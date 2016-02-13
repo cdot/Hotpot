@@ -1,0 +1,66 @@
+{
+    "name": "Hottie",
+    "version": "0.0.0",
+    "description": "Central heating controller",
+    "main": "Control.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Crawford Currie",
+    "bin": { "module-name": "./Control.js" },
+    "main": { "module-name": "./Control.js" },
+    "license": "MIT",
+    "devDependencies": {
+        "jake": "latest"
+    },
+    "keywords": {
+        "gpio",
+        "raspberry",
+        "raspi",
+        "rpi",
+        "home",
+        "heating",
+        "control",
+        "pi"
+    },
+    "dependencies": {
+        "node-getopt": "0.2.3",
+        "onoff": "1.0.4",
+        "http": "0.0.0",
+        "fs": "0.0.2",
+        "events": "1.1.0",
+        "util": "0.10.3",
+        "node-crontab": "0.0.8",
+        "ds18x20": "0.2.0"
+    },
+    "analyze": true,
+    "eslintConfig": {
+        "env": {
+            "browser": true,
+            "jquery": true
+        },
+        "ecmaFeatures": {
+            "blockBindings": true
+        },
+        "globals": {
+            "require": true,
+            "module": true,
+            "Buffer": true
+        },
+        "rules": {
+            "no-underscore-dangle": 0,
+            "curly": 0,
+            "camelcase": 0,
+            "no-unused-vars": 1,
+            "no-console": 0,
+            "no-debugger": 0,
+            "no-alert": 1,
+            "no-new" : 0,
+            "new-cap" : 0,
+            "dot-notation" : 1,
+            "no-trailing-spaces" : 0,
+            "no-use-before-define": "3 nofunc",
+            "no-loop-func": 1
+        }
+    }
+}
