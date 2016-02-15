@@ -1,35 +1,29 @@
+/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+
 /**
  * Thermostat
  *
  * Talks to DS18x20 thermometers and raises events when the measured
- * temp passes a target. Two events are supported, "above" when
- * the temperature increases above the target, and below, when the
- * temperature drops below the target. A slack window can be built into the
- * measurement so that the "below" event doesn't fire until the temperature
- * drops below target-window/2 and above doesn't fire until it rises
- * above target+window/2. The events are passed the current temperature.
+ * temperature passes into or out of a target window.
+ *
+ * Two events are supported, "above" when the temperature increases
+ * above the window, and below, when the temperature drops below the window.
  * Also supports measuring the immediate temperature of the thermometer,
  * independent of the event loop.
+ *
+ * A thermostat also has a list of rules functions that are run in
+ * order to adjust the target settings at each poll. The rules functions
+ * are numbered and are run starting at 0. If a rules function returns
+ * true, the evaluation of rules stops.
  */
 const EventEmitter = require("events").EventEmitter;  
 const util = require("util");
-const crontab = require("node-crontab");
 
 // Thermostat poll
 const POLL_INTERVAL = 1; // seconds
 
 // Singleton interface to DS18x20 thermometers
-var ds18x20 = require("ds18x20");
-if (!ds18x20.isDriverLoaded()) {
-    try {
-        ds18x20.loadDriver();
-    } catch (err) {
-        console.error(err.message);
-        console.error("Temperature sensor driver not loaded - falling back to test sensor");
-        var DS18x20 = require("./TestSupport.js").DS18x20;
-        ds18x20 = new DS18x20();
-    }
-}
+var ds18x20;
 
 // Known thermometer ids (get from command-line or config)
 const K0 = -273.25; // 0K
@@ -43,6 +37,20 @@ const K0 = -273.25; // 0K
  */
 function Thermostat(name, id, target, window) {
     "use strict";
+
+    if (!ds18x20) {
+        ds18x20 = require("ds18x20");
+        if (!ds18x20.isDriverLoaded()) {
+            try {
+                ds18x20.loadDriver();
+            } catch (err) {
+                console.error(err.message);
+                console.error("Temperature sensor driver not loaded - falling back to test sensor");
+                var DS18x20 = require("./TestSupport.js").DS18x20;
+                ds18x20 = new DS18x20();
+            }
+        }
+    }
 
     EventEmitter.call(this);
     var self = this;
@@ -80,85 +88,12 @@ module.exports = Thermostat;
  */
 Thermostat.prototype.set_target = function(target) {
     "use strict";
+    if (target == this.target)
+        return;
     this.target = target;
     this.low = this.target - this.window / 2;
     this.high = this.target + this.window / 2;
-};
-
-/**
- * @param schedule array of arrays of cron specifications. Each has entries
- * [0] minute      0-59
- * [1] hour        0-23
- * [2] date        1-31
- * [3] month       1-12 (or names)
- * [4] dow         0-7 (0 pr 7 is Sun, or use names)#
- * [5] time to run for H or H:M
- * [6] temperature in degrees C, 0 switches off
- * schedule can also be a string. The fields are whitespace separated,
- * lines are newline separated. Comment lines start with #
- *
- * Examples:
- * # Set 18C at 06:30 for 2 hours every day
- * 30 6 * * * 2 18
- * # Set 18C 18:30 for 4.5 hours every day
- * 30 8 * * * 4.5 18
- * # Switch off between 19:00 and 21:30 every Wednesday and Friday
- * 0 19 * * Wed,Fri 2.5 0
- *
- * Schedules are ordered, with the lowest priority, default, schedule at the top.
- * When a higher priority (lower) schedule is in force, the lower priority schedules
- * will continue to run but will have no effect. When the higher priority item completes,
- * the next highest priority active schedule will take over.
- */
-Thermostat.prototype.set_schedule = function(schedules) {
-    "use strict";
-    var self = this;
-    var i;
-
-    if (typeof schedules === "string") {
-        var lines = schedules.split(/\n/);
-        schedules = [];
-        for (i in lines) {
-            var line = lines[i];
-            if (line.charAt(0) === "#" || line.length === 0)
-                continue;
-            var fields = line.split(/[ \t]+/, 7);
-            if (fields.length === 7)
-                schedules.push(fields);
-            else
-                console.error("Error parsing " + self.name
-                              + " schedules: Malformed schedule " + lines[i]);
-        }
-    }
-
-    for (i in self.schedule)
-        crontab.cancelJob(self.schedule[i][8]);
-    self.schedule = [];
-
-    var dispatch = function(n) {
-        self.fire_job(n);
-    };
-
-    for (i in schedules) {
-        var prio = self.schedule.length;
-        var sched = schedules[i];
-        self.schedule.push(sched);
-        var scheds = sched[0] + " " + sched[1] + " " +
-                    sched[2] + " " + sched[3] + " " + sched[4];
-        console.log("Schedule " + scheds);
-        try {
-            var jobid = crontab.scheduleJob(
-                scheds,
-                dispatch,
-                [ i ],
-                self,
-                true);
-            self.schedule[i].push(jobid);
-        } catch (e) {
-            console.error("Error parsing " + self.name
-                          + " schedules: " + e.message);
-        }
-    }
+    console.log(this.name + " target changed to " + this.target);
 };
 
 /**
@@ -183,7 +118,13 @@ Thermostat.prototype.poll = function() {
         if (err !== null) {
             console.log("ERROR: " + err);
         } else {
-            // Round temp to degress
+            // Update the rules
+            for (var i in self.rules) {
+                console.log("Test rule " + i);
+                var rule = self.rules[i];
+                if (rule.call(self, temp))
+                    break;
+            }
             //console.log(self.id + " reads " + temp + "C");
             var init = (self.last_temp === K0);
             if (temp < self.low && (init || self.last_temp >= self.low))
@@ -204,4 +145,43 @@ Thermostat.prototype.poll = function() {
 Thermostat.prototype.temperature = function() {
     "use strict";
     return ds18x20.get(this.id);
+};
+
+/**
+ * Insert a rule at a given position in the order. Positions are
+ * numbered from 0 (highest priority). To add a rule at the lowest
+ * priority position, pass i=-1 (or i > max rule position)
+ * @param rule the rule to add
+ * @param i the position to insert the rule at, or -1 for the end
+ * @return the position the rules was added at
+ */
+Thermostat.prototype.insert_rule = function(rule, i) {
+    "use strict";
+    if (i < 0 || i >= this.rules.length) {
+        this.rules.push(rule);
+        i = this.rules.length - 1;
+    } else if (i == 0)
+        this.rules.unshift(rule);
+    else
+        this.rules.splice(i, 0, rule);
+    return i;
+};
+
+/**
+* Remove a rule
+* @param i the number of the rule to delete
+* @return the removed rule function
+*/
+Thermostat.prototype.remove_rule = function(i) {
+    "use strict";
+    var del = this.rules.splice(i, 1);
+    return del[0];
+};
+
+/**
+ * Remove all rules
+ */
+Thermostat.prototype.clear_rules = function() {
+    "use strict";
+    this.rules = [];
 };

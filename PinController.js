@@ -1,3 +1,5 @@
+/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+
 /**
  * Control pins
  *

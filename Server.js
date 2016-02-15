@@ -1,7 +1,15 @@
-const Thermostat = require("./Thermostat.js");
-const PinController = require("./PinController.js");
+/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+
+/**
+ * HTTP server object. A set of thermostats and control pins, with a
+ * controlling configuration.
+ */
 const HTTP = require("http");
 const Fs = require("fs");
+
+const Thermostat = require("./Thermostat.js");
+const PinController = require("./PinController.js");
+const Time = require("./Time.js"); // for rules
 
 /**
  * HTTP Server object
@@ -62,16 +70,20 @@ function Server(config) {
         self.start_server(self.config.port);
     });
 
-    // Load cron schedules for thermostats
-    for (k in self.config.schedule) {
-        console.log("Loading schedule for " + k + " from "
-                   + self.config.schedule[k]);
-        Fs.readFile(self.config.schedule[k], function(err, data) {
-            if (err)
-                console.log(err);
-            else
-                self.thermostat[k].set_schedule("" + data);
-        });
+    // Load rules for thermostats
+    for (k in self.config.rules) {
+        console.log("Loading rules for " + k + " from "
+                   + self.config.rules[k]);
+        var data = Fs.readFileSync(self.config.rules[k], "utf8");
+        try {
+            var rules = eval(data);
+            self.thermostat[k].clear_rules();
+            for (var i in rules)
+                self.thermostat[k].insert_rule(rules[i], i);
+        } catch (e) {
+            console.error("Failed to load rules from "
+                          + self.config.rules[k] + ": " + e.message);
+        }
     }
 }
 
@@ -95,11 +107,16 @@ Server.prototype.set = function(channel, on, respond) {
         }, this.valve_return * 1000);
     }
 
+    // Y-plan systems have a state where if the heating is on but the
+    // hot water is off, and the heating is turned off, then the grey
+    // wire to the valve (the "hot water off" signal) is held high,
+    // stalling the motor and consuming power pointlessly. We need some
+    // special processing to avoid this state.
+    // If heating only on, and it's going off, switch on HW
+    // to kill the grey wire. This allows the spring to fully
+    // return. Then after a timeout, set the desired state.
     if (channel === "CH" && !on
         && this.pin.HW.state === 1 && this.pin.HW.state === 0) {
-        // If heating only on, and it"s going off, switch on HW
-        // to kill the grey wire. This allows the spring to fully
-        // return. Then after a timeout, set the desired state.
         this.pin.CH.set(0);
         this.pin.HW.set(1);
         self.pending = true;

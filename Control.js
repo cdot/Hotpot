@@ -1,20 +1,12 @@
+/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 const DESCRIPTION =
-"A Raspberry PI central heating control server." + "\n" +
-"The server assumes the PI is configured with two DS18x20 temperature" + "\n" +
-"sensors, one for heating (CH) and one for hot water (HW). It sets the" + "\n" +
-"state of two GPIO pins to turn on the relevant heating control. The" + "\n" +
-"server listens for HTTP requests coming in on a port, which are used" + "\n" +
-"to to change the setting of temperature required from the CH and HW." + "\n" +
-"The server also supports commands to control the window on the" + "\n" +
-"thermostat. The window controls the actual switching temperature, For" + "\n" +
-"example, if we ask for:" + "\n" +
-"" + "\n" +
-"--temperature HW=60 --window HW=5" + "\n" +
-"" + "\n" +
-"then when the temperature falls below 57.5 degrees, the hot water will switch" + "\n" +
-"on. When it rises above 62.5 degrees, it will turn off." + "\n";
+"DESCRIPTION\nA Raspberry PI central heating control server.\n" +
+"See README.md for details\n\nOPTIONS\n";
 
 const Getopt = require("node-getopt");
+
+// Global controller object, used by 
+var controller;
 
 /** Main program */
 (function () {
@@ -42,23 +34,27 @@ const Getopt = require("node-getopt");
     };
 
     var opt = Getopt.create([
-        // Port 13196 is listed as "Ontolux" - no idea what that is, but it seems
-        // harmless enough for a default port.
+        [ "h", "help", "Show this help" ],
+        [ "d", "debug", "Run in debug mode" ],
+        // Port 13196 is listed as "Ontolux" - no idea what that is, but it
+        // seems harmless enough for a default port.
         [ "p", "port=ARG", "Network port to use, default is " + config.port ],
         [ "v", "valve_return=ARG", "Tune valve return time, default is "
           + config.valve_return + " (seconds)" ],
-        [ "h", "help", "Show this help" ],
-        [ "d", "debug", "Run in debug mode" ],
         [ "g", "gpio=ARG+", "Specify GPIO pin to use for CH/HW\n"
-          + "\t\te.g. --gpio CH=1"],
+          + "\te.g. --gpio CH=1"],
         [ "i", "id=ARG+", "Set the device ID for a thermostat\n"
-          + "\t\te.g. --device CH=28-00000574c791"],
-        [ "t", "temperature=ARG+", "Set the target temperature for a thermostat,"
-          + " degrees C\n\t\te.g. --temperature HW=60" ],
-        [ "w", "window=ARG+", "Set the target temperature window for a thermostat,"
-          + " degrees C\n\t\te.g. --window HW=5" ],
-        [ "s", "schedule=ARG+", "Load the crontab for a thermostat from the"
-          + " given file\n\t\te.g. --schedule CH=central_heating.ct" ]
+          + "\te.g. --device CH=28-00000574c791"],
+        [ "t", "temperature=ARG+", "Set the initial target temperature for a"
+          + " thermostat, degrees C e.g. \n\t--temperature HW=60"
+          + "\n\tRules may override this setting once the server is running." ],
+        [ "w", "window=ARG+", "Set the target temperature window for a"
+          + " thermostat, degrees C e.g.\n\t--window HW=5"
+          + "\n\tRules may override this setting once the server is running." ],
+        [ "r", "rules=ARG+", "Load the rules for a thermostat from the"
+          + " given file e.g.\n\t--rules CH=central_heating.rules"
+          + "\n\tRules may be modified via the HTTP interface once the server"
+          + " is running." ]
     ])
         .bindHelp()
         .setHelp(DESCRIPTION + "[[OPTIONS]]")
@@ -67,7 +63,7 @@ const Getopt = require("node-getopt");
     console.info(opt);
 
     // process CH=N style options
-    [ "gpio", "device", "temperature", "schedule" ].forEach(function(opn) {
+    [ "gpio", "device", "temperature", "rules" ].forEach(function(opn) {
         var optval = opt.options[opn];
         delete opt.options[opn];
         if (typeof optval !== "undefined") {
@@ -96,5 +92,5 @@ const Getopt = require("node-getopt");
     console.info(config);
 
     var Server = require("./Server.js");
-    new Server(config);
+   controller = new Server(config);
 })();
