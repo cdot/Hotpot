@@ -1,17 +1,26 @@
 [
-    function() {
-        if (Time.between("06:30", "07:30")) {
-            this.set_target(55);
-            return true;
+    {
+        name: "morning",
+        test: function() {
+            if (Time.between("06:30", "07:30")) {
+                this.set_target(55);
+                return true;
+            }
         }
     },
-    function() {
-        if (Time.between("17:30", "18:30")) {
-            this.set_target(55);
-            return true;
+    {
+        name: "evening",
+        test: function() {
+            if (Time.between("17:30", "18:30")) {
+                this.set_target(55);
+                return true;
+            }
         }
     },
-    function() {
-        this.set_target(0);
+    {
+        name: "otherwise",
+        test: function() {
+            this.set_target(0);
+        }
     }
 ]

@@ -60,7 +60,8 @@
             "dot-notation" : 1,
             "no-trailing-spaces" : 0,
             "no-use-before-define": "3 nofunc",
-            "no-loop-func": 1
+            "no-loop-func": 1,
+            "no-eval": 1
         }
     }
 }

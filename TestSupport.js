@@ -1,3 +1,5 @@
+/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+
 // Test support
 
 // Global object that records current pin state
@@ -13,7 +15,8 @@ DS18x20.prototype.get = function(id, fn) {
         this.cur += Math.random();
     else
         this.cur -= Math.random();
-    //console.log("GET "+id+":"+this.mapID[id]+"("+pinstate[this.mapID[id]]+")="+this.cur);
+    console.TRACE(3, "GET DS18x20: " + id + ": " + this.mapID[id] +
+                  "(" + pinstate[this.mapID[id]] + ")=" + this.cur);
     if (fn)
         fn(null, this.cur);
     else
@@ -28,7 +31,7 @@ function Gpio(pin, name) {
 
 Gpio.prototype.writeSync = function(n) {
     pinstate[this.name] = n;
-    console.log("TEST Gpio: " + this.pin + "(" + this.name + ") = " + n);
+    console.TRACE(3, "SET GPIO: " + this.pin + "(" + this.name + ") = " + n);
 };
 
 module.exports = {

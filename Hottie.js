@@ -4,14 +4,14 @@ const DESCRIPTION =
 "See README.md for details\n\nOPTIONS\n";
 
 const Getopt = require("node-getopt");
-
-// Global controller object, used by 
-var controller;
+const Server = require("./Server.js");
+const Controller = require("./Controller.js");
 
 /** Main program */
 (function () {
     "use strict";
 
+    // Default config
     var config = {
         port: 13196,
         valve_return: 5, // return time, in seconds
@@ -30,12 +30,16 @@ var controller;
         window: {
             HW: 5,
             CH: 5
+        },
+        rules: {
+            HW: "hot_water.rules",
+            CH: "central_heating.rules"
         }
     };
 
     var opt = Getopt.create([
         [ "h", "help", "Show this help" ],
-        [ "d", "debug", "Run in debug mode" ],
+        [ "d", "debug=ARG", "Run in debug mode" ],
         // Port 13196 is listed as "Ontolux" - no idea what that is, but it
         // seems harmless enough for a default port.
         [ "p", "port=ARG", "Network port to use, default is " + config.port ],
@@ -89,8 +93,20 @@ var controller;
         config[k] = opt.options[k];
     }
 
-    console.info(config);
+    // 0: initialisation
+    // 1: pin on/off
+    // 2: command tracing
+    // 3: test module tracing
+    console.TRACE = function(level, message) {
+        if (((1 << level) & config.debug) !== 0) {
+            console.log(message);
+        }
+    };
 
-    var Server = require("./Server.js");
-   controller = new Server(config);
+    // Start the controller and when it's ready, start an HTTP server
+    // to receive commands for it.
+    new Controller(config, function() {
+        new Server(config.port, this);
+    });
+
 })();

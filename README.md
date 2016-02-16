@@ -33,9 +33,9 @@ initial setup, the HTTP interface can be used to query and modify the
 configuration.
 
 Example command-line:
-
--p 13126 --gpio HW=4 -i HW=28-00010474b79a --rules HW=hot_water.rules
-
+```
+node Control.js -p 13126 --gpio HW=4 -i HW=28-00010474b79a --rules HW=hot_water.rules
+```
 # Rules files
 
 Rules files are Javascript files that contain an array of functions

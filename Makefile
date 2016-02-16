@@ -1,14 +1,14 @@
 # Copyright (C) 2016 Crawford Currie http://c-dot.co.uk / MIT
 
 SOURCES := \
-	Control.js \
+	Hottie.js \
 	Server.js\
+	Controller.js\
 	PinController.js\
 	Thermostat.js
 
 %.esl : %.js
 	eslint $^
-	touch $@
 
 release: $(MIN)
 	@echo "Done"
@@ -17,4 +17,3 @@ eslint: $(subst .js,.esl,$(SOURCES))
 
 clean:
 	find . -name '*~' -exec rm \{\} \;
-	find . -name '*.esl' -exec rm \{\} \;

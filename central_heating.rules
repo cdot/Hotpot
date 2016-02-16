@@ -1,24 +1,27 @@
 [
-    function() {
-        if (Time.between("06:30", "08:30")) {
-            this.set_target(18);
-            return true;
+    {
+        name: "morning",
+        test: function() {
+            if (Time.between("06:30", "08:30")) {
+                this.set_target(18);
+                return true;
+            }
         }
     },
-    function() {
-        if (Time.between("06:30", "08:30")) {
-            this.set_target(18);
-            return true;
+    {
+        name: "daytime",
+        test: function() {
+            if (Time.between("08:30", "18:30")) {
+                this.set_target(16);
+                return true;
+            }
         }
     },
-    function() {
-        if (Time.between("08:30", "18:30")) {
-            this.set_target(16);
-            return true;
+    {
+        name: "otherwise",
+        test: function() {
+            // Prevent freezing
+            this.set_target(7.5);
         }
-    },
-    function() {
-        // Prevent freezing
-        this.set_target(7.5);
     }
 ]
