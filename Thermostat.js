@@ -163,7 +163,6 @@ Thermostat.prototype.insert_rule = function(rule, i) {
     "use strict";
     if (typeof i === "undefined")
         i = -1;
-console.log("Add rule to " + this.rules.length);
     if (i < 0 || i >= this.rules.length) {
         this.rules.push(rule);
         i = this.rules.length - 1;

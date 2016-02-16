@@ -19,7 +19,7 @@ function Controller(config, when_ready) {
     "use strict";
 
     var self = this, k;
-console.log("ARSE "+ config.rules.length);
+
     // Create pin controllers
     self.pin = {};
     for (k in config.gpio) {
@@ -97,9 +97,9 @@ Controller.prototype.set = function(channel, on, respond) {
 
     var self = this;
     if (this.pending) {
-        console.info("Request backing off");
+        console.TRACE(2, "Request backing off");
         setTimeout(function() {
-            console.info("Backed off awakens");
+            console.TRACE(2, "Backed off awakens");
             self.set(channel, on, respond);
         }, this.valve_return * 1000);
     }
@@ -148,6 +148,7 @@ Controller.prototype.get_status = function() {
         struct[th.name].window = th.window;
         struct[th.name].target = th.target;
         struct[th.name].state = this.pin[th.name].state;
+        struct[th.name].rules_enabled = th.rules_enabled;
         struct[th.name].rules = th.rules.map(serialize);
     }
     return struct;
@@ -193,7 +194,7 @@ Controller.prototype.execute_command = function(struct) {
             th.insert_rule({
                 name: command.name,
                 test: test
-            }, command.index);
+            }, command.number);
             break;
         case "set_window":
             th.set_window(command.number);
