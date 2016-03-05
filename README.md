@@ -1,19 +1,28 @@
-# hottie
+# Hotpot
 
-Central heating controller for Raspberry Pi and Y-plan central heating system.
-Piggybacks on the existing system so that the existing controller can still be
-used.
+Central heating controller for a Y-plan central heating system, using
+nodjs on Raspberry Pi. Piggybacks on the existing system so that the existing
+controller can still be used (though not at the same time).
 
-The controller uses rules defined a set of javascript functions to control
+The controller assumes the Pi is configured with a number of DS18x20
+temperature sensors, usually one for heating (CH) and one for hot water (HW), connected to GPIO.
+
+It sets the state of GPIO pins to turn on the relevant heating control. It
+then works to keep the temperatures sensed on the DS18x20's to within defined
+ranges.
+
+# Hardware
+
+Aside from the Raspberry Pi, the only additional hardware required are two DS18x20 temperature sensors, and two relays. A dual SRD-05VDC-SL-C relay module is ideal for this. The wiring capitalises on the fact that when the controller for a Y system is powered on, but set to "off", the "Hot water off" control line is held high (at 250V). See Mains.svg for details of the mains level wiring.
+
+The wiring of the temperature sensors and the control side of the relays is shown in 5V-3.5V control.svg
+
+# Software
+
+The controller uses rules defined in a set of javascript functions to control
 the temperature of the different services offered by the central heating
 system. It can operate either as a stand-alone controller or as an HTTP
 server that supports querying and changing the configuration of the system.
-
-The controller assumes the Pi is configured with a number of DS18x20
-temperature sensors, usually one for heating (CH) and one for hot water (HW).
-It sets the state of GPIO pins to turn on the relevant heating control. It
-then works to keep the temperatures sensed on the DS18x20's to within defined
-windows.
 
 For example, we might have a DS18x20 called "HW" that senses the hot water
 temperature. A GPIO pin also called "HW" is used to control whether the

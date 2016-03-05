@@ -2,17 +2,14 @@
     "name": "Hottie",
     "version": "0.0.0",
     "description": "Central heating controller",
-    "main": "Control.js",
+    "main": "Hottie.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "Crawford Currie",
-    "bin": { "module-name": "./Control.js" },
-    "main": { "module-name": "./Control.js" },
+    "bin": { "module-name": "./Hottie.js" },
+    "main": { "module-name": "./Hottie.js" },
     "license": "MIT",
-    "devDependencies": {
-        "jake": "latest"
-    },
     "keywords": {
         "gpio",
         "raspberry",
