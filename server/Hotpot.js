@@ -16,8 +16,8 @@ const Controller = require("./Controller.js");
         port: 13196,
         valve_return: 5, // return time, in seconds
         device: {
-            HW: "28-00000574c791",
-            CH: "28-00000574f4f3"
+            HW: "28-0115914ff5ff",
+            CH: "28-0316027f81ff"
         },
         gpio: {
             CH: 4, // GPIO pin number

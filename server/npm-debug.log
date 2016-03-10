@@ -1,20 +1,826 @@
 0 info it worked if it ends with ok
-1 verbose cli [ '/usr/bin/nodejs', '/usr/bin/npm', 'install', 'ds18x20' ]
-2 info using npm@1.3.10
-3 info using node@v0.10.25
-4 error Failed to parse json
-4 error Unexpected token ,
-5 error File: /home/crawford/Projects/hottie/server/package.json
-6 error Failed to parse package.json data.
-6 error package.json must be actual JSON, not just JavaScript.
-6 error
-6 error This is not a bug in npm.
-6 error Tell the package author to fix their package.json file. JSON.parse
-7 error System Linux 4.2.0-25-generic
-8 error command "/usr/bin/nodejs" "/usr/bin/npm" "install" "ds18x20"
-9 error cwd /home/crawford/Projects/hottie/server
-10 error node -v v0.10.25
-11 error npm -v 1.3.10
-12 error file /home/crawford/Projects/hottie/server/package.json
-13 error code EJSONPARSE
-14 verbose exit [ 1, true ]
+1 verbose cli [ '/usr/bin/nodejs', '/usr/bin/npm', 'install', 'onoff' ]
+2 info using npm@1.4.21
+3 info using node@v0.10.29
+4 warn package.json Hottie@0.0.0 No repository field.
+5 warn package.json Hottie@0.0.0 No README data
+6 verbose readDependencies using package.json deps
+7 verbose cache add [ 'onoff@1.0.4', null ]
+8 verbose cache add name=undefined spec="onoff@1.0.4" args=["onoff@1.0.4",null]
+9 verbose parsed url { protocol: null,
+9 verbose parsed url   slashes: null,
+9 verbose parsed url   auth: null,
+9 verbose parsed url   host: null,
+9 verbose parsed url   port: null,
+9 verbose parsed url   hostname: null,
+9 verbose parsed url   hash: null,
+9 verbose parsed url   search: null,
+9 verbose parsed url   query: null,
+9 verbose parsed url   pathname: 'onoff@1.0.4',
+9 verbose parsed url   path: 'onoff@1.0.4',
+9 verbose parsed url   href: 'onoff@1.0.4' }
+10 verbose cache add name="onoff" spec="1.0.4" args=["onoff","1.0.4"]
+11 verbose parsed url { protocol: null,
+11 verbose parsed url   slashes: null,
+11 verbose parsed url   auth: null,
+11 verbose parsed url   host: null,
+11 verbose parsed url   port: null,
+11 verbose parsed url   hostname: null,
+11 verbose parsed url   hash: null,
+11 verbose parsed url   search: null,
+11 verbose parsed url   query: null,
+11 verbose parsed url   pathname: '1.0.4',
+11 verbose parsed url   path: '1.0.4',
+11 verbose parsed url   href: '1.0.4' }
+12 verbose addNamed [ 'onoff', '1.0.4' ]
+13 verbose addNamed [ '1.0.4', '1.0.4' ]
+14 silly lockFile 5796989d-onoff-1-0-4 onoff@1.0.4
+15 verbose lock onoff@1.0.4 /home/pi/.npm/5796989d-onoff-1-0-4.lock
+16 verbose request where is /onoff
+17 verbose request registry https://registry.npmjs.org/
+18 verbose request id 1731bcdb63a102b9
+19 verbose url raw /onoff
+20 verbose url resolving [ 'https://registry.npmjs.org/', './onoff' ]
+21 verbose url resolved https://registry.npmjs.org/onoff
+22 verbose request where is https://registry.npmjs.org/onoff
+23 info trying registry request attempt 1 at 18:49:50
+24 verbose etag "67JSHSG8RL70TJFUT4LQ9WQ7Y"
+25 http GET https://registry.npmjs.org/onoff
+26 http 304 https://registry.npmjs.org/onoff
+27 silly registry.get cb [ 304,
+27 silly registry.get   { date: 'Mon, 07 Mar 2016 18:49:51 GMT',
+27 silly registry.get     via: '1.1 varnish',
+27 silly registry.get     'cache-control': 'max-age=300',
+27 silly registry.get     etag: '"67JSHSG8RL70TJFUT4LQ9WQ7Y"',
+27 silly registry.get     age: '0',
+27 silly registry.get     connection: 'keep-alive',
+27 silly registry.get     'x-served-by': 'cache-ams4139-AMS',
+27 silly registry.get     'x-cache': 'MISS',
+27 silly registry.get     'x-cache-hits': '0',
+27 silly registry.get     'x-timer': 'S1457376591.088523,VS0,VE100',
+27 silly registry.get     vary: 'Accept' } ]
+28 verbose etag https://registry.npmjs.org/onoff from cache
+29 silly lockFile 5796989d-onoff-1-0-4 onoff@1.0.4
+30 silly lockFile 5796989d-onoff-1-0-4 onoff@1.0.4
+31 silly resolved [ { name: 'onoff',
+31 silly resolved     version: '1.0.4',
+31 silly resolved     description: 'GPIO access and interrupt detection with JavaScript',
+31 silly resolved     main: 'onoff.js',
+31 silly resolved     directories: { example: 'examples', test: 'test' },
+31 silly resolved     scripts: { test: 'echo "Tests can only be run manually from the command line. They access hardware GPIOs." && exit 1' },
+31 silly resolved     repository: { type: 'git', url: 'git+https://github.com/fivdi/onoff.git' },
+31 silly resolved     engines: { node: '>=0.8.0' },
+31 silly resolved     dependencies: { epoll: '~0.1.17' },
+31 silly resolved     keywords:
+31 silly resolved      [ 'gpio',
+31 silly resolved        'embedded',
+31 silly resolved        'interrupt',
+31 silly resolved        'beaglebone',
+31 silly resolved        'bbb',
+31 silly resolved        'bb',
+31 silly resolved        'raspberry',
+31 silly resolved        'raspi',
+31 silly resolved        'rpi',
+31 silly resolved        'pi',
+31 silly resolved        'linux' ],
+31 silly resolved     author: { name: 'fivdi' },
+31 silly resolved     license: 'MIT',
+31 silly resolved     gitHead: 'e918dccccfd29978b054e49a535269e882a6ba06',
+31 silly resolved     bugs: { url: 'https://github.com/fivdi/onoff/issues' },
+31 silly resolved     homepage: 'https://github.com/fivdi/onoff#readme',
+31 silly resolved     _id: 'onoff@1.0.4',
+31 silly resolved     _shasum: '4630dedb97a110a698d0f16b7f20f6f07f4e6641',
+31 silly resolved     _from: 'onoff@1.0.4',
+31 silly resolved     _npmVersion: '2.14.4',
+31 silly resolved     _nodeVersion: '4.1.1',
+31 silly resolved     _npmUser: { name: 'fivdi', email: 'fivdiweb@gmail.com' },
+31 silly resolved     maintainers: [ [Object] ],
+31 silly resolved     dist:
+31 silly resolved      { shasum: '4630dedb97a110a698d0f16b7f20f6f07f4e6641',
+31 silly resolved        tarball: 'http://registry.npmjs.org/onoff/-/onoff-1.0.4.tgz' },
+31 silly resolved     _resolved: 'https://registry.npmjs.org/onoff/-/onoff-1.0.4.tgz',
+31 silly resolved     readme: 'ERROR: No README data found!' } ]
+32 info install onoff@1.0.4 into /home/pi/hottie/server
+33 info installOne onoff@1.0.4
+34 verbose node_modules/onoff unbuild
+35 verbose tar unpack /home/pi/.npm/onoff/1.0.4/package.tgz
+36 silly lockFile 144f4010-hottie-server-node-modules-onoff tar:///home/pi/hottie/server/node_modules/onoff
+37 verbose lock tar:///home/pi/hottie/server/node_modules/onoff /home/pi/.npm/144f4010-hottie-server-node-modules-onoff.lock
+38 silly lockFile e2749259-e-pi-npm-onoff-1-0-4-package-tgz tar:///home/pi/.npm/onoff/1.0.4/package.tgz
+39 verbose lock tar:///home/pi/.npm/onoff/1.0.4/package.tgz /home/pi/.npm/e2749259-e-pi-npm-onoff-1-0-4-package-tgz.lock
+40 silly gunzTarPerm modes [ '755', '644' ]
+41 silly gunzTarPerm extractEntry package.json
+42 silly gunzTarPerm modified mode [ 'package.json', 436, 420 ]
+43 silly gunzTarPerm extractEntry .npmignore
+44 silly gunzTarPerm modified mode [ '.npmignore', 436, 420 ]
+45 silly gunzTarPerm extractEntry README.md
+46 silly gunzTarPerm modified mode [ 'README.md', 436, 420 ]
+47 silly gunzTarPerm extractEntry LICENSE
+48 silly gunzTarPerm modified mode [ 'LICENSE', 436, 420 ]
+49 silly gunzTarPerm extractEntry onoff.js
+50 silly gunzTarPerm modified mode [ 'onoff.js', 436, 420 ]
+51 silly gunzTarPerm extractEntry History.md
+52 silly gunzTarPerm modified mode [ 'History.md', 436, 420 ]
+53 silly gunzTarPerm extractEntry examples/blink-led-async.js
+54 silly gunzTarPerm modified mode [ 'examples/blink-led-async.js', 436, 420 ]
+55 silly gunzTarPerm extractEntry examples/blink-led.js
+56 silly gunzTarPerm modified mode [ 'examples/blink-led.js', 436, 420 ]
+57 silly gunzTarPerm extractEntry examples/light-switch.js
+58 silly gunzTarPerm modified mode [ 'examples/light-switch.js', 436, 420 ]
+59 silly gunzTarPerm extractEntry examples/wait-for-interrupt.js
+60 silly gunzTarPerm modified mode [ 'examples/wait-for-interrupt.js', 436, 420 ]
+61 silly gunzTarPerm extractEntry examples/light-switch.png
+62 silly gunzTarPerm modified mode [ 'examples/light-switch.png', 436, 420 ]
+63 silly gunzTarPerm extractEntry examples/mygpio-overlay.dts
+64 silly gunzTarPerm modified mode [ 'examples/mygpio-overlay.dts', 436, 420 ]
+65 silly gunzTarPerm extractEntry examples/run-examples
+66 silly gunzTarPerm modified mode [ 'examples/run-examples', 509, 493 ]
+67 silly gunzTarPerm extractEntry test/blink-led.js
+68 silly gunzTarPerm modified mode [ 'test/blink-led.js', 436, 420 ]
+69 silly gunzTarPerm extractEntry test/configure-and-check-output.js
+70 silly gunzTarPerm modified mode [ 'test/configure-and-check-output.js', 436, 420 ]
+71 silly gunzTarPerm extractEntry test/export-many-times.js
+72 silly gunzTarPerm modified mode [ 'test/export-many-times.js', 436, 420 ]
+73 silly gunzTarPerm extractEntry test/many-interrupts.js
+74 silly gunzTarPerm modified mode [ 'test/many-interrupts.js', 436, 420 ]
+75 silly gunzTarPerm extractEntry test/configure-and-check-input.js
+76 silly gunzTarPerm modified mode [ 'test/configure-and-check-input.js', 436, 420 ]
+77 silly gunzTarPerm extractEntry test/performance-interrupt.js
+78 silly gunzTarPerm modified mode [ 'test/performance-interrupt.js', 436, 420 ]
+79 silly gunzTarPerm extractEntry test/performance-sync.js
+80 silly gunzTarPerm modified mode [ 'test/performance-sync.js', 436, 420 ]
+81 silly gunzTarPerm extractEntry test/wait-for-interrupt.js
+82 silly gunzTarPerm modified mode [ 'test/wait-for-interrupt.js', 436, 420 ]
+83 silly gunzTarPerm extractEntry test/wait-for-many-interrupts.js
+84 silly gunzTarPerm modified mode [ 'test/wait-for-many-interrupts.js', 436, 420 ]
+85 silly gunzTarPerm extractEntry test/performance-async.js
+86 silly gunzTarPerm modified mode [ 'test/performance-async.js', 436, 420 ]
+87 silly gunzTarPerm extractEntry test/run-tests
+88 silly gunzTarPerm modified mode [ 'test/run-tests', 509, 493 ]
+89 silly lockFile 144f4010-hottie-server-node-modules-onoff tar:///home/pi/hottie/server/node_modules/onoff
+90 silly lockFile 144f4010-hottie-server-node-modules-onoff tar:///home/pi/hottie/server/node_modules/onoff
+91 silly lockFile e2749259-e-pi-npm-onoff-1-0-4-package-tgz tar:///home/pi/.npm/onoff/1.0.4/package.tgz
+92 silly lockFile e2749259-e-pi-npm-onoff-1-0-4-package-tgz tar:///home/pi/.npm/onoff/1.0.4/package.tgz
+93 info preinstall onoff@1.0.4
+94 verbose readDependencies using package.json deps
+95 verbose readDependencies using package.json deps
+96 verbose cache add [ 'epoll@~0.1.17', null ]
+97 verbose cache add name=undefined spec="epoll@~0.1.17" args=["epoll@~0.1.17",null]
+98 verbose parsed url { protocol: null,
+98 verbose parsed url   slashes: null,
+98 verbose parsed url   auth: null,
+98 verbose parsed url   host: null,
+98 verbose parsed url   port: null,
+98 verbose parsed url   hostname: null,
+98 verbose parsed url   hash: null,
+98 verbose parsed url   search: null,
+98 verbose parsed url   query: null,
+98 verbose parsed url   pathname: 'epoll@~0.1.17',
+98 verbose parsed url   path: 'epoll@~0.1.17',
+98 verbose parsed url   href: 'epoll@~0.1.17' }
+99 verbose cache add name="epoll" spec="~0.1.17" args=["epoll","~0.1.17"]
+100 verbose parsed url { protocol: null,
+100 verbose parsed url   slashes: null,
+100 verbose parsed url   auth: null,
+100 verbose parsed url   host: null,
+100 verbose parsed url   port: null,
+100 verbose parsed url   hostname: null,
+100 verbose parsed url   hash: null,
+100 verbose parsed url   search: null,
+100 verbose parsed url   query: null,
+100 verbose parsed url   pathname: '~0.1.17',
+100 verbose parsed url   path: '~0.1.17',
+100 verbose parsed url   href: '~0.1.17' }
+101 verbose addNamed [ 'epoll', '~0.1.17' ]
+102 verbose addNamed [ null, '>=0.1.17-0 <0.2.0-0' ]
+103 silly lockFile 4d19a677-epoll-0-1-17 epoll@~0.1.17
+104 verbose lock epoll@~0.1.17 /home/pi/.npm/4d19a677-epoll-0-1-17.lock
+105 silly addNameRange { name: 'epoll', range: '>=0.1.17-0 <0.2.0-0', hasData: false }
+106 verbose request where is /epoll
+107 verbose request registry https://registry.npmjs.org/
+108 verbose url raw /epoll
+109 verbose url resolving [ 'https://registry.npmjs.org/', './epoll' ]
+110 verbose url resolved https://registry.npmjs.org/epoll
+111 verbose request where is https://registry.npmjs.org/epoll
+112 info trying registry request attempt 1 at 18:49:57
+113 verbose etag "6WZ73CR3UE3D2D3OPP56GN2SE"
+114 http GET https://registry.npmjs.org/epoll
+115 http 304 https://registry.npmjs.org/epoll
+116 silly registry.get cb [ 304,
+116 silly registry.get   { date: 'Mon, 07 Mar 2016 18:49:57 GMT',
+116 silly registry.get     via: '1.1 varnish',
+116 silly registry.get     'cache-control': 'max-age=300',
+116 silly registry.get     etag: '"6WZ73CR3UE3D2D3OPP56GN2SE"',
+116 silly registry.get     age: '0',
+116 silly registry.get     connection: 'keep-alive',
+116 silly registry.get     'x-served-by': 'cache-ams4145-AMS',
+116 silly registry.get     'x-cache': 'MISS',
+116 silly registry.get     'x-cache-hits': '0',
+116 silly registry.get     'x-timer': 'S1457376597.797837,VS0,VE741',
+116 silly registry.get     vary: 'Accept' } ]
+117 verbose etag https://registry.npmjs.org/epoll from cache
+118 silly addNameRange number 2 { name: 'epoll', range: '>=0.1.17-0 <0.2.0-0', hasData: true }
+119 silly addNameRange versions [ 'epoll',
+119 silly addNameRange   [ '0.0.1',
+119 silly addNameRange     '0.0.2',
+119 silly addNameRange     '0.0.3',
+119 silly addNameRange     '0.0.4',
+119 silly addNameRange     '0.0.5',
+119 silly addNameRange     '0.0.6',
+119 silly addNameRange     '0.0.7',
+119 silly addNameRange     '0.0.8',
+119 silly addNameRange     '0.1.0',
+119 silly addNameRange     '0.1.1',
+119 silly addNameRange     '0.1.2',
+119 silly addNameRange     '0.1.3',
+119 silly addNameRange     '0.1.4',
+119 silly addNameRange     '0.1.5',
+119 silly addNameRange     '0.1.7',
+119 silly addNameRange     '0.1.8',
+119 silly addNameRange     '0.1.9',
+119 silly addNameRange     '0.1.10',
+119 silly addNameRange     '0.1.11',
+119 silly addNameRange     '0.1.12',
+119 silly addNameRange     '0.1.13',
+119 silly addNameRange     '0.1.14',
+119 silly addNameRange     '0.1.15',
+119 silly addNameRange     '0.1.16',
+119 silly addNameRange     '0.1.17' ] ]
+120 verbose addNamed [ 'epoll', '0.1.17' ]
+121 verbose addNamed [ '0.1.17', '0.1.17' ]
+122 silly lockFile b7255f7f-epoll-0-1-17 epoll@0.1.17
+123 verbose lock epoll@0.1.17 /home/pi/.npm/b7255f7f-epoll-0-1-17.lock
+124 silly lockFile b7255f7f-epoll-0-1-17 epoll@0.1.17
+125 silly lockFile b7255f7f-epoll-0-1-17 epoll@0.1.17
+126 silly lockFile 4d19a677-epoll-0-1-17 epoll@~0.1.17
+127 silly lockFile 4d19a677-epoll-0-1-17 epoll@~0.1.17
+128 silly resolved [ { name: 'epoll',
+128 silly resolved     version: '0.1.17',
+128 silly resolved     description: 'A low-level Node.js binding for the Linux epoll API',
+128 silly resolved     main: 'epoll.js',
+128 silly resolved     directories: { example: 'example', test: 'test' },
+128 silly resolved     scripts:
+128 silly resolved      { test: 'echo "Tests can only be run manually from the command line." && exit 1',
+128 silly resolved        install: 'node-gyp rebuild' },
+128 silly resolved     repository: { type: 'git', url: 'git+https://github.com/fivdi/epoll.git' },
+128 silly resolved     engines: { node: '>=0.8.0' },
+128 silly resolved     dependencies: { bindings: '~1.2.1', nan: '~2.2.0' },
+128 silly resolved     keywords:
+128 silly resolved      [ 'epoll',
+128 silly resolved        'epollpri',
+128 silly resolved        'poll',
+128 silly resolved        'pollpri',
+128 silly resolved        'gpio',
+128 silly resolved        'interrupt',
+128 silly resolved        'linux' ],
+128 silly resolved     author: { name: 'fivdi' },
+128 silly resolved     license: 'MIT',
+128 silly resolved     gypfile: true,
+128 silly resolved     gitHead: '39307e6b9ec315a66dd6d2ea983666dd43ac8812',
+128 silly resolved     bugs: { url: 'https://github.com/fivdi/epoll/issues' },
+128 silly resolved     homepage: 'https://github.com/fivdi/epoll#readme',
+128 silly resolved     _id: 'epoll@0.1.17',
+128 silly resolved     _shasum: '6a01e6278895ca5ce776731b5e56b23fe1fb9cfa',
+128 silly resolved     _from: 'epoll@~0.1.17',
+128 silly resolved     _npmVersion: '2.14.4',
+128 silly resolved     _nodeVersion: '4.1.1',
+128 silly resolved     _npmUser: { name: 'fivdi', email: 'fivdiweb@gmail.com' },
+128 silly resolved     maintainers: [ [Object] ],
+128 silly resolved     dist:
+128 silly resolved      { shasum: '6a01e6278895ca5ce776731b5e56b23fe1fb9cfa',
+128 silly resolved        tarball: 'http://registry.npmjs.org/epoll/-/epoll-0.1.17.tgz' },
+128 silly resolved     _resolved: 'https://registry.npmjs.org/epoll/-/epoll-0.1.17.tgz',
+128 silly resolved     readme: 'ERROR: No README data found!' } ]
+129 info install epoll@0.1.17 into /home/pi/hottie/server/node_modules/onoff
+130 info installOne epoll@0.1.17
+131 verbose node_modules/onoff/node_modules/epoll unbuild
+132 verbose tar unpack /home/pi/.npm/epoll/0.1.17/package.tgz
+133 silly lockFile ba3d45eb-modules-onoff-node-modules-epoll tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll
+134 verbose lock tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll /home/pi/.npm/ba3d45eb-modules-onoff-node-modules-epoll.lock
+135 silly lockFile 2b3328df--pi-npm-epoll-0-1-17-package-tgz tar:///home/pi/.npm/epoll/0.1.17/package.tgz
+136 verbose lock tar:///home/pi/.npm/epoll/0.1.17/package.tgz /home/pi/.npm/2b3328df--pi-npm-epoll-0-1-17-package-tgz.lock
+137 silly gunzTarPerm modes [ '755', '644' ]
+138 silly gunzTarPerm extractEntry package.json
+139 silly gunzTarPerm modified mode [ 'package.json', 436, 420 ]
+140 silly gunzTarPerm extractEntry .npmignore
+141 silly gunzTarPerm modified mode [ '.npmignore', 436, 420 ]
+142 silly gunzTarPerm extractEntry README.md
+143 silly gunzTarPerm modified mode [ 'README.md', 436, 420 ]
+144 silly gunzTarPerm extractEntry LICENSE
+145 silly gunzTarPerm modified mode [ 'LICENSE', 436, 420 ]
+146 silly gunzTarPerm extractEntry epoll.js
+147 silly gunzTarPerm modified mode [ 'epoll.js', 436, 420 ]
+148 silly gunzTarPerm extractEntry History.md
+149 silly gunzTarPerm modified mode [ 'History.md', 436, 420 ]
+150 silly gunzTarPerm extractEntry binding.gyp
+151 silly gunzTarPerm modified mode [ 'binding.gyp', 436, 420 ]
+152 silly gunzTarPerm extractEntry example/interrupts-per-second/interrupts-per-second.js
+153 silly gunzTarPerm modified mode [ 'example/interrupts-per-second/interrupts-per-second.js',
+153 silly gunzTarPerm   436,
+153 silly gunzTarPerm   420 ]
+154 silly gunzTarPerm extractEntry example/interrupts-per-second/export
+155 silly gunzTarPerm modified mode [ 'example/interrupts-per-second/export', 509, 493 ]
+156 silly gunzTarPerm extractEntry example/interrupts-per-second/unexport
+157 silly gunzTarPerm modified mode [ 'example/interrupts-per-second/unexport', 509, 493 ]
+158 silly gunzTarPerm extractEntry example/watch-button/watch-button.js
+159 silly gunzTarPerm modified mode [ 'example/watch-button/watch-button.js', 436, 420 ]
+160 silly gunzTarPerm extractEntry example/watch-button/export
+161 silly gunzTarPerm modified mode [ 'example/watch-button/export', 509, 493 ]
+162 silly gunzTarPerm extractEntry example/watch-button/unexport
+163 silly gunzTarPerm modified mode [ 'example/watch-button/unexport', 509, 493 ]
+164 silly gunzTarPerm extractEntry src/epoll.cc
+165 silly gunzTarPerm modified mode [ 'src/epoll.cc', 436, 420 ]
+166 silly gunzTarPerm extractEntry src/epoll.h
+167 silly gunzTarPerm modified mode [ 'src/epoll.h', 436, 420 ]
+168 silly gunzTarPerm extractEntry test/brute-force-leak-check.js
+169 silly gunzTarPerm modified mode [ 'test/brute-force-leak-check.js', 436, 420 ]
+170 silly gunzTarPerm extractEntry test/do-almost-nothing.js
+171 silly gunzTarPerm modified mode [ 'test/do-almost-nothing.js', 436, 420 ]
+172 silly gunzTarPerm extractEntry test/do-nothing.js
+173 silly gunzTarPerm modified mode [ 'test/do-nothing.js', 436, 420 ]
+174 silly gunzTarPerm extractEntry test/no-gc-allowed.js
+175 silly gunzTarPerm modified mode [ 'test/no-gc-allowed.js', 436, 420 ]
+176 silly gunzTarPerm extractEntry test/closed.js
+177 silly gunzTarPerm modified mode [ 'test/closed.js', 436, 420 ]
+178 silly gunzTarPerm extractEntry test/performance-check.js
+179 silly gunzTarPerm modified mode [ 'test/performance-check.js', 436, 420 ]
+180 silly gunzTarPerm extractEntry test/util.js
+181 silly gunzTarPerm modified mode [ 'test/util.js', 436, 420 ]
+182 silly gunzTarPerm extractEntry test/two-shot.js
+183 silly gunzTarPerm modified mode [ 'test/two-shot.js', 436, 420 ]
+184 silly gunzTarPerm extractEntry test/verify-events.js
+185 silly gunzTarPerm modified mode [ 'test/verify-events.js', 436, 420 ]
+186 silly gunzTarPerm extractEntry test/one-shot.js
+187 silly gunzTarPerm modified mode [ 'test/one-shot.js', 436, 420 ]
+188 silly gunzTarPerm extractEntry test/run-tests
+189 silly gunzTarPerm modified mode [ 'test/run-tests', 509, 493 ]
+190 silly lockFile ba3d45eb-modules-onoff-node-modules-epoll tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll
+191 silly lockFile ba3d45eb-modules-onoff-node-modules-epoll tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll
+192 silly lockFile 2b3328df--pi-npm-epoll-0-1-17-package-tgz tar:///home/pi/.npm/epoll/0.1.17/package.tgz
+193 silly lockFile 2b3328df--pi-npm-epoll-0-1-17-package-tgz tar:///home/pi/.npm/epoll/0.1.17/package.tgz
+194 info preinstall epoll@0.1.17
+195 verbose readDependencies using package.json deps
+196 verbose readDependencies using package.json deps
+197 verbose cache add [ 'nan@~2.2.0', null ]
+198 verbose cache add name=undefined spec="nan@~2.2.0" args=["nan@~2.2.0",null]
+199 verbose parsed url { protocol: null,
+199 verbose parsed url   slashes: null,
+199 verbose parsed url   auth: null,
+199 verbose parsed url   host: null,
+199 verbose parsed url   port: null,
+199 verbose parsed url   hostname: null,
+199 verbose parsed url   hash: null,
+199 verbose parsed url   search: null,
+199 verbose parsed url   query: null,
+199 verbose parsed url   pathname: 'nan@~2.2.0',
+199 verbose parsed url   path: 'nan@~2.2.0',
+199 verbose parsed url   href: 'nan@~2.2.0' }
+200 verbose cache add [ 'bindings@~1.2.1', null ]
+201 verbose cache add name=undefined spec="bindings@~1.2.1" args=["bindings@~1.2.1",null]
+202 verbose parsed url { protocol: null,
+202 verbose parsed url   slashes: null,
+202 verbose parsed url   auth: null,
+202 verbose parsed url   host: null,
+202 verbose parsed url   port: null,
+202 verbose parsed url   hostname: null,
+202 verbose parsed url   hash: null,
+202 verbose parsed url   search: null,
+202 verbose parsed url   query: null,
+202 verbose parsed url   pathname: 'bindings@~1.2.1',
+202 verbose parsed url   path: 'bindings@~1.2.1',
+202 verbose parsed url   href: 'bindings@~1.2.1' }
+203 verbose cache add name="nan" spec="~2.2.0" args=["nan","~2.2.0"]
+204 verbose parsed url { protocol: null,
+204 verbose parsed url   slashes: null,
+204 verbose parsed url   auth: null,
+204 verbose parsed url   host: null,
+204 verbose parsed url   port: null,
+204 verbose parsed url   hostname: null,
+204 verbose parsed url   hash: null,
+204 verbose parsed url   search: null,
+204 verbose parsed url   query: null,
+204 verbose parsed url   pathname: '~2.2.0',
+204 verbose parsed url   path: '~2.2.0',
+204 verbose parsed url   href: '~2.2.0' }
+205 verbose addNamed [ 'nan', '~2.2.0' ]
+206 verbose addNamed [ null, '>=2.2.0-0 <2.3.0-0' ]
+207 silly lockFile faa6f8d9-nan-2-2-0 nan@~2.2.0
+208 verbose lock nan@~2.2.0 /home/pi/.npm/faa6f8d9-nan-2-2-0.lock
+209 verbose cache add name="bindings" spec="~1.2.1" args=["bindings","~1.2.1"]
+210 verbose parsed url { protocol: null,
+210 verbose parsed url   slashes: null,
+210 verbose parsed url   auth: null,
+210 verbose parsed url   host: null,
+210 verbose parsed url   port: null,
+210 verbose parsed url   hostname: null,
+210 verbose parsed url   hash: null,
+210 verbose parsed url   search: null,
+210 verbose parsed url   query: null,
+210 verbose parsed url   pathname: '~1.2.1',
+210 verbose parsed url   path: '~1.2.1',
+210 verbose parsed url   href: '~1.2.1' }
+211 verbose addNamed [ 'bindings', '~1.2.1' ]
+212 verbose addNamed [ null, '>=1.2.1-0 <1.3.0-0' ]
+213 silly lockFile b7a61b57-bindings-1-2-1 bindings@~1.2.1
+214 verbose lock bindings@~1.2.1 /home/pi/.npm/b7a61b57-bindings-1-2-1.lock
+215 silly addNameRange { name: 'nan', range: '>=2.2.0-0 <2.3.0-0', hasData: false }
+216 silly addNameRange { name: 'bindings', range: '>=1.2.1-0 <1.3.0-0', hasData: false }
+217 verbose request where is /nan
+218 verbose request registry https://registry.npmjs.org/
+219 verbose url raw /nan
+220 verbose url resolving [ 'https://registry.npmjs.org/', './nan' ]
+221 verbose url resolved https://registry.npmjs.org/nan
+222 verbose request where is https://registry.npmjs.org/nan
+223 info trying registry request attempt 1 at 18:50:02
+224 verbose etag "BAVERG4EG5W3XHF012VJBMBOB"
+225 http GET https://registry.npmjs.org/nan
+226 verbose request where is /bindings
+227 verbose request registry https://registry.npmjs.org/
+228 verbose url raw /bindings
+229 verbose url resolving [ 'https://registry.npmjs.org/', './bindings' ]
+230 verbose url resolved https://registry.npmjs.org/bindings
+231 verbose request where is https://registry.npmjs.org/bindings
+232 info trying registry request attempt 1 at 18:50:02
+233 verbose etag "1LLBF9OH58DLBEL4629U6032D"
+234 http GET https://registry.npmjs.org/bindings
+235 http 304 https://registry.npmjs.org/nan
+236 silly registry.get cb [ 304,
+236 silly registry.get   { date: 'Mon, 07 Mar 2016 18:50:02 GMT',
+236 silly registry.get     via: '1.1 varnish',
+236 silly registry.get     'cache-control': 'max-age=300',
+236 silly registry.get     etag: '"BAVERG4EG5W3XHF012VJBMBOB"',
+236 silly registry.get     age: '283',
+236 silly registry.get     connection: 'keep-alive',
+236 silly registry.get     'x-served-by': 'cache-lcy1132-LCY',
+236 silly registry.get     'x-cache': 'HIT',
+236 silly registry.get     'x-cache-hits': '6',
+236 silly registry.get     'x-timer': 'S1457376602.508811,VS0,VE0',
+236 silly registry.get     vary: 'Accept' } ]
+237 verbose etag https://registry.npmjs.org/nan from cache
+238 http 304 https://registry.npmjs.org/bindings
+239 silly registry.get cb [ 304,
+239 silly registry.get   { date: 'Mon, 07 Mar 2016 18:50:02 GMT',
+239 silly registry.get     via: '1.1 varnish',
+239 silly registry.get     'cache-control': 'max-age=300',
+239 silly registry.get     etag: '"1LLBF9OH58DLBEL4629U6032D"',
+239 silly registry.get     age: '272',
+239 silly registry.get     connection: 'keep-alive',
+239 silly registry.get     'x-served-by': 'cache-lcy1134-LCY',
+239 silly registry.get     'x-cache': 'HIT',
+239 silly registry.get     'x-cache-hits': '4',
+239 silly registry.get     'x-timer': 'S1457376602.533196,VS0,VE0',
+239 silly registry.get     vary: 'Accept' } ]
+240 verbose etag https://registry.npmjs.org/bindings from cache
+241 silly addNameRange number 2 { name: 'nan', range: '>=2.2.0-0 <2.3.0-0', hasData: true }
+242 silly addNameRange versions [ 'nan',
+242 silly addNameRange   [ '0.3.0-wip',
+242 silly addNameRange     '0.3.0-wip2',
+242 silly addNameRange     '0.3.0',
+242 silly addNameRange     '0.3.1',
+242 silly addNameRange     '0.3.2',
+242 silly addNameRange     '0.4.0',
+242 silly addNameRange     '0.4.1',
+242 silly addNameRange     '0.4.2',
+242 silly addNameRange     '0.4.3',
+242 silly addNameRange     '0.4.4',
+242 silly addNameRange     '0.5.0',
+242 silly addNameRange     '0.5.1',
+242 silly addNameRange     '0.5.2',
+242 silly addNameRange     '0.6.0',
+242 silly addNameRange     '0.7.0',
+242 silly addNameRange     '0.7.1',
+242 silly addNameRange     '0.8.0',
+242 silly addNameRange     '1.0.0',
+242 silly addNameRange     '1.1.0',
+242 silly addNameRange     '1.1.1',
+242 silly addNameRange     '1.1.2',
+242 silly addNameRange     '1.2.0',
+242 silly addNameRange     '1.3.0',
+242 silly addNameRange     '1.4.0',
+242 silly addNameRange     '1.4.1',
+242 silly addNameRange     '1.5.0',
+242 silly addNameRange     '1.4.2',
+242 silly addNameRange     '1.4.3',
+242 silly addNameRange     '1.5.1',
+242 silly addNameRange     '1.5.2',
+242 silly addNameRange     '1.6.0',
+242 silly addNameRange     '1.5.3',
+242 silly addNameRange     '1.6.1',
+242 silly addNameRange     '1.6.2',
+242 silly addNameRange     '1.7.0',
+242 silly addNameRange     '1.8.0',
+242 silly addNameRange     '1.8.1',
+242 silly addNameRange     '1.8.2',
+242 silly addNameRange     '1.8.3',
+242 silly addNameRange     '1.8.4',
+242 silly addNameRange     '1.9.0',
+242 silly addNameRange     '2.0.0',
+242 silly addNameRange     '2.0.1',
+242 silly addNameRange     '2.0.2',
+242 silly addNameRange     '2.0.3',
+242 silly addNameRange     '2.0.4',
+242 silly addNameRange     '2.0.5',
+242 silly addNameRange     '2.0.6',
+242 silly addNameRange     '2.0.7',
+242 silly addNameRange     '2.0.8',
+242 silly addNameRange     '2.0.9',
+242 silly addNameRange     '2.1.0',
+242 silly addNameRange     '2.2.0' ] ]
+243 verbose addNamed [ 'nan', '2.2.0' ]
+244 verbose addNamed [ '2.2.0', '2.2.0' ]
+245 silly lockFile 5a654447-nan-2-2-0 nan@2.2.0
+246 verbose lock nan@2.2.0 /home/pi/.npm/5a654447-nan-2-2-0.lock
+247 silly addNameRange number 2 { name: 'bindings', range: '>=1.2.1-0 <1.3.0-0', hasData: true }
+248 silly addNameRange versions [ 'bindings',
+248 silly addNameRange   [ '0.0.1',
+248 silly addNameRange     '0.1.0',
+248 silly addNameRange     '0.1.1',
+248 silly addNameRange     '0.2.0',
+248 silly addNameRange     '0.2.1',
+248 silly addNameRange     '0.2.2',
+248 silly addNameRange     '0.2.3',
+248 silly addNameRange     '0.2.4',
+248 silly addNameRange     '0.3.0',
+248 silly addNameRange     '0.4.0',
+248 silly addNameRange     '1.0.0',
+248 silly addNameRange     '1.1.0',
+248 silly addNameRange     '1.1.1',
+248 silly addNameRange     '1.2.0',
+248 silly addNameRange     '1.2.1' ] ]
+249 verbose addNamed [ 'bindings', '1.2.1' ]
+250 verbose addNamed [ '1.2.1', '1.2.1' ]
+251 silly lockFile e9060511-bindings-1-2-1 bindings@1.2.1
+252 verbose lock bindings@1.2.1 /home/pi/.npm/e9060511-bindings-1-2-1.lock
+253 silly lockFile e9060511-bindings-1-2-1 bindings@1.2.1
+254 silly lockFile e9060511-bindings-1-2-1 bindings@1.2.1
+255 silly lockFile 5a654447-nan-2-2-0 nan@2.2.0
+256 silly lockFile 5a654447-nan-2-2-0 nan@2.2.0
+257 silly lockFile b7a61b57-bindings-1-2-1 bindings@~1.2.1
+258 silly lockFile b7a61b57-bindings-1-2-1 bindings@~1.2.1
+259 silly lockFile faa6f8d9-nan-2-2-0 nan@~2.2.0
+260 silly lockFile faa6f8d9-nan-2-2-0 nan@~2.2.0
+261 silly resolved [ { name: 'bindings',
+261 silly resolved     description: 'Helper module for loading your native module\'s .node file',
+261 silly resolved     keywords: [ 'native', 'addon', 'bindings', 'gyp', 'waf', 'c', 'c++' ],
+261 silly resolved     version: '1.2.1',
+261 silly resolved     author:
+261 silly resolved      { name: 'Nathan Rajlich',
+261 silly resolved        email: 'nathan@tootallnate.net',
+261 silly resolved        url: 'http://tootallnate.net' },
+261 silly resolved     repository:
+261 silly resolved      { type: 'git',
+261 silly resolved        url: 'git://github.com/TooTallNate/node-bindings.git' },
+261 silly resolved     main: './bindings.js',
+261 silly resolved     bugs: { url: 'https://github.com/TooTallNate/node-bindings/issues' },
+261 silly resolved     homepage: 'https://github.com/TooTallNate/node-bindings',
+261 silly resolved     license: 'MIT',
+261 silly resolved     gitHead: 'e404152ee27f8478ccbc7122ee051246e8e5ec02',
+261 silly resolved     _id: 'bindings@1.2.1',
+261 silly resolved     scripts: {},
+261 silly resolved     _shasum: '14ad6113812d2d37d72e67b4cacb4bb726505f11',
+261 silly resolved     _from: 'bindings@~1.2.1',
+261 silly resolved     _npmVersion: '1.4.14',
+261 silly resolved     _npmUser: { name: 'tootallnate', email: 'nathan@tootallnate.net' },
+261 silly resolved     maintainers: [ [Object], [Object] ],
+261 silly resolved     dist:
+261 silly resolved      { shasum: '14ad6113812d2d37d72e67b4cacb4bb726505f11',
+261 silly resolved        tarball: 'http://registry.npmjs.org/bindings/-/bindings-1.2.1.tgz' },
+261 silly resolved     directories: {},
+261 silly resolved     _resolved: 'https://registry.npmjs.org/bindings/-/bindings-1.2.1.tgz',
+261 silly resolved     readme: 'ERROR: No README data found!' },
+261 silly resolved   { name: 'nan',
+261 silly resolved     version: '2.2.0',
+261 silly resolved     description: 'Native Abstractions for Node.js: C++ header for Node 0.8 -> 4 compatibility',
+261 silly resolved     main: 'include_dirs.js',
+261 silly resolved     repository: { type: 'git', url: 'git://github.com/nodejs/nan.git' },
+261 silly resolved     scripts:
+261 silly resolved      { test: 'tap --gc test/js/*-test.js',
+261 silly resolved        'rebuild-tests': 'node-gyp rebuild --msvs_version=2013 --directory test',
+261 silly resolved        docs: 'doc/.build.sh' },
+261 silly resolved     contributors:
+261 silly resolved      [ [Object],
+261 silly resolved        [Object],
+261 silly resolved        [Object],
+261 silly resolved        [Object],
+261 silly resolved        [Object],
+261 silly resolved        [Object],
+261 silly resolved        [Object] ],
+261 silly resolved     devDependencies:
+261 silly resolved      { bindings: '~1.2.1',
+261 silly resolved        commander: '^2.8.1',
+261 silly resolved        glob: '^5.0.14',
+261 silly resolved        'node-gyp': '~3.0.1',
+261 silly resolved        tap: '~0.7.1',
+261 silly resolved        xtend: '~4.0.0' },
+261 silly resolved     license: 'MIT',
+261 silly resolved     bugs: { url: 'https://github.com/nodejs/nan/issues' },
+261 silly resolved     homepage: 'https://github.com/nodejs/nan#readme',
+261 silly resolved     _id: 'nan@2.2.0',
+261 silly resolved     _shasum: '779c07135629503cf6a7b7e6aab33049b3c3853c',
+261 silly resolved     _resolved: 'https://registry.npmjs.org/nan/-/nan-2.2.0.tgz',
+261 silly resolved     _from: 'nan@~2.2.0',
+261 silly resolved     _npmVersion: '3.3.6',
+261 silly resolved     _nodeVersion: '5.0.0',
+261 silly resolved     _npmUser: { name: 'kkoopa', email: 'bbyholm@abo.fi' },
+261 silly resolved     dist:
+261 silly resolved      { shasum: '779c07135629503cf6a7b7e6aab33049b3c3853c',
+261 silly resolved        tarball: 'http://registry.npmjs.org/nan/-/nan-2.2.0.tgz' },
+261 silly resolved     maintainers: [ [Object], [Object] ],
+261 silly resolved     directories: {},
+261 silly resolved     readme: 'ERROR: No README data found!' } ]
+262 info install bindings@1.2.1 into /home/pi/hottie/server/node_modules/onoff/node_modules/epoll
+263 info install nan@2.2.0 into /home/pi/hottie/server/node_modules/onoff/node_modules/epoll
+264 info installOne bindings@1.2.1
+265 info installOne nan@2.2.0
+266 verbose node_modules/onoff/node_modules/epoll/node_modules/bindings unbuild
+267 verbose node_modules/onoff/node_modules/epoll/node_modules/nan unbuild
+268 verbose tar unpack /home/pi/.npm/bindings/1.2.1/package.tgz
+269 silly lockFile 4304f68a-ules-epoll-node-modules-bindings tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/bindings
+270 verbose lock tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/bindings /home/pi/.npm/4304f68a-ules-epoll-node-modules-bindings.lock
+271 silly lockFile 2dc3eda1-i-npm-bindings-1-2-1-package-tgz tar:///home/pi/.npm/bindings/1.2.1/package.tgz
+272 verbose lock tar:///home/pi/.npm/bindings/1.2.1/package.tgz /home/pi/.npm/2dc3eda1-i-npm-bindings-1-2-1-package-tgz.lock
+273 verbose tar unpack /home/pi/.npm/nan/2.2.0/package.tgz
+274 silly lockFile 7fcfc235-e-modules-epoll-node-modules-nan tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/nan
+275 verbose lock tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/nan /home/pi/.npm/7fcfc235-e-modules-epoll-node-modules-nan.lock
+276 silly lockFile f072e436-ome-pi-npm-nan-2-2-0-package-tgz tar:///home/pi/.npm/nan/2.2.0/package.tgz
+277 verbose lock tar:///home/pi/.npm/nan/2.2.0/package.tgz /home/pi/.npm/f072e436-ome-pi-npm-nan-2-2-0-package-tgz.lock
+278 silly gunzTarPerm modes [ '755', '644' ]
+279 silly gunzTarPerm modes [ '755', '644' ]
+280 silly gunzTarPerm extractEntry package.json
+281 silly gunzTarPerm extractEntry package.json
+282 silly gunzTarPerm modified mode [ 'package.json', 436, 420 ]
+283 silly gunzTarPerm extractEntry README.md
+284 silly gunzTarPerm extractEntry bindings.js
+285 silly gunzTarPerm extractEntry README.md
+286 silly gunzTarPerm modified mode [ 'README.md', 436, 420 ]
+287 silly gunzTarPerm extractEntry include_dirs.js
+288 silly gunzTarPerm modified mode [ 'include_dirs.js', 436, 420 ]
+289 silly gunzTarPerm extractEntry nan_converters.h
+290 silly gunzTarPerm modified mode [ 'nan_converters.h', 436, 420 ]
+291 silly gunzTarPerm extractEntry LICENSE.md
+292 silly gunzTarPerm modified mode [ 'LICENSE.md', 436, 420 ]
+293 silly lockFile 4304f68a-ules-epoll-node-modules-bindings tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/bindings
+294 silly lockFile 4304f68a-ules-epoll-node-modules-bindings tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/bindings
+295 silly lockFile 2dc3eda1-i-npm-bindings-1-2-1-package-tgz tar:///home/pi/.npm/bindings/1.2.1/package.tgz
+296 silly lockFile 2dc3eda1-i-npm-bindings-1-2-1-package-tgz tar:///home/pi/.npm/bindings/1.2.1/package.tgz
+297 info preinstall bindings@1.2.1
+298 verbose readDependencies using package.json deps
+299 verbose readDependencies using package.json deps
+300 silly resolved []
+301 verbose about to build /home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/bindings
+302 info build /home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/bindings
+303 verbose linkStuff [ false,
+303 verbose linkStuff   false,
+303 verbose linkStuff   false,
+303 verbose linkStuff   '/home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules' ]
+304 info linkStuff bindings@1.2.1
+305 verbose linkBins bindings@1.2.1
+306 verbose linkMans bindings@1.2.1
+307 verbose rebuildBundles bindings@1.2.1
+308 info install bindings@1.2.1
+309 info postinstall bindings@1.2.1
+310 silly gunzTarPerm extractEntry .dntrc
+311 silly gunzTarPerm modified mode [ '.dntrc', 436, 420 ]
+312 silly gunzTarPerm extractEntry appveyor.yml
+313 silly gunzTarPerm modified mode [ 'appveyor.yml', 436, 420 ]
+314 silly gunzTarPerm extractEntry doc/new.md
+315 silly gunzTarPerm modified mode [ 'doc/new.md', 436, 420 ]
+316 silly gunzTarPerm extractEntry doc/.build.sh
+317 silly gunzTarPerm modified mode [ 'doc/.build.sh', 509, 493 ]
+318 silly gunzTarPerm extractEntry doc/buffers.md
+319 silly gunzTarPerm modified mode [ 'doc/buffers.md', 436, 420 ]
+320 silly gunzTarPerm extractEntry doc/callback.md
+321 silly gunzTarPerm modified mode [ 'doc/callback.md', 436, 420 ]
+322 silly gunzTarPerm extractEntry doc/converters.md
+323 silly gunzTarPerm modified mode [ 'doc/converters.md', 436, 420 ]
+324 silly gunzTarPerm extractEntry doc/errors.md
+325 silly gunzTarPerm modified mode [ 'doc/errors.md', 436, 420 ]
+326 silly gunzTarPerm extractEntry doc/maybe_types.md
+327 silly gunzTarPerm modified mode [ 'doc/maybe_types.md', 436, 420 ]
+328 silly gunzTarPerm extractEntry doc/methods.md
+329 silly gunzTarPerm modified mode [ 'doc/methods.md', 436, 420 ]
+330 silly gunzTarPerm extractEntry doc/asyncworker.md
+331 silly gunzTarPerm modified mode [ 'doc/asyncworker.md', 436, 420 ]
+332 silly gunzTarPerm extractEntry doc/node_misc.md
+333 silly gunzTarPerm modified mode [ 'doc/node_misc.md', 436, 420 ]
+334 silly gunzTarPerm extractEntry doc/object_wrappers.md
+335 silly gunzTarPerm modified mode [ 'doc/object_wrappers.md', 436, 420 ]
+336 silly gunzTarPerm extractEntry doc/persistent.md
+337 silly gunzTarPerm modified mode [ 'doc/persistent.md', 436, 420 ]
+338 silly gunzTarPerm extractEntry doc/scopes.md
+339 silly gunzTarPerm modified mode [ 'doc/scopes.md', 436, 420 ]
+340 silly gunzTarPerm extractEntry doc/script.md
+341 silly gunzTarPerm modified mode [ 'doc/script.md', 436, 420 ]
+342 silly gunzTarPerm extractEntry doc/string_bytes.md
+343 silly gunzTarPerm modified mode [ 'doc/string_bytes.md', 436, 420 ]
+344 silly gunzTarPerm extractEntry doc/v8_internals.md
+345 silly gunzTarPerm modified mode [ 'doc/v8_internals.md', 436, 420 ]
+346 silly gunzTarPerm extractEntry doc/v8_misc.md
+347 silly gunzTarPerm modified mode [ 'doc/v8_misc.md', 436, 420 ]
+348 silly gunzTarPerm extractEntry nan.h
+349 silly gunzTarPerm modified mode [ 'nan.h', 436, 420 ]
+350 silly gunzTarPerm extractEntry nan_callbacks.h
+351 silly gunzTarPerm modified mode [ 'nan_callbacks.h', 436, 420 ]
+352 silly gunzTarPerm extractEntry nan_callbacks_12_inl.h
+353 silly gunzTarPerm modified mode [ 'nan_callbacks_12_inl.h', 436, 420 ]
+354 silly gunzTarPerm extractEntry nan_callbacks_pre_12_inl.h
+355 silly gunzTarPerm modified mode [ 'nan_callbacks_pre_12_inl.h', 436, 420 ]
+356 silly gunzTarPerm extractEntry nan_converters_43_inl.h
+357 silly gunzTarPerm modified mode [ 'nan_converters_43_inl.h', 436, 420 ]
+358 silly gunzTarPerm extractEntry nan_converters_pre_43_inl.h
+359 silly gunzTarPerm modified mode [ 'nan_converters_pre_43_inl.h', 436, 420 ]
+360 silly gunzTarPerm extractEntry nan_implementation_12_inl.h
+361 silly gunzTarPerm modified mode [ 'nan_implementation_12_inl.h', 436, 420 ]
+362 silly gunzTarPerm extractEntry nan_implementation_pre_12_inl.h
+363 silly gunzTarPerm modified mode [ 'nan_implementation_pre_12_inl.h', 436, 420 ]
+364 silly gunzTarPerm extractEntry nan_maybe_43_inl.h
+365 silly gunzTarPerm modified mode [ 'nan_maybe_43_inl.h', 436, 420 ]
+366 silly gunzTarPerm extractEntry nan_maybe_pre_43_inl.h
+367 silly gunzTarPerm modified mode [ 'nan_maybe_pre_43_inl.h', 436, 420 ]
+368 silly gunzTarPerm extractEntry nan_new.h
+369 silly gunzTarPerm modified mode [ 'nan_new.h', 436, 420 ]
+370 silly gunzTarPerm extractEntry nan_object_wrap.h
+371 silly gunzTarPerm modified mode [ 'nan_object_wrap.h', 436, 420 ]
+372 silly gunzTarPerm extractEntry nan_persistent_12_inl.h
+373 silly gunzTarPerm modified mode [ 'nan_persistent_12_inl.h', 436, 420 ]
+374 silly gunzTarPerm extractEntry nan_persistent_pre_12_inl.h
+375 silly gunzTarPerm modified mode [ 'nan_persistent_pre_12_inl.h', 436, 420 ]
+376 silly gunzTarPerm extractEntry nan_string_bytes.h
+377 silly gunzTarPerm modified mode [ 'nan_string_bytes.h', 436, 420 ]
+378 silly gunzTarPerm extractEntry nan_typedarray_contents.h
+379 silly gunzTarPerm modified mode [ 'nan_typedarray_contents.h', 436, 420 ]
+380 silly gunzTarPerm extractEntry nan_weak.h
+381 silly gunzTarPerm modified mode [ 'nan_weak.h', 436, 420 ]
+382 silly gunzTarPerm extractEntry CHANGELOG.md
+383 silly gunzTarPerm modified mode [ 'CHANGELOG.md', 436, 420 ]
+384 silly gunzTarPerm extractEntry tools/package.json
+385 silly gunzTarPerm modified mode [ 'tools/package.json', 436, 420 ]
+386 silly gunzTarPerm extractEntry tools/README.md
+387 silly gunzTarPerm modified mode [ 'tools/README.md', 436, 420 ]
+388 silly gunzTarPerm extractEntry tools/1to2.js
+389 silly gunzTarPerm modified mode [ 'tools/1to2.js', 509, 493 ]
+390 silly lockFile 7fcfc235-e-modules-epoll-node-modules-nan tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/nan
+391 silly lockFile 7fcfc235-e-modules-epoll-node-modules-nan tar:///home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/nan
+392 silly lockFile f072e436-ome-pi-npm-nan-2-2-0-package-tgz tar:///home/pi/.npm/nan/2.2.0/package.tgz
+393 silly lockFile f072e436-ome-pi-npm-nan-2-2-0-package-tgz tar:///home/pi/.npm/nan/2.2.0/package.tgz
+394 info preinstall nan@2.2.0
+395 verbose readDependencies using package.json deps
+396 verbose readDependencies using package.json deps
+397 silly resolved []
+398 verbose about to build /home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/nan
+399 info build /home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules/nan
+400 verbose linkStuff [ false,
+400 verbose linkStuff   false,
+400 verbose linkStuff   false,
+400 verbose linkStuff   '/home/pi/hottie/server/node_modules/onoff/node_modules/epoll/node_modules' ]
+401 info linkStuff nan@2.2.0
+402 verbose linkBins nan@2.2.0
+403 verbose linkMans nan@2.2.0
+404 verbose rebuildBundles nan@2.2.0
+405 info install nan@2.2.0
+406 info postinstall nan@2.2.0
+407 verbose about to build /home/pi/hottie/server/node_modules/onoff/node_modules/epoll
+408 info build /home/pi/hottie/server/node_modules/onoff/node_modules/epoll
+409 verbose linkStuff [ false,
+409 verbose linkStuff   false,
+409 verbose linkStuff   false,
+409 verbose linkStuff   '/home/pi/hottie/server/node_modules/onoff/node_modules' ]
+410 info linkStuff epoll@0.1.17
+411 verbose linkBins epoll@0.1.17
+412 verbose linkMans epoll@0.1.17
+413 verbose rebuildBundles epoll@0.1.17
+414 verbose rebuildBundles [ 'bindings', 'nan' ]
+415 info install epoll@0.1.17
+416 verbose unsafe-perm in lifecycle true
+417 info epoll@0.1.17 Failed to exec install script
+418 verbose node_modules/onoff/node_modules/epoll unbuild
+419 warn This failure might be due to the use of legacy binary "node"
+420 warn For further explanations, please read
+/usr/share/doc/nodejs/README.Debian
+421 info preuninstall epoll@0.1.17
+422 info uninstall epoll@0.1.17
+423 verbose false,/home/pi/hottie/server/node_modules,/home/pi/hottie/server/node_modules/onoff/node_modules unbuild epoll@0.1.17
+424 info postuninstall epoll@0.1.17
+425 verbose about to build /home/pi/hottie/server/node_modules/onoff
+426 verbose node_modules/onoff unbuild
+427 info preuninstall onoff@1.0.4
+428 info uninstall onoff@1.0.4
+429 verbose true,/home/pi/hottie/server/node_modules,/home/pi/hottie/server/node_modules unbuild onoff@1.0.4
+430 info postuninstall onoff@1.0.4
+431 error epoll@0.1.17 install: `node-gyp rebuild`
+431 error Exit status 1
+432 error Failed at the epoll@0.1.17 install script.
+432 error This is most likely a problem with the epoll package,
+432 error not with npm itself.
+432 error Tell the author that this fails on your system:
+432 error     node-gyp rebuild
+432 error You can get their info via:
+432 error     npm owner ls epoll
+432 error There is likely additional logging output above.
+433 error System Linux 4.1.18+
+434 error command "/usr/bin/nodejs" "/usr/bin/npm" "install" "onoff"
+435 error cwd /home/pi/hottie/server
+436 error node -v v0.10.29
+437 error npm -v 1.4.21
+438 error code ELIFECYCLE
+439 verbose exit [ 1, true ]

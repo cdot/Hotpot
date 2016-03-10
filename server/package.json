@@ -10,7 +10,7 @@
     "bin": { "module-name": "./Hottie.js" },
     "main": { "module-name": "./Hottie.js" },
     "license": "MIT",
-    "keywords": {
+    "keywords": [
         "gpio",
         "raspberry",
         "raspi",
@@ -19,7 +19,7 @@
         "heating",
         "control",
         "pi"
-    },
+    ],
     "dependencies": {
         "node-getopt": "0.2.3",
         "onoff": "1.0.4",

@@ -1,7 +1,7 @@
 # Copyright (C) 2016 Crawford Currie http://c-dot.co.uk / MIT
 
 SOURCES := \
-	Hottie.js \
+	Hotpot.js \
 	Server.js\
 	Controller.js\
 	PinController.js\
