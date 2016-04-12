@@ -1,0 +1,20 @@
+(function($) {
+    var populate = function(sensor, data) {
+        data = data[sensor];
+        for (var k in data) {
+            $("#" + sensor + ":" + k).each(function() {
+                this.text(data[k]);
+            });
+        }
+    };
+
+    var ping = function() {
+        $.getJSON("192.168.1.16", function(data) {
+            populate("HW", data);
+            populate("CH", data);
+        });
+        setTimeout(ping, 1000);
+    };
+
+    ping();
+})(jQuery);
