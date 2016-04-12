@@ -85,3 +85,19 @@ Rules functions can also interrogate other thermostats using the controller. For
 ```
 # HTTP interface
 The HTTP interface supports GET and POST requests.
+
+# Configuring the Hardware
+
+The included diagram "5V-3.5V control.svg" shows the wiring I use. Note that the
+pin used for the temperature sensors has to be changed in /boot/config.txt,
+thus:
+
+```
+# 1-wire settings
+dtoverlay=w1-gpio,gpiopin=18
+```
+You can see what sensors are configured using 
+```
+ls /sys/bus/w1/devices/w1_bus_master1
+```
+Expect to see devices such as 28-0316027f81ff

@@ -84,6 +84,16 @@ function Controller(config, when_ready) {
 }
 module.exports = Controller;
 
+Controller.prototype.DESTROY = function() {
+    for (k in this.pin) {
+        this.pin[k].DESTROY();
+    }
+
+    for (k in this.thermostat) {
+        this.thermostat[k].DESTROY();
+    }
+};
+
 /**
  * @private
  * Set the on/off state of the system.

@@ -1,5 +1,7 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
+var Fs = require("fs");
+
 /**
  * Control pins
  *
@@ -8,25 +10,38 @@
 function PinController(name, pin) {
     "use strict";
 
-    var Gpio;
-    this.name = name;
+    var self = this;
+    self.name = name;
+    self.pin = pin;
+    console.log("Creating controller for pin " + pin);
+    var ok = false;
     try {
-        Gpio = require("onoff").Gpio;
-        this.Gpio = new Gpio(pin, "out");
+	Fs.lstatSync("/sys/class/gpio/gpio" + pin);
+        console.log("Pin already exported");
     } catch (e) {
-        console.error(e.message);
-        console.error("Gpio not available, using test pins ");
-        Gpio = require("./TestSupport.js").Gpio;
-        this.Gpio = new Gpio(pin, name);
+        console.log("export pin " + pin);
+        Fs.writeFileSync("/sys/class/gpio/export", pin);
     }
-    this.set(0);
+    self.setFeature("direction", "out");
+    self.set(0);
 }
 module.exports = PinController;
+
+PinController.prototype.DESTROY = function() {
+    console.log("unexport pin " + pin);
+    Fs.writeFileSync("/sys/class/gpio/unexport", pin);
+};
+
+PinController.prototype.setFeature = function(feature, value) {
+    "use strict";
+    console.log("Set pin " + this.pin + " " + feature + "=" + value);
+    Fs.writeFileSync("/sys/class/gpio/gpio" + this.pin + "/" + feature, value);
+}
 
 PinController.prototype.set = function(state) {
     "use strict";
     this.state = state;
-    this.Gpio.writeSync(state);
+    this.setFeature("value", state ? 1 : 0);
 };
 
 PinController.prototype.state = function() {

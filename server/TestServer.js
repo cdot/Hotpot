@@ -1,5 +1,6 @@
 // Unit tests for Hottie HTTP server
 // Need a fresh server running on 13196
+// This code talks to the server
 const HTTP = require("http");
 const assert = require("assert");
 

@@ -64,7 +64,6 @@ Server.prototype.POST = function(server, request, response) {
             response.statusCode = 200;
             response.end();
         } catch (e) {
-console.error("WANKER " + e);
             console.error(e + " in " + json);
             response.write(e + " in " + json + "\n");
             response.statusCode = 400;

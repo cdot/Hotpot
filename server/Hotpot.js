@@ -1,4 +1,5 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+const CONFIG_FILE = process.env.HOME + "/.config/Hotpot/config.json";
 const DESCRIPTION =
 "DESCRIPTION\nA Raspberry PI central heating control server.\n" +
 "See README.md for details\n\nOPTIONS\n";
@@ -6,36 +7,15 @@ const DESCRIPTION =
 const Getopt = require("node-getopt");
 const Server = require("./Server.js");
 const Controller = require("./Controller.js");
+const Fs = require("fs");
 
 /** Main program */
 (function () {
     "use strict";
 
-    // Default config
-    var config = {
-        port: 13196,
-        valve_return: 5, // return time, in seconds
-        device: {
-            HW: "28-0115914ff5ff",
-            CH: "28-0316027f81ff"
-        },
-        gpio: {
-            CH: 4, // GPIO pin number
-            HW: 5  // GPIO pin number
-        },
-        temperature: {
-            HW: 20,
-            CH: 20
-        },
-        window: {
-            HW: 5,
-            CH: 5
-        },
-        rules: {
-            HW: "hot_water.rules",
-            CH: "central_heating.rules"
-        }
-    };
+    // Load config
+    var data = Fs.readFileSync(CONFIG_FILE, "utf8");
+    var config = JSON.parse(data);
 
     var opt = Getopt.create([
         [ "h", "help", "Show this help" ],
@@ -66,6 +46,9 @@ const Controller = require("./Controller.js");
 
     console.info(opt);
 
+    var instantiateEnv = function(s) {
+    };
+
     // process CH=N style options
     [ "gpio", "device", "temperature", "rules" ].forEach(function(opn) {
         var optval = opt.options[opn];
@@ -93,6 +76,16 @@ const Controller = require("./Controller.js");
         config[k] = opt.options[k];
     }
 
+    for (var k in config.rules) {
+	config.rules[k] = config.rules[k].replace(
+	    /(\$[A-Z]+)/g, function(match) {
+	    var v = match.substring(1);
+	    if (typeof process.env[v] !== "undefined")
+	       return process.env[v];
+	    return match;
+	});
+    }
+
     // 0: initialisation
     // 1: pin on/off
     // 2: command tracing
@@ -105,8 +98,14 @@ const Controller = require("./Controller.js");
 
     // Start the controller and when it's ready, start an HTTP server
     // to receive commands for it.
-    new Controller(config, function() {
-        new Server(config.port, this);
-    });
-
+    var controller;
+    try {
+	controller = new Controller(config, function() {
+	        new Server(config.port, this);
+	});
+    } catch (e) {
+	console.error(e.message);
+	if (controller)
+	    controller.DESTROY();
+    }
 })();

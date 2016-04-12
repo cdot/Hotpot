@@ -62,6 +62,7 @@ function Thermostat(name, id, target, window) {
     this.window = 0;  // slack window
     this.rules = [];  // activation rules
     this.rules_enabled = true;
+    this.live = true;
     if (typeof target !== "undefined")
         this.set_target(target);
     if (typeof window !== "undefined")
@@ -82,6 +83,10 @@ function Thermostat(name, id, target, window) {
 }
 util.inherits(Thermostat, EventEmitter);
 module.exports = Thermostat;
+
+Thermostat.prototype.DESTROY = function() {
+    this.live = false;
+};
 
 /**
  * Set target temperature.
@@ -114,6 +119,10 @@ Thermostat.prototype.set_window = function(window) {
 // Private function for polling thermometers
 Thermostat.prototype.poll = function() {
     "use strict";
+
+    if (!this.live)
+	return; // shut down the poll loop
+
     var self = this;
     //console.log("Poll " + this.id);
     ds18x20.get(this.id, function(err, temp) {
@@ -145,6 +154,7 @@ Thermostat.prototype.poll = function() {
 
 /**
  * Get the current temperature
+ * @return the current termperature sensed by the device
  */
 Thermostat.prototype.temperature = function() {
     "use strict";

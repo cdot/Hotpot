@@ -2,6 +2,8 @@
 
 // Test support
 
+const assert = require('assert');
+
 // Global object that records current pin state
 var pinstate = {};
 
@@ -23,19 +25,21 @@ DS18x20.prototype.get = function(id, fn) {
         return this.cur;
 };
 
-function Gpio(pin, name) {
-    this.pin = pin;
-    this.name = name;
-    pinstate[this.name] = 0;
+function Wpi() {
 }
 
-Gpio.prototype.writeSync = function(n) {
-    pinstate[this.name] = n;
-    console.TRACE(3, "SET GPIO: " + this.pin + "(" + this.name + ") = " + n);
+Wpi.prototype.setup = function(shat) {
+    if (shat !== "gpio")
+        debugger;
+}
+
+Wpi.prototype.digitalWrite = function(pin, state) {
+    pinstate[pin] = state;
+    console.TRACE(3, "SET GPIO: " + pin + " = " + state);
 };
 
 module.exports = {
-    Gpio: Gpio,
+    Wpi: Wpi,
     DS18x20: DS18x20,
     pinstate: pinstate
 };
