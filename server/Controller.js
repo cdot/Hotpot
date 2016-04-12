@@ -147,7 +147,10 @@ Controller.prototype.set = function(channel, on, respond) {
 Controller.prototype.get_status = function() {
     "use strict";
 
-    var struct = {};
+    var struct = {
+	time: new Date().toGMTString()
+    };
+
     var serialize = function(cv) {
         return "" + cv;
     };

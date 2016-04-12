@@ -40,6 +40,11 @@ Server.prototype.GET = function(server, request, response) {
     "use strict";
 
     console.TRACE(2, "Processing GET");
+    response.writeHead(200, "OK",
+ 	{
+	    "Access-Control-Allow-Origin": null,
+	    "Access-Control-Allow-Methods": "POST, GET"
+	});
     response.statusCode = 200;
     response.write(JSON.stringify(this.controller.get_status()));
     response.end();
