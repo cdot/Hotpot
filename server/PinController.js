@@ -14,7 +14,7 @@ function PinController(name, pin) {
     self.name = name;
     self.pin = pin;
 
-    console.TRACE(4, "Creating controller for pin " + pin);
+    console.TRACE("init", "Creating controller for pin " + pin);
     
     var init = function() {
         self.setFeature("direction", "out", function() {
@@ -24,10 +24,10 @@ function PinController(name, pin) {
     
     try {
 	Fs.lstatSync("/sys/class/gpio/gpio" + pin);
-        console.TRACE(4, "Pin already exported");
+        console.TRACE("init", "Pin already exported");
         init();
     } catch (e) {
-        console.TRACE(4, "export pin " + pin);
+        console.TRACE("init", "export pin " + pin);
         Fs.writeFile("/sys/class/gpio/export",
                      pin,
                      init);
@@ -36,13 +36,13 @@ function PinController(name, pin) {
 module.exports = PinController;
 
 PinController.prototype.DESTROY = function() {
-    console.TRACE(4, "unexport pin " + pin);
+    console.TRACE("init", "unexport pin " + pin);
     Fs.writeFile("/sys/class/gpio/unexport", pin, function() {});
 };
 
 PinController.prototype.setFeature = function(feature, value, callback) {
     "use strict";
-    console.TRACE(4, "Set pin " + this.pin + " " + feature + "=" + value);
+    console.TRACE("change", "Set pin " + this.pin + " " + feature + "=" + value);
     if (typeof callback === "undefined")
         callback = function() {};
     Fs.writeFile("/sys/class/gpio/gpio" + this.pin + "/" + feature,

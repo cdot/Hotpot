@@ -33,12 +33,12 @@ function Server(config, controller) {
         options.key = Fs.readFileSync(config.server.key)
         if (typeof config.server.cert !== "undefined")
             options.cert = Fs.readFileSync(config.server.cert);
-        console.TRACE(0, "HTTPS starting on port " + config.server.port
+        console.TRACE("server", "HTTPS starting on port " + config.server.port
                      + " with key " + config.server.key);
     
         server = require("https").createServer(options, handler);
     } else {
-        console.TRACE(0, "HTTP starting on port " + config.server.port);
+        console.TRACE("server", "HTTP starting on port " + config.server.port);
         server = require("http").createServer(handler);
     }
     server.listen(config.server.port);
@@ -53,11 +53,11 @@ function Server(config, controller) {
 Server.prototype.GET = function(server, request, response) {
     "use strict";
 
-    console.TRACE(2, "Processing GET");
+    //console.TRACE("server", "Processing GET");
     response.writeHead(200, "OK",
  	{
 	    "Access-Control-Allow-Origin": null,
-	    "Access-Control-Allow-Methods": "POST, GET"
+	    "Access-Control-Allow-Methods": "POST,GET"
 	});
     response.statusCode = 200;
     response.write(JSON.stringify(this.controller.get_status()));
@@ -75,11 +75,16 @@ Server.prototype.POST = function(server, request, response) {
         body.push(chunk);
     }).on("end", function() {
         var json = Buffer.concat(body).toString();
-        console.TRACE(2, "Processing POST " + json);
+        console.TRACE("server", "Processing POST " + json);
         // TODO: decrypt request
         try {
             var data = JSON.parse(json);
             self.controller.execute_command(data);
+            response.writeHead(200, "OK",
+ 	                       {
+	                           "Access-Control-Allow-Origin": null,
+	                           "Access-Control-Allow-Methods": "POST,GET"
+	                       });
             response.statusCode = 200;
             response.end();
         } catch (e) {

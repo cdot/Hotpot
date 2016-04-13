@@ -17,7 +17,7 @@ DS18x20.prototype.get = function(id, fn) {
         this.cur += Math.random();
     else
         this.cur -= Math.random();
-    console.TRACE(3, "GET DS18x20: " + id + ": " + this.mapID[id] +
+    console.TRACE("debug", "GET DS18x20: " + id + ": " + this.mapID[id] +
                   "(" + pinstate[this.mapID[id]] + ")=" + this.cur);
     if (fn)
         fn(null, this.cur);
@@ -35,7 +35,7 @@ Wpi.prototype.setup = function(shat) {
 
 Wpi.prototype.digitalWrite = function(pin, state) {
     pinstate[pin] = state;
-    console.TRACE(3, "SET GPIO: " + pin + " = " + state);
+    console.TRACE("debug", "SET GPIO: " + pin + " = " + state);
 };
 
 module.exports = {

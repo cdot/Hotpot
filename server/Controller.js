@@ -26,21 +26,22 @@ function Controller(config, when_ready) {
         self.pin[k] = new PinController(k, config.gpio[k]);
     }
 
-    // Create thermostats
-    self.thermostat = {};
+    // Command handlers
     var switch_on = function(id, cur) {
-        console.TRACE(1, id + " ON, " + cur + " < "
+        console.TRACE("change", id + " ON, " + cur + " < "
                     + (config.temperature[id]
                        + config.window[id] / 2));
         self.set(id, true);
     };
     var switch_off = function(id, cur) {
-        console.TRACE(1, id + " OFF, " + cur + " > "
+        console.TRACE("change", id + " OFF, " + cur + " > "
                     + (config.temperature[id]
                        - config.window[id] / 2));
         self.set(id, false);
     };
-
+    
+    // Create thermostats
+    self.thermostat = {};
     for (k in config.device) {
         var th = new Thermostat(k,
                                 config.device[k],
@@ -53,7 +54,7 @@ function Controller(config, when_ready) {
 
     // Load rules for thermostats
     for (k in config.rules) {
-        console.TRACE(0, "Loading rules for " + k + " from "
+        console.TRACE("init", "Loading rules for " + k + " from "
                       + config.rules[k]);
         var data = Fs.readFileSync(config.rules[k], "utf8");
         try {
@@ -107,9 +108,7 @@ Controller.prototype.set = function(channel, on, respond) {
 
     var self = this;
     if (this.pending) {
-        console.TRACE(2, "Request backing off");
         setTimeout(function() {
-            console.TRACE(2, "Backed off awakens");
             self.set(channel, on, respond);
         }, this.valve_return * 1000);
     }
@@ -170,53 +169,55 @@ Controller.prototype.get_status = function() {
 /**
  * Command handler for a command that modifies the configuration
  * of the controller.
- * @param struct structure comtaining the command e.g.
- * { command: "disable_rules", thermostat: "name" }
- * { command: "enable_rules", thermostat: "name" }
- * { command: "insert_rule", thermostat: "name", name: "rule name", test: "function text" }
- * { command: "remove_rule", thermostat: "name", name: "rule name" }
- * { command: "set_window", thermostat: "name", number: width }
- * { command: "set_target", thermostat: "name", number: temp }
+ * @param struct structure containing the command e.g.
+ * { command: "disable_rules", id: "name" }
+ * { command: "enable_rules", id: "name" }
+ * { command: "insert_rule", id: "name", name: "rule name", test: "function text" }
+ * { command: "remove_rule", id: "name", name: "rule name" }
+ * { command: "set_window", id: "name", number: width }
+ * { command: "set_target", id: "name", number: temp }
+ * { command: "set_state", id: "name", number: state }
  */
-Controller.prototype.execute_command = function(struct) {
+Controller.prototype.execute_command = function(command) {
     "use strict";
 
     var self = this;
 
-    for (var k in struct) {
-        var command = struct[k];
-        var th = self.thermostat[command.thermostat];
-        switch (command.command) {
-        case "disable_rules":
-            th.enable_rules(false);
-            break;
-        case "enable_rules":
-            th.enable_rules(true);
-            break;
-        case "remove_rule":
-            th.remove_rule(command.name);
-            break;
-        case "insert_rule":
-            var test;
-            try {
-                eval("test=" + command.test);
-            } catch (e) {
-                throw "Bad test function: " + command.test
-                    + ": " + e.message;
-            };
-            th.insert_rule({
-                name: command.name,
-                test: test
-            }, command.number);
-            break;
-        case "set_window":
-            th.set_window(command.number);
-            break;
-        case "set_target":
-            th.set_target(command.number);
-            break;
-        default:
-            throw "Fuck off";
-        }
+    var th = self.thermostat[command.id];
+    switch (command.command) {
+    case "disable_rules":
+        th.enable_rules(false);
+        break;
+    case "enable_rules":
+        th.enable_rules(true);
+        break;
+    case "remove_rule":
+        th.remove_rule(command.name);
+        break;
+    case "insert_rule":
+        var test;
+        try {
+            eval("test=" + command.test);
+        } catch (e) {
+            throw "Bad test function: " + command.test
+                + ": " + e.message;
+        };
+        th.insert_rule({
+            name: command.name,
+            test: test
+        }, command.number);
+        break;
+    case "set_window":
+        th.set_window(command.number);
+        break;
+    case "set_target":
+        th.set_target(command.number);
+        break;
+    case "set_state":
+        console.TRACE("change", command.id + " FORCE " + command.number);
+        self.set(command.id, command.number != 0);
+        break;
+    default:
+        throw "Fuck off";
     }
 };
