@@ -37,7 +37,7 @@ function Controller(config, when_ready) {
     var switch_off = function(id, cur) {
         console.TRACE(1, id + " OFF, " + cur + " > "
                     + (config.temperature[id]
-                       + config.window[id] / 2));
+                       - config.window[id] / 2));
         self.set(id, false);
     };
 

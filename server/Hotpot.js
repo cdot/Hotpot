@@ -46,9 +46,6 @@ const Fs = require("fs");
 
     console.info(opt);
 
-    var instantiateEnv = function(s) {
-    };
-
     // process CH=N style options
     [ "gpio", "device", "temperature", "rules" ].forEach(function(opn) {
         var optval = opt.options[opn];
@@ -76,20 +73,29 @@ const Fs = require("fs");
         config[k] = opt.options[k];
     }
 
-    for (var k in config.rules) {
-	config.rules[k] = config.rules[k].replace(
-	    /(\$[A-Z]+)/g, function(match) {
-	    var v = match.substring(1);
-	    if (typeof process.env[v] !== "undefined")
-	       return process.env[v];
-	    return match;
-	});
-    }
+    var expandEnv = function(data) {
+        for (var k in data) {
+	    if (typeof data[k] === "string") {
+                data[k] = data[k].replace(
+	                /(\$[A-Z]+)/g, function(match) {
+	                    var v = match.substring(1);
+	                    if (typeof process.env[v] !== "undefined")
+	                        return process.env[v];
+	                    return match;
+	                });
+            } else if (data[k] !== null && typeof data[k] === "object") {
+                expandEnv(data[k]);
+            }
+        }
+    };
+    
+    expandEnv(config);
 
     // 0: initialisation
     // 1: pin on/off
     // 2: command tracing
     // 3: test module tracing
+    // 4: pin setup details
     console.TRACE = function(level, message) {
         if (((1 << level) & config.debug) !== 0) {
             console.log(message);
@@ -101,7 +107,7 @@ const Fs = require("fs");
     var controller;
     try {
 	controller = new Controller(config, function() {
-	        new Server(config.port, this);
+	    new Server(config, this);
 	});
     } catch (e) {
 	console.error(e.message);
