@@ -9,7 +9,7 @@
     };
 
     var ping = function() {
-        $.getJSON("192.168.1.15:13196", function(data) {
+        $.getJSON("https://192.168.1.15:13196", function(data) {
             $("#time").text(data.time);
             populate("HW", data);
             populate("CH", data);
