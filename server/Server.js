@@ -6,20 +6,19 @@
  * curl --data '{"command":"disable_rules","thermostat":"HW"}' http://daphne:13196
  */
 
-const HTTP = require("http");
+const Fs = require("fs");
 
 /**
- * HTTP Server object
+ * HTTP(S) Server object
  */
-function Server(port, controller) {
+function Server(config, controller) {
     "use strict";
 
     var self = this;
-
+    
     self.controller = controller;
-    console.info("Server starting on port " + port);
 
-    HTTP.createServer(function(request, response) {
+    var handler = function(request, response) {
         if (self[request.method]) {
             self[request.method].call(self, this, request, response);
         } else {
@@ -27,7 +26,22 @@ function Server(port, controller) {
             response.write("No support for " + request.method);
             response.end();
         }
-    }).listen(port);
+    };
+    var server;
+    if (typeof config.server.key !== "undefined") {
+        var options = {};
+        options.key = Fs.readFileSync(config.server.key)
+        if (typeof config.server.cert !== "undefined")
+            options.cert = Fs.readFileSync(config.server.cert);
+        console.TRACE(0, "HTTPS starting on port " + config.server.port
+                     + " with key " + config.server.key);
+    
+        server = require("https").createServer(options, handler);
+    } else {
+        console.TRACE(0, "HTTP starting on port " + config.server.port);
+        server = require("http").createServer(handler);
+    }
+    server.listen(config.server.port);
 }
 
 /**
@@ -40,6 +54,11 @@ Server.prototype.GET = function(server, request, response) {
     "use strict";
 
     console.TRACE(2, "Processing GET");
+    response.writeHead(200, "OK",
+ 	{
+	    "Access-Control-Allow-Origin": null,
+	    "Access-Control-Allow-Methods": "POST, GET"
+	});
     response.statusCode = 200;
     response.write(JSON.stringify(this.controller.get_status()));
     response.end();

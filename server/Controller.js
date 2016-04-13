@@ -37,7 +37,7 @@ function Controller(config, when_ready) {
     var switch_off = function(id, cur) {
         console.TRACE(1, id + " OFF, " + cur + " > "
                     + (config.temperature[id]
-                       + config.window[id] / 2));
+                       - config.window[id] / 2));
         self.set(id, false);
     };
 
@@ -147,7 +147,10 @@ Controller.prototype.set = function(channel, on, respond) {
 Controller.prototype.get_status = function() {
     "use strict";
 
-    var struct = {};
+    var struct = {
+	time: new Date().toGMTString()
+    };
+
     var serialize = function(cv) {
         return "" + cv;
     };
