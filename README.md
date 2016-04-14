@@ -19,9 +19,9 @@ The wiring of the temperature sensors and the control side of the relays is show
 
 # Software
 
-The controller uses rules defined in a set of javascript functions to control
+The controller uses rules defined in javascript functions to control
 the temperature of the different services offered by the central heating
-system. It can operate either as a stand-alone controller or as an HTTP
+system. It can operate either as a stand-alone controller or as an HTTPS
 server that supports querying and changing the configuration of the system.
 
 For example, we might have a DS18x20 called "HW" that senses the hot water
@@ -37,9 +37,9 @@ function that is called with 'this' set to the Thermostat. A rules
 function is expected to test conditions such as time and
 temperature, and set the target temperature accordingly.
 
-The server is initially configured from the command-line. After the
-initial setup, the HTTP interface can be used to query and modify the
-configuration.
+The server is initially configured from options passed on the command-line
+or read from a file in ~/.config. After the initial setup, the HTTP interface
+can be used to query and modify the configuration.
 
 Example command-line:
 ```

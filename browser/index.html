@@ -5,41 +5,38 @@
     <title>HotPot remote monitor</title>
     <script type="text/javascript" src="jquery/jquery-2.2.3.min.js"></script>
     <script type="text/javascript" src="js/browser.js"></script>
+    <script type="text/javascript" src="js/edit_in_place.js"></script>
     <link rel="stylesheet" href="css/browser.css">
   </head>
   <body>
+    <h1>Hotpot Central Heating Monitor</h1>
+    <div id="comms_error"></div>
     <div><b>Time:</b> <span id="time"></span></div>
     <div id="controllers">
     </div>
     <div style="display:none" id="controller_template">
-      <h1 class="name"></h1>
+      <h2 data-field="name"></h2>
       <table class="datatable">
         <tr>
-          <th>Temperature</th>
-          <td><input disabled="disabled" class="temperature"/></td>
+          <th class="ralign">Temperature</th>
+          <td data-field="temperature"></td>
         </tr>
         <tr>
           <th>State</th>
-          <td>
-            <input type="text" class="state"/>
-          </td>
+          <td data-field="state" class="editable"></td>
         </tr>
         <tr>
           <th>Target</th>
-          <td>
-            <input type="text" class="target"/>
-          </td>
+          <td data-field="target" class="editable"></td>
         </tr>
         <tr>
           <th>Window</th>
-          <td>
-            <input type="text" class="window"/>
-          </td>
+          <td data-field="window" class="editable"></td>
         </tr>
         <tr>
           <th>Rules</th>
           <td>
-            <table class="rules">
+            <table data-field="rules">
               <thead>
                 <tr><th>Index</th><th>Name</th><th>Function</th></tr>
               </thead>
@@ -53,11 +50,9 @@
     <table style="display:none">
       <tbody id="rule_template">
         <tr class="rule">
-          <td class="index"></td>
-          <td class="name"></td>
-          <td>
-            <textarea class="test"></textarea>
-          </td>
+          <td data-field="index"></td>
+          <td data-field="name" class="editable"></td>
+          <td data-field="test" class="editable textarea"></td>
         </tr>
       </tbody>
     </table>

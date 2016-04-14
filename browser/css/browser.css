@@ -7,6 +7,12 @@
     text-align: right;
 }
 
+.error {
+    font-weight: bold;
+    color: red;
+    height: 2em;
+}
+
 @font-face {
   font-family: 'Poiret One';
   font-style: normal;
@@ -18,4 +24,8 @@ body {
     background-color: #393939;
     font-family: 'Poiret One',cursive,Helvetica,Arial,sans-serif;
     color: white;
+}
+
+.editable {
+    background-color: maroon;
 }
