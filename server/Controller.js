@@ -175,11 +175,13 @@ Controller.prototype.get_status = function() {
  * @param struct structure containing the command and parameters e.g.
  * { command: "disable_rules", id: "name" }
  * { command: "enable_rules", id: "name" }
- * { command: "insert_rule", id: "name", name: "rule name", test: "function text" }
- * { command: "remove_rule", id: "name", name: "rule name" }
- * { command: "set_window", id: "name", number: width }
- * { command: "set_target", id: "name", number: temp }
- * { command: "set_state", id: "name", number: state }
+ * { command: "insert_rule", id: "name", name: "rule name", test: "function text", number: index }
+ * { command: "replace_rule", id: "name", index: index, name: "rule name", test: "function text" }
+ * { command: "remove_rule", id: "name", index: index }
+ * { command: "set_window", id: "name", value: width }
+ * { command: "set_target", id: "name", value: temp }
+ * { command: "set_state", id: "name", value: state }
+ * id is the controller id e.g. HW
  */
 Controller.prototype.execute_command = function(command) {
     "use strict";
@@ -195,24 +197,24 @@ Controller.prototype.execute_command = function(command) {
         th.enable_rules(true);
         break;
     case "remove_rule":
-        th.remove_rule(command.number);
+        th.remove_rule(command.index);
         break;
     case "insert_rule":
-        th.insert_rule(new Rule(command.name, command.test), command.number);
+        th.insert_rule(new Rule(command.name, command.test), command.index);
         break;
     case "replace_rule":
-        th.remove_rule(command.number);
-        th.insert_rule(new Rule(command.name, command.test), command.number);
+        th.remove_rule(command.index);
+        th.insert_rule(new Rule(command.name, command.test), command.index);
         break;
     case "set_window":
-        th.set_window(command.number);
+        th.set_window(command.value);
         break;
     case "set_target":
-        th.set_target(command.number);
+        th.set_target(command.value);
         break;
     case "set_state":
-        console.TRACE("change", command.id + " FORCE " + command.number);
-        self.set(command.id, command.number != 0);
+        console.TRACE("change", command.id + " FORCE " + command.value);
+        self.set(command.id, command.value != 0);
         break;
     default:
         throw "Unrecognised command " + command.command;
