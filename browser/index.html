@@ -7,28 +7,24 @@
     <script type="text/javascript" src="js/browser.js"></script>
   </head>
   <body>
-    <h1 id="time"></h1>
-    <h1>Hot Water</h1>
-    <dl>
-      <dt>Temperature</dt>
-      <dd id="HW_temperature"></dd>
-      <dt>Target</dt>
-      <dd id="HW_target"></dd>
-      <dt>Window</dt>
-      <dd id="HW_window"></dd>
-      <dt>State</dt>
-      <dd id="HW_state"></dd>
-    </dl>
-    <h1>Central Heating</h1>
-    <dl>
-      <dt>Temperature</dt>
-      <dd id="CH_temperature"></dd>
-      <dt>Target</dt>
-      <dd id="CH_target"></dd>
-      <dt>Window</dt>
-      <dd id="CH_window"></dd>
-      <dt>State</dt>
-      <dd id="CH_state"></dd>
+    <div><b>Time:</b> <span id="time"></span></div>
+    <div>
+      <h1>Hot Water</h1>
+      <table>
+        <tr><td>Temperature:</td><td> <input disabled="disabled" name="HW_temperature"/></td></tr>
+        <tr><td>Target:</td><td> <input type="text" name="HW_target"/></td></tr>
+        <tr><td>Window:</td><td> <input type="text" name="HW_window"/></td></tr>
+        <tr><td>State:</td><td> <input type="text" name="HW_state"/></td></tr>
+      </table>
+    </div>
+    <div>
+      <h1>Central Heating</h1>
+      <table>
+        <tr><td>Temperature:</td><td> <input disabled="disabled" name="CH_temperature"/></td></tr>
+        <tr><td>Target:</td><td> <input type="text" name="CH_target"/></td></tr>
+        <tr><td>Window:</td><td> <input type="text" name="CH_window"/></td></tr>
+        <tr><td>State:</td><td> <input type="text" name="CH_state"/></td></tr>
+      </table>
     </dl>
   </body>
 </html>
