@@ -1,9 +1,12 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+/**
+ * Singleton controller for a number of pins and thermostats. Controls the
+ * hardware state.
+ */
 const Fs = require("fs");
-
 const Thermostat = require("./Thermostat.js");
 const PinController = require("./PinController.js");
-const Time = require("./Time.js"); // for rules
+const Rule = require("./Rule.js");
 
 /**
  * @param config configuration data, including the following fields:
@@ -58,10 +61,13 @@ function Controller(config, when_ready) {
                       + config.rules[k]);
         var data = Fs.readFileSync(config.rules[k], "utf8");
         try {
+            // Not JSON, as it contains functions
             var rules = eval(data);
             self.thermostat[k].clear_rules();
             for (var i in rules)
-                self.thermostat[k].insert_rule(rules[i], i);
+                self.thermostat[k].insert_rule(
+                    new Rule(rules[i].name,
+                             rules[i].test));
         } catch (e) {
             console.error("Failed to load rules from "
                           + config.rules[k] + ": " + e.message);
@@ -147,21 +153,18 @@ Controller.prototype.get_status = function() {
     "use strict";
 
     var struct = {
-	time: new Date().toGMTString()
+	time: new Date().toGMTString(),
+        thermostats: [],
+        pins: []
     };
 
-    var serialize = function(cv) {
-        return "" + cv;
-    };
     for (var k in this.thermostat) {
         var th = this.thermostat[k];
-        struct[th.name] = {};
-        struct[th.name].temperature = th.temperature();
-        struct[th.name].window = th.window;
-        struct[th.name].target = th.target;
-        struct[th.name].state = this.pin[th.name].state;
-        struct[th.name].rules_enabled = th.rules_enabled;
-        struct[th.name].rules = th.rules.map(serialize);
+        struct.thermostats.push(th.serialisable());
+    }
+    for (var k in this.pin) {
+        var pi = this.pin[k];
+        struct.pins.push(pi.serialisable());
     }
     return struct;
 };
@@ -169,7 +172,7 @@ Controller.prototype.get_status = function() {
 /**
  * Command handler for a command that modifies the configuration
  * of the controller.
- * @param struct structure containing the command e.g.
+ * @param struct structure containing the command and parameters e.g.
  * { command: "disable_rules", id: "name" }
  * { command: "enable_rules", id: "name" }
  * { command: "insert_rule", id: "name", name: "rule name", test: "function text" }
@@ -192,20 +195,14 @@ Controller.prototype.execute_command = function(command) {
         th.enable_rules(true);
         break;
     case "remove_rule":
-        th.remove_rule(command.name);
+        th.remove_rule(command.number);
         break;
     case "insert_rule":
-        var test;
-        try {
-            eval("test=" + command.test);
-        } catch (e) {
-            throw "Bad test function: " + command.test
-                + ": " + e.message;
-        };
-        th.insert_rule({
-            name: command.name,
-            test: test
-        }, command.number);
+        th.insert_rule(new Rule(command.name, command.test), command.number);
+        break;
+    case "replace_rule":
+        th.remove_rule(command.number);
+        th.insert_rule(new Rule(command.name, command.test), command.number);
         break;
     case "set_window":
         th.set_window(command.number);
@@ -218,6 +215,6 @@ Controller.prototype.execute_command = function(command) {
         self.set(command.id, command.number != 0);
         break;
     default:
-        throw "Fuck off";
+        throw "Unrecognised command " + command.command;
     }
 };

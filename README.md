@@ -51,38 +51,48 @@ Rules files are Javascript files that contain an array of functions
 definitons. Each function is called in turn, and it it returns true,
 the evaluation will stop. Functions can set the configuration of the
 thermostat they are called on. The "Time" class is provided to make
-comparing times easier. Example, hot_water.rules:
+comparing times easier. Example hot_water rules:
 ```Javascript
 [
-    function() {
-        if (Time.between("06:30", "07:30")) {
-            this.set_target(60);
-            return true;
+    {
+        name: "morning",
+        test: function() {
+            if (Time.between("06:30", "07:30")) {
+                this.set_target(55);
+                return true;
+            }
         }
     },
-    function() {
-        if (Time.between("17:30", "18:30")) {
-            this.set_target(55);
-            return true;
+    {
+        name: "evening",
+        test: function() {
+            if (Time.between("17:30", "20:30")) {
+                this.set_target(55);
+                return true;
+            }
         }
     },
-    function() {
-        this.set_target(0);
+    {
+        name: "otherwise",
+        test: function() {
+            this.set_target(0);
+        }
     }
 ]
 ```
 This will set the temperature to 60 degrees between 06:30 and 07:30 for your morning shower, then to 55 degreees between 17:30 and 18:30 for the washing up and evening showers. At any other time the temperature is set to 0, which turns the hot water off.
 
 Rules functions can also interrogate other thermostats using the controller. For example,
-```
+```Javascript
 [
-    function() {
-        // Turn on hot water if CH temp falls below 5 degrees
+    name: "Turn on hot water if CH temp falls below 5 degrees",
+    test: function() {
         if (controller.thermostat.CH.temperature < 5)
            this.set_target(40);
     }
 ]
 ```
+
 # HTTP interface
 The HTTP interface supports GET and POST requests.
 

@@ -7,6 +7,7 @@
  */
 
 const Fs = require("fs");
+const serialize = require("serialize-javascript");
 
 /**
  * HTTP(S) Server object
@@ -60,7 +61,7 @@ Server.prototype.GET = function(server, request, response) {
 	    "Access-Control-Allow-Methods": "POST,GET"
 	});
     response.statusCode = 200;
-    response.write(JSON.stringify(this.controller.get_status()));
+    response.write(serialize(this.controller.get_status()));
     response.end();
 };
 

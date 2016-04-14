@@ -60,7 +60,7 @@ function Thermostat(name, id, target, window) {
     this.low = K0;    // low threshold
     this.high = K0;   // high threshold
     this.window = 0;  // slack window
-    this.rules = [];  // activation rules
+    this.rules = [];  // activation rules, array of Rule
     this.rules_enabled = true;
     this.live = true;
     if (typeof target !== "undefined")
@@ -132,13 +132,11 @@ Thermostat.prototype.poll = function() {
             // Update the rules
             if (self.rules_enabled) {
                 for (var i in self.rules) {
-                    var rule = self.rules[i];
-                    //console.log("Test rule " + i + " = " + rule.name);
-                    if (rule.test.call(self, temp))
+                    if (self.rules[i].test(self, temp))
                         break;
                 }
             }
-            //console.log(self.id + " reads " + temp + "C");
+            //console.TRACE("thermostat", self.id + " reads " + temp + "C");
             var init = (self.last_temp === K0);
             if (temp < self.low && (init || self.last_temp >= self.low))
                 self.emit("below", self.name, temp);
@@ -166,28 +164,28 @@ Thermostat.prototype.temperature = function() {
  * numbered from 0 (highest priority). To add a rule at the lowest
  * priority position, pass i=-1 (or i > max rule position)
  * @param rule the rule, a hash with { name: , test: }
- * @param i the position to insert the rule at, or -1 for the end
+ * @param i the position to insert the rule at, or -1 (or undef) for the end
  * @return the position the rules was added at
  */
 Thermostat.prototype.insert_rule = function(rule, i) {
     "use strict";
-    if (typeof i === "undefined")
-        i = -1;
-    if (i < 0 || i >= this.rules.length) {
+    if (typeof i === "undefined" || i < 0 || i > this.rules.length)
+        i = this.rules.length;
+    if (i === this.rules.length) {
         this.rules.push(rule);
-        i = this.rules.length - 1;
     } else if (i === 0)
         this.rules.unshift(rule);
     else
         this.rules.splice(i, 0, rule);
+    rule.index = i;
     console.TRACE("change", this.name + " rule " + this.rules[i].name
-                  + "(" + i + ") inserted");
+                  + "(" + i + ") inserted at " + rule.index);
     return i;
 };
 
 /**
 * Remove a rule
-* @param i the number (or name) of the rule to delete
+* @param i the number (or name, or rule object) of the rule to delete
 * @return the removed rule function
 */
 Thermostat.prototype.remove_rule = function(i) {
@@ -199,9 +197,12 @@ Thermostat.prototype.remove_rule = function(i) {
                 break;
             }
         }
+    } else if (typeof i === "object") {
+        i = i.index;
     }
     var del = this.rules.splice(i, 1);
-    console.TRACE("change", this.name + " rule " + del[0].name + "(" + i + ") removed");
+    console.TRACE("change", this.name + " rule " + del[0].name
+                  + "(" + i + ") removed");
     return del[0];
 };
 
@@ -224,3 +225,16 @@ Thermostat.prototype.enable_rules = function(torf) {
     console.TRACE("change", this.name + " rules "
                     + (this.rules_enabled ? "en" : "dis") + "abled");
 };
+
+Thermostat.prototype.serialisable = function() {
+    return {
+        name: this.name,
+        temperature: this.temperature(),
+        window: this.window,
+        target: this.target,
+        rules_enabled: this.rules_enabled,
+        rules: this.rules.map(function(rule, i) {
+            return rule.serialisable(i);
+        })
+    };
+}

@@ -7,14 +7,14 @@ var Fs = require("fs");
  *
  * Writes to GPIO pins
  */
-function PinController(name, pin) {
+function PinController(name, gpio) {
     "use strict";
 
     var self = this;
     self.name = name;
-    self.pin = pin;
+    self.gpio = gpio;
 
-    console.TRACE("init", "Creating controller for pin " + pin);
+    console.TRACE("init", "Creating controller for gpio " + gpio);
     
     var init = function() {
         self.setFeature("direction", "out", function() {
@@ -23,29 +23,29 @@ function PinController(name, pin) {
     };
     
     try {
-	Fs.lstatSync("/sys/class/gpio/gpio" + pin);
+	Fs.lstatSync("/sys/class/gpio/gpio" + gpio);
         console.TRACE("init", "Pin already exported");
         init();
     } catch (e) {
-        console.TRACE("init", "export pin " + pin);
+        console.TRACE("init", "export gpio " + gpio);
         Fs.writeFile("/sys/class/gpio/export",
-                     pin,
+                     gpio,
                      init);
     }
 }
 module.exports = PinController;
 
 PinController.prototype.DESTROY = function() {
-    console.TRACE("init", "unexport pin " + pin);
-    Fs.writeFile("/sys/class/gpio/unexport", pin, function() {});
+    console.TRACE("init", "unexport gpio " + gpio);
+    Fs.writeFile("/sys/class/gpio/unexport", gpio, function() {});
 };
 
 PinController.prototype.setFeature = function(feature, value, callback) {
     "use strict";
-    console.TRACE("change", "Set pin " + this.pin + " " + feature + "=" + value);
+    console.TRACE("change", "Set gpio " + this.gpio + " " + feature + "=" + value);
     if (typeof callback === "undefined")
         callback = function() {};
-    Fs.writeFile("/sys/class/gpio/gpio" + this.pin + "/" + feature,
+    Fs.writeFile("/sys/class/gpio/gpio" + this.gpio + "/" + feature,
                  value, callback);
 }
 
@@ -55,7 +55,10 @@ PinController.prototype.set = function(state, callback) {
     this.setFeature("value", state ? 1 : 0, callback);
 };
 
-PinController.prototype.state = function() {
-    "use strict";
-    return this.state;
+PinController.prototype.serialisable = function() {
+    return {
+        name: this.name,
+        gpio: this.gpio,
+        state: this.state
+    };
 };
