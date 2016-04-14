@@ -5,26 +5,61 @@
     <title>HotPot remote monitor</title>
     <script type="text/javascript" src="jquery/jquery-2.2.3.min.js"></script>
     <script type="text/javascript" src="js/browser.js"></script>
+    <link rel="stylesheet" href="css/browser.css">
   </head>
   <body>
     <div><b>Time:</b> <span id="time"></span></div>
-    <div>
-      <h1>Hot Water</h1>
-      <table>
-        <tr><td>Temperature:</td><td> <input disabled="disabled" name="HW_temperature"/></td></tr>
-        <tr><td>Target:</td><td> <input type="text" name="HW_target"/></td></tr>
-        <tr><td>Window:</td><td> <input type="text" name="HW_window"/></td></tr>
-        <tr><td>State:</td><td> <input type="text" name="HW_state"/></td></tr>
+    <div id="controllers">
+    </div>
+    <div style="display:none" id="controller_template">
+      <h1 class="name"></h1>
+      <table class="datatable">
+        <tr>
+          <th>Temperature</th>
+          <td><input disabled="disabled" class="temperature"/></td>
+        </tr>
+        <tr>
+          <th>State</th>
+          <td>
+            <input type="text" class="state"/>
+          </td>
+        </tr>
+        <tr>
+          <th>Target</th>
+          <td>
+            <input type="text" class="target"/>
+          </td>
+        </tr>
+        <tr>
+          <th>Window</th>
+          <td>
+            <input type="text" class="window"/>
+          </td>
+        </tr>
+        <tr>
+          <th>Rules</th>
+          <td>
+            <table class="rules">
+              <thead>
+                <tr><th>Index</th><th>Name</th><th>Function</th></tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </td>
+        </tr>
       </table>
     </div>
-    <div>
-      <h1>Central Heating</h1>
-      <table>
-        <tr><td>Temperature:</td><td> <input disabled="disabled" name="CH_temperature"/></td></tr>
-        <tr><td>Target:</td><td> <input type="text" name="CH_target"/></td></tr>
-        <tr><td>Window:</td><td> <input type="text" name="CH_window"/></td></tr>
-        <tr><td>State:</td><td> <input type="text" name="CH_state"/></td></tr>
-      </table>
-    </dl>
+    <table style="display:none">
+      <tbody id="rule_template">
+        <tr class="rule">
+          <td class="index"></td>
+          <td class="name"></td>
+          <td>
+            <textarea class="test"></textarea>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </body>
 </html>
