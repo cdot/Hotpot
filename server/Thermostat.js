@@ -227,6 +227,9 @@ Thermostat.prototype.enable_rules = function(torf) {
                     + (this.rules_enabled ? "en" : "dis") + "abled");
 };
 
+/**
+ * Construct a report amenable to serialisation
+ */
 Thermostat.prototype.serialisable = function() {
     "use strict";
     return {
