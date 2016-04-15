@@ -5,7 +5,7 @@
  */
 const ONE_DAY = 86400000; // one day in ms
 
-var Time = {};
+Time = {};
 module.exports = Time;
 
 // Private - get midnight, today
