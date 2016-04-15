@@ -22,6 +22,7 @@ function Controller(config, when_ready) {
     "use strict";
 
     var self = this, k;
+    this.last_changed_by = "initialisation";
 
     // Create pin controllers
     self.pin = {};
@@ -29,17 +30,21 @@ function Controller(config, when_ready) {
         self.pin[k] = new PinController(k, config.gpio[k]);
     }
 
-    // Command handlers
-    var switch_on = function(id, cur) {
+    // Event handlers
+    var thermostat_on = function(id, cur) {
+        // Thermostat requested change
         console.TRACE("change", id + " ON, " + cur + " < "
                     + (config.temperature[id]
                        + config.window[id] / 2));
+        this.last_changed_by = id;
         self.set(id, true);
     };
-    var switch_off = function(id, cur) {
+    var thermostat_off = function(id, cur) {
+        // Thermostat requested change
         console.TRACE("change", id + " OFF, " + cur + " > "
                     + (config.temperature[id]
                        - config.window[id] / 2));
+        this.last_changed_by = id;
         self.set(id, false);
     };
     
@@ -50,8 +55,8 @@ function Controller(config, when_ready) {
                                 config.device[k],
                                 config.temperature[k],
                                 config.window[k]);
-        th.on("below", switch_on);
-        th.on("above", switch_off);
+        th.on("below", thermostat_on);
+        th.on("above", thermostat_off);
         self.thermostat[k] = th;
     }
 
@@ -158,7 +163,8 @@ Controller.prototype.get_status = function() {
     var struct = {
 	time: new Date().toGMTString(),
         thermostats: [],
-        pins: []
+        pins: [],
+        last_changed_by: this.last_changed_by
     };
     var k;
 
@@ -218,6 +224,7 @@ Controller.prototype.execute_command = function(command) {
         break;
     case "set_state":
         console.TRACE("change", command.id + " FORCE " + command.value);
+        this.last_changed_by = "command";
         self.set(command.id, 0 + command.value !== 0);
         break;
     default:
