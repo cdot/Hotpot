@@ -31,7 +31,7 @@ function Server(config, controller) {
     var server;
     if (typeof config.server.key !== "undefined") {
         var options = {};
-        options.key = Fs.readFileSync(config.server.key)
+        options.key = Fs.readFileSync(config.server.key);
         if (typeof config.server.cert !== "undefined")
             options.cert = Fs.readFileSync(config.server.cert);
         console.TRACE("server", "HTTPS starting on port " + config.server.port
@@ -55,11 +55,12 @@ Server.prototype.GET = function(server, request, response) {
     "use strict";
 
     //console.TRACE("server", "Processing GET");
-    response.writeHead(200, "OK",
- 	{
-	    "Access-Control-Allow-Origin": null,
-	    "Access-Control-Allow-Methods": "POST,GET"
-	});
+    response.writeHead(
+        200, "OK",
+	{
+            "Access-Control-Allow-Origin": null,
+            "Access-Control-Allow-Methods": "POST,GET"
+        });
     response.statusCode = 200;
     response.write(serialize(this.controller.get_status()));
     response.end();
@@ -81,11 +82,12 @@ Server.prototype.POST = function(server, request, response) {
         try {
             var data = JSON.parse(json);
             self.controller.execute_command(data);
-            response.writeHead(200, "OK",
- 	                       {
-	                           "Access-Control-Allow-Origin": null,
-	                           "Access-Control-Allow-Methods": "POST,GET"
-	                       });
+            response.writeHead(
+                200, "OK",
+                {
+                    "Access-Control-Allow-Origin": null,
+                    "Access-Control-Allow-Methods": "POST,GET"
+                });
             response.statusCode = 200;
             response.end();
         } catch (e) {

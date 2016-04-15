@@ -21,7 +21,7 @@ function PinController(name, gpio) {
 	// If we don't set the pin active_low, then writing a 1 to value
 	// sets the pin low, and vice-versa. Ho hum.
         self.setFeature("active_low", 1);
-       	self.set(false);
+        self.set(false);
         self.setFeature("direction", "out");
     };
     
@@ -39,8 +39,9 @@ function PinController(name, gpio) {
 module.exports = PinController;
 
 PinController.prototype.DESTROY = function() {
-    console.TRACE("init", "unexport gpio " + gpio);
-    Fs.writeFile("/sys/class/gpio/unexport", gpio, function() {});
+    "use strict";
+    console.TRACE("init", "unexport gpio " + this.gpio);
+    Fs.writeFile("/sys/class/gpio/unexport", this.gpio, function() {});
 };
 
 PinController.prototype.setFeature = function(feature, value, callback) {
@@ -50,7 +51,7 @@ PinController.prototype.setFeature = function(feature, value, callback) {
         callback = function() {};
     Fs.writeFile("/sys/class/gpio/gpio" + this.gpio + "/" + feature,
                  value, callback);
-}
+};
 
 PinController.prototype.set = function(state, callback) {
     "use strict";
@@ -59,10 +60,12 @@ PinController.prototype.set = function(state, callback) {
 
 PinController.prototype.get = function() {
     "use strict";
-    return Fs.readFileSync("/sys/class/gpio/gpio" + this.gpio + "/value", "utf8");
+    return Fs.readFileSync(
+        "/sys/class/gpio/gpio" + this.gpio + "/value", "utf8");
 };
 
 PinController.prototype.serialisable = function() {
+    "use strict";
     return {
         name: this.name,
         gpio: this.gpio,

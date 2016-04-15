@@ -92,6 +92,9 @@ function Controller(config, when_ready) {
 module.exports = Controller;
 
 Controller.prototype.DESTROY = function() {
+    "use strict";
+    var k;
+
     for (k in this.pin) {
         this.pin[k].DESTROY();
     }
@@ -157,12 +160,13 @@ Controller.prototype.get_status = function() {
         thermostats: [],
         pins: []
     };
+    var k;
 
-    for (var k in this.thermostat) {
+    for (k in this.thermostat) {
         var th = this.thermostat[k];
         struct.thermostats.push(th.serialisable());
     }
-    for (var k in this.pin) {
+    for (k in this.pin) {
         var pi = this.pin[k];
         struct.pins.push(pi.serialisable());
     }
@@ -214,7 +218,7 @@ Controller.prototype.execute_command = function(command) {
         break;
     case "set_state":
         console.TRACE("change", command.id + " FORCE " + command.value);
-        self.set(command.id, command.value != 0);
+        self.set(command.id, 0 + command.value !== 0);
         break;
     default:
         throw "Unrecognised command " + command.command;

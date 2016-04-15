@@ -5,6 +5,8 @@ SOURCES := \
 	Server.js\
 	Controller.js\
 	PinController.js\
+	Rule.js\
+	Time.js\
 	Thermostat.js
 
 %.esl : %.js

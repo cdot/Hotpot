@@ -1,47 +1,57 @@
 (function($) {
+    "use strict";
+
     var server = "https://192.168.1.15:13196";
     var setup_backoff = 5; // seconds
     var update_backoff = 5; // seconds
     var update_rate = 1; // seconds
 
     // Edit text of a field
-    var field_edit = function(s) {
-        var $self = $(this);
-        var $controller = $self.closest(".controller");
-        var data = {
-            command: "set_" + $self.data("field"),
-            id: $controller.data("name"),
-            value: s
-        };
-        $.post("https://192.168.1.15:13196",
-               JSON.stringify(data))
-            .success(function() {
-                $self.text(s);
-            });
+    var edit_field = function() {
+        $(this).edit_in_place({
+            changed: function(s) {
+                var $self = $(this);
+                var $controller = $self.closest(".controller");
+                var data = {
+                    command: "set_" + $self.data("field"),
+                    id: $controller.data("name"),
+                    value: s
+                };
+                $.post("https://192.168.1.15:13196",
+                       JSON.stringify(data))
+                    .success(function() {
+                        $self.text(s);
+                    });
+            }
+        });
     };
 
     // Edit text of a rule
-    var rule_edit = function(s) {
-        var $self = $(this);
-        var $controller = $self.closest(".controller");
-        var $row = $self.closest(".rule");
-        var newrule = {
-            name: $row.find("[data-field='name']").text(),
-            test: $row.find("[data-field='test']").text()
-        };
-        newrule[$self.data("field")] = s;
-        var data = {
-            command: "replace_rule",
-            id: $controller.data("name"),
-            index: $row.data("index"),
-            name: newrule.name,
-            test: newrule.test
-        };
-        $.post("https://192.168.1.15:13196",
-               JSON.stringify(data))
-            .success(function() {
-                $self.text(s);
-            });
+    var edit_rule = function() {
+        $(this).edit_in_place({
+            changed: function(s) {
+                var $self = $(this);
+                var $controller = $self.closest(".controller");
+                var $row = $self.closest(".rule");
+                var newrule = {
+                    name: $row.find("[data-field='name']").text(),
+                    test: $row.find("[data-field='test']").text()
+                };
+                newrule[$self.data("field")] = s;
+                var data = {
+                    command: "replace_rule",
+                    id: $controller.data("name"),
+                    index: $row.data("index"),
+                    name: newrule.name,
+                    test: newrule.test
+                };
+                $.post("https://192.168.1.15:13196",
+                       JSON.stringify(data))
+                    .success(function() {
+                        $self.text(s);
+                    });
+            }
+        });
     };
 
     // Populate from pin or thermostat record
@@ -58,18 +68,13 @@
                 var $row = $tbody.find(".rule" + rule.index);
                 if ($row.length === 0) {
                     // Create new row
-                    var $row = $($("#rule_template").html());
+                    $row = $($("#rule_template").html());
                     $row.addClass("rule" + rule.index);
                     $row.addClass("rule");
                     $row.data("index", rule.index);
                     $tbody.append($row);
                     $row.find(".editable")
-                        .on("click", function() {
-                            $(this).edit_in_place({
-                                width:200,
-                                changed: rule_edit
-                            });
-                        });
+                        .on("click", edit_rule);
                 }
                 populate(rule, $row);
             }
@@ -90,11 +95,12 @@
         $.getJSON(
             server,
             function(data) {
+                var i;
                 $("#comms_error").html("");
                 $("#time").text(data.time);
-                for (var i in data.thermostats)
+                for (i in data.thermostats)
                     populate(data.thermostats[i]);
-                for (var i in data.pins)
+                for (i in data.pins)
                     populate(data.pins[i]);
                 setTimeout(ping, update_rate * 1000);
             })
@@ -119,13 +125,8 @@
                     var $div = $("<div id='" + th.name
                         + "'>" + html + "</div>");
                     $div.addClass("controller");
-                    $div.find(".editable").on(
-                        "click", function() {
-                            $(this).edit_in_place({
-                                width:200,
-                                changed: field_edit
-                            });
-                        })
+                    $div.find(".editable")
+                        .on("click", edit_field);
                     populate(th, $div);
                     $("#controllers").append($div);
                 }

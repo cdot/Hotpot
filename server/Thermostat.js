@@ -85,6 +85,7 @@ util.inherits(Thermostat, EventEmitter);
 module.exports = Thermostat;
 
 Thermostat.prototype.DESTROY = function() {
+    "use strict";
     this.live = false;
 };
 
@@ -227,6 +228,7 @@ Thermostat.prototype.enable_rules = function(torf) {
 };
 
 Thermostat.prototype.serialisable = function() {
+    "use strict";
     return {
         name: this.name,
         temperature: this.temperature(),
@@ -237,4 +239,4 @@ Thermostat.prototype.serialisable = function() {
             return rule.serialisable(i);
         })
     };
-}
+};

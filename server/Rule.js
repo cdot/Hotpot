@@ -18,6 +18,7 @@ const Time = require("./Time.js"); // for executing rules
  * temperature, and false otherwise.
  */
 function Rule(name, fn) {
+    "use strict";
     if (typeof fn === "string") {
         // Compile the fn function
         try {
@@ -25,7 +26,7 @@ function Rule(name, fn) {
         } catch (e) {
             throw "Bad fn function: " + fn
                 + ": " + e.message;
-        };
+        }
         fn = eval(fn);
     }
     this.index = -1;
@@ -42,16 +43,18 @@ module.exports = Rule;
  * @param temp the current temperature
  */
 Rule.prototype.test = function(thermostat, temp) {
+    "use strict";
     var pass = this.fn.call(thermostat, temp);
     //console.TRACE("rule", "Test rule '"+ rule.name + "' = " + pass);
     return pass;
-}
+};
 
 /**
  * Get a serialisable version of the rule
  * @param
  */
 Rule.prototype.serialisable = function() {
+    "use strict";
     return {
         index: this.index,
         name: this.name,

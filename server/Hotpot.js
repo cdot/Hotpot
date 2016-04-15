@@ -73,21 +73,22 @@ const Fs = require("fs");
         config[k] = opt.options[k];
     }
 
-    var expandEnv = function(data) {
-        for (var k in data) {
-	    if (typeof data[k] === "string") {
-                data[k] = data[k].replace(
-	                /(\$[A-Z]+)/g, function(match) {
-	                    var v = match.substring(1);
-	                    if (typeof process.env[v] !== "undefined")
-	                        return process.env[v];
-	                    return match;
-	                });
-            } else if (data[k] !== null && typeof data[k] === "object") {
-                expandEnv(data[k]);
+    function expandEnv(struct) {
+        for (var key in struct) {
+            if (typeof struct[key] === "string") {
+                struct[key] = struct[key].replace(
+                        /(\$[A-Z]+)/g, function(match) {
+                            var v = match.substring(1);
+                            if (typeof process.env[v] !== "undefined")
+                                return process.env[v];
+                            return match;
+                        });
+            } else if (struct[key] !== null
+                       && typeof struct[key] === "object") {
+                expandEnv(struct[key]);
             }
         }
-    };
+    }
     
     expandEnv(config);
 
@@ -106,11 +107,11 @@ const Fs = require("fs");
     var controller;
     try {
 	controller = new Controller(config, function() {
-	    new Server(config, this);
+            new Server(config, this);
 	});
     } catch (e) {
 	console.error(e.message);
-	if (controller)
-	    controller.DESTROY();
+        if (controller)
+            controller.DESTROY();
     }
 })();

@@ -41,7 +41,8 @@
         "globals": {
             "require": true,
             "module": true,
-            "Buffer": true
+            "Buffer": true,
+            "process" : true
         },
         "rules": {
             "no-underscore-dangle": 0,
