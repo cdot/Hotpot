@@ -25,9 +25,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.98994949"
-     inkscape:cx="230.88205"
-     inkscape:cy="580.34068"
+     inkscape:zoom="1.4"
+     inkscape:cx="353.93186"
+     inkscape:cy="578.32037"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -1014,27 +1014,27 @@
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:11.6427927px;line-height:125%;font-family:Pothana2000;-inkscape-font-specification:Pothana2000;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="319.35999"
-       y="-549.36603"
+       x="447.45886"
+       y="-496.00327"
        id="text4865"
        sodipodi:linespacing="125%"
        transform="matrix(0,0.97023268,-1.0306806,0,0,0)"><tspan
          sodipodi:role="line"
          id="tspan4867"
-         x="319.35999"
-         y="-549.36603">IN1</tspan></text>
+         x="447.45886"
+         y="-496.00327">IN1</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:11.6427927px;line-height:125%;font-family:Pothana2000;-inkscape-font-specification:Pothana2000;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="349.74252"
-       y="-548.38593"
+       x="539.68225"
+       y="-496.40915"
        id="text4869"
        sodipodi:linespacing="125%"
        transform="matrix(0,0.97023268,-1.0306806,0,0,0)"><tspan
          sodipodi:role="line"
          id="tspan4871"
-         x="349.74252"
-         y="-548.38593">IN2</tspan></text>
+         x="539.68225"
+         y="-496.40915">IN2</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:11.6427927px;line-height:125%;font-family:Pothana2000;-inkscape-font-specification:Pothana2000;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -1053,7 +1053,7 @@
          id="tspan4877" /></text>
     <g
        id="g4900"
-       transform="matrix(0,0.82400861,-1.0047944,0,1312.9281,90.243005)">
+       transform="matrix(0,0.51535877,-1.0189965,0,1323.1516,135.03757)">
       <path
          sodipodi:nodetypes="cc"
          inkscape:connector-curvature="0"
@@ -1099,13 +1099,13 @@
        sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3.88098693;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 351.23441,318.58519 211.14358,0"
+       d="m 348.23441,442.87091 159.14358,0"
        id="path4904-3"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3.88098693;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 351.23441,349.31618 211.14358,0"
+       d="m 349.66299,533.6019 159.14358,0"
        id="path4904-86"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
