@@ -99,7 +99,7 @@ const Fs = require("fs");
     // 4: pin setup details
     console.TRACE = function(level, message) {
         if (config.debug === "all" || config.debug.includes(level))
-            console.log(message);
+            console.log(level + ": " + message);
     };
 
     // Start the controller and when it's ready, start an HTTP server

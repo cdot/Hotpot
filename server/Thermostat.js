@@ -62,7 +62,9 @@ function Thermostat(name, id, target, window) {
     this.window = 0;  // slack window
     this.rules = [];  // activation rules, array of Rule
     this.rules_enabled = true;
-    this.live = true;
+    this.active_rule = "none"; // the currently active rule
+    this.live = true; // True until destroyed
+    
     if (typeof target !== "undefined")
         this.set_target(target);
     if (typeof window !== "undefined")
@@ -76,7 +78,7 @@ function Thermostat(name, id, target, window) {
     // Don't start polling until after a timeout even because otherwise
     // the event emitter won't work
     setTimeout(function() {
-        console.TRACE("init", "Thermostat " + self.name + " "
+        console.TRACE("thermostat", self.name + " "
                       + self.low + " < T < " + self.high + " started");
         self.poll();
     }, 10);
@@ -99,7 +101,7 @@ Thermostat.prototype.set_target = function(target) {
     this.low = target - this.window / 2;
     this.high = target + this.window / 2;
     if (target !== this.target)
-        console.TRACE("change", this.name + " target changed to " + this.target);
+        console.TRACE("thermostat", this.name + " target changed to " + this.target);
     this.target = target;
 };
 
@@ -114,7 +116,7 @@ Thermostat.prototype.set_window = function(window) {
     "use strict";
     this.window = window;
     this.set_target(this.target);
-    console.TRACE("change", this.name + " window changed to " + this.window);
+    console.TRACE("thermostat", this.name + " window changed to " + this.window);
 };
 
 // Private function for polling thermometers
@@ -125,24 +127,33 @@ Thermostat.prototype.poll = function() {
 	return; // shut down the poll loop
 
     var self = this;
-    //console.log("Poll " + this.id);
     ds18x20.get(this.id, function(err, temp) {
         if (err !== null) {
             console.error("ERROR: " + err);
         } else {
-            // Update the rules
             if (self.rules_enabled) {
-                for (var i in self.rules) {
-                    if (self.rules[i].test(self, temp))
+                // Test each of the rules in order until one fires,
+                // then stop testing. This will leave us with the
+                // appropriate low/high state.
+                self.active_rule = "none";
+                 for (var i in self.rules) {
+                    if (self.rules[i].test(self, temp)) {
+                        self.active_rule = self.rules[i].name;
                         break;
+                    }
                 }
             }
-            //console.TRACE("thermostat", self.id + " reads " + temp + "C");
+            //console.TRACE("thermostat", self.name + " active rule is "
+            //              + self.active_rule
+            //              + " current temp " + temp + "C");
+            // If rules are not enabled, we leave active_rule at
+            // whatever the last setting was.
+
             var init = (self.last_temp === K0);
             if (temp < self.low && (init || self.last_temp >= self.low))
-                self.emit("below", self.name, temp);
+                self.emit("below", self.name, self.active_rule. temp);
             else if (temp > self.high && (init || self.last_temp <= self.high))
-                self.emit("above", self.name, temp);
+                self.emit("above", self.name, self.active_rule, temp);
             self.last_temp = temp;
             setTimeout(function() {
                 self.poll();
@@ -179,7 +190,7 @@ Thermostat.prototype.insert_rule = function(rule, i) {
     else
         this.rules.splice(i, 0, rule);
     rule.index = i;
-    console.TRACE("change", this.name + " rule " + this.rules[i].name
+    console.TRACE("thermostat", this.name + " rule " + this.rules[i].name
                   + "(" + i + ") inserted at " + rule.index);
     return i;
 };
@@ -202,7 +213,7 @@ Thermostat.prototype.remove_rule = function(i) {
         i = i.index;
     }
     var del = this.rules.splice(i, 1);
-    console.TRACE("change", this.name + " rule " + del[0].name
+    console.TRACE("thermostat", this.name + " rule " + del[0].name
                   + "(" + i + ") removed");
     return del[0];
 };
@@ -212,7 +223,7 @@ Thermostat.prototype.remove_rule = function(i) {
  */
 Thermostat.prototype.clear_rules = function() {
     "use strict";
-    console.TRACE("change", this.name + " rules cleared");
+    console.TRACE("thermostat", this.name + " rules cleared");
     this.rules = [];
 };
 
@@ -223,8 +234,8 @@ Thermostat.prototype.clear_rules = function() {
 Thermostat.prototype.enable_rules = function(torf) {
     "use strict";
     this.rules_enabled = torf;
-    console.TRACE("change", this.name + " rules "
-                    + (this.rules_enabled ? "en" : "dis") + "abled");
+    console.TRACE("thermostat", this.name + " rules "
+                  + (this.rules_enabled ? "en" : "dis") + "abled");
 };
 
 /**
@@ -238,6 +249,7 @@ Thermostat.prototype.serialisable = function() {
         window: this.window,
         target: this.target,
         rules_enabled: this.rules_enabled,
+        active_rule: this.active_rule,
         rules: this.rules.map(function(rule, i) {
             return rule.serialisable(i);
         })

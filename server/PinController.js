@@ -40,21 +40,24 @@ module.exports = PinController;
 
 PinController.prototype.DESTROY = function() {
     "use strict";
-    console.TRACE("init", "unexport gpio " + this.gpio);
+    console.TRACE("pincontroller", "unexport gpio " + this.gpio);
     Fs.writeFile("/sys/class/gpio/unexport", this.gpio, function() {});
 };
 
 PinController.prototype.setFeature = function(feature, value, callback) {
     "use strict";
-    console.TRACE("change", "Set gpio " + this.gpio + " " + feature + "=" + value);
+
     if (typeof callback === "undefined")
         callback = function() {};
     Fs.writeFile("/sys/class/gpio/gpio" + this.gpio + "/" + feature,
                  value, callback);
 };
 
-PinController.prototype.set = function(state, callback) {
+PinController.prototype.set = function(state, actor, callback) {
     "use strict";
+    this.actor = actor;
+    console.TRACE("pincontroller", actor + " set gpio "
+                  + this.gpio + " = " + (state ? "on" : "off"));
     this.setFeature("value", state ? 1 : 0, callback);
 };
 
@@ -68,6 +71,7 @@ PinController.prototype.serialisable = function() {
     "use strict";
     return {
         name: this.name,
+        actor: this.actor,
         gpio: this.gpio,
         state: this.get()
     };

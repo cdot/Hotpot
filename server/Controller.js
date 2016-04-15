@@ -22,7 +22,6 @@ function Controller(config, when_ready) {
     "use strict";
 
     var self = this, k;
-    this.last_changed_by = "initialisation";
 
     // Create pin controllers
     self.pin = {};
@@ -31,21 +30,19 @@ function Controller(config, when_ready) {
     }
 
     // Event handlers
-    var thermostat_on = function(id, cur) {
+    var thermostat_on = function(id, rule, cur) {
         // Thermostat requested change
         console.TRACE("change", id + " ON, " + cur + " < "
                     + (config.temperature[id]
                        + config.window[id] / 2));
-        this.last_changed_by = id;
-        self.set(id, true);
+        self.set(id, rule, true);
     };
-    var thermostat_off = function(id, cur) {
+    var thermostat_off = function(id, rule, cur) {
         // Thermostat requested change
         console.TRACE("change", id + " OFF, " + cur + " > "
                     + (config.temperature[id]
                        - config.window[id] / 2));
-        this.last_changed_by = id;
-        self.set(id, false);
+        self.set(id, rule, false);
     };
     
     // Create thermostats
@@ -88,9 +85,9 @@ function Controller(config, when_ready) {
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
     console.info("- Resetting valve");
-    self.pin.HW.set(1);
-    self.pin.CH.set(0);
-    self.set("HW", false, function() {
+    self.pin.HW.set(1, "initialisation");
+    self.pin.CH.set(0, "initialisation");
+    self.set("HW", "initialisation", false, function() {
         when_ready.call(self);
     });
 }
@@ -113,17 +110,18 @@ Controller.prototype.DESTROY = function() {
  * @private
  * Set the on/off state of the system.
  * @param channel "HW" or "CH"
+ * @param actor who is setting e.g. "thermostat" or "command"
  * @param state true or false (on or off)
  * @param respond function called when state is set, parameters
  * are (self=Server, channel, state)
  */
-Controller.prototype.set = function(channel, on, respond) {
+Controller.prototype.set = function(channel, actor, on, respond) {
     "use strict";
 
     var self = this;
     if (this.pending) {
         setTimeout(function() {
-            self.set(channel, on, respond);
+            self.set(channel, actor, on, respond);
         }, this.valve_return * 1000);
     }
 
@@ -137,17 +135,17 @@ Controller.prototype.set = function(channel, on, respond) {
     // return. Then after a timeout, set the desired state.
     if (channel === "CH" && !on
         && this.pin.HW.state === 1 && this.pin.HW.state === 0) {
-        this.pin.CH.set(0);
-        this.pin.HW.set(1);
+        this.pin.CH.set(0, actor);
+        this.pin.HW.set(1, actor);
         self.pending = true;
         setTimeout(function() {
             self.pending = false;
-            self.set(channel, on, respond);
+            self.set(channel, actor, on, respond);
         }, this.valve_return * 1000);
     } else {
         // Otherwise this is a simple state transition, just
         // set the appropriate pin
-        this.pin[channel].set(on ? 1 : 0);
+        this.pin[channel].set(on ? 1 : 0, actor);
         if (respond)
             respond.call(self, channel, on);
     }
@@ -163,8 +161,7 @@ Controller.prototype.get_status = function() {
     var struct = {
 	time: new Date().toGMTString(),
         thermostats: [],
-        pins: [],
-        last_changed_by: this.last_changed_by
+        pins: []
     };
     var k;
 
@@ -224,8 +221,7 @@ Controller.prototype.execute_command = function(command) {
         break;
     case "set_state":
         console.TRACE("change", command.id + " FORCE " + command.value);
-        this.last_changed_by = "command";
-        self.set(command.id, 0 + command.value !== 0);
+        self.set(command.id, "command", parseInt(command.value) !== 0);
         break;
     default:
         throw "Unrecognised command " + command.command;
