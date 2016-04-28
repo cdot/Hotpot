@@ -74,7 +74,7 @@ function Thermostat(name, config) {
     this.last_temp = K0; // Temperature measured in last poll
 
     if (typeof ds18x20.mapID !== "undefined")
-        ds18x20.mapID[id] = name;
+        ds18x20.mapID[config.id] = name;
 
     if (typeof config.rules !== "undefined") {
         console.TRACE("init", "Loading rules for " + name + " from "

@@ -42,7 +42,8 @@
             "require": true,
             "module": true,
             "Buffer": true,
-            "process" : true
+            "process" : true,
+            "Time": true
         },
         "rules": {
             "no-underscore-dangle": 0,
