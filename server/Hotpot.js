@@ -17,15 +17,17 @@ const Fs = require("fs");
     var data = Fs.readFileSync(CONFIG_FILE, "utf8");
     var config;
     eval("config=" + data);
+    console.log("Configured from " + CONFIG_FILE);
 
     var opt = Getopt.create([
         [ "h", "help", "Show this help" ],
-        [ "d", "debug=ARG", "Run in debug mode" ]
+        [ "d", "debug=ARG", "Run in debug mode e.g. --debug all" ]
     ])
         .bindHelp()
         .setHelp(DESCRIPTION + "[[OPTIONS]]")
         .parseSystem();
 
+    opt = opt.options;
     console.info(opt);
 
     function expandEnv(struct) {
@@ -53,7 +55,8 @@ const Fs = require("fs");
     // 3: test module tracing
     // 4: pin setup details
     console.TRACE = function(level, message) {
-        if (config.debug === "all" || config.debug.includes(level))
+        if (typeof opt.debug !== "undefined" &&
+		(opt.debug === "all" || opt.debug.includes(level)))
             console.log(level + ": " + message);
     };
 

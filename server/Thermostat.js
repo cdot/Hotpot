@@ -18,6 +18,8 @@
  */
 const EventEmitter = require("events").EventEmitter;  
 const util = require("util");
+const Fs = require("fs");
+const Rule = require("./Rule.js");
 
 // Thermostat poll
 const POLL_INTERVAL = 1; // seconds

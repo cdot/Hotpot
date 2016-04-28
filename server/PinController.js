@@ -27,7 +27,7 @@ function PinController(name, config) {
 	// If we don't set the pin active_low, then writing a 1 to value
 	// sets the pin low, and vice-versa. Ho hum.
         self.setFeature("active_low", 1);
-        self.set(false);
+        self.set("init", false);
         self.setFeature("direction", "out");
     };
     
@@ -61,6 +61,7 @@ PinController.prototype.setFeature = function(feature, value, callback) {
 
 PinController.prototype.set = function(state, actor, callback) {
     "use strict";
+if (typeof actor === "undefined") throw new Error().stack;
     this.actor = actor;
     console.TRACE("pincontroller", actor + " set gpio "
                   + this.gpio + " = " + (state ? "on" : "off"));

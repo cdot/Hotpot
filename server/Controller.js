@@ -20,31 +20,29 @@ const VALVE_RETURN = 10000;
 function Controller(config, when_ready) {
     "use strict";
 
+    console.TRACE("init", "Creating Controller");
+
     var self = this, k;
     this.last_changed_by = "initialisation";
 
     // Create pin controllers
     self.pin = {};
-    for (k in config.pin) {
-        self.pin[k] = new PinController(k, config.pin[k]);
+    for (k in config.pins) {
+        self.pin[k] = new PinController(k, config.pins[k]);
     }
 
     // Event handlers
     var thermostat_on = function(id, cur) {
         // Thermostat requested change
         console.TRACE("change", id + " ON, " + cur + " < "
-                    + (config.temperature[id]
-                       + config.window[id] / 2));
-        this.last_changed_by = id;
-        self.set(id, true);
+                    + self.thermostat[id].low);
+        self.set(id, "rule", true);
     };
     var thermostat_off = function(id, cur) {
         // Thermostat requested change
         console.TRACE("change", id + " OFF, " + cur + " > "
-                    + (config.temperature[id]
-                       - config.window[id] / 2));
-        this.last_changed_by = id;
-        self.set(id, false);
+                    + self.thermostat[id].high);
+        self.set(id, "rule", false);
     };
     
     // Create thermostats
@@ -64,10 +62,10 @@ function Controller(config, when_ready) {
     // Assume worst-case valve configuration i.e. grey wire live holding
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
-    console.info("- Resetting valve");
-    self.pin.HW.set(1);
-    self.pin.CH.set(0);
-    self.set("HW", false, function() {
+    console.TRACE("init", "Resetting valve");
+    self.pin.HW.set(1, "init");
+    self.pin.CH.set(0, "init");
+    self.set("HW", "init", false, function() {
         when_ready.call(self);
     });
 }
@@ -103,7 +101,10 @@ Controller.prototype.set = function(channel, actor, on, respond) {
         setTimeout(function() {
             self.set(channel, actor, on, respond);
         }, VALVE_RETURN);
+	return;
     }
+
+    self.last_changed_by = actor;
 
     // Y-plan systems have a state where if the heating is on but the
     // hot water is off, and the heating is turned off, then the grey
@@ -125,7 +126,7 @@ Controller.prototype.set = function(channel, actor, on, respond) {
     } else {
         // Otherwise this is a simple state transition, just
         // set the appropriate pin
-        this.pin[channel].set(on ? 1 : 0);
+        this.pin[channel].set(on ? 1 : 0, actor);
         if (respond)
             respond.call(self, channel, on);
     }

@@ -32,8 +32,11 @@ function Server(config, controller) {
     if (typeof config.server.key !== "undefined") {
         var options = {};
         options.key = Fs.readFileSync(config.server.key);
-        if (typeof config.server.cert !== "undefined")
+	console.TRACE("server", "Key " + config.server.key + " loaded");
+        if (typeof config.server.cert !== "undefined") {
             options.cert = Fs.readFileSync(config.server.cert);
+	    console.TRACE("server", "Certificate " + config.server.cert + " loaded");
+	}
         console.TRACE("server", "HTTPS starting on port " + config.server.port
                      + " with key " + config.server.key);
     
