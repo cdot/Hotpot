@@ -7,14 +7,20 @@ var Fs = require("fs");
  *
  * Writes to GPIO pins
  */
-function PinController(name, gpio) {
+
+/**
+ * Constructor
+ * @param name name of the pin e.g. HW
+ * @param config configuration block for the pin, as described in README.md
+ */
+function PinController(name, config) {
     "use strict";
 
     var self = this;
     self.name = name;
-    self.gpio = gpio;
+    self.gpio = config.gpio;
 
-    console.TRACE("init", "Creating controller for gpio " + gpio);
+    console.TRACE("init", "Creating controller for gpio " + self.gpio);
     
     var init = function() {
 	// This seems backwards, and runs counter to the documentation.
@@ -26,13 +32,13 @@ function PinController(name, gpio) {
     };
     
     try {
-	Fs.readFileSync("/sys/class/gpio/gpio" + gpio + "/value");
+	Fs.readFileSync("/sys/class/gpio/gpio" + self.gpio + "/value");
         console.TRACE("init", "Pin already exported");
         init();
     } catch (e) {
-        console.TRACE("init", "export gpio " + gpio);
+        console.TRACE("init", "export gpio " + self.gpio);
         Fs.writeFile("/sys/class/gpio/export",
-                     gpio,
+                     self.gpio,
                      init);
     }
 }

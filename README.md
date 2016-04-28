@@ -23,7 +23,7 @@ The controller uses rules defined in javascript functions to control
 the temperature of the different services offered by the central heating
 system. It can operate either as a stand-alone controller or as an HTTPS
 server that supports querying and changing the configuration of the system.
-
+w
 For example, we might have a DS18x20 called "HW" that senses the hot water
 temperature. A GPIO pin also called "HW" is used to control whether the
 central heating is providing hot water. We set a target temperature of
@@ -37,14 +37,81 @@ function that is called with 'this' set to the Thermostat. A rules
 function is expected to test conditions such as time and
 temperature, and set the target temperature accordingly.
 
-The server is initially configured from options passed on the command-line
-or read from a file in ~/.config. After the initial setup, the HTTP interface
+The server is initially configured from options read from a file in
+$HOME/.config/Hotpot/config.json. After the initial setup, the HTTP interface
 can be used to query and modify the configuration.
 
-Example command-line:
+# HTTP interface
+The HTTP interface supports GET and POST requests.
+
+# Configuring the Hardware
+
+The included diagram "5V-3.5V control.svg" shows the wiring I use. Note that the
+pin used for the temperature sensors has to be changed in /boot/config.txt,
+thus:
+
 ```
-node Control.js -p 13126 --gpio HW=4 -i HW=28-00010474b79a --rules HW=hot_water.rules
+# 1-wire settings
+dtoverlay=w1-gpio,gpiopin=18
 ```
+You can see what sensors are configured using 
+```
+ls /sys/bus/w1/devices/w1_bus_master1
+```
+Expect to see devices such as 28-0316027f81ff
+
+# Configuring software
+
+The server is configured from the command-line and from a configuration file
+in ~/.config/Hotpot/config.json
+
+Example configuration file:
+```Javascript
+{
+    server: {
+        key: "$HOME/.config/Hotpot/hotpot.key",
+        cert: "$HOME/.config/Hotpot/hotpot.crt",
+        port: 13196
+    },
+    thermostats: {
+        HW: {
+            id: "28-0115914ff5ff",
+            rules: "$HOME/.config/Hotpot/hw_rules.json",
+            target: 55,
+            window: 3
+        },
+        CH: {
+            id: "28-0316027f81ff",
+            rules: "$HOME/.config/Hotpot/ch_rules.json",
+            target: 15,
+            window: 3
+        }
+    },
+    pins: {
+        CH: {
+            gpio: 23
+        },
+        HW: {
+            gpio: 25
+        }
+    }
+}
+```
+- server - sets up the HTTP(S) server
+  - key server private key
+  - cert server certificate. If no key and cert are given, an HTTP server will be used, otherwise it will be HTTPS.
+  - port the network port to use (default is 13196)
+- thermostats - sets up the DS18X20 thermostats available to the system. Each thermostat has:
+  - id - used to communicate with the sensor
+  - rules - (optional) name of a rules file that contains the rules for the thermostat
+  - target (optional) starting target temperature, before any rules are applied. Defaults to 0K (-273 degress C)
+  - window (optional) window over the target temperature.
+- pins - sets up the pins used to control the system.
+  - gpio - the GPIO pin number
+
+Note that the pin names "HW" and "CH" are predefined, as Y-plan systems have
+some dependencies between them.
+
 # Rules files
 
 Rules files are Javascript files that contain an array of functions
@@ -92,22 +159,3 @@ Rules functions can also interrogate other thermostats using the controller. For
     }
 ]
 ```
-
-# HTTP interface
-The HTTP interface supports GET and POST requests.
-
-# Configuring the Hardware
-
-The included diagram "5V-3.5V control.svg" shows the wiring I use. Note that the
-pin used for the temperature sensors has to be changed in /boot/config.txt,
-thus:
-
-```
-# 1-wire settings
-dtoverlay=w1-gpio,gpiopin=18
-```
-You can see what sensors are configured using 
-```
-ls /sys/bus/w1/devices/w1_bus_master1
-```
-Expect to see devices such as 28-0316027f81ff

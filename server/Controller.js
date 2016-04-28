@@ -8,13 +8,12 @@ const Thermostat = require("./Thermostat.js");
 const PinController = require("./PinController.js");
 const Rule = require("./Rule.js");
 
+// Time to wait for the multiposition valve to return to the discharged
+// state, in ms
+const VALVE_RETURN = 10000;
+
 /**
- * @param config configuration data, including the following fields:
- * valve_return - Y-plan valve spring return time, in seconds
- * device - hash of device ids, one per thermostat
- * gpio - hash of gpio pins, usually one per thermostat
- * temperature - hash of initial target temperature, per thermostat
- * window - hash of initial windows, one per thermostat
+ * @param config configuration data (see README.md)
  * @param when_ready callback function for when the controller is
  * initialised and ready to accept commands
  */
@@ -22,58 +21,39 @@ function Controller(config, when_ready) {
     "use strict";
 
     var self = this, k;
+    this.last_changed_by = "initialisation";
 
     // Create pin controllers
     self.pin = {};
-    for (k in config.gpio) {
-        self.pin[k] = new PinController(k, config.gpio[k]);
+    for (k in config.pin) {
+        self.pin[k] = new PinController(k, config.pin[k]);
     }
 
     // Event handlers
-    var thermostat_on = function(id, rule, cur) {
+    var thermostat_on = function(id, cur) {
         // Thermostat requested change
         console.TRACE("change", id + " ON, " + cur + " < "
                     + (config.temperature[id]
                        + config.window[id] / 2));
-        self.set(id, rule, true);
+        this.last_changed_by = id;
+        self.set(id, true);
     };
-    var thermostat_off = function(id, rule, cur) {
+    var thermostat_off = function(id, cur) {
         // Thermostat requested change
         console.TRACE("change", id + " OFF, " + cur + " > "
                     + (config.temperature[id]
                        - config.window[id] / 2));
-        self.set(id, rule, false);
+        this.last_changed_by = id;
+        self.set(id, false);
     };
     
     // Create thermostats
     self.thermostat = {};
-    for (k in config.device) {
-        var th = new Thermostat(k,
-                                config.device[k],
-                                config.temperature[k],
-                                config.window[k]);
+    for (k in config.thermostats) {
+        var th = new Thermostat(k, config.thermostats[k]);
         th.on("below", thermostat_on);
         th.on("above", thermostat_off);
         self.thermostat[k] = th;
-    }
-
-    // Load rules for thermostats
-    for (k in config.rules) {
-        console.TRACE("init", "Loading rules for " + k + " from "
-                      + config.rules[k]);
-        var data = Fs.readFileSync(config.rules[k], "utf8");
-        try {
-            // Not JSON, as it contains functions
-            var rules = eval(data);
-            self.thermostat[k].clear_rules();
-            for (var i in rules)
-                self.thermostat[k].insert_rule(
-                    new Rule(rules[i].name,
-                             rules[i].test));
-        } catch (e) {
-            console.error("Failed to load rules from "
-                          + config.rules[k] + ": " + e.message);
-        }
     }
 
     // When we start, turn heating OFF and hot water ON to ensure
@@ -85,9 +65,9 @@ function Controller(config, when_ready) {
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
     console.info("- Resetting valve");
-    self.pin.HW.set(1, "initialisation");
-    self.pin.CH.set(0, "initialisation");
-    self.set("HW", "initialisation", false, function() {
+    self.pin.HW.set(1);
+    self.pin.CH.set(0);
+    self.set("HW", false, function() {
         when_ready.call(self);
     });
 }
@@ -109,7 +89,7 @@ Controller.prototype.DESTROY = function() {
 /**
  * @private
  * Set the on/off state of the system.
- * @param channel "HW" or "CH"
+ * @param channel e.g. "HW" or "CH"
  * @param actor who is setting e.g. "thermostat" or "command"
  * @param state true or false (on or off)
  * @param respond function called when state is set, parameters
@@ -122,7 +102,7 @@ Controller.prototype.set = function(channel, actor, on, respond) {
     if (this.pending) {
         setTimeout(function() {
             self.set(channel, actor, on, respond);
-        }, this.valve_return * 1000);
+        }, VALVE_RETURN);
     }
 
     // Y-plan systems have a state where if the heating is on but the
@@ -135,17 +115,17 @@ Controller.prototype.set = function(channel, actor, on, respond) {
     // return. Then after a timeout, set the desired state.
     if (channel === "CH" && !on
         && this.pin.HW.state === 1 && this.pin.HW.state === 0) {
-        this.pin.CH.set(0, actor);
-        this.pin.HW.set(1, actor);
+        this.pin.CH.set(0);
+        this.pin.HW.set(1);
         self.pending = true;
         setTimeout(function() {
             self.pending = false;
             self.set(channel, actor, on, respond);
-        }, this.valve_return * 1000);
+        }, VALVE_RETURN);
     } else {
         // Otherwise this is a simple state transition, just
         // set the appropriate pin
-        this.pin[channel].set(on ? 1 : 0, actor);
+        this.pin[channel].set(on ? 1 : 0);
         if (respond)
             respond.call(self, channel, on);
     }
@@ -161,7 +141,8 @@ Controller.prototype.get_status = function() {
     var struct = {
 	time: new Date().toGMTString(),
         thermostats: [],
-        pins: []
+        pins: [],
+        last_changed_by: this.last_changed_by
     };
     var k;
 
@@ -221,7 +202,8 @@ Controller.prototype.execute_command = function(command) {
         break;
     case "set_state":
         console.TRACE("change", command.id + " FORCE " + command.value);
-        self.set(command.id, "command", parseInt(command.value) !== 0);
+        this.last_changed_by = "command";
+        self.set(command.id, 0 + command.value !== 0);
         break;
     default:
         throw "Unrecognised command " + command.command;

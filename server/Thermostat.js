@@ -31,11 +31,9 @@ const K0 = -273.25; // 0K
 /**
  * Construct a thermostat
  * @param name name by which the caller identifies the thermostat
- * @param id device id of the DS18x20 device
- * @param target target temperature (optional)
- * @param window window around target (optional, see set_window)
+ * @param config configuration block for the pin, described in README.md
  */
-function Thermostat(name, id, target, window) {
+function Thermostat(name, config) {
     "use strict";
 
     if (!ds18x20) {
@@ -55,25 +53,44 @@ function Thermostat(name, id, target, window) {
     EventEmitter.call(this);
     var self = this;
     this.name = name;
-    this.id = id;     // DS18x20 device ID
-    this.target = K0; // target temperature
-    this.low = K0;    // low threshold
-    this.high = K0;   // high threshold
-    this.window = 0;  // slack window
-    this.rules = [];  // activation rules, array of Rule
+    this.id = config.id; // DS18x20 device ID
+    this.target = K0;    // target temperature
+    this.low = K0;       // low threshold
+    this.high = K0;      // high threshold
+    this.window = 0;     // slack window
+    this.rules = [];     // activation rules, array of Rule
     this.rules_enabled = true;
+
     this.active_rule = "none"; // the currently active rule
     this.live = true; // True until destroyed
     
-    if (typeof target !== "undefined")
-        this.set_target(target);
-    if (typeof window !== "undefined")
-        this.set_window(window);
+    if (typeof config.target !== "undefined")
+        this.set_target(config.target);
+    if (typeof config.window !== "undefined")
+        this.set_window(config.window);
 
     this.last_temp = K0; // Temperature measured in last poll
 
     if (typeof ds18x20.mapID !== "undefined")
         ds18x20.mapID[id] = name;
+
+    if (typeof config.rules !== "undefined") {
+        console.TRACE("init", "Loading rules for " + name + " from "
+                      + config.rules);
+        var data = Fs.readFileSync(config.rules, "utf8");
+        try {
+            // Not JSON, as it contains functions
+            var rules = eval(data);
+            self.clear_rules();
+            for (var i in rules)
+                self.insert_rule(
+                    new Rule(rules[i].name,
+                             rules[i].test));
+        } catch (e) {
+            console.error("Failed to load rules from "
+                          + config.rules + ": " + e.message);
+        }
+    }
 
     // Don't start polling until after a timeout even because otherwise
     // the event emitter won't work

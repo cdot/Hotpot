@@ -1,7 +1,7 @@
 (function($) {
     "use strict";
 
-    var server = "https://192.168.1.15:13196";
+    var server = "https://192.168.1.16:13196";
     var setup_backoff = 5; // seconds
     var update_backoff = 5; // seconds
     var update_rate = 1; // seconds
