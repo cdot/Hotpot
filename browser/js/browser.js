@@ -17,7 +17,7 @@
                     id: $controller.data("name"),
                     value: s
                 };
-                $.post("https://192.168.1.15:13196",
+                $.post(server,
                        JSON.stringify(data))
                     .success(function() {
                         $self.text(s);
@@ -45,7 +45,7 @@
                     name: newrule.name,
                     test: newrule.test
                 };
-                $.post("https://192.168.1.15:13196",
+                $.post(server,
                        JSON.stringify(data))
                     .success(function() {
                         $self.text(s);

@@ -204,7 +204,7 @@ Controller.prototype.execute_command = function(command) {
     case "set_state":
         console.TRACE("change", command.id + " FORCE " + command.value);
         this.last_changed_by = "command";
-        self.set(command.id, 0 + command.value !== 0);
+        self.set(command.id, "command", parseInt(command.value) !== 0);
         break;
     default:
         throw "Unrecognised command " + command.command;

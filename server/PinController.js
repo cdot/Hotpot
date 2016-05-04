@@ -32,8 +32,9 @@ function PinController(name, config) {
     };
     
     try {
-	Fs.readFileSync("/sys/class/gpio/gpio" + self.gpio + "/value");
-        console.TRACE("init", "Pin already exported");
+	var val = Fs.readFileSync(
+            "/sys/class/gpio/gpio" + self.gpio + "/value");
+        console.TRACE("init", "Pin already exported (" + val + ")");
         init();
     } catch (e) {
         console.TRACE("init", "export gpio " + self.gpio);
