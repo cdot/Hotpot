@@ -3,6 +3,8 @@
  * Singleton controller for a number of pins and thermostats. Controls the
  * hardware state.
  */
+const EventEmitter = require("events").EventEmitter;  
+const util = require("util");
 const Fs = require("fs");
 const Thermostat = require("./Thermostat.js");
 const PinController = require("./PinController.js");
@@ -26,6 +28,7 @@ function Controller(config, when_ready) {
     self.last_changed_by = "initialisation";
     self.config = config;
 
+    EventEmitter.call(self);
     // Create pin controllers
     self.pin = {};
     for (k in config.pins) {
@@ -70,6 +73,7 @@ function Controller(config, when_ready) {
         when_ready.call(self);
     });
 }
+util.inherits(Controller, EventEmitter);
 module.exports = Controller;
 
 Controller.prototype.toString = function() {

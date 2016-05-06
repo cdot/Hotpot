@@ -8,6 +8,7 @@
 
 const Fs = require("fs");
 const serialize = require("serialize-javascript");
+const Config = require("./Config.js");
 
 /**
  * HTTP(S) Server object
@@ -32,10 +33,10 @@ function Server(config, controller) {
     var server;
     if (typeof config.key !== "undefined") {
         var options = {};
-        options.key = Fs.readFileSync(config.expanded(config.key));
+        options.key = Fs.readFileSync(Config.expanded(config.key));
 	console.TRACE("server", "Key " + config.key + " loaded");
         if (typeof config.cert !== "undefined") {
-            options.cert = Fs.readFileSync(config.expanded(config.cert));
+            options.cert = Fs.readFileSync(Config.expanded(config.cert));
             console.TRACE("server", "Certificate " + config.cert + " loaded");
         }
         console.TRACE("server", "HTTPS starting on port " + config.port
