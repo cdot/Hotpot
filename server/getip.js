@@ -77,7 +77,7 @@ function http_get(config, callback) {
 if (config.debug)
     console.TRACE = console.log;
 else
-    console.TRACE = null;
+    console.TRACE = function() { "use strict" };
 
 // Get IP address http://smart-ip.net/myip
 http_get(
@@ -89,6 +89,9 @@ http_get(
         "use strict";
         
         console.TRACE("Current IP address " + new_addr);
+	// Convert to JSON
+	new_addr = 'hotpot_ip="' + new_addr + '"';
+
         // Get known address
         http_get(
             config.http,

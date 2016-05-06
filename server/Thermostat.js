@@ -27,7 +27,7 @@ const POLL_INTERVAL = 1; // seconds
 // Singleton interface to DS18x20 thermometers
 var ds18x20;
 
-// Known thermometer ids (get from command-line or config)
+// Known unlikely temperature value
 const K0 = -273.25; // 0K
 
 /**
@@ -56,10 +56,10 @@ function Thermostat(name, config) {
     var self = this;
     this.name = name;
     this.id = config.id; // DS18x20 device ID
-    this.target = K0;    // target temperature
-    this.low = K0;       // low threshold
-    this.high = K0;      // high threshold
-    this.window = 0;     // slack window
+    this.target = 15;    // target temperature
+    this.low = 13;       // low threshold
+    this.high = 17;      // high threshold
+    this.window = 4;     // slack window
     this.rules = [];     // activation rules, array of Rule
     this.rules_enabled = true;
 
@@ -170,9 +170,9 @@ Thermostat.prototype.poll = function() {
 
             var init = (self.last_temp === K0);
             if (temp < self.low && (init || self.last_temp >= self.low))
-                self.emit("below", self.name, self.active_rule. temp);
+                self.emit("below", self.name, temp);
             else if (temp > self.high && (init || self.last_temp <= self.high))
-                self.emit("above", self.name, self.active_rule, temp);
+                self.emit("above", self.name, temp);
             self.last_temp = temp;
             setTimeout(function() {
                 self.poll();
