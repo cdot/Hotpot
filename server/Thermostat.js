@@ -95,7 +95,7 @@ function Thermostat(name, config) {
 util.inherits(Thermostat, EventEmitter);
 module.exports = Thermostat;
 
-Thermostat.prototype.toString = function() {
+Thermostat.prototype.serialisable = function() {
     "use strict";
 
     var config = {
@@ -107,7 +107,7 @@ Thermostat.prototype.toString = function() {
     for (var k in this.rules) {
         config.rules.push(this.rules[k]);
     }
-    return config.toString();
+    return config;
 };
 
 Thermostat.prototype.DESTROY = function() {

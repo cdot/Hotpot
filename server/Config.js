@@ -1,5 +1,6 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 const Fs = require("fs");
+const serialize = require("serialize-javascript");
 
 Config = {
     load: function(file) {
@@ -26,7 +27,7 @@ Config = {
 
     save: function(data, file) {
         "use strict";
-        console.log(data.toString());
+        console.log("SAVE " + serialize(data));
         //    Fs.writeFileSync(Config.expanded(file), data, "utf8");
         console.log(file + " updated");
     }

@@ -76,7 +76,7 @@ function Controller(config, when_ready) {
 util.inherits(Controller, EventEmitter);
 module.exports = Controller;
 
-Controller.prototype.toString = function() {
+Controller.prototype.serialisable = function() {
     "use strict";
     var k;
     var config = {
@@ -84,12 +84,12 @@ Controller.prototype.toString = function() {
         pins: {}
     };
     for (k in this.thermostat) {
-        config.thermostats[k] = this.thermostat[k];
+        config.thermostats[k] = this.thermostat[k].serialisable();
     }
     for (k in this.pin) {
-        config.pins[k] = this.pin[k];
+        config.pins[k] = this.pin[k].serialisable();
     }
-    return config.toString();
+    return config;
 };
 
 /**

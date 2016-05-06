@@ -6,7 +6,6 @@
  * A rule governing when/if a function is to be turned on/off based on the
  * state of one or more thermostats.
  */
-const serialize = require("serialize-javascript");
 const Time = require("./Time.js"); // for executing rules
 
 /**
@@ -35,7 +34,7 @@ function Rule(name, fn) {
 }
 module.exports = Rule;
 
-Rule.prototype.toString = function() {
+Rule.prototype.serialisable = function() {
     "use strict";
     return {
         name: this.name,
@@ -57,15 +56,3 @@ Rule.prototype.test = function(thermostat, temp) {
     return pass;
 };
 
-/**
- * Get a serialisable version of the rule
- * @param
- */
-Rule.prototype.serialisable = function() {
-    "use strict";
-    return {
-        index: this.index,
-        name: this.name,
-        test: serialize(this.fn)
-    };
-};

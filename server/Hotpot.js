@@ -42,18 +42,19 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
 	controller = new Controller(
             config.controller,
             function() {
-                server = new Server(config.server, this);
-                this.on("config_change",
+                var self = this;
+                server = new Server(config.server, self);
+
+                self.on("config_change",
                               function() {
                                   Config.save({
-                                      server: server,
-                                      controller: controller
+                                      server: config.server,
+                                      controller: self.serialisable()
                                   }, CONFIG_FILE);
                               });
+                self.emit("config_change");
             });
     } catch (e) {
 	console.error(e.message);
-        if (controller)
-            controller.DESTROY();
     }
 })();

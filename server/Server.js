@@ -18,7 +18,6 @@ function Server(config, controller) {
 
     var self = this;
 
-    self.config = config;
     self.controller = controller;
 
     var handler = function(request, response) {
@@ -49,11 +48,6 @@ function Server(config, controller) {
     }
     server.listen(config.port);
 }
-
-Server.prototype.toString = function() {
-    "use strict";
-    return this.config.toString();
-};
 
 /**
  * AJAX request to get the status of the server.
