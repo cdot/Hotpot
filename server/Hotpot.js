@@ -45,6 +45,8 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
                 var self = this;
                 server = new Server(config.server, self);
 
+                // Save config when it changes, so we restart to the
+                // same state
                 self.on("config_change",
                               function() {
                                   Config.save({
@@ -52,7 +54,6 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
                                       controller: self.serialisable()
                                   }, CONFIG_FILE);
                               });
-                self.emit("config_change");
             });
     } catch (e) {
 	console.error(e.message);
