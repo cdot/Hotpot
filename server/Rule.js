@@ -35,6 +35,14 @@ function Rule(name, fn) {
 }
 module.exports = Rule;
 
+Rule.prototype.toString = function() {
+    "use strict";
+    return {
+        name: this.name,
+        rule: this.fn
+    };
+};
+
 /**
  * Call the test function for this rule for the given thermostat and
  * current temperature. Will return true if the rule passes for the

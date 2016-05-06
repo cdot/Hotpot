@@ -1,6 +1,7 @@
 # Copyright (C) 2016 Crawford Currie http://c-dot.co.uk / MIT
 
 SOURCES := \
+	Config.js \
 	Hotpot.js \
 	Server.js\
 	Controller.js\
@@ -11,6 +12,7 @@ SOURCES := \
 
 %.esl : %.js
 	eslint $^
+	touch %.esl
 
 release: $(MIN)
 	@echo "Done"

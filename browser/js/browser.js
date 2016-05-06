@@ -1,7 +1,9 @@
 (function($) {
     "use strict";
 
-    var server = "https://192.168.1.16:13196";
+    var ip_source = "http://c-dot.co.uk/hotpot.ip";
+
+    var server;
     var setup_backoff = 5; // seconds
     var update_backoff = 5; // seconds
     var update_rate = 1; // seconds
@@ -187,6 +189,7 @@
     };
 
     var first_ping = function() {
+        server = "https://" + hotpot_ip + ":13196";
         $.getJSON(
             server,
             function(data) {

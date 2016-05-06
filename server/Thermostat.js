@@ -33,7 +33,7 @@ const K0 = -273.25; // 0K
 /**
  * Construct a thermostat
  * @param name name by which the caller identifies the thermostat
- * @param config configuration block for the pin, described in README.md
+ * @param config configuration for the pin, a Config object
  */
 function Thermostat(name, config) {
     "use strict";
@@ -61,7 +61,6 @@ function Thermostat(name, config) {
     this.high = 17;      // high threshold
     this.window = 4;     // slack window
     this.rules = [];     // activation rules, array of Rule
-    this.rules_enabled = true;
 
     this.active_rule = "none"; // the currently active rule
     this.live = true; // True until destroyed
@@ -77,21 +76,12 @@ function Thermostat(name, config) {
         ds18x20.mapID[config.id] = name;
 
     if (typeof config.rules !== "undefined") {
-        console.TRACE("init", "Loading rules for " + name + " from "
-                      + config.rules);
-        var data = Fs.readFileSync(config.rules, "utf8");
-        try {
-            // Not JSON, as it contains functions
-            var rules = eval(data);
-            self.clear_rules();
-            for (var i in rules)
-                self.insert_rule(
-                    new Rule(rules[i].name,
-                             rules[i].test));
-        } catch (e) {
-            console.error("Failed to load rules from "
-                          + config.rules + ": " + e.message);
-        }
+        var rules = config.rules;
+        self.clear_rules();
+        for (var i in rules)
+            self.insert_rule(
+                new Rule(rules[i].name,
+                         rules[i].test));
     }
 
     // Don't start polling until after a timeout even because otherwise
@@ -104,6 +94,21 @@ function Thermostat(name, config) {
 }
 util.inherits(Thermostat, EventEmitter);
 module.exports = Thermostat;
+
+Thermostat.prototype.toString = function() {
+    "use strict";
+
+    var config = {
+        id: this.id,
+        target: this.target,
+        window: this.window,
+        rules: []
+    };
+    for (var k in this.rules) {
+        config.rules.push(this.rules[k]);
+    }
+    return config.toString();
+};
 
 Thermostat.prototype.DESTROY = function() {
     "use strict";
@@ -150,16 +155,14 @@ Thermostat.prototype.poll = function() {
         if (err !== null) {
             console.error("ERROR: " + err);
         } else {
-            if (self.rules_enabled) {
-                // Test each of the rules in order until one fires,
-                // then stop testing. This will leave us with the
-                // appropriate low/high state.
-                self.active_rule = "none";
-                 for (var i in self.rules) {
-                    if (self.rules[i].test(self, temp)) {
-                        self.active_rule = self.rules[i].name;
-                        break;
-                    }
+            // Test each of the rules in order until one fires,
+            // then stop testing. This will leave us with the
+            // appropriate low/high state.
+            self.active_rule = "none";
+            for (var i in self.rules) {
+                if (self.rules[i].test(self, temp)) {
+                    self.active_rule = self.rules[i].name;
+                    break;
                 }
             }
             //console.TRACE("thermostat", self.name + " active rule is "
@@ -247,18 +250,7 @@ Thermostat.prototype.clear_rules = function() {
 };
 
 /**
- * Enable/disable rules
- * @param torf true to enable rules (the default)
- */
-Thermostat.prototype.enable_rules = function(torf) {
-    "use strict";
-    this.rules_enabled = torf;
-    console.TRACE("thermostat", this.name + " rules "
-                  + (this.rules_enabled ? "en" : "dis") + "abled");
-};
-
-/**
- * Construct a report amenable to serialisation
+ * Construct a report amenable to JSON serialisation
  */
 Thermostat.prototype.serialisable = function() {
     "use strict";
@@ -267,7 +259,6 @@ Thermostat.prototype.serialisable = function() {
         temperature: this.temperature(),
         window: this.window,
         target: this.target,
-        rules_enabled: this.rules_enabled,
         active_rule: this.active_rule,
         rules: this.rules.map(function(rule, i) {
             return rule.serialisable(i);

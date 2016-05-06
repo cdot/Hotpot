@@ -16,7 +16,8 @@ function Server(config, controller) {
     "use strict";
 
     var self = this;
-    
+
+    self.config = config;
     self.controller = controller;
 
     var handler = function(request, response) {
@@ -29,24 +30,29 @@ function Server(config, controller) {
         }
     };
     var server;
-    if (typeof config.server.key !== "undefined") {
+    if (typeof config.key !== "undefined") {
         var options = {};
-        options.key = Fs.readFileSync(config.server.key);
-	console.TRACE("server", "Key " + config.server.key + " loaded");
-        if (typeof config.server.cert !== "undefined") {
-            options.cert = Fs.readFileSync(config.server.cert);
-            console.TRACE("server", "Certificate " + config.server.cert + " loaded");
+        options.key = Fs.readFileSync(config.expanded(config.key));
+	console.TRACE("server", "Key " + config.key + " loaded");
+        if (typeof config.cert !== "undefined") {
+            options.cert = Fs.readFileSync(config.expanded(config.cert));
+            console.TRACE("server", "Certificate " + config.cert + " loaded");
         }
-        console.TRACE("server", "HTTPS starting on port " + config.server.port
-                     + " with key " + config.server.key);
+        console.TRACE("server", "HTTPS starting on port " + config.port
+                     + " with key " + config.key);
     
         server = require("https").createServer(options, handler);
     } else {
-        console.TRACE("server", "HTTP starting on port " + config.server.port);
+        console.TRACE("server", "HTTP starting on port " + config.port);
         server = require("http").createServer(handler);
     }
-    server.listen(config.server.port);
+    server.listen(config.port);
 }
+
+Server.prototype.toString = function() {
+    "use strict";
+    return this.config.toString();
+};
 
 /**
  * AJAX request to get the status of the server.

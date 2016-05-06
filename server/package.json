@@ -43,7 +43,8 @@
             "module": true,
             "Buffer": true,
             "process" : true,
-            "Time": true
+            "Time": true,
+            "Config": true
         },
         "rules": {
             "no-underscore-dangle": 0,

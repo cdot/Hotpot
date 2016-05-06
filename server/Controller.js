@@ -13,7 +13,7 @@ const Rule = require("./Rule.js");
 const VALVE_RETURN = 10000;
 
 /**
- * @param config configuration data (see README.md)
+ * @param config Config object
  * @param when_ready callback function for when the controller is
  * initialised and ready to accept commands
  */
@@ -23,7 +23,8 @@ function Controller(config, when_ready) {
     console.TRACE("init", "Creating Controller");
 
     var self = this, k;
-    this.last_changed_by = "initialisation";
+    self.last_changed_by = "initialisation";
+    self.config = config;
 
     // Create pin controllers
     self.pin = {};
@@ -71,17 +72,20 @@ function Controller(config, when_ready) {
 }
 module.exports = Controller;
 
-Controller.prototype.DESTROY = function() {
+Controller.prototype.toString = function() {
     "use strict";
     var k;
-
-    for (k in this.pin) {
-        this.pin[k].DESTROY();
-    }
-
+    var config = {
+        thermostats: {},
+        pins: {}
+    };
     for (k in this.thermostat) {
-        this.thermostat[k].DESTROY();
+        config.thermostats[k] = this.thermostat[k];
     }
+    for (k in this.pin) {
+        config.pins[k] = this.pin[k];
+    }
+    return config.toString();
 };
 
 /**
@@ -179,27 +183,26 @@ Controller.prototype.execute_command = function(command) {
 
     var th = self.thermostat[command.id];
     switch (command.command) {
-    case "disable_rules":
-        th.enable_rules(false);
-        break;
-    case "enable_rules":
-        th.enable_rules(true);
-        break;
     case "remove_rule":
         th.remove_rule(command.index);
+        self.emit("config_change");
         break;
     case "insert_rule":
         th.insert_rule(new Rule(command.name, command.test), command.index);
+        self.emit("config_change");
         break;
     case "replace_rule":
         th.remove_rule(command.index);
         th.insert_rule(new Rule(command.name, command.test), command.index);
+        self.emit("config_change");
         break;
     case "set_window":
         th.set_window(command.value);
+        self.emit("config_change");
         break;
     case "set_target":
         th.set_target(command.value);
+        self.emit("config_change");
         break;
     case "set_state":
         console.TRACE("change", command.id + " FORCE " + command.value);

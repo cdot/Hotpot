@@ -1,5 +1,4 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
-const CONFIG_FILE = process.env.HOME + "/.config/Hotpot/config.json";
 const DESCRIPTION =
 "DESCRIPTION\nA Raspberry PI central heating control server.\n" +
 "See README.md for details\n\nOPTIONS\n";
@@ -7,66 +6,51 @@ const DESCRIPTION =
 const Getopt = require("node-getopt");
 const Server = require("./Server.js");
 const Controller = require("./Controller.js");
-const Fs = require("fs");
+const Config = require("./Config.js");
+const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
 
 /** Main program */
 (function () {
     "use strict";
 
-    // Load config
-    var data = Fs.readFileSync(CONFIG_FILE, "utf8");
-    var config;
-    eval("config=" + data);
-    console.log("Configured from " + CONFIG_FILE);
-
-    var opt = Getopt.create([
+    var cliopt = Getopt.create([
         [ "h", "help", "Show this help" ],
         [ "d", "debug=ARG", "Run in debug mode e.g. --debug all" ]
     ])
         .bindHelp()
         .setHelp(DESCRIPTION + "[[OPTIONS]]")
-        .parseSystem();
-
-    opt = opt.options;
-    console.info(opt);
-
-    function expandEnv(struct) {
-        for (var key in struct) {
-            if (typeof struct[key] === "string") {
-                struct[key] = struct[key].replace(
-                        /(\$[A-Z]+)/g, function(match) {
-                            var v = match.substring(1);
-                            if (typeof process.env[v] !== "undefined")
-                                return process.env[v];
-                            return match;
-                        });
-            } else if (struct[key] !== null
-                       && typeof struct[key] === "object") {
-                expandEnv(struct[key]);
-            }
-        }
-    }
-    
-    expandEnv(config);
-
+        .parseSystem()
+        .options;
+   
     // 0: initialisation
     // 1: pin on/off
     // 2: command tracing
     // 3: test module tracing
     // 4: pin setup details
     console.TRACE = function(level, message) {
-        if (typeof opt.debug !== "undefined" &&
-		(opt.debug === "all" || opt.debug.includes(level)))
+        if (typeof cliopt.debug !== "undefined" &&
+		(cliopt.debug === "all" || cliopt.debug.includes(level)))
             console.log(level + ": " + message);
     };
 
+    var config = Config.load(CONFIG_FILE);
+
     // Start the controller and when it's ready, start an HTTP server
     // to receive commands for it.
-    var controller;
+    var controller, server;
     try {
-	controller = new Controller(config, function() {
-            new Server(config, this);
-	});
+	controller = new Controller(
+            config.controller,
+            function() {
+                server = new Server(config.server, this);
+                this.on("config_change",
+                              function() {
+                                  Config.save({
+                                      server: server,
+                                      controller: controller
+                                  }, CONFIG_FILE);
+                              });
+            });
     } catch (e) {
 	console.error(e.message);
         if (controller)
