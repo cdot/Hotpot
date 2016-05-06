@@ -26,5 +26,14 @@ body {
 }
 
 .editable {
-    background-color: maroon;
+}
+
+.fixed {
+    font-style: italic;
+}
+
+.temperature_canvas {
+    width: 300px;
+    height: 100px;
+    float: right;
 }

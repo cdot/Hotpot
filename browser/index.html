@@ -16,20 +16,23 @@
     </div>
     <div style="display:none" id="controller_template">
       <h2 data-field="name"></h2>
+      <canvas class="temperature_canvas" width="300" height="100"></canvas>
       <table class="datatable">
-        <tr>
+        <tr class="fixed">
           <th class="ralign">Temperature</th>
           <td data-field="temperature"></td>
         </tr>
         <tr>
           <th>State</th>
-          <td data-field="state" class="editable"></td>
+          <td>
+            <input type="checkbox" data-field="state"/>
+          </td>
         </tr>
-        <tr>
+        <tr class="fixed">
           <th>Active Rule</th>
           <td data-field="active_rule"></td>
         </tr>
-        <tr>
+        <tr class="fixed">
           <th>Last Changed By</th>
           <td data-field="actor"></td>
         </tr>
@@ -46,7 +49,11 @@
           <td>
             <table data-field="rules">
               <thead>
-                <tr><th>Index</th><th>Name</th><th>Function</th></tr>
+                <tr>
+                  <th class="fixed">Index</th>
+                  <th>Name</th>
+                  <th>Function</th>
+                </tr>
               </thead>
               <tbody>
               </tbody>
@@ -58,7 +65,7 @@
     <table style="display:none">
       <tbody id="rule_template">
         <tr class="rule">
-          <td data-field="index"></td>
+          <td data-field="index" class="fixed"></td>
           <td data-field="name" class="editable"></td>
           <td data-field="test" class="editable" data-editable="height:'50px',area:true"></td>
         </tr>

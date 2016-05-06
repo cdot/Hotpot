@@ -26,6 +26,20 @@
         });
     };
 
+    var toggle_field = function() {
+        var $self = $(this);
+        var $controller = $self.closest(".controller");
+        var data = {
+            command: "set_" + $self.data("field"),
+            id: $controller.data("name"),
+            value: !$self.prop("checked")
+        };
+        $.post(server,
+               JSON.stringify(data))
+            .success(function() {
+            });
+    };
+
     // Edit text of a rule
     var edit_rule = function() {
         $(this).edit_in_place({
@@ -54,17 +68,77 @@
         });
     };
 
+    var log_temperature = function($self, temp) {
+        var $controller = $self.closest(".controller");
+        var last_temp = $controller.data("last_temp");
+        var $canvas = $controller.find(".temperature_canvas");
+        var target = parseFloat($controller.find("[data-field='target']").text());
+        var window = parseFloat($controller.find("[data-field='window']").text());
+        if ($canvas.height() === 0)
+            return;
+        var h = $canvas.height();
+        var w = $canvas.width();
+        var scale = 3 * window;
+        var offset = target - 3 * window / 2;
+        var y = function(v) {
+            return h - (v - offset) * h / scale;
+        };
+
+        var ctx = $canvas[0].getContext('2d');
+
+        var img = null;
+        if (typeof(last_temp) !== "undefined") {
+            img = ctx.getImageData(
+                2, 1, w - 3, h - 2);
+        }
+
+        // Background
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, w, h);
+
+        // Window
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, y(target + window / 2), w, window * h / scale);
+
+        // Target
+        ctx.strokeStyle = "red";
+        ctx.beginPath();
+        ctx.moveTo(0, y(target));
+        ctx.lineTo(w, y(target));
+        ctx.stroke();
+
+        // Current temp
+        ctx.strokeStyle = "green";
+        ctx.beginPath();
+        ctx.moveTo(w - 2, y(last_temp));
+        ctx.lineTo(w - 1, y(temp));
+        ctx.stroke();
+
+        // Old data
+        if (img !== null)
+            ctx.putImageData(img, 1, 1);
+
+        $controller.data("last_temp", temp);
+    };
+
     // Populate from pin or thermostat record
     var populate = function(data, $div) {
         var populate_field = function() {
+            var $self = $(this);
             if (typeof data[k] !== "object") {
-                $(this).text(data[k]);
+                if ($self.is(":checkbox")) {
+                    $self.prop("checked", parseInt(data[k]) === 1);
+                } else {
+                    if ($self.data("field") === "temperature")
+                        log_temperature($self, parseInt(data[k]));
+                    $self.text(data[k]);
+                }
                 return;
             }
             // Rule array
             for (var i in data[k]) {
                 var rule = data[k][i];
-                var $tbody = $(this).find("tbody");
+                var $tbody = $self.find("tbody");
                 var $row = $tbody.find(".rule" + rule.index);
                 if ($row.length === 0) {
                     // Create new row
@@ -127,6 +201,8 @@
                     $div.addClass("controller");
                     $div.find(".editable")
                         .on("click", edit_field);
+                    $div.find("input:checkbox")
+                        .on("click", toggle_field);
                     populate(th, $div);
                     $("#controllers").append($div);
                 }
