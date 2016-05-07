@@ -125,41 +125,42 @@
 
     // Populate from pin or thermostat record
     var populate = function(data, $div) {
+        var k;
+
         var populate_field = function() {
             var $self = $(this);
-            if (typeof data[k] !== "object") {
-                if ($self.is(":checkbox")) {
-                    $self.prop("checked", parseInt(data[k]) === 1);
-                } else {
-                    if ($self.data("field") === "temperature")
-                        log_temperature($self, parseInt(data[k]));
-                    $self.text(data[k]);
+            if (k === "rules") {
+                // Rule array
+                for (var i in data[k]) {
+                    var rule = data[k][i];
+                    rule.index = i;
+                    var $tbody = $self.find("tbody");
+                    var $row = $tbody.find(".rule" + rule.index);
+                    if ($row.length === 0) {
+                        // Create new row
+                        $row = $($("#rule_template").html());
+                        $row.addClass("rule" + rule.index);
+                        $row.addClass("rule");
+                        $row.data("index", rule.index);
+                        $tbody.append($row);
+                        $row.find(".editable")
+                            .on("click", edit_rule);
+                    }
+                    populate(rule, $row);
                 }
-                return;
-            }
-            // Rule array
-            for (var i in data[k]) {
-                var rule = data[k][i];
-                var $tbody = $self.find("tbody");
-                var $row = $tbody.find(".rule" + rule.index);
-                if ($row.length === 0) {
-                    // Create new row
-                    $row = $($("#rule_template").html());
-                    $row.addClass("rule" + rule.index);
-                    $row.addClass("rule");
-                    $row.data("index", rule.index);
-                    $tbody.append($row);
-                    $row.find(".editable")
-                        .on("click", edit_rule);
-                }
-                populate(rule, $row);
+            } else  if ($self.is(":checkbox")) {
+                $self.prop("checked", parseInt(data[k]) === 1);
+            } else {
+                if ($self.data("field") === "temperature")
+                    log_temperature($self, parseInt(data[k]));
+                $self.text(data[k].toString());
             }
         };
 
         if (typeof $div === "undefined")
             $div = $("#" + data.name);
         $div.data("name", data.name);
-        for (var k in data) {
+        for (k in data) {
             $div
                 .find("[data-field='" + k + "']")
                 .first()
@@ -168,10 +169,11 @@
     };
 
     var ping = function() {
-        $.getJSON(
+        $.get(
             server,
-            function(data) {
-                var i;
+            function(raw) {
+                var data, i;
+                eval("data=" + raw);
                 $("#comms_error").html("");
                 $("#time").text(data.time);
                 for (i in data.thermostats)
@@ -190,9 +192,12 @@
 
     var first_ping = function() {
         server = "https://" + hotpot_ip + ":13196";
-        $.getJSON(
+        // Can't use getJSON because of the rule functions
+        $.get(
             server,
-            function(data) {
+            function(raw) {
+                var data;
+                eval("data=" + raw);
                 $("#comms_error").html("");
                 $("#time").text(data.time);
                 for (var i in data.thermostats) {
