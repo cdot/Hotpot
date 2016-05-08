@@ -158,7 +158,7 @@ Thermostat.prototype.poll = function() {
             // appropriate low/high state.
             self.active_rule = "none";
             for (var i in self.rules) {
-                if (self.rules[i].test(self, temp)) {
+                if (self.rules[i].test.call(self, temp)) {
                     self.active_rule = self.rules[i].name;
                     break;
                 }
@@ -245,21 +245,4 @@ Thermostat.prototype.clear_rules = function() {
     "use strict";
     console.TRACE("thermostat", this.name + " rules cleared");
     this.rules = [];
-};
-
-/**
- * Construct a report amenable to JSON serialisation
- */
-Thermostat.prototype.serialisable = function() {
-    "use strict";
-    return {
-        name: this.name,
-        temperature: this.temperature(),
-        window: this.window,
-        target: this.target,
-        active_rule: this.active_rule,
-        rules: this.rules.map(function(rule, i) {
-            return rule.serialisable(i);
-        })
-    };
 };

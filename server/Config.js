@@ -8,7 +8,7 @@ Config = {
         var data = Fs.readFileSync(Config.expanded(file), "utf8");
         var config;
         eval("config=" + data);
-        console.log("Configured from " + file);
+        console.TRACE("init", "Configured from " + file);
         return config;
     },
 
@@ -27,8 +27,7 @@ Config = {
 
     save: function(data, file) {
         "use strict";
-//	Fs.writeFileSync(Config.expanded(file), serialize(data), "utf8");
-console.log(serialize(data));
+	Fs.writeFileSync(Config.expanded(file), serialize(data), "utf8");
         console.log(file + " updated");
     }
 };

@@ -79,13 +79,16 @@ module.exports = Controller;
 Controller.prototype.serialisable = function() {
     "use strict";
 
+    var sermap = function(m) {
+	var k, res = {};
+	for (var k in m)
+            res[k] = m[k].serialisable();
+        return res;
+    };
+
     return {
-        thermostats: this.thermostat.map(function(th) {
-            return th.serialisable();
-        },
-        pins: this.pin.map(function(p) {
-            return p.serialisable();
-        }
+        thermostats: sermap(this.thermostat),
+        pins: sermap(this.pin)
     };
 };
 
