@@ -98,16 +98,14 @@ module.exports = Thermostat;
 Thermostat.prototype.serialisable = function() {
     "use strict";
 
-    var config = {
+    return {
         id: this.id,
         target: this.target,
         window: this.window,
-        rules: []
+        rules: this.rules.map(function(rule) {
+            return rule.serialisable();
+        })
     };
-    for (var k in this.rules) {
-        config.rules.push(this.rules[k]);
-    }
-    return config;
 };
 
 Thermostat.prototype.DESTROY = function() {

@@ -27,7 +27,8 @@ Config = {
 
     save: function(data, file) {
         "use strict";
-	Fs.writeFileSync(Config.expanded(file), data, "utf8");
+//	Fs.writeFileSync(Config.expanded(file), serialize(data), "utf8");
+console.log(serialize(data));
         console.log(file + " updated");
     }
 };

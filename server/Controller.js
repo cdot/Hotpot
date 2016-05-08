@@ -78,18 +78,15 @@ module.exports = Controller;
 
 Controller.prototype.serialisable = function() {
     "use strict";
-    var k;
-    var config = {
-        thermostats: {},
-        pins: {}
+
+    return {
+        thermostats: this.thermostat.map(function(th) {
+            return th.serialisable();
+        },
+        pins: this.pin.map(function(p) {
+            return p.serialisable();
+        }
     };
-    for (k in this.thermostat) {
-        config.thermostats[k] = this.thermostat[k].serialisable();
-    }
-    for (k in this.pin) {
-        config.pins[k] = this.pin[k].serialisable();
-    }
-    return config;
 };
 
 /**

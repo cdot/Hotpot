@@ -30,7 +30,7 @@ function Rule(name, fn) {
     }
     this.index = -1;
     this.name = name;
-    this.fn = fn;
+    this.test = fn;
 }
 module.exports = Rule;
 
@@ -38,7 +38,7 @@ Rule.prototype.serialisable = function() {
     "use strict";
     return {
         name: this.name,
-        rule: this.fn
+        test: this.test
     };
 };
 
@@ -51,7 +51,7 @@ Rule.prototype.serialisable = function() {
  */
 Rule.prototype.test = function(thermostat, temp) {
     "use strict";
-    var pass = this.fn.call(thermostat, temp);
+    var pass = this.test.call(thermostat, temp);
     //console.TRACE("rule", "Test rule '"+ rule.name + "' = " + pass);
     return pass;
 };
