@@ -167,9 +167,7 @@ Controller.prototype.get_status = function() {
  * Command handler for a command that modifies the configuration
  * of the controller.
  * @param struct structure containing the command and parameters e.g.
- * { command: "disable_rules", id: "name" }
- * { command: "enable_rules", id: "name" }
- * { command: "insert_rule", id: "name", name: "rule name", test: "function text", number: index }
+  * { command: "insert_rule", id: "name", name: "rule name", test: "function text", number: index }
  * { command: "replace_rule", id: "name", index: index, name: "rule name", test: "function text" }
  * { command: "remove_rule", id: "name", index: index }
  * { command: "set_window", id: "name", value: width }
@@ -181,34 +179,37 @@ Controller.prototype.execute_command = function(command) {
     "use strict";
 
     var self = this;
-
+    var ci = (typeof command.index !== "undefined")
+        ? parseInt(command.index) : -1;
+    var cv = (typeof command.value !== "undefined")
+        ? parseFloat(command.value) : 0;
     var th = self.thermostat[command.id];
     switch (command.command) {
     case "remove_rule":
-        th.remove_rule(command.index);
+        th.remove_rule(ci);
         self.emit("config_change");
         break;
     case "insert_rule":
-        th.insert_rule(new Rule(command.name, command.test), command.index);
+        th.insert_rule(new Rule(command.name, command.test), ci);
         self.emit("config_change");
         break;
     case "replace_rule":
-        th.remove_rule(command.index);
-        th.insert_rule(new Rule(command.name, command.test), command.index);
+        th.remove_rule(ci);
+        th.insert_rule(new Rule(command.name, command.test), ci);
         self.emit("config_change");
         break;
     case "set_window":
-        th.set_window(command.value);
+        th.set_window(cv);
         self.emit("config_change");
         break;
     case "set_target":
-        th.set_target(command.value);
+        th.set_target(cv);
         self.emit("config_change");
         break;
     case "set_state":
-        console.TRACE("change", command.id + " FORCE " + command.value);
+        console.TRACE("change", command.id + " FORCE " + cv);
         this.last_changed_by = "command";
-        self.set(command.id, "command", parseInt(command.value) !== 0);
+        self.set(command.id, "command", cv !== 0);
         break;
     default:
         throw "Unrecognised command " + command.command;

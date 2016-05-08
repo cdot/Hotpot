@@ -2,8 +2,6 @@
 
 /**
  * HTTP server object
- *
- * curl --data '{"command":"disable_rules","thermostat":"HW"}' http://daphne:13196
  */
 
 const Fs = require("fs");
