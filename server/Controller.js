@@ -25,7 +25,6 @@ function Controller(config, when_ready) {
     console.TRACE("init", "Creating Controller");
 
     var self = this, k;
-    self.last_changed_by = "initialisation";
     self.config = config;
 
     EventEmitter.call(self);
@@ -112,8 +111,6 @@ Controller.prototype.set = function(channel, actor, on, respond) {
 	return;
     }
 
-    self.last_changed_by = actor;
-
     // Y-plan systems have a state where if the heating is on but the
     // hot water is off, and the heating is turned off, then the grey
     // wire to the valve (the "hot water off" signal) is held high,
@@ -124,8 +121,8 @@ Controller.prototype.set = function(channel, actor, on, respond) {
     // return. Then after a timeout, set the desired state.
     if (channel === "CH" && !on
         && this.pin.HW.state === 1 && this.pin.HW.state === 0) {
-        this.pin.CH.set(0);
-        this.pin.HW.set(1);
+        this.pin.CH.set(0, actor);
+        this.pin.HW.set(1, actor);
         self.pending = true;
         setTimeout(function() {
             self.pending = false;
@@ -150,8 +147,7 @@ Controller.prototype.get_status = function() {
     var struct = {
 	time: new Date().toGMTString(),
         thermostats: [],
-        pins: [],
-        last_changed_by: this.last_changed_by
+        pins: []
     };
     var k;
 
@@ -211,7 +207,6 @@ Controller.prototype.execute_command = function(command) {
         break;
     case "set_state":
         console.TRACE("change", command.id + " FORCE " + cv);
-        this.last_changed_by = "command";
         self.set(command.id, "command", cv !== 0);
         break;
     default:

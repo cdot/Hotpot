@@ -99,9 +99,12 @@ Thermostat.prototype.serialisable = function() {
     "use strict";
 
     return {
+        name: this.name,
         id: this.id,
         target: this.target,
         window: this.window,
+	active_rule: this.active_rule,
+	temperature: this.temperature(),
         rules: this.rules.map(function(rule) {
             return rule.serialisable();
         })

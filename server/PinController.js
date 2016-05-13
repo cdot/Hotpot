@@ -19,6 +19,7 @@ function PinController(name, config) {
     var self = this;
     self.name = name;
     self.gpio = config.gpio;
+    self.last_changed_by = "init";
 
     console.TRACE("init", "Creating controller for gpio " + self.gpio);
     
@@ -27,7 +28,7 @@ function PinController(name, config) {
 	// If we don't set the pin active_low, then writing a 1 to value
 	// sets the pin low, and vice-versa. Ho hum.
         self.setFeature("active_low", 1);
-        self.set("init", false);
+        self.set(false, "init");
         self.setFeature("direction", "out");
     };
     
@@ -62,7 +63,8 @@ PinController.prototype.setFeature = function(feature, value, callback) {
 
 PinController.prototype.set = function(state, actor, callback) {
     "use strict";
-if (typeof actor === "undefined") throw new Error().stack;
+    if (typeof actor === "undefined")
+	throw new Error().stack;
     this.actor = actor;
     console.TRACE("pincontroller", actor + " set gpio "
                   + this.gpio + " = " + (state ? "on" : "off"));
@@ -71,8 +73,8 @@ if (typeof actor === "undefined") throw new Error().stack;
 
 PinController.prototype.get = function() {
     "use strict";
-    return Fs.readFileSync(
-        "/sys/class/gpio/gpio" + this.gpio + "/value", "utf8");
+    return parseInt(Fs.readFileSync(
+        "/sys/class/gpio/gpio" + this.gpio + "/value", "utf8"));
 };
 
 PinController.prototype.serialisable = function() {
