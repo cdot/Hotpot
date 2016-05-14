@@ -72,8 +72,10 @@
     };
 
     // Generate temperature log graph
-    var log_temperature = function($self, temp) {
+    var log_temperature = function() {
+        var $self = $(this);
         var $controller = $self.closest(".controller");
+        var temp = parseFloat($self.text());
         var last_temp = $controller.data("last_temp");
         var $canvas = $controller.find(".temperature_canvas");
         var target = parseFloat($controller.find("[data-field='target']").text());
@@ -156,10 +158,9 @@
                 $self.prop("checked", parseInt(data[k]) === 1);
             } else {
                 // Text / number field
-                if ($self.data("field") === "temperature")
-                    log_temperature($self, parseInt(data[k]));
                 $self.text(data[k].toString());
             }
+            $self.trigger("data_change");
         };
 
         if (typeof $div === "undefined")
@@ -190,7 +191,7 @@
             .error(function(jqXHR, status, err) {
                 $("#comms_error").html(
                     "<div class='error'>Could not contact server "
-                        + server + " for update</div>");
+                        + server + " for update: " + err + "</div>");
                 setTimeout(ping, update_backoff * 1000);
             });
     };
@@ -216,6 +217,8 @@
                         .on("click", edit_field);
                     $div.find("input:checkbox")
                         .on("click", toggle_field);
+                    $div.find("[data-field='temperature']")
+                        .on("data_change", log_temperature);
                     populate(th, $div);
                     $("#controllers").append($div);
                 }
@@ -224,8 +227,8 @@
             .error(function(jqXHR, textStatus, errorThrown) {
                 $("#comms_error").html(
                     "<div class='error'>Could not contact server "
-                        + server + " for setup. Will try again in "
-                        + setup_backoff
+                        + server + " for setup: " + errorThrown
+                        + " Will try again in " + setup_backoff
                         + " seconds</div>");
                 setTimeout(first_ping, setup_backoff * 1000);
             });

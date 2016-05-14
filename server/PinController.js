@@ -45,11 +45,14 @@ function PinController(name, config) {
 }
 module.exports = PinController;
 
+/** Not worked out how to do this yet :-(
 PinController.prototype.DESTROY = function() {
     "use strict";
-    console.TRACE("pincontroller", "unexport gpio " + this.gpio);
+
+    console.TRACE("pin", "unexport gpio " + this.gpio);
     Fs.writeFile("/sys/class/gpio/unexport", this.gpio, function() {});
 };
+*/
 
 PinController.prototype.setFeature = function(feature, value, callback) {
     "use strict";
@@ -62,10 +65,10 @@ PinController.prototype.setFeature = function(feature, value, callback) {
 
 PinController.prototype.set = function(state, actor, callback) {
     "use strict";
-if (typeof actor === "undefined") throw new Error().stack;
+
     this.actor = actor;
-    console.TRACE("pincontroller", actor + " set gpio "
-                  + this.gpio + " = " + (state ? "on" : "off"));
+    console.TRACE("pin", actor + " set gpio "
+                  + this.gpio + " " + (state ? "ON" : "OFF"));
     this.setFeature("value", state ? 1 : 0, callback);
 };
 

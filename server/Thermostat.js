@@ -57,8 +57,6 @@ function Thermostat(name, config) {
     this.name = name;
     this.id = config.id; // DS18x20 device ID
     this.target = 15;    // target temperature
-    this.low = 13;       // low threshold
-    this.high = 17;      // high threshold
     this.window = 4;     // slack window
     this.rules = [];     // activation rules, array of Rule
 
@@ -88,13 +86,17 @@ function Thermostat(name, config) {
     // the event emitter won't work
     setTimeout(function() {
         console.TRACE("thermostat", self.name + " "
-                      + self.low + " < T < " + self.high + " started");
+                      + self.low() + " < T < " + self.high() + " started");
         self.poll();
     }, 10);
 }
 util.inherits(Thermostat, EventEmitter);
 module.exports = Thermostat;
 
+/**
+ * Generate and return a serialisable version of the structure, suitable
+ * for use in an AJAX response.
+ */
 Thermostat.prototype.serialisable = function() {
     "use strict";
 
@@ -102,15 +104,11 @@ Thermostat.prototype.serialisable = function() {
         id: this.id,
         target: this.target,
         window: this.window,
+        last_temp: this.last_temp,
         rules: this.rules.map(function(rule) {
             return rule.serialisable();
         })
     };
-};
-
-Thermostat.prototype.DESTROY = function() {
-    "use strict";
-    this.live = false;
 };
 
 /**
@@ -120,11 +118,18 @@ Thermostat.prototype.DESTROY = function() {
  */
 Thermostat.prototype.set_target = function(target) {
     "use strict";
-    this.low = target - this.window / 2;
-    this.high = target + this.window / 2;
     if (target !== this.target)
-        console.TRACE("thermostat", this.name + " target changed to " + this.target);
+        console.TRACE("thermostat", this.name + " target changed to "
+                      + this.target);
     this.target = target;
+};
+
+Thermostat.prototype.low = function() {
+    return this.target - this.window / 2;
+};
+
+Thermostat.prototype.high = function() {
+        return this.target + this.window / 2;
 };
 
 /**
@@ -170,9 +175,9 @@ Thermostat.prototype.poll = function() {
             // whatever the last setting was.
 
             var init = (self.last_temp === K0);
-            if (temp < self.low && (init || self.last_temp >= self.low))
+            if (temp < self.low() && (init || self.last_temp >= self.low()))
                 self.emit("below", self.name, temp);
-            else if (temp > self.high && (init || self.last_temp <= self.high))
+            else if (temp > self.high() && (init || self.last_temp <= self.high()))
                 self.emit("above", self.name, temp);
             self.last_temp = temp;
             setTimeout(function() {
