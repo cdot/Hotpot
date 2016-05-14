@@ -38,13 +38,13 @@ function Controller(config, when_ready) {
     var thermostat_on = function(id, cur) {
         // Thermostat requested change
         console.TRACE("change", id + " ON, " + cur + " < "
-                    + self.thermostat[id].low);
+                    + self.thermostat[id].low());
         self.set(id, "active rule", true);
     };
     var thermostat_off = function(id, cur) {
         // Thermostat requested change
         console.TRACE("change", id + " OFF, " + cur + " > "
-                    + self.thermostat[id].high);
+                    + self.thermostat[id].high());
         self.set(id, "active rule", false);
     };
     
