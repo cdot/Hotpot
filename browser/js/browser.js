@@ -8,7 +8,7 @@
     var update_backoff = 5; // seconds
     var update_rate = 1; // seconds
 
-    // Edit text of a field
+    // Edit text of a value field
     var edit_field = function() {
         $(this).edit_in_place({
             changed: function(s) {
@@ -28,6 +28,7 @@
         });
     };
 
+    // Toggle a checkbox field
     var toggle_field = function() {
         var $self = $(this);
         var $controller = $self.closest(".controller");
@@ -70,6 +71,7 @@
         });
     };
 
+    // Generate temperature log graph
     var log_temperature = function($self, temp) {
         var $controller = $self.closest(".controller");
         var last_temp = $controller.data("last_temp");
@@ -80,8 +82,8 @@
             return;
         var h = $canvas.height();
         var w = $canvas.width();
-        var scale = 3 * window;
-        var offset = target - 3 * window / 2;
+        var scale = 5 * window;
+        var offset = target - scale / 2;
         var y = function(v) {
             return h - (v - offset) * h / scale;
         };
@@ -99,7 +101,7 @@
         ctx.fillRect(0, 0, w, h);
 
         // Window
-        ctx.fillStyle = "white";
+        ctx.fillStyle = "silver";
         ctx.fillRect(0, y(target + window / 2), w, window * h / scale);
 
         // Target
@@ -110,7 +112,7 @@
         ctx.stroke();
 
         // Current temp
-        ctx.strokeStyle = "green";
+        ctx.strokeStyle = "yellow";
         ctx.beginPath();
         ctx.moveTo(w - 2, y(last_temp));
         ctx.lineTo(w - 1, y(temp));
@@ -123,7 +125,7 @@
         $controller.data("last_temp", temp);
     };
 
-    // Populate from pin or thermostat record
+    // Populate a field from pin or thermostat record
     var populate = function(data, $div) {
         var k;
 
@@ -146,11 +148,14 @@
                         $row.find(".editable")
                             .on("click", edit_rule);
                     }
+                    // Recurse onto each text field
                     populate(rule, $row);
                 }
             } else  if ($self.is(":checkbox")) {
+                // Binary checkbox
                 $self.prop("checked", parseInt(data[k]) === 1);
             } else {
+                // Text / number field
                 if ($self.data("field") === "temperature")
                     log_temperature($self, parseInt(data[k]));
                 $self.text(data[k].toString());
