@@ -97,7 +97,10 @@
                 }
             } else  if ($self.is(":checkbox")) {
                 // Binary checkbox
-                $self.prop("checked", parseInt(data[k]) === 1);
+                if (typeof data[k] === "string")
+                    $self.prop("checked", parseInt(data[k]) === 1);
+                else
+                    $self.prop("checked", data[k]);
             } else {
                 // Text / number field
                 $self.text(data[k].toString());
