@@ -36,15 +36,9 @@ function Controller(config, when_ready) {
 
     // Event handlers
     var thermostat_on = function(id, cur) {
-        // Thermostat requested change
-        console.TRACE("change", id + " ON, " + cur + " < "
-                    + self.thermostat[id].low());
         self.set(id, "active rule", true);
     };
     var thermostat_off = function(id, cur) {
-        // Thermostat requested change
-        console.TRACE("change", id + " OFF, " + cur + " > "
-                    + self.thermostat[id].high());
         self.set(id, "active rule", false);
     };
     
@@ -96,7 +90,7 @@ Controller.prototype.serialisable = function() {
  * Set the on/off state of the system.
  * @param channel e.g. "HW" or "CH"
  * @param actor who is setting e.g. "thermostat" or "command"
- * @param state true or false (on or off)
+ * @param on true or false (on or off)
  * @param respond function called when state is set, parameters
  * are (self=Server, channel, state)
  */
@@ -109,6 +103,13 @@ Controller.prototype.set = function(channel, actor, on, respond) {
             self.set(channel, actor, on, respond);
         }, VALVE_RETURN);
 	return;
+    }
+
+    var cur = this.pin[channel].get();
+    if (actor !== "init" && (on && cur === 1 || !on && cur === 0)) {
+        if (typeof respond !== "undefined")
+            respond.call(self, channel, on);
+        return;
     }
 
     // Y-plan systems have a state where if the heating is on but the
@@ -132,7 +133,7 @@ Controller.prototype.set = function(channel, actor, on, respond) {
         // Otherwise this is a simple state transition, just
         // set the appropriate pin
         this.pin[channel].set(on ? 1 : 0, actor);
-        if (respond)
+        if (typeof respond !== "undefined")
             respond.call(self, channel, on);
     }
 };
@@ -177,37 +178,68 @@ Controller.prototype.get_status = function() {
 Controller.prototype.execute_command = function(command) {
     "use strict";
 
+    var ptypes = {
+        command: "string",
+        id: "string",
+        index: "int",
+        name: "string",
+        test: "function",
+        value: "float",
+        expiry: "date"
+    }
+
+    function get(field) {
+        if (typeof command[field] === "undefined")
+            throw "Missing " + field;
+        switch (ptypes[field]) {
+        case "date":
+            if (command[field] === "never")
+                return undefined;
+            return new Date(command[field]);
+        case "int":
+            return parseInt(command[field]);
+        case "float":
+            return parseFloat(command[field]);
+        default:
+            if (typeof command[field] !== type)
+                throw "Bad " + field + ": " + t;
+            return command[field];
+        }
+    }
+
     var self = this;
-    var ci = (typeof command.index !== "undefined")
-        ? parseInt(command.index) : -1;
-    var cv = (typeof command.value !== "undefined")
-        ? parseFloat(command.value) : 0;
     var th = self.thermostat[command.id];
-    switch (command.command) {
+    switch (get("command")) {
     case "remove_rule":
-        th.remove_rule(ci);
+        th.remove_rule(get("index"));
         self.emit("config_change");
         break;
     case "insert_rule":
-        th.insert_rule(new Rule(command.name, command.test), ci);
+        th.insert_rule(
+            new Rule(get("name"), get("test"), get("expiry")),
+            get("index"));
         self.emit("config_change");
         break;
     case "replace_rule":
-        th.remove_rule(ci);
-        th.insert_rule(new Rule(command.name, command.test), ci);
+        th.remove_rule(get("index"));
+        th.insert_rule(
+            new Rule(get("name"), get("test"), get("expiry")),
+            get("index"));
         self.emit("config_change");
         break;
     case "set_window":
-        th.set_window(cv);
+        th.set_window(get("value"));
         self.emit("config_change");
         break;
     case "set_target":
-        th.set_target(cv);
+        th.set_target(get("value"));
         self.emit("config_change");
         break;
     case "set_state":
-        console.TRACE("change", command.id + " FORCE " + cv);
-        self.set(command.id, "command", cv !== 0);
+        // Will be overridden if any rules are in place. Better to use
+        // an expiring rule.
+        console.TRACE("change", command.id + " FORCE " + get("value"));
+        self.set(command.id, "command", get(value) !== 0);
         break;
     default:
         throw "Unrecognised command " + command.command;

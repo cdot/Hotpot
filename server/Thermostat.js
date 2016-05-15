@@ -46,8 +46,7 @@ function Thermostat(name, config) {
             } catch (err) {
                 console.error(err.message);
                 console.error("Temperature sensor driver not loaded - falling back to test sensor");
-                var DS18x20 = require("./TestSupport.js").DS18x20;
-                ds18x20 = new DS18x20();
+                ds18x20 = require("./TestSupport.js");
             }
         }
     }
@@ -71,7 +70,7 @@ function Thermostat(name, config) {
     this.last_temp = K0; // Temperature measured in last poll
 
     if (typeof ds18x20.mapID !== "undefined")
-        ds18x20.mapID[config.id] = name;
+        ds18x20.mapID(config.id, name);
 
     if (typeof config.rules !== "undefined") {
         var rules = config.rules;
@@ -79,7 +78,9 @@ function Thermostat(name, config) {
         for (var i in rules)
             self.insert_rule(
                 new Rule(rules[i].name,
-                         rules[i].test));
+                         rules[i].test,
+                         typeof rules[i].expiry !== "undefined" ?
+                         new Date(rules[i].expiry) : undefined));
     }
 
     // Don't start polling until after a timeout even because otherwise
@@ -177,10 +178,9 @@ Thermostat.prototype.poll = function() {
             // If rules are not enabled, we leave active_rule at
             // whatever the last setting was.
 
-            var init = (self.last_temp === K0);
-            if (temp < self.low() && (init || self.last_temp >= self.low()))
+            if (temp < self.low())
                 self.emit("below", self.name, temp);
-            else if (temp > self.high() && (init || self.last_temp <= self.high()))
+            else if (temp > self.high())
                 self.emit("above", self.name, temp);
             self.last_temp = temp;
             setTimeout(function() {

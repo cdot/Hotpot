@@ -5,7 +5,11 @@
     <title>HotPot remote monitor</title>
     <script type="text/javascript" src="jquery/jquery-2.2.3.min.js"></script>
     <script type="text/javascript" src="js/edit_in_place.js"></script>
-    <script type="text/javascript" src="http://c-dot.co.uk/hotpot_ip.js"></script>
+    <script type="text/javascript" src="js/autoscale_graph.js"></script>
+<!--    <script type="text/javascript" src="http://c-dot.co.uk/hotpot_ip.js"></script> -->
+<script type="text/javascript">
+  var hotpot_ip = "192.168.1.12";
+</script>
     <script type="text/javascript" src="js/browser.js"></script>
     <link rel="stylesheet" href="css/browser.css">
   </head>
@@ -17,48 +21,56 @@
     </div>
     <div style="display:none" id="controller_template">
       <h2 data-field="name"></h2>
-      <canvas class="temperature_canvas" width="300" height="100"></canvas>
-      <table class="datatable">
-        <tr class="fixed">
-          <th class="ralign">Temperature</th>
-          <td data-field="temperature"></td>
-        </tr>
+      <table width="100%">
         <tr>
-          <th>State</th>
-          <td>
-            <input type="checkbox" data-field="state"/>
-          </td>
-        </tr>
-        <tr class="fixed">
-          <th>Active Rule</th>
-          <td data-field="active_rule"></td>
-        </tr>
-        <tr class="fixed">
-          <th>Last Changed By</th>
-          <td data-field="actor"></td>
-        </tr>
-        <tr>
-          <th>Target</th>
-          <td data-field="target" class="editable"></td>
-        </tr>
-        <tr>
-          <th>Window</th>
-          <td data-field="window" class="editable"></td>
-        </tr>
-        <tr>
-          <th>Rules</th>
-          <td>
-            <table data-field="rules">
-              <thead>
-                <tr>
-                  <th class="fixed">Index</th>
-                  <th>Name</th>
-                  <th>Function</th>
-                </tr>
-              </thead>
-              <tbody>
-              </tbody>
+          <td width="50%">
+            <table class="datatable">
+              <tr class="fixed">
+                <th class="ralign">Temperature</th>
+                <td data-field="temperature"></td>
+              </tr>
+              <tr>
+                <th>State</th>
+                <td>
+                  <input type="checkbox" data-field="state"/>
+                </td>
+              </tr>
+              <tr class="fixed">
+                <th>Active Rule</th>
+                <td data-field="active_rule"></td>
+              </tr>
+              <tr class="fixed">
+                <th>Last Changed By</th>
+                <td data-field="actor"></td>
+              </tr>
+              <tr>
+                <th>Target</th>
+                <td data-field="target" class="editable"></td>
+              </tr>
+              <tr>
+                <th>Window</th>
+                <td data-field="window" class="editable"></td>
+              </tr>
+              <tr>
+                <th>Rules</th>
+                <td>
+                  <table data-field="rules">
+                    <thead>
+                      <tr>
+                        <th class="fixed">Index</th>
+                        <th>Name</th>
+                        <th>Function</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
             </table>
+          </td>
+          <td width="50%">
+            <canvas class="temperature_canvas"></canvas>
           </td>
         </tr>
       </table>
