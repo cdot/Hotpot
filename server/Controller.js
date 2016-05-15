@@ -235,6 +235,10 @@ Controller.prototype.execute_command = function(command) {
         th.set_target(get("value"));
         self.emit("config_change");
         break;
+    case "set_rules_enabled":
+        th.enable_rules(get("value") !== 0);
+        self.emit("config_change");
+        break;
     case "set_state":
         // Will be overridden if any rules are in place. Better to use
         // an expiring rule.

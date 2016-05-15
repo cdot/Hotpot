@@ -58,6 +58,7 @@ function Thermostat(name, config) {
     this.target = 15;    // target temperature
     this.window = 4;     // slack window
     this.rules = [];     // activation rules, array of Rule
+    this.rules_enabled = true;
 
     this.active_rule = "none"; // the currently active rule
     this.live = true; // True until destroyed
@@ -109,6 +110,7 @@ Thermostat.prototype.serialisable = function() {
 	temperature: this.temperature(),
         last_temp: this.last_temp,
 	active_rule: this.active_rule,
+        rules_enabled: this.rules_enabled,
         rules: this.rules.map(function(rule) {
             return rule.serialisable();
         })
@@ -126,6 +128,10 @@ Thermostat.prototype.set_target = function(target) {
         console.TRACE("thermostat", this.name + " target changed to "
                       + this.target);
     this.target = target;
+};
+
+Thermostat.prototype.enable_rules = function(enable) {
+    thie.rules_enabled = enable;
 };
 
 Thermostat.prototype.low = function() {
@@ -166,10 +172,12 @@ Thermostat.prototype.poll = function() {
             // then stop testing. This will leave us with the
             // appropriate low/high state.
             self.active_rule = "none";
-            for (var i in self.rules) {
-                if (self.rules[i].test.call(self, temp)) {
-                    self.active_rule = self.rules[i].name;
-                    break;
+            if (this.rules_enabled) {
+                for (var i in self.rules) {
+                    if (self.rules[i].test.call(self, temp)) {
+                        self.active_rule = self.rules[i].name;
+                        break;
+                    }
                 }
             }
             //console.TRACE("thermostat", self.name + " active rule is "
