@@ -1,8 +1,6 @@
 (function($) {
     "use strict";
 
-    var ip_source = "http://c-dot.co.uk/hotpot.ip";
-
     var server;
     var setup_backoff = 5; // seconds
     var update_backoff = 5; // seconds
@@ -35,7 +33,7 @@
         var data = {
             command: "set_" + $self.data("field"),
             id: $controller.data("name"),
-            value: !$self.prop("checked")
+            value: $self.prop("checked") ? 1 : 0
         };
         $.post(server,
                JSON.stringify(data))
@@ -69,62 +67,6 @@
                     });
             }
         });
-    };
-
-    // Generate temperature log graph
-    var log_temperature = function() {
-        var $self = $(this);
-        var $controller = $self.closest(".controller");
-        var temp = parseFloat($self.text());
-        var last_temp = $controller.data("last_temp");
-        var $canvas = $controller.find(".temperature_canvas");
-        var target = parseFloat($controller.find("[data-field='target']").text());
-        var window = parseFloat($controller.find("[data-field='window']").text());
-        if ($canvas.height() === 0)
-            return;
-        var h = $canvas.height();
-        var w = $canvas.width();
-        var scale = 5 * window;
-        var offset = target - scale / 2;
-        var y = function(v) {
-            return h - (v - offset) * h / scale;
-        };
-
-        var ctx = $canvas[0].getContext('2d');
-
-        var img = null;
-        if (typeof(last_temp) !== "undefined") {
-            img = ctx.getImageData(
-                2, 1, w - 3, h - 2);
-        }
-
-        // Background
-        ctx.fillStyle = "black";
-        ctx.fillRect(0, 0, w, h);
-
-        // Window
-        ctx.fillStyle = "silver";
-        ctx.fillRect(0, y(target + window / 2), w, window * h / scale);
-
-        // Target
-        ctx.strokeStyle = "red";
-        ctx.beginPath();
-        ctx.moveTo(0, y(target));
-        ctx.lineTo(w, y(target));
-        ctx.stroke();
-
-        // Current temp
-        ctx.strokeStyle = "yellow";
-        ctx.beginPath();
-        ctx.moveTo(w - 2, y(last_temp));
-        ctx.lineTo(w - 1, y(temp));
-        ctx.stroke();
-
-        // Old data
-        if (img !== null)
-            ctx.putImageData(img, 1, 1);
-
-        $controller.data("last_temp", temp);
     };
 
     // Populate a field from pin or thermostat record
@@ -196,6 +138,31 @@
             });
     };
 
+    var init_canvas = function($div) {
+        var $df = $div.find("[data-field='temperature']");
+        var $dt = $div.find("[data-field='target']");
+        var $dw = $div.find("[data-field='window']");
+        var $tc = $div.find(".temperature_canvas");
+
+        $tc.autoscale_graph({
+            $controller: $div,
+            current: function() {
+                return parseFloat($df.text());
+            },
+            target: function() {
+                return parseFloat($dt.text());
+            },
+            window: function() {
+                return parseFloat($dw.text());
+            }
+        });
+
+        $df.data("canvas", $tc)
+            .on("data_change", function() {
+                $(this).data("canvas").trigger("data_change");
+            });
+    };
+
     var first_ping = function() {
         server = "https://" + hotpot_ip + ":13196";
         // Can't use getJSON because of the rule functions
@@ -217,8 +184,7 @@
                         .on("click", edit_field);
                     $div.find("input:checkbox")
                         .on("click", toggle_field);
-                    $div.find("[data-field='temperature']")
-                        .on("data_change", log_temperature);
+                    init_canvas($div);
                     populate(th, $div);
                     $("#controllers").append($div);
                 }

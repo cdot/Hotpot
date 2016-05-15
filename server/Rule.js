@@ -16,7 +16,7 @@ const Time = require("./Time.js"); // for executing rules
  * current temperature, and will return true if the rule passes for that
  * temperature, and false otherwise.
  */
-function Rule(name, fn) {
+function Rule(name, fn, expiry) {
     "use strict";
     if (typeof fn === "string") {
         // Compile the fn function
@@ -31,6 +31,8 @@ function Rule(name, fn) {
     this.index = -1;
     this.name = name;
     this.test = fn;
+    if (typeof expiry !== "undefined")
+        this.expiry = expiry;
 }
 module.exports = Rule;
 
@@ -38,7 +40,8 @@ Rule.prototype.serialisable = function() {
     "use strict";
     return {
         name: this.name,
-        test: this.test
+        test: this.test,
+        expiry: this.expiry
     };
 };
 
@@ -55,4 +58,14 @@ Rule.prototype.test = function(thermostat, temp) {
     //console.TRACE("rule", "Test rule '"+ rule.name + "' = " + pass);
     return pass;
 };
+
+/**
+ * Check if the rule has an expiry date and if so, whether it has
+ * expired.
+ */
+Rule.prototype.hasExpired = function() {
+    "use strict";
+    return (typeof this.expiry !== "undefined"
+           && (new Date()).valueOf() > this.expiry.valueOf())
+}
 
