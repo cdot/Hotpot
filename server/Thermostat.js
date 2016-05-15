@@ -172,7 +172,7 @@ Thermostat.prototype.poll = function() {
             // then stop testing. This will leave us with the
             // appropriate low/high state.
             self.active_rule = "none";
-            if (this.rules_enabled) {
+            if (self.rules_enabled) {
                 for (var i in self.rules) {
                     if (self.rules[i].test.call(self, temp)) {
                         self.active_rule = self.rules[i].name;
