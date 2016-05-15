@@ -201,7 +201,7 @@ Controller.prototype.execute_command = function(command) {
         case "float":
             return parseFloat(command[field]);
         default:
-            if (typeof command[field] !== type)
+            if (typeof command[field] !== ptypes[field])
                 throw "Bad " + field + ": " + t;
             return command[field];
         }

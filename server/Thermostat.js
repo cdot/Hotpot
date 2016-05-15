@@ -131,7 +131,7 @@ Thermostat.prototype.set_target = function(target) {
 };
 
 Thermostat.prototype.enable_rules = function(enable) {
-    thie.rules_enabled = enable;
+    this.rules_enabled = enable;
 };
 
 Thermostat.prototype.low = function() {
@@ -139,7 +139,7 @@ Thermostat.prototype.low = function() {
 };
 
 Thermostat.prototype.high = function() {
-        return this.target + this.window / 2;
+    return this.target + this.window / 2;
 };
 
 /**
