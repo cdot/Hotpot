@@ -56,10 +56,10 @@ function update_address(new_addr) {
             });
 }    
 
-function http_get(config, callback) {
+function http_get(url, callback) {
     "use strict";
     var result = "";
-    http.get(config,
+    http.get(url,
         function(res) {
             res.on("data", function(chunk) {
                 result += chunk;
@@ -69,7 +69,7 @@ function http_get(config, callback) {
             });
         })
         .on("error", function(err) {
-            console.error("Failed to GET from " + config.host + ": " + err);
+            console.error("Failed to GET from " + url.host + ": " + err);
         });
 
 }
@@ -77,7 +77,7 @@ function http_get(config, callback) {
 if (config.debug)
     console.TRACE = console.log;
 else
-    console.TRACE = function() { "use strict" };
+    console.TRACE = function() { "use strict"; };
 
 // Get IP address http://smart-ip.net/myip
 http_get(
@@ -90,7 +90,7 @@ http_get(
         
         console.TRACE("Current IP address " + new_addr);
 	// Convert to JSON
-	new_addr = 'hotpot_ip="' + new_addr + '"';
+	new_addr = "hotpot_ip=\"" + new_addr + "\"";
 
         // Get known address
         http_get(
@@ -105,5 +105,3 @@ http_get(
                     console.TRACE("No need to update");
             });
     });
-
-    

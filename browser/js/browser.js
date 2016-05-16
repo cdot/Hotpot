@@ -4,10 +4,19 @@
     var server;
     var setup_backoff = 5; // seconds
     var update_backoff = 5; // seconds
-    var update_rate = 1; // seconds
+    var update_rate = 5; // seconds
+
+    var poller;
+    var stop_polling = function () {
+        if (poller) {
+            clearTimeout(poller);
+            poller = null;
+        }
+    };
 
     // Edit text of a value field
     var edit_field = function() {
+        stop_polling();
         $(this).edit_in_place({
             changed: function(s) {
                 var $self = $(this);
@@ -21,6 +30,7 @@
                        JSON.stringify(data))
                     .success(function() {
                         $self.text(s);
+                        poll();
                     });
             }
         });
@@ -37,12 +47,83 @@
         };
         $.post(server,
                JSON.stringify(data))
-            .success(function() {
+            .always(function() {
+                poll();
             });
+    };
+
+    var add_rule = function() {
+        var $self = $(this);
+        var $controller = $self.closest(".controller");
+        stop_polling();
+        var data = {
+            command: "insert_rule",
+            id: $controller.data("name"),
+            name: "new rule",
+            test: "function() { }",
+            index: -1
+        };
+        $.post(server,
+               JSON.stringify(data))
+            .always(function() {
+                poll();
+            });
+    };
+
+    var remove_rule = function() {
+        var $self = $(this);
+        var $controller = $self.closest(".controller");
+        var $rule = $self.closest(".rule");
+        var index = parseInt($rule.find("[data-field='index']").text());
+        stop_polling();
+        var data = {
+            command: "remove_rule",
+            id: $controller.data("name"),
+            index: index
+        };
+        $.post(server,
+               JSON.stringify(data))
+            .done(function() {
+                $rule.remove();
+            })
+            .always(function() {
+                poll();
+            });
+    };
+
+    var move_rule = function(dir) {
+        var $self = $(this);
+        var $controller = $self.closest(".controller");
+        var $rule = $self.closest(".rule");
+        var index = parseInt($rule.find("[data-field='index']").text());
+        stop_polling();
+        var data = {
+            command: "move_rule",
+            id: $controller.data("name"),
+            index: index,
+            value: dir
+        };
+        $.post(server,
+               JSON.stringify(data))
+            .done(function() {
+                $rule.remove();
+            })
+            .always(function() {
+                poll();
+            });
+    };
+
+    var move_down = function() {
+        move_rule.call(this, +1);
+    };
+
+    var move_up = function() {
+        move_rule.call(this, -1);
     };
 
     // Edit text of a rule
     var edit_rule = function() {
+        stop_polling();
         $(this).edit_in_place({
             changed: function(s) {
                 var $self = $(this);
@@ -62,9 +143,15 @@
                 };
                 $.post(server,
                        JSON.stringify(data))
-                    .success(function() {
+                    .done(function() {
                         $self.text(s);
+                    })
+                    .always(function() {
+                        poll();
                     });
+            },
+            cancel: function() {
+                poll();
             }
         });
     };
@@ -77,25 +164,37 @@
             var $self = $(this);
             if (k === "rules") {
                 // Rule array
-                for (var i in data[k]) {
+                var $tbody = $self.find("tbody");
+                $tbody.find(".rule").remove();
+                data[k].sort(function(a, b) {
+                    return a.index - b.index;
+                });
+                for (var i = 0; i < data[k].length; i++) {
                     var rule = data[k][i];
-                    rule.index = i;
-                    var $tbody = $self.find("tbody");
-                    var $row = $tbody.find(".rule" + rule.index);
-                    if ($row.length === 0) {
-                        // Create new row
-                        $row = $($("#rule_template").html());
-                        $row.addClass("rule" + rule.index);
-                        $row.addClass("rule");
-                        $row.data("index", rule.index);
-                        $tbody.append($row);
-                        $row.find(".editable")
-                            .on("click", edit_rule);
-                    }
+                    // Create new row
+                    var $row = $($("#rule_template").html());
+                    $row.addClass("rule" + rule.index);
+                    $row.addClass("rule");
+                    $row.data("index", rule.index);
+                    $tbody.append($row);
+                    $row.find(".editable")
+                        .on("click", edit_rule);
+                    $row.find(".remove")
+                        .on("click", remove_rule);
+                    if (i === 0)
+                        $row.find(".move.up").addClass("disabled");
+                    else
+                        $row.find(".move.up")
+                        .on("click", move_up);
+                    if (i === data[k].length - 1)
+                        $row.find(".move.down").addClass("disabled");
+                    else
+                        $row.find(".move.down")
+                        .on("click", move_down);
                     // Recurse onto each text field
                     populate(rule, $row);
                 }
-            } else  if ($self.is(":checkbox")) {
+            } else if ($self.is(":checkbox")) {
                 // Binary checkbox
                 if (typeof data[k] === "string")
                     $self.prop("checked", parseInt(data[k]) === 1);
@@ -119,7 +218,7 @@
         }
     };
 
-    var ping = function() {
+    var poll = function() {
         $.get(
             server,
             function(raw) {
@@ -131,13 +230,13 @@
                     populate(data.thermostats[i]);
                 for (i in data.pins)
                     populate(data.pins[i]);
-                setTimeout(ping, update_rate * 1000);
+                poller = setTimeout(poll, update_rate * 1000);
             })
             .error(function(jqXHR, status, err) {
                 $("#comms_error").html(
                     "<div class='error'>Could not contact server "
                         + server + " for update: " + err + "</div>");
-                setTimeout(ping, update_backoff * 1000);
+                poller = setTimeout(poll, update_backoff * 1000);
             });
     };
 
@@ -167,6 +266,13 @@
     };
 
     var first_ping = function() {
+        var urps = window.location.search.substring(1).split(/[&;]/);
+        for (var i = 0; i < urps.length; i++) {
+            var urp = urps[i].split("=");
+            if (urp[0] === "ip")
+                hotpot_ip = urp[1];
+        }
+
         server = "https://" + hotpot_ip + ":13196";
         // Can't use getJSON because of the rule functions
         $.get(
@@ -176,9 +282,9 @@
                 eval("data=" + raw);
                 $("#comms_error").html("");
                 $("#time").text(data.time);
-                for (var i in data.thermostats) {
+                for (var j in data.thermostats) {
                     // Create a new data block from the template
-                    var th = data.thermostats[i];
+                    var th = data.thermostats[j];
                     var html = $("#controller_template").html();
                     var $div = $("<div id='" + th.name
                         + "'>" + html + "</div>");
@@ -189,9 +295,11 @@
                         .on("click", toggle_field);
                     init_canvas($div);
                     populate(th, $div);
+                    $div.find(".add_rule")
+                        .on("click", add_rule);
                     $("#controllers").append($div);
                 }
-                setTimeout(ping, 1000);
+                setTimeout(poll, 1000);
             })
             .error(function(jqXHR, textStatus, errorThrown) {
                 $("#comms_error").html(

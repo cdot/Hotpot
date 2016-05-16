@@ -29,21 +29,20 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
     // 4: pin setup details
     console.TRACE = function(level, message) {
         if (typeof cliopt.debug !== "undefined" &&
-	    (cliopt.debug === "all" || cliopt.debug.includes(level)))
-            console.log((new Date()) + level + ": " + message);
+            (cliopt.debug === "all" || cliopt.debug.includes(level)))
+            console.log((new Date().toISOString()) + " " + level + ": " + message);
     };
 
     var config = Config.load(CONFIG_FILE);
 
     // Start the controller and when it's ready, start an HTTP server
     // to receive commands for it.
-    var controller, server;
     try {
-	controller = new Controller(
+	new Controller(
             config.controller,
             function() {
                 var self = this;
-                server = new Server(config.server, self);
+                new Server(config.server, self);
 
                 // Save config when it changes, so we restart to the
                 // same state

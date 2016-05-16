@@ -75,7 +75,7 @@ History.prototype.get = function(num) {
 
             // Rendering doesn't work unless you force the attrs
             if (!$canvas.data("attrs_set")) {
-                $canvas.attr("width", $canvas.width())
+                $canvas.attr("width", $canvas.width());
                 $canvas.attr("height", $canvas.height());
                 $canvas.data("attrs_set", true);
             }

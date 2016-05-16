@@ -26,6 +26,7 @@
             "blockBindings": true
         },
         "globals": {
+            "hotpot_ip" : true
         },
         "rules": {
             "no-underscore-dangle": 0,

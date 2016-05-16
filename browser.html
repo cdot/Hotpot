@@ -1,22 +1,19 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>HotPot remote monitor</title>
-    <script type="text/javascript" src="jquery/jquery-2.2.3.min.js"></script>
-    <script type="text/javascript" src="js/edit_in_place.js"></script>
-    <script type="text/javascript" src="js/autoscale_graph.js"></script>
+    <script type="text/javascript" src="browser/jquery/jquery-2.2.3.min.js"></script>
+    <script type="text/javascript" src="browser/js/edit_in_place.js"></script>
+    <script type="text/javascript" src="browser/js/autoscale_graph.js"></script>
     <script type="text/javascript" src="http://c-dot.co.uk/hotpot_ip.js"></script>
-<!--<script type="text/javascript">
-  var hotpot_ip = "192.168.1.12";
-</script>-->
-    <script type="text/javascript" src="js/browser.js"></script>
-    <link rel="stylesheet" href="css/browser.css">
+    <script type="text/javascript" src="browser/js/browser.js"></script>
+    <link rel="stylesheet" href="browser/css/browser.css">
   </head>
   <body>
     <h1>Hotpot Central Heating Monitor</h1>
     <div id="comms_error"></div>
-    <div><b>Time:</b> <span id="time"></span></div>
+    <div><b>System Time:</b> <span id="time"></span></div>
     <div id="controllers">
     </div>
     <div style="display:none" id="controller_template">
@@ -63,7 +60,9 @@
                   <table data-field="rules">
                     <thead>
                       <tr>
+                        <th></th>
                         <th class="fixed">Index</th>
+                        <th></th>
                         <th>Name</th>
                         <th>Function</th>
                       </tr>
@@ -71,6 +70,7 @@
                     <tbody>
                     </tbody>
                   </table>
+                  <div class="add_rule">&#x2D32; Add new rule</div>
                 </td>
               </tr>
             </table>
@@ -84,7 +84,14 @@
     <table style="display:none">
       <tbody id="rule_template">
         <tr class="rule">
+          <td>
+            <span class="remove" title="Delete rule">&#9746;</span>
+          </td>
           <td data-field="index" class="fixed"></td>
+          <td>
+            <span class="move up" title="Move up">▲</span>
+            <span class="move down" title="Move down">▼</span>
+          </td>
           <td data-field="name" class="editable"></td>
           <td data-field="test" class="editable" data-editable="height:'50px',area:true"></td>
         </tr>

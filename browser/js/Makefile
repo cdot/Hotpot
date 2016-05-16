@@ -1,15 +1,9 @@
 # Copyright (C) 2016 Crawford Currie http://c-dot.co.uk / MIT
 
 SOURCES := \
-	Config.js \
-	Controller.js \
-	getip.js \
-	Hotpot.js \
-	Pin.js \
-	Rule.js \
-	Server.js \
-	Thermostat.js \
-	Time.js
+	autoscale_graph.js \
+	browser.js \
+	edit_in_place.js
 
 %.esl : %.js
 	eslint $^

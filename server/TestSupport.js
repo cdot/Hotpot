@@ -18,10 +18,10 @@ TestSupport = {
     get: function(id, fn) {
         var name = TestSupport.ID2Name[id];
         var odl = TestSupport.temperature[name];
-        if (TestSupport.pinstate[name] === 1)
-            TestSupport.temperature[name] += Math.random() / 10;
+        if (TestSupport.pinstate[name])
+            TestSupport.temperature[name] += Math.random();
         else
-            TestSupport.temperature[name] -= Math.random() / 10;
+            TestSupport.temperature[name] -= Math.random();
         //console.log("WTF " + name + " (" + TestSupport.pinstate[name] + ") "
         // + odl + " -> " + TestSupport.temperature[name]);
         if (typeof fn !== "undefined")

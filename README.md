@@ -112,13 +112,19 @@ Example configuration file:
 Note that the pin names "HW" and "CH" are predefined, as Y-plan systems have
 some dependencies between them.
 
-# Rules files
+# Rules
 
-Rules files are Javascript files that contain an array of functions
-definitons. Each function is called in turn, and it it returns true,
-the evaluation will stop. Functions can set the configuration of the
-thermostat they are called on. The "Time" class is provided to make
-comparing times easier. Example hot_water rules:
+Rules are Javascript functions associated with thermostats.
+```Javascript
+function rule(int temp, Controller controller)
+'this' is the Thermostat object
+```
+Each function is
+called in turn each time the temperature is polled, and it it returns true,
+the evaluation will stop. Rule functions are called with 'this' set to
+the thermostat object and the controller. The simplest
+rules set the configuration of the thermostat by adjusting e.g. the target
+temperature and window. For example,
 ```Javascript
 [
     {
@@ -131,31 +137,40 @@ comparing times easier. Example hot_water rules:
         }
     },
     {
-        name: "evening",
-        test: function() {
-            if (Time.between("17:30", "20:30")) {
-                this.set_target(55);
-                return true;
-            }
-        }
-    },
-    {
         name: "otherwise",
         test: function() {
             this.set_target(0);
+            this.set_window(10);
         }
     }
 ]
 ```
-This will set the temperature to 60 degrees between 06:30 and 07:30 for your morning shower, then to 55 degreees between 17:30 and 18:30 for the washing up and evening showers. At any other time the temperature is set to 0, which turns the hot water off.
+This will set the temperature to 55 degrees between 06:30 and 07:30 for your morning shower, then switch off the hot water at any other time. The "Time" class is provided to make comparing times easier. All time comparisons are done in system time.
 
 Rules functions can also interrogate other thermostats using the controller. For example,
 ```Javascript
-[
+{
     name: "Turn on hot water if CH temp falls below 5 degrees",
-    test: function() {
-        if (controller.thermostat.CH.temperature < 5)
+    test: function(controller) {
+        if (controller.thermostat.CH.temperature() < 5)
            this.set_target(40);
     }
-]
+}
 ```
+A rule can also remove itself from the rule set (for example, a rule may
+be set to expire after a certain time) by returning the string "remove".
+```Javascript
+{
+    name: "One hour pulse for hot water",
+    test: function() {
+          if (Time.after("10:35"))
+              return "remove";
+          this.set_target(55);
+    }
+}
+```
+
+# Browser interface
+
+The browser interface is a low-level debugging tool that gives access to the
+functions of the controller using AJAX requests to the controller.

@@ -17,45 +17,41 @@
     "use strict";
     $.fn.edit_in_place = function(options) {
 
-        var $this = $(this);
-        var opt = {
-            height: options.height || $this.height(),
-            width: options.width || $this.width(),
-            changed: options.changed ||
-                function(text) {
-                    $this.text(text);
-                },
+        var $elf = $(this);
+        options = $.extend({
+            height: $elf.height(),
+            width: $elf.width(),
+            changed: function(text) {
+                $elf.text(text);
+            },
             area: false
-        };
+        }, options);
         
-        var data = $this.data("editable");
+        var data = $elf.data("editable");
         if (typeof data === "string") {
             try {
                 eval("data={" + data + "}");
             } catch (e) {
                 throw "Unparseable data-editable: " + data + ": " + e.message;
             }
-            for (var o in opt)
+            for (var o in options)
                 if (typeof data[o] !== "undefined")
-                    opt[o] = data[o];
+                    options[o] = data[o];
         }
 
         var $editor;
 
         var destroy = function() {
             $editor.remove();
-            $this.show();
+            $elf.show();
         };
 
-        var commit = function() {
-        };
-
-        if (opt.area) {
+        if (options.area) {
             var $tick, $cross, $controls, $ta;
 
             $editor = $("<div></div>")
-                .css("height", opt.height)
-                .css("width", opt.width);
+                .css("height", options.height)
+                .css("width", options.width);
             var $error = $("<div></div>")
                 .css("color", "white")
                 .css("background-color", "red")
@@ -65,23 +61,28 @@
                 .addClass("editable_button")
                 .on("click", function() {
                     var fn = $ta.val();
-                    if (fn !== $this.text()) {
+                    if (fn !== $elf.text()) {
                         try {
                             // Does it compile?
                             var ok;
                             eval("ok=" + fn);
                             destroy();
-                            opt.changed.call($this, fn);
+                            options.changed.call($elf, fn);
                         } catch (e) {
                             $error.text("Error: " + e.message);
                         }
-                    } else
+                    } else {
                         destroy();
+                        if (options.cancel)
+                            options.cancel.call($elf);
+                    }
                 });
             $cross = $("<div>&#9746;</div>")
             .addClass("editable_button")
                 .css("float", "right")
                 .on("click", function() {
+                    if (options.cancel)
+                        options.cancel.call($elf);
                     destroy();
                 });
 
@@ -104,9 +105,9 @@
             $editor.append($controls);
 
             $ta = $("<textarea></textarea>")
-                .css("height", opt.height - $controls.height())
-                .css("width", opt.width);
-            $ta.val($this.text());
+                .css("height", options.height - $controls.height())
+                .css("width", options.width);
+            $ta.val($elf.text());
             $editor.append($ta);
 
             $editor.append($error);
@@ -116,7 +117,9 @@
                     // Escape means cancel, Enter means commit
                     if (e.keyCode === 27
                         || (e.keyCode === 13
-                            && $editor.val() === $this.text())) {
+                            && $editor.val() === $elf.text())) {
+                        if (options.cancel)
+                            options.cancel.call($elf);
                         destroy();
                         return false;
                     } else
@@ -125,19 +128,22 @@
                 .on("change", function() {
                     var val = $editor.val();
                     destroy();
-                    if (val !== $this.text())
-                        opt.changed.call($this, val);
+                    if (val !== $elf.text()) {
+                        options.changed.call($elf, val);
+                    } else if (options.cancel) {
+                        options.cancel.call($elf);
+                    }
                 });
-            $editor.val($this.text());
+            $editor.val($elf.text());
          }
 
-        $this.hide();
+        $elf.hide();
 
         $editor
-            .insertBefore($this)
+            .insertBefore($elf)
             .addClass("in_place_editor")
-            .css("height", opt.height)
-            .css("width", opt.width)
+            .css("height", options.height)
+            .css("width", options.width)
 
             .on("mouseup", function(e) {
                 // Override the parent click handler

@@ -36,3 +36,15 @@ body {
     width: 100%;
     height: 100%;
 }
+
+.move.disabled {
+    color: gray;
+}
+
+.add_rule {
+    color: olive;
+}
+
+.add_rule:hover {
+    color: yellow;
+}

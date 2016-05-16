@@ -16,9 +16,6 @@
  * are numbered and are run starting at 0. If a rules function returns
  * true, the evaluation of rules stops.
  */
-const EventEmitter = require("events").EventEmitter;  
-const util = require("util");
-const Fs = require("fs");
 const Rule = require("./Rule.js");
 
 // Thermostat poll
@@ -33,9 +30,10 @@ const K0 = -273.25; // 0K
 /**
  * Construct a thermostat
  * @param name name by which the caller identifies the thermostat
+ * @param controller Controller this thermostat is part of
  * @param config configuration for the pin, a Config object
  */
-function Thermostat(name, config) {
+function Thermostat(name, controller, config) {
     "use strict";
 
     if (!ds18x20) {
@@ -51,24 +49,22 @@ function Thermostat(name, config) {
         }
     }
 
-    EventEmitter.call(this);
     var self = this;
-    this.name = name;
-    this.id = config.id; // DS18x20 device ID
-    this.target = 15;    // target temperature
-    this.window = 4;     // slack window
-    this.rules = [];     // activation rules, array of Rule
-    this.rules_enabled = true;
-
-    this.active_rule = "none"; // the currently active rule
-    this.live = true; // True until destroyed
+    self.name = name;
+    self.id = config.id; // DS18x20 device ID
+    self.target = 15;    // target temperature
+    self.window = 4;     // slack window
+    self.rules = [];     // activation rules, array of Rule
+    self.rules_enabled = true;
+    self.active_rule = "none"; // the currently active rule
+    self.live = true; // True until destroyed
     
     if (typeof config.target !== "undefined")
-        this.set_target(config.target);
+        self.set_target(config.target);
     if (typeof config.window !== "undefined")
-        this.set_window(config.window);
+        self.set_window(config.window);
 
-    this.last_temp = K0; // Temperature measured in last poll
+    self.last_temp = K0; // Temperature measured in last poll
 
     if (typeof ds18x20.mapID !== "undefined")
         ds18x20.mapID(config.id, name);
@@ -79,9 +75,7 @@ function Thermostat(name, config) {
         for (var i in rules)
             self.insert_rule(
                 new Rule(rules[i].name,
-                         rules[i].test,
-                         typeof rules[i].expiry !== "undefined" ?
-                         new Date(rules[i].expiry) : undefined));
+                         rules[i].test));
     }
 
     // Don't start polling until after a timeout even because otherwise
@@ -89,15 +83,22 @@ function Thermostat(name, config) {
     setTimeout(function() {
         console.TRACE("thermostat", self.name + " "
                       + self.low() + " < T < " + self.high() + " started");
-        self.poll();
+        self.poll(controller);
     }, 10);
 }
-util.inherits(Thermostat, EventEmitter);
 module.exports = Thermostat;
+
+/**
+ * Release all resources used by the thermostat
+ */
+Thermostat.prototype.DESTROY = function() {
+    "use strict";
+};
 
 /**
  * Generate and return a serialisable version of the structure, suitable
  * for use in an AJAX response.
+ * @return a serialisable structure
  */
 Thermostat.prototype.serialisable = function() {
     "use strict";
@@ -119,7 +120,6 @@ Thermostat.prototype.serialisable = function() {
 
 /**
  * Set target temperature.
- * Thresholds will be computed based on the current window.
  * @param target target temperature
  */
 Thermostat.prototype.set_target = function(target) {
@@ -131,19 +131,13 @@ Thermostat.prototype.set_target = function(target) {
 };
 
 Thermostat.prototype.enable_rules = function(enable) {
+    "use strict";
     this.rules_enabled = enable;
 };
 
-Thermostat.prototype.low = function() {
-    return this.target - this.window / 2;
-};
-
-Thermostat.prototype.high = function() {
-    return this.target + this.window / 2;
-};
 
 /**
- * Set temperature window.
+ * Set the temperature window.
  * Thresholds will be recomputed based on the current target, so
  * that "above" is fired when temperature rises above target+window/2
  * and "below" when temp falls below target-window/2
@@ -156,8 +150,29 @@ Thermostat.prototype.set_window = function(window) {
     console.TRACE("thermostat", this.name + " window changed to " + this.window);
 };
 
-// Private function for polling thermometers
-Thermostat.prototype.poll = function() {
+/**
+ * Get the lower bound of the temperature window
+ */
+Thermostat.prototype.low = function() {
+    "use strict";
+    return this.target - this.window / 2;
+};
+
+/**
+ * Get the upper bound of the termperature window
+ */
+Thermostat.prototype.high = function() {
+    "use strict";
+    return this.target + this.window / 2;
+};
+
+/**
+ * Function for polling thermometers
+ * @param controller Controller object that is notified when the temperature
+ * crosses a threshold.
+ * @private
+ */
+Thermostat.prototype.poll = function(controller) {
     "use strict";
 
     if (!this.live)
@@ -165,21 +180,41 @@ Thermostat.prototype.poll = function() {
 
     var self = this;
     ds18x20.get(this.id, function(err, temp) {
+        var i;
         if (err !== null) {
             console.error("ERROR: " + err);
         } else {
             // Test each of the rules in order until one fires,
             // then stop testing. This will leave us with the
             // appropriate low/high state.
+            var remove = [];
             self.active_rule = "none";
-            if (self.rules_enabled) {
-                for (var i in self.rules) {
-                    if (self.rules[i].test.call(self, temp)) {
-                        self.active_rule = self.rules[i].name;
-                        break;
-                    }
+            for (i = 0; i < self.rules.length; i++) {
+                var rule = self.rules[i];
+                var result;
+               try {
+                    result = rule.test.call(self, controller);
+                } catch (e) {
+                    console.TRACE("Rule " + i + " call failed: " + e.message);
+                }
+                if (typeof result === "string") {
+                    if (result === "remove")
+                        remove.push(i);
+                } else if (typeof result === "boolean" && result) {
+                    self.active_rule = self.rules[i].name;
+                    break;
                 }
             }
+
+            // Remove rules flagged for removal
+            while (remove.length > 0) {
+                i = remove.pop();
+                console.TRACE("thermostat", "Remove rule " + i);
+                self.rules.splice(i, 1);
+                self.renumber_rules();
+                controller.emit("config_change");
+            }
+
             //console.TRACE("thermostat", self.name + " active rule is "
             //              + self.active_rule
             //              + " current temp " + temp + "C");
@@ -187,20 +222,51 @@ Thermostat.prototype.poll = function() {
             // whatever the last setting was.
 
             if (temp < self.low())
-                self.emit("below", self.name, temp);
+                controller.set(self.name, "active rule", true);
             else if (temp > self.high())
-                self.emit("above", self.name, temp);
+                controller.set(self.name, "active_rule", false);
+
             self.last_temp = temp;
             setTimeout(function() {
-                self.poll();
+                self.poll(controller);
             }, POLL_INTERVAL * 1000);
         }
     });
 };
 
 /**
+ * Get the index of a rule specified by name, object or index
+ * @private
+ */
+Thermostat.prototype.get_rule_index = function(i) {
+    "use strict";
+
+    if (typeof i !== "string") {
+        for (var j in this.rules) {
+            if (this.rules[j].name === i) {
+                return j;
+            }
+        }
+    } else if (typeof i === "object") {
+        return i.index;
+    }
+    return i;
+};
+
+/**
+ * Reset the index of rules
+ * @private
+ */
+Thermostat.prototype.renumber_rules = function() {
+    "use strict";
+
+    for (var j = 0; j < this.rules.length; j++)
+        this.rules[j].index = j;
+};
+
+/**
  * Get the current temperature
- * @return the current termperature sensed by the device
+ * @return the current temperature sensed by the device
  */
 Thermostat.prototype.temperature = function() {
     "use strict";
@@ -225,10 +291,33 @@ Thermostat.prototype.insert_rule = function(rule, i) {
         this.rules.unshift(rule);
     else
         this.rules.splice(i, 0, rule);
-    rule.index = i;
+    this.renumber_rules();
     console.TRACE("thermostat", this.name + " rule " + this.rules[i].name
                   + "(" + i + ") inserted at " + rule.index);
     return i;
+};
+
+/**
+ * Move a rule a specified number of places in the order
+ * @param i the number (or name, or rule object) of the rule to delete
+ * @param move number of places to move the rule, negative to move up,
+ * positive to move down
+ */
+Thermostat.prototype.move_rule = function(i, move) {
+    "use strict";
+    if (move === 0)
+        return;
+    i = this.get_rule_index(i);
+    var dest = i + move;
+    if (dest < 0)
+        dest = 0;
+    if (dest >= this.rules.length)
+        dest = this.rules.length - 1;
+
+    var removed = this.rules.splice(i, 1);
+    this.rules.splice(dest, 0, removed[0]);
+    this.renumber_rules();
+    console.TRACE("thermostat", this.name + " rule " + i + " moved to " + dest);
 };
 
 /**
@@ -238,17 +327,9 @@ Thermostat.prototype.insert_rule = function(rule, i) {
 */
 Thermostat.prototype.remove_rule = function(i) {
     "use strict";
-    if (typeof i === "string") {
-        for (var j in this.rules) {
-            if (this.rules[j].name === i) {
-                i = j;
-                break;
-            }
-        }
-    } else if (typeof i === "object") {
-        i = i.index;
-    }
+    i = this.get_rule_index(i);
     var del = this.rules.splice(i, 1);
+    this.renumber_rules();
     console.TRACE("thermostat", this.name + " rule " + del[0].name
                   + "(" + i + ") removed");
     return del[0];
