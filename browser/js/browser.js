@@ -14,7 +14,7 @@
         }
     };
 
-    // Edit text of a value field
+    // User clicks edit text of a value field
     var edit_field = function() {
         stop_polling();
         $(this).edit_in_place({
@@ -36,7 +36,7 @@
         });
     };
 
-    // Toggle a checkbox field
+    // User toggles a checkbox field
     var toggle_field = function() {
         var $self = $(this);
         var $controller = $self.closest(".controller");
@@ -52,6 +52,7 @@
             });
     };
 
+    // User clicks add rule
     var add_rule = function() {
         var $self = $(this);
         var $controller = $self.closest(".controller");
@@ -70,6 +71,7 @@
             });
     };
 
+    // User clicks remove rule
     var remove_rule = function() {
         var $self = $(this);
         var $controller = $self.closest(".controller");
@@ -91,6 +93,7 @@
             });
     };
 
+    // Support for user clicks that move rules
     var move_rule = function(dir) {
         var $self = $(this);
         var $controller = $self.closest(".controller");
@@ -113,15 +116,17 @@
             });
     };
 
+    // User clicks move rule down
     var move_down = function() {
         move_rule.call(this, +1);
     };
 
+    // User clicks move rule up
     var move_up = function() {
         move_rule.call(this, -1);
     };
 
-    // Edit text of a rule
+    // User clicks edit text of a rule
     var edit_rule = function() {
         stop_polling();
         $(this).edit_in_place({
@@ -176,6 +181,7 @@
                     $row.addClass("rule" + rule.index);
                     $row.addClass("rule");
                     $row.data("index", rule.index);
+                    $row.attr("name", rule.name);
                     $tbody.append($row);
                     $row.find(".editable")
                         .on("click", edit_rule);
@@ -216,6 +222,12 @@
                 .first()
                 .each(populate_field);
         }
+
+        if (typeof data.active_rule !== "undefined")
+            $div
+            .find(".rule")
+            .filter("[name='" + data.active_rule.toString() + "']")
+            .addClass("active_rule");
     };
 
     var poll = function() {

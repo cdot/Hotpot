@@ -22,12 +22,24 @@
         <tr>
           <td width="50%">
             <table class="datatable">
+              <tr>
+                <th>Target Temperature</th>
+                <td>
+                  <span data-field="target" class="editable"></span>
+                  <span class="fixed">&plusmn;</span>
+                  <span data-field="window" class="editable"></span><span class="fixed">/2 set by</span>
+                  <span class="fixed" data-field="actor"></span>
+                </td>
+              </tr>
+                </td>
+              </tr>
+              </tr>
               <tr class="fixed">
-                <th class="ralign">Temperature</th>
+                <th class="ralign">Current Temperature</th>
                 <td data-field="temperature"></td>
               </tr>
               <tr>
-                <th>State</th>
+                <th>Active</th>
                 <td>
                   <input type="checkbox" data-field="state"/>
                 </td>
@@ -37,22 +49,6 @@
                 <td>
                   <input type="checkbox" data-field="rules_enabled"/>
                 </td>
-              </tr>
-              <tr class="fixed">
-                <th>Active Rule</th>
-                <td data-field="active_rule"></td>
-              </tr>
-              <tr class="fixed">
-                <th>Last Changed By</th>
-                <td data-field="actor"></td>
-              </tr>
-              <tr>
-                <th>Target</th>
-                <td data-field="target" class="editable"></td>
-              </tr>
-              <tr>
-                <th>Window</th>
-                <td data-field="window" class="editable"></td>
               </tr>
               <tr>
                 <th>Rules</th>
