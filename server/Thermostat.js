@@ -211,7 +211,7 @@ Thermostat.prototype.poll = function(controller) {
                 i = remove.pop();
                 console.TRACE("thermostat", "Remove rule " + i);
                 self.rules.splice(i, 1);
-                self.renumber_rules();
+                self.renumberRules();
                 controller.emit("config_change");
             }
 
@@ -238,7 +238,7 @@ Thermostat.prototype.poll = function(controller) {
  * Get the index of a rule specified by name, object or index
  * @private
  */
-Thermostat.prototype.get_rule_index = function(i) {
+Thermostat.prototype.getRuleIndex = function(i) {
     "use strict";
 
     if (typeof i !== "string") {
@@ -257,7 +257,7 @@ Thermostat.prototype.get_rule_index = function(i) {
  * Reset the index of rules
  * @private
  */
-Thermostat.prototype.renumber_rules = function() {
+Thermostat.prototype.renumberRules = function() {
     "use strict";
 
     for (var j = 0; j < this.rules.length; j++)
@@ -291,7 +291,7 @@ Thermostat.prototype.insert_rule = function(rule, i) {
         this.rules.unshift(rule);
     else
         this.rules.splice(i, 0, rule);
-    this.renumber_rules();
+    this.renumberRules();
     console.TRACE("thermostat", this.name + " rule " + this.rules[i].name
                   + "(" + i + ") inserted at " + rule.index);
     return i;
@@ -307,7 +307,7 @@ Thermostat.prototype.move_rule = function(i, move) {
     "use strict";
     if (move === 0)
         return;
-    i = this.get_rule_index(i);
+    i = this.getRuleIndex(i);
     var dest = i + move;
     if (dest < 0)
         dest = 0;
@@ -316,7 +316,7 @@ Thermostat.prototype.move_rule = function(i, move) {
 
     var removed = this.rules.splice(i, 1);
     this.rules.splice(dest, 0, removed[0]);
-    this.renumber_rules();
+    this.renumberRules();
     console.TRACE("thermostat", this.name + " rule " + i + " moved to " + dest);
 };
 
@@ -327,9 +327,9 @@ Thermostat.prototype.move_rule = function(i, move) {
 */
 Thermostat.prototype.remove_rule = function(i) {
     "use strict";
-    i = this.get_rule_index(i);
+    i = this.getRuleIndex(i);
     var del = this.rules.splice(i, 1);
-    this.renumber_rules();
+    this.renumberRules();
     console.TRACE("thermostat", this.name + " rule " + del[0].name
                   + "(" + i + ") removed");
     return del[0];

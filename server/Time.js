@@ -34,11 +34,18 @@ Time = {
 
     /**
      * Get the current time in ms
-     * @private
      */
     now: function() {
         "use strict";
         return (new Date()).getTime();
+    },
+
+    /**
+     * Get the current time in s
+     */
+    nowSeconds: function() {
+        "use strict";
+        return (new Date()).getTime() / 1000;
     },
 
     /**

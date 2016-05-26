@@ -5,6 +5,7 @@ SOURCES := \
 	Controller.js \
 	getip.js \
 	Hotpot.js \
+	Mobile.js \
 	Pin.js \
 	Rule.js \
 	Server.js \

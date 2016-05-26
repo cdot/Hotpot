@@ -32,7 +32,7 @@ var config;
 eval("config=" + Fs.readFileSync("./getip.config"));
 
 // Update the IP address in the file, if it has changed
-function update_address(new_addr) {
+function updateAddress(new_addr) {
     "use strict";
 
     console.TRACE("Updating IP address");
@@ -56,7 +56,7 @@ function update_address(new_addr) {
             });
 }    
 
-function http_get(url, callback) {
+function httpGET(url, callback) {
     "use strict";
     var result = "";
     http.get(url,
@@ -80,7 +80,7 @@ else
     console.TRACE = function() { "use strict"; };
 
 // Get IP address http://smart-ip.net/myip
-http_get(
+httpGET(
     {
         host: "smart-ip.net",
         path: "/myip"
@@ -93,14 +93,14 @@ http_get(
 	new_addr = "hotpot_ip=\"" + new_addr + "\"";
 
         // Get known address
-        http_get(
+        httpGET(
             config.http,
             function(old_addr) {
                 console.TRACE("Existing IP address " + old_addr);
                 // force update
                 // old_addr="ignored";
                 if (old_addr !== new_addr)
-                    update_address(new_addr);
+                    updateAddress(new_addr);
                 else
                     console.TRACE("No need to update");
             });

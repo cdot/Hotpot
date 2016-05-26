@@ -68,39 +68,51 @@ in ~/.config/Hotpot/config.json
 Example configuration file:
 ```Javascript
 {
-    server: {
-        key: "$HOME/.config/Hotpot/hotpot.key",
-        cert: "$HOME/.config/Hotpot/hotpot.crt",
-        port: 13196
+  server: {
+      key: "$HOME/.config/Hotpot/hotpot.key",
+      cert: "$HOME/.config/Hotpot/hotpot.crt",
+      port: 13196
+  },
+  controller: {
+    location: {
+        latitude: 53.2479773,
+        longitude: -2.504296
     },
     thermostats: {
-        HW: {
-            id: "28-0115914ff5ff",
-            rules: "$HOME/.config/Hotpot/hw_rules.json",
-            target: 55,
-            window: 3
-        },
-        CH: {
-            id: "28-0316027f81ff",
-            rules: "$HOME/.config/Hotpot/ch_rules.json",
-            target: 15,
-            window: 3
-        }
+      HW: {
+          id: "28-0115914ff5ff",
+          rules: "$HOME/.config/Hotpot/hw_rules.json",
+          target: 55,
+          window: 3
+      },
+      CH: {
+          id: "28-0316027f81ff",
+          rules: "$HOME/.config/Hotpot/ch_rules.json",
+          target: 15,
+          window: 3
+      }
     },
     pins: {
-        CH: {
-            gpio: 23
-        },
-        HW: {
-            gpio: 25
-        }
+      CH: {
+          gpio: 23
+      },
+      HW: {
+          gpio: 25
+      }
+    },
+    mobiles: {
+      "7f673fe4926": {
+        name: "Roamer's Phone"
+      }
     }
+  }
 }
 ```
 - server - sets up the HTTP(S) server
   - key server private key
   - cert server certificate. If no key and cert are given, an HTTP server will be used, otherwise it will be HTTPS.
   - port the network port to use (default is 13196)
+- location - sets the latitude and longitude of the home location
 - thermostats - sets up the DS18X20 thermostats available to the system. Each thermostat has:
   - id - used to communicate with the sensor
   - rules - (optional) name of a rules file that contains the rules for the thermostat
@@ -108,6 +120,7 @@ Example configuration file:
   - window (optional) window over the target temperature.
 - pins - sets up the pins used to control the system.
   - gpio - the GPIO pin number
+- mobiles - sets the unique ID of roaming devices
 
 Note that the pin names "HW" and "CH" are predefined, as Y-plan systems have
 some dependencies between them.
@@ -174,3 +187,13 @@ be set to expire after a certain time) by returning the string "remove".
 
 The browser interface is a low-level debugging tool that gives access to the
 functions of the controller using AJAX requests to the controller.
+
+# Maps
+Setting up to access the API
+* Go to the API console
+* Click on "Credentials"
+* Add a server key, with your server's IP address
+(you can add a userIp parameter to requests if it isn't stable)
+* Go to "Overview" and enable the Maps Directions API
+Getting directions:
+

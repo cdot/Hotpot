@@ -8,6 +8,7 @@ const util = require("util");
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
 const Rule = require("./Rule.js");
+const Mobile = require("./Mobile.js");
 
 // Time to wait for the multiposition valve to return to the discharged
 // state, in ms
@@ -23,6 +24,8 @@ function Controller(config, when_ready) {
 
     console.TRACE("init", "Creating Controller");
 
+    this.location = config.location;
+    this.createMobiles(config.mobiles);
     this.createPins(config.pins, function() {
         this.createThermostats(config.thermostats, when_ready);
     });
@@ -37,6 +40,21 @@ Controller.prototype.DESTROY = function() {
         this.pin[k].DESTROY();
     for (k in this.thermostat)
         this.thermostat[k].DESTROY();
+    for (k in this.mobile)
+        this.mobile[k].DESTROY();
+};
+
+/**
+ * Create mobiles specified by config
+ */
+Controller.prototype.createMobiles = function(config) {
+    "use strict";
+
+    this.mobile = {};
+    for (var id in config) {
+        this.mobile[id] = new Mobile(id, config[id],
+                                     this.location);
+    }
 };
 
 /**
@@ -108,8 +126,10 @@ Controller.prototype.serialisable = function() {
 
     return {
 	time: new Date().toString(), // local time
+        location: this.location,
         thermostats: sermap(this.thermostat),
-        pins: sermap(this.pin)
+        pins: sermap(this.pin),
+        mobiles: sermap(this.device)
     };
 };
 
@@ -169,6 +189,22 @@ Controller.prototype.set = function(channel, actor, on, respond) {
 };
 
 /**
+ * Handler for a location setting
+ * @param info structure containing location in "latitude", "longitude" and
+ * device idenitifier in "device"
+ * @return location of server
+ */
+Controller.prototype.setMobileLocation = function(info) {
+    "use strict";
+    var d = info.device;
+    if (typeof this.mobile[d] === "undefined")
+        throw "Set location: " + d + " not known";
+    this.mobile[d].setLocation(info);
+    this.mobile[d].estimateTOA();
+    return this.location;
+};
+
+/**
  * Command handler for a command that modifies the configuration
  * of the controller.
  * @param struct structure containing the command and parameters e.g.
@@ -181,7 +217,7 @@ Controller.prototype.set = function(channel, actor, on, respond) {
  * { command: "set_state", id: "name", value: state }
  * id is the controller id e.g. HW
  */
-Controller.prototype.execute_command = function(command) {
+Controller.prototype.executeCommand = function(command) {
     "use strict";
 
     var ptypes = {

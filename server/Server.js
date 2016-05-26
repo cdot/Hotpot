@@ -7,6 +7,7 @@
 const Fs = require("fs");
 const serialize = require("serialize-javascript");
 const Config = require("./Config.js");
+const Url = require("url");
 
 /**
  * HTTP(S) Server object
@@ -47,16 +48,9 @@ function Server(config, controller) {
     server.listen(config.port);
 }
 
-/**
- * AJAX request to get the status of the server.
- * This is currently just the on/off state of the boiler, but
- * will include data from the temperature probes when I figure
- * them out.
- */
-Server.prototype.GET = function(server, request, response) {
+/** @private */
+Server.prototype.OK = function(response) {
     "use strict";
-
-    //console.TRACE("server", "Processing GET");
     response.writeHead(
         200, "OK",
 	{
@@ -64,7 +58,30 @@ Server.prototype.GET = function(server, request, response) {
             "Access-Control-Allow-Methods": "POST,GET"
         });
     response.statusCode = 200;
-    response.write(serialize(this.controller.serialisable()));
+};
+
+/**
+ * AJAX request to get the status of the server, and set the position
+ * of a device.
+ */
+Server.prototype.GET = function(server, request, response) {
+    "use strict";
+
+    //console.TRACE("server", "Processing GET " + request.url);
+    var req = Url.parse("" + request.url, true);
+    var reply;
+    try {
+        if (typeof req.query !== "undefined")
+            reply = this.controller.setMobileLocation(req.query);
+        else
+            reply = this.controller.serialisable();
+        this.OK(response);
+        response.write(serialize(reply));
+    } catch (e) {
+        console.error(e + " in " + request.url + "\n" + e.stack);
+        response.write(e + " in " + request.url + "\n");
+        response.statusCode = 400;
+    }
     response.end();
 };
 
@@ -83,21 +100,14 @@ Server.prototype.POST = function(server, request, response) {
         // TODO: decrypt request
         try {
             var data = JSON.parse(json);
-            self.controller.execute_command(data);
-            response.writeHead(
-                200, "OK",
-                {
-                    "Access-Control-Allow-Origin": null,
-                    "Access-Control-Allow-Methods": "POST,GET"
-                });
-            response.statusCode = 200;
-            response.end();
+            self.controller.executeCommand(data);
+            self.OK(response);
         } catch (e) {
             console.error(e + " in " + json);
             response.write(e + " in " + json + "\n");
             response.statusCode = 400;
-            response.end();
         }
+        response.end();
     });
 };
 

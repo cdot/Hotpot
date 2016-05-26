@@ -285,7 +285,7 @@
                 hotpot_ip = urp[1];
         }
 
-        server = "https://" + hotpot_ip + ":13196";
+        server = "http://" + hotpot_ip + ":13196";
         // Can't use getJSON because of the rule functions
         $.get(
             server,
