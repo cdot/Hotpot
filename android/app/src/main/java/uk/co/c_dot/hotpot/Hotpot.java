@@ -1,50 +1,25 @@
 package uk.co.c_dot.hotpot;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.Date;
-import java.text.DateFormat;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
-
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.StrictMode;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
-
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.maps.CameraUpdate;
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
-
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -52,45 +27,45 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.app.ActivityCompat;
-import android.provider.Settings;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Hotpot
     extends FragmentActivity
     implements ConnectionCallbacks, OnConnectionFailedListener,
-               LocationListener,
                OnMapReadyCallback {
 
     protected static final String TAG = "HOTPOT";
 
-    public static final long UPDATE_INTERVAL = 5000;
-    public static final long FASTEST_UPDATE_INTERVAL =
-            UPDATE_INTERVAL / 2;
+    public static final long UPDATE_INTERVAL = 5000; // ms
 
     // ANDROID_ID of the device
     private String mAndroidId;
-    // Server URL
+    // Server URL. used for the API license
     private static final String HOTPOT_URL =  "http://192.168.1.12:13196/";
+
     // Radius of the earth, for haversine
-    private static final double EARTH_RADIUS = 6371000;
+    private static final double EARTH_RADIUS = 6371000; // metres
 
     // API objects
     protected GoogleApiClient mGoogleApiClient;
     private GoogleMap mMap;
-    protected LocationRequest mLocationRequest;
 
     // Current location marker
-    private Marker mMarker;
+    private Marker mMobileMarker, mHomeMarker;
 
     // Server home location
-    private LatLng home = null;
+    private LatLng mHomePos = null, mLastPos = null;
 
     /*
     private KeyStore mKeyStore = null;
@@ -183,12 +158,13 @@ public class Hotpot
 
     /**
      * Send a location update to the server. If the home location hasn't been set already,
-     * use the server response to set it.
+     * use the server response to set it. Schedules the next update.
      * @param loc new location
      */
     private void sendUpdate(LatLng loc) {
         /*    if (mSSLContext == null)
             mSSLContext = setupSSL();*/
+
         Log.i(TAG, "Sending location update");
         try {
             URL url = new URL(HOTPOT_URL
@@ -214,48 +190,74 @@ public class Hotpot
                 Pattern re = Pattern.compile("\"(.*?)\":(.*?)[,}]");
                 Matcher m = re.matcher(reply);
                 double latitude = 0, longitude = 0;
-                double next_update= FASTEST_UPDATE_INTERVAL;
+                long next_update = 0;
                 while (m.find()) {
                     String key = m.group(1);
                     String value = m.group(2);
-                    if (key.equals("home_lat"))
-                        latitude = Double.parseDouble(value);
-                    else if (key.equals("home_long"))
-                        longitude = Double.parseDouble(value);
-                    else if (key.equals("interval"))
-                        next_update = Double.parseDouble(value) * 1000;
-                    else
-                        Log.i(TAG, "Bad reply from server " + reply);
+                    switch (key) {
+                        case "home_lat":
+                            latitude = Double.parseDouble(value);
+                            break;
+                        case "home_long":
+                            longitude = Double.parseDouble(value);
+                            break;
+                        case "interval":
+                            next_update = (long) (Double.parseDouble(value) * 1000);
+                            break;
+                        default:
+                            Log.i(TAG, "Bad reply from server " + reply);
+                    }
                 }
-                if (home == null) {
-                    home = new LatLng(latitude, longitude);
-                    Log.i(TAG, "HOME is at " + home);
+                if (mHomePos == null) {
+                    mHomePos = new LatLng(latitude, longitude);
+                    Log.i(TAG, "HOME is at " + mHomePos);
                 }
                 if (next_update < UPDATE_INTERVAL)
                     next_update = UPDATE_INTERVAL;
-                Log.i(TAG, "Next update in " + (next_update / 1000) + "s");
-                // this isn't working
-                mLocationRequest.setInterval((long)next_update);
+                getNextLocationAfter(next_update);
             } finally {
                 connection.disconnect();
             }
         } catch (IOException ioe) {
             Log.i(TAG, "Problem sending update " + ioe.getMessage());// + this.getStackTrace(ioe));
+            getNextLocationAfter(UPDATE_INTERVAL);
         }
     }
 
     /**
-     * Create our location request object (can't be done until permissions are confirmed)
-     * and start listening for location updates.
+     * Scheduler for location updates
      */
-    private void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(UPDATE_INTERVAL);
-        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL);
-        // TODO: Use PRIORITY_NO_POWER to only get updates when triggered by other apps e.g. OSMand
-        // https://developers.google.com/android/reference/com/google/android/gms/location/LocationRequest
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        startListening();
+    private Handler handler = new Handler();
+
+    private class WakeUp implements Runnable {
+        public boolean ignore = false;
+
+        @Override
+        public void run() {
+            Log.i(TAG, "Woken");
+            if (!ignore)
+                onLocationChanged();
+        }
+    }
+
+    private WakeUp wakeUp = new WakeUp();
+
+    /**
+     * Schedules a location update for some time in the future
+     *
+     * @param update time in ms to wait before the update
+     */
+    private void getNextLocationAfter(long update) {
+        wakeUp.ignore = false;
+        Log.i(TAG, "Next update in " + (update / 1000) + "s");
+        handler.postDelayed(wakeUp, update);
+    }
+
+    /**
+     * Stop listening for location updates
+     */
+    private void stopListening() {
+        wakeUp.ignore = true;
     }
 
     /**
@@ -270,6 +272,9 @@ public class Hotpot
 
     /**
      * Callback for permissions request. Overrides FragmentActivity
+     * @param requestCode code set in the request
+     * @param permissions permissions asked for
+     * @param grantResults dunno
      */
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -278,7 +283,7 @@ public class Hotpot
                 && grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Permission Granted", Toast.LENGTH_SHORT).show();
-            createLocationRequest();
+            getNextLocationAfter(UPDATE_INTERVAL);
         } else {
             Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
         }
@@ -303,119 +308,85 @@ public class Hotpot
                                 Math.sin(dLong / 2) * Math.sin(dLong / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-        double d = EARTH_RADIUS * c;
+        return EARTH_RADIUS * c;
+    }
 
-        return d;
+    private void updateMap(LatLng curPos) {
+        if (mMap == null)
+            return; // map not ready yet
+
+        if (mHomePos != null && mHomeMarker == null) {
+            mHomeMarker = mMap.addMarker(new MarkerOptions().position(mHomePos));
+        }
+
+        CameraUpdate cam;
+        if (mMobileMarker == null) {
+            mMobileMarker = mMap.addMarker(new MarkerOptions()
+                    //.draggable(false)
+                    .position(curPos)
+                    .flat(true));
+            cam = CameraUpdateFactory.newLatLngZoom(curPos, 12);
+        } else
+            cam = CameraUpdateFactory.newLatLng(curPos);
+
+        mMobileMarker.setPosition(curPos);
+        mMobileMarker.setTitle(DateFormat.getTimeInstance().format(new Date()));
+
+        if (mLastPos != null) {
+            double latDiff = curPos.latitude - mLastPos.latitude;
+            double longDiff = curPos.longitude - mLastPos.longitude;
+            double rotation;
+            if (latDiff == 0)
+                rotation = (longDiff == 0)
+                        ? 0
+                        : (longDiff > 0)
+                        ? 270
+                        : 90;
+            else if (longDiff == 0)
+                rotation = (latDiff > 0) ? 180 : 0;
+            else
+                rotation = 360 * Math.atan2(-longDiff, -latDiff) / (2 * Math.PI);
+            mMobileMarker.setRotation((float) rotation);
+        }
+
+        mMap.moveCamera(cam);
     }
 
     /**
      * Callback for a location event. Implements LocationListener
      */
-    @Override
-    public void onLocationChanged(Location location) {
-        Log.d(TAG, "onLocationChanged " + location);
-        if (location == null || mMap == null)
-            return;
-        LatLng curPos = new LatLng(location.getLatitude(),
-                location.getLongitude()), oldPos;
-        boolean firstLocation = false;
-        if (mMarker == null) {
-            mMarker = mMap.addMarker(new MarkerOptions()
-                    //.draggable(false)
-                    .position(curPos)
-                    .flat(true));
-            oldPos = curPos;
-            firstLocation = true;
-        } else
-            oldPos = mMarker.getPosition();
-
-        double dist = haversine(oldPos, curPos);
-
-        // If within 20m of the old position, and not our first time, then not moving, Do no more
-        if (dist < 20 && !firstLocation && home != null) {
-            Log.i(TAG, "Not sending location update, not moved");
-            mMarker.setRotation(0);
+    public void onLocationChanged() {
+        Location location;
+        try {
+            location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        } catch (SecurityException se) {
+            Log.d(TAG, "onLocationChanged failed " + se.getMessage());
+            getNextLocationAfter(UPDATE_INTERVAL);
             return;
         }
+        Log.d(TAG, "onLocationChanged " + location);
+        if (location == null || mMap == null) {
+            getNextLocationAfter(UPDATE_INTERVAL);
+            return;
+        }
+        LatLng curPos = new LatLng(location.getLatitude(),
+                location.getLongitude());
 
-        double latDiff = curPos.latitude - oldPos.latitude;
-        double longDiff = curPos.longitude - oldPos.longitude;
-        double rotation;
-        if (latDiff == 0)
-            rotation = (longDiff == 0)
-                    ? 0
-                    : (longDiff > 0)
-                    ? 270
-                    : 90;
-        else if (longDiff == 0)
-            rotation = (latDiff > 0) ? 180 : 0;
-        else
-            rotation = 360 * Math.atan2(-longDiff, -latDiff) / (2 * Math.PI);
+        if (mLastPos != null) {
+            double dist = haversine(mLastPos, curPos);
 
-        mMarker.setRotation((float) rotation);
-        mMarker.setPosition(curPos);
+            // If within 20m of the old position, then not moving, Do no more
+            if (dist < 20 && mHomePos != null) {
+                Log.i(TAG, "Not sending location update, not moved enough: " + dist + "m");
+                getNextLocationAfter(UPDATE_INTERVAL);
+                return;
+            }
+        }
 
-        CameraUpdate cam;
-        if (firstLocation)
-            cam = CameraUpdateFactory.newLatLngZoom(curPos, 12);
-        else
-            cam = CameraUpdateFactory.newLatLng(curPos);
-        mMap.moveCamera(cam);
+        updateMap(curPos);
 
-        mMarker.setTitle(DateFormat.getTimeInstance().format(new Date()));
-
+        mLastPos = curPos;
         sendUpdate(curPos);
-    }
-
-    /**
-     * Start listening to location events
-     * @throws SecurityException
-     */
-    public void startListening() throws SecurityException {
-        Log.d(TAG, "startListening");
-        if (mLocationRequest != null)
-            LocationServices
-                .FusedLocationApi
-                .requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
-    }
-
-    /**
-     * Stop listening to location events
-     */
-    public void stopListening() {
-        Log.d(TAG, "stopListening");
-        LocationServices
-                .FusedLocationApi
-                .removeLocationUpdates(mGoogleApiClient, this);
-    }
-
-    /**
-     * Implements LocationListener
-     * Called when the GPS provider is turned off (user turning off the GPS on the phone)
-     * */
-    public void onProviderDisabled(String provider) {
-        Log.d(TAG, "onProviderDisabled " + provider);
-    }
-
-    /**
-     * Implements LocationListener
-     * Called when the GPS provider is turned on (user turning on the GPS on the phone)
-     */
-    public void onProviderEnabled(String provider) {
-        Log.d(TAG, "onProviderEnabled " + provider);
-    }
-
-    /**
-     * Implements LocationListener
-     * Called when the status of the GPS provider changes
-     * @param provider
-     * @param status one of android.location.LocationProvider.OUT_OF_SERVICE
-     * android.location.LocationProvider.TEMPORARILY_UNAVAILABLE
-     * android.location.LocationProvider.AVAILABLE
-     * @param extras
-     */
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-        Log.d(TAG, "onStatusChanged " + provider + " " + status);
     }
 
     /**
@@ -429,7 +400,7 @@ public class Hotpot
         setContentView(R.layout.activity_maps);
 
         mMap = null;
-        mMarker = null;
+        mMobileMarker = null;
         mAndroidId = Settings.Secure
             .getString(getContentResolver(), Settings.Secure.ANDROID_ID);
 
@@ -471,21 +442,7 @@ public class Hotpot
     public void onResume() {
         Log.d(TAG, "onResume");
         super.onResume();
-        startListening();
-    }
-
-    /**
-     * See Android Activity Lifecycle
-     * Overrides FragmentActivity
-     */
-    @Override
-    protected void onPause() {
-        Log.d(TAG, "onPause");
-        super.onPause();
-        // Stop location updates to save battery
-        // SMELL: probably want to keep them going, don't we? If they're
-        // only every 15 minutes or so.....
-        stopListening();
+        getNextLocationAfter(UPDATE_INTERVAL);
     }
 
     /**
@@ -495,6 +452,7 @@ public class Hotpot
     @Override
     protected void onStop() {
         Log.d(TAG, "onStop");
+        stopListening();
         mGoogleApiClient.disconnect();
         super.onStop();
     }
@@ -513,10 +471,10 @@ public class Hotpot
     @Override
     public void onConnected(Bundle connectionHint) throws SecurityException {
         Log.d(TAG, "onConnected");
-        // Check we have permission to create the location request
+        // Check we have permission to get the location
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED)
-            createLocationRequest();
+            getNextLocationAfter(UPDATE_INTERVAL);
         else // if not, request it
             requestLocationPermission();        Log.d(TAG, "Constructed location listener");
     }
@@ -537,6 +495,7 @@ public class Hotpot
     /**
      * Callback for when an API connection fails
      * Implements OnConnectionFailedListener
+     * @param result carrier for error code
      */
     @Override
     public void onConnectionFailed(ConnectionResult result) {
