@@ -70,9 +70,9 @@ public class Hotpot
 
     protected static final String TAG = "HOTPOT";
 
-    public static final long UPDATE_INTERVAL_IN_MS = 5000;
-    public static final long FASTEST_UPDATE_INTERVAL_IN_MS =
-            UPDATE_INTERVAL_IN_MS / 2;
+    public static final long UPDATE_INTERVAL = 5000;
+    public static final long FASTEST_UPDATE_INTERVAL =
+            UPDATE_INTERVAL / 2;
 
     // ANDROID_ID of the device
     private String mAndroidId;
@@ -208,27 +208,39 @@ public class Hotpot
                     result.write(buffer, 0, length);
                 }
                 String reply = result.toString("UTF-8");
-                // Reply is the location of the server
-                if (home == null) {
-                    Pattern re = Pattern.compile("\\{\"(.*?)\":(.*?),\"(.*?)\":(.*?)\\}");
-                    Matcher m = re.matcher(reply);
-                    if (m.matches()) {
-                        int latitude = 4, longitude = 2;
-                        if (m.group(1).equals("latitude")) {
-                            latitude = 2;
-                            longitude = 4;
-                        }
-                        home = new LatLng(Double.parseDouble(m.group(latitude)),
-                                Double.parseDouble(m.group(longitude)));
-                        Log.i(TAG, "HOME is at " + home);
-                    } else
-                        Log.i(TAG, "Could not parse home location from " + reply);
+                // Reply includes:
+                // latitude, longitude (location of the server)
+                // next_update (earliest time to send the next update, in epoch seconds)
+                Pattern re = Pattern.compile("\"(.*?)\":(.*?)[,}]");
+                Matcher m = re.matcher(reply);
+                double latitude = 0, longitude = 0;
+                double next_update= FASTEST_UPDATE_INTERVAL;
+                while (m.find()) {
+                    String key = m.group(1);
+                    String value = m.group(2);
+                    if (key.equals("home_lat"))
+                        latitude = Double.parseDouble(value);
+                    else if (key.equals("home_long"))
+                        longitude = Double.parseDouble(value);
+                    else if (key.equals("interval"))
+                        next_update = Double.parseDouble(value) * 1000;
+                    else
+                        Log.i(TAG, "Bad reply from server " + reply);
                 }
+                if (home == null) {
+                    home = new LatLng(latitude, longitude);
+                    Log.i(TAG, "HOME is at " + home);
+                }
+                if (next_update < UPDATE_INTERVAL)
+                    next_update = UPDATE_INTERVAL;
+                Log.i(TAG, "Next update in " + (next_update / 1000) + "s");
+                // this isn't working
+                mLocationRequest.setInterval((long)next_update);
             } finally {
                 connection.disconnect();
             }
         } catch (IOException ioe) {
-            Log.i(TAG, "Problem sending update " + this.getStackTrace(ioe));
+            Log.i(TAG, "Problem sending update " + ioe.getMessage());// + this.getStackTrace(ioe));
         }
     }
 
@@ -238,8 +250,10 @@ public class Hotpot
      */
     private void createLocationRequest() {
         mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MS);
-        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MS);
+        mLocationRequest.setInterval(UPDATE_INTERVAL);
+        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL);
+        // TODO: Use PRIORITY_NO_POWER to only get updates when triggered by other apps e.g. OSMand
+        // https://developers.google.com/android/reference/com/google/android/gms/location/LocationRequest
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         startListening();
     }

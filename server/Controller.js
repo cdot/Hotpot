@@ -200,8 +200,12 @@ Controller.prototype.setMobileLocation = function(info) {
     if (typeof this.mobile[d] === "undefined")
         throw "Set location: " + d + " not known";
     this.mobile[d].setLocation(info);
-    this.mobile[d].estimateTOA();
-    return this.location;
+    var interval = this.mobile[d].estimateTOA();
+    return {
+        home_lat: this.location.latitude,
+        home_long: this.location.longitude,
+        interval: interval
+    };
 };
 
 /**

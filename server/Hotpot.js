@@ -29,7 +29,7 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
     // 4: pin setup details
     console.TRACE = function(level, message) {
         if (typeof cliopt.debug !== "undefined" &&
-            (cliopt.debug === "all" || cliopt.debug.includes(level)))
+            (cliopt.debug === "all" || cliopt.debug.indexOf(level) >= 0))
             console.log((new Date().toISOString()) + " " + level + ": " + message);
     };
 

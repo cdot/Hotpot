@@ -2,14 +2,21 @@
 /**
  * Record keeper for a mobile device that is reporting its position
  */
+const https = require("https");
 const Time = require("./Time.js");
+
+const MAPS_API_KEY = "AIzaSyDXPRbq4Q2GRxX9rDp-VsIsUSNcfil0PyI";
+const MAPS_SERVER_IP = "46.208.108.90";
+
+const DEFAULT_INTERVAL = 5 * 60; // 5 minutes in seconds
+const LONG_INTERVAL = 30 * 60 // half an hour in seconds
+
+const MPH = 0.44704; // metres per second -> mph
+const FAST_WALK = 4 * MPH; // in m/s
+const FAST_CYCLE = 20 * MPH; // in m/s
 
 const EARTH_RADIUS = 6371000; // metres
 const A_LONG_TIME = 10 * 24 * 60 * 60; // 10 days in s
-const MAPS_API_KEY = "AIzaSyDXPRbq4Q2GRxX9rDp-VsIsUSNcfil0PyI";
-const MAPS_SERVER_IP = "46.208.108.90";
-const MPS_TO_MPH = 0.44704; // metres per second -> mph
-const https = require("https");
 
 /**
  * Construct a new mobile.
@@ -56,7 +63,11 @@ Mobile.prototype.setLocation = function(loc) {
         latitude: loc.latitude,
         longitude: loc.longitude
     };
+    this.last_time = this.time;
     this.time = Time.nowSeconds();
+    console.TRACE("mobile", "setLocation @" + this.time
+                  + ": " + loc.latitude
+                  + "," + loc.longitude);
     if (this.last_location === null) {
         this.last_location = this.location;
         this.last_time = this.time;
@@ -99,7 +110,12 @@ function haversine(p1, p2) {
  * @param loc the location being navigated to
  * @param callback function called with estimated time of arrival in
  * epoch seconds
+ * @return interval before we want another update, in seconds. If the
+ * mobile is a long way from home, or moving slowly, we may want to
+ * wait quite a while before asking for an update. This gives the mobile
+ * device a chance to save power by not consuming a lot of battery.
  */
+
 Mobile.prototype.estimateTOA = function() {
     "use strict";
     var crow_flies = haversine(this.home, this.location); // metres
@@ -108,40 +124,56 @@ Mobile.prototype.estimateTOA = function() {
     // Are they very close to home?
     if (crow_flies < 1000) {
         this.time_of_arrival = Time.nowSeconds();
-        return; // less than 1km; as good as there
+        console.TRACE("mobile", "Too close");
+        return DEFAULT_INTERVAL; // less than 1km; as good as there
     }
 
     // Are they a long way away, >1000km
     if (crow_flies > 1000000) {
         this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
-        return;
+        console.TRACE("mobile", "Too far away; TOA " + this.time_of_arrival);
+        return LONG_INTERVAL;
     }
-
-    // Are they getting any closer?
-    var last_crow = haversine(this.home, this.last_location);
-    if (crow_flies > last_crow)
-        // no; skip re-routing until we know they are heading home
-        return;
 
     // What's their speed over the ground?
     var distance = haversine(this.last_location, this.location);
-    var time = (this.time - this.last_time) / 1000; // seconds
+    var time = this.time - this.last_time; // seconds
 
-    if (time === 0)
+    if (time === 0) {
         // Shouldn't happen
-        return;
+        console.TRACE("mobile", "Zero time");
+        return DEFAULT_INTERVAL;
+    }
 
     var speed = distance / time; // metres per second
-    speed = speed / MPS_TO_MPH; // miles per hour
+    console.TRACE("mobile", "Distance " + distance + "m, time " + time
+                 + "s, speed " + speed + "m/s ("
+                 + (speed / MPH) + "mph)");
+
+    // When far away, we want a wider interval. When closer, we want a
+    // smaller interval.
+    // time to arrival =~ crow_flies / speed
+    // divide that by 10 (finger in the air)
+    var interval = (crow_flies / speed) / 10;
+    console.TRACE("mobile", "Next interval " + crow_flies
+                  + " / " + speed + " gives " + interval);
+
+    // Are they getting any closer?
+    var last_crow = haversine(this.home, this.last_location);
+    if (crow_flies > last_crow) {
+        // no; skip re-routing until we know they are heading home
+        console.TRACE("mobile", "Getting further away");
+        return interval;
+    }
 
     // So they are getting closer. What's their mode of transport?
 
     // This is too crude, should take account of transitions from one
     // mode to another
     var mode = "driving";
-    if (speed < 4)
+    if (speed < FAST_WALK)
         mode = "walking";
-    else if (speed < 20)
+    else if (speed < FAST_CYCLE)
         mode = "bicycling";
 
     // We don't really want to re-route everytime, but how do we know we
@@ -149,16 +181,19 @@ Mobile.prototype.estimateTOA = function() {
 
     // https://maps.googleapis.com/maps/api/directions/json?units=metric&key=AIzaSyDXPRbq4Q2GRxX9rDp-VsIsUSNcfil0PyI&userIp=46.208.108.90&origin=53,4&destination=54,3&mode=walking
 
+    console.TRACE("mobile", "Routing by " + mode);
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
         + "&key=" + MAPS_API_KEY
         + "&userIp=" + MAPS_SERVER_IP
         + "&origin=" + this.location.latitude + "," + this.location.longitude
         + "&destination=" + this.home.latitude + "," + this.home.longitude
-        + "&departure_time=" + Time.nowSeconds()
+        + "&departure_time=" + Math.round(Time.nowSeconds())
         + "&mode=" + mode;
+    //console.TRACE("mobile", url);
 
     var analyseRoutes = function(route) {
+        console.TRACE("mobile", "Got a route");
         // Get the time of the best route
         var best_route = A_LONG_TIME;
         for (var r in route.routes) {
@@ -171,20 +206,25 @@ Mobile.prototype.estimateTOA = function() {
             if (route_length < best_route)
                 best_route = route_length;
         }
+        console.TRACE("mobile", "Best route is " + best_route);
         self.time_of_arrival = Time.nowSeconds() + best_route;
     };
 
     var result = "";
+    var self = this;
     https.get(url,
         function(res) {
             res.on("data", function(chunk) {
                 result += chunk;
             });
             res.on("end", function() {
+                //console.TRACE("mobile", result);
                 analyseRoutes(JSON.parse(result));
             });
         })
         .on("error", function(err) {
             console.error("Failed to GET from " + url.host + ": " + err);
         });
+
+    return interval;
 };
