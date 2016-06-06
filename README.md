@@ -74,9 +74,15 @@ Example configuration file:
       port: 13196
   },
   controller: {
-    location: {
-        latitude: 53.2479773,
-        longitude: -2.504296
+     location: {
+        // Private API key, used for accessing google maps
+        api_key: "Abd0982354",
+        // This is no IP in particular
+        server_ip: "123.45.67.89"
+        home: {
+            latitude: 53.2479773,
+            longitude: -2.504296
+        }
     },
     thermostats: {
       HW: {
@@ -129,7 +135,7 @@ some dependencies between them.
 
 Rules are Javascript functions associated with thermostats.
 ```Javascript
-function rule(int temp, Controller controller)
+function rule(Controller controller)
 'this' is the Thermostat object
 ```
 Each function is
@@ -140,46 +146,46 @@ rules set the configuration of the thermostat by adjusting e.g. the target
 temperature and window. For example,
 ```Javascript
 [
-    {
-        name: "morning",
-        test: function() {
-            if (Time.between("06:30", "07:30")) {
-                this.set_target(55);
-                return true;
-            }
-        }
-    },
-    {
-        name: "otherwise",
-        test: function() {
-            this.set_target(0);
-            this.set_window(10);
-        }
+  {
+    name: "morning",
+    test: function() {
+      if (Time.between("06:30", "07:30")) {
+        this.set_target(55);
+        return true;
+      }
     }
+  },
+  {
+    name: "otherwise",
+    test: function() {
+      this.set_target(0);
+      this.set_window(10);
+    }
+  }
 ]
 ```
 This will set the temperature to 55 degrees between 06:30 and 07:30 for your morning shower, then switch off the hot water at any other time. The "Time" class is provided to make comparing times easier. All time comparisons are done in system time.
 
-Rules functions can also interrogate other thermostats using the controller. For example,
+You can interrogate the status of the thermostat using the methods described in the documentation. You can also interrogate other thermostats by using the controller. For example, you might have a rule for the central heating thermostat as follows:
 ```Javascript
 {
-    name: "Turn on hot water if CH temp falls below 5 degrees",
-    test: function(controller) {
-        if (controller.thermostat.CH.temperature() < 5)
-           this.set_target(40);
-    }
+  name: "Turn on heating if CH temp falls below 5 degrees",
+  test: function(controller) {
+    if (controller.thermostat.CH.temperature() < 5)
+      this.set_target(40);
+  }
 }
 ```
 A rule can also remove itself from the rule set (for example, a rule may
 be set to expire after a certain time) by returning the string "remove".
 ```Javascript
 {
-    name: "One hour pulse for hot water",
-    test: function() {
-          if (Time.after("10:35"))
-              return "remove";
-          this.set_target(55);
-    }
+  name: "One hour pulse for hot water",
+  test: function() {
+    if (Time.after("10:35"))
+      return "remove";
+    this.set_target(55);
+  }
 }
 ```
 

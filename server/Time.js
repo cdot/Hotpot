@@ -6,7 +6,7 @@
  */
 const ONE_DAY = 86400000; // one day in ms
 
-Time = {
+var Time = module.exports = {
     /**
      * Get midnight, today
      * @private
@@ -91,5 +91,3 @@ Time = {
         return (t1.getTime() < Time.now());
     }
 };
-
-module.exports = Time;

@@ -8,19 +8,23 @@ var Fs = require("fs");
 
 /**
  * Constructor
- * @param name name of the pin e.g. HW
- * @param config configuration block for the pin. Only one field is used,
+ * @param {String} name name of the pin e.g. HW
+ * @param {object} config configuration block for the pin. Only one field is used,
  * gpio (the number of the gpio pin)
- * @param done callback invoked when pin is created
+ * @param {function} done callback invoked when pin is created
+ * @class
  */
 function Pin(name, config, done) {
     "use strict";
 
     var self = this;
 
+    /** @property {String} name name of the pin e.g. HW */
     self.name = name;
-    self.gpio = config.gpio;
-    self.last_changed_by = "init";
+    /** @property {integer} gpio gpio port */
+    self.gpio = config.get("gpio");
+    /** @property {String} actor the thing that last changed the pin state e.g. a rule name */
+    self.actor = "init";
 
     console.TRACE("pin " + self.name,
                   "Creating controller for gpio " + self.gpio);
@@ -130,9 +134,9 @@ Pin.prototype.setFeature = function(feature, value, callback) {
 
 /**
  * Set the pin state
- * @param state boolean
- * @param actor name of thing that caused the state to change
- * @param callback called when state has been set
+ * @param {integer} state of the pin
+ * @param {String} actor name of thing that caused the state to change
+ * @param {function} callback called when state has been set
  */
 Pin.prototype.set = function(state, actor, callback) {
     "use strict";
@@ -143,12 +147,12 @@ Pin.prototype.set = function(state, actor, callback) {
     this.actor = actor;
     if (typeof this.debug !== "undefined")
         this.debug.pinstate[this.name] = state;
-    this.setFeature("value", state ? 1 : 0, callback);
+    this.setFeature("value", state, callback);
 };
 
 /**
  * Get the pin state
- * @return pin state (boolean)
+ * @return pin state {integer}
  */
 Pin.prototype.get = function() {
     "use strict";
@@ -156,13 +160,13 @@ Pin.prototype.get = function() {
         return this.debug.pinstate[this.name];
     else
         return parseInt(Fs.readFileSync(
-            "/sys/class/gpio/gpio" + this.gpio + "/value", "utf8")) === 1;
+            "/sys/class/gpio/gpio" + this.gpio + "/value", "utf8"));
 };
 
 /**
  * Generate and return a serialisable version of the structure, suitable
  * for use in an AJAX response.
- * @return a serialisable structure
+ * @return {object} a serialisable structure
  */
 Pin.prototype.serialisable = function() {
     "use strict";

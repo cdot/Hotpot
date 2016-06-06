@@ -242,6 +242,8 @@
                     populate(data.thermostats[i]);
                 for (i in data.pins)
                     populate(data.pins[i]);
+                for (i in data.mobiles)
+                    populate(data.mobiles[i]);
                 poller = setTimeout(poll, update_rate * 1000);
             })
             .error(function(jqXHR, status, err) {
@@ -285,7 +287,7 @@
                 hotpot_ip = urp[1];
         }
 
-        server = "http://" + hotpot_ip + ":13196";
+        server = "http://" + hotpot_ip + ":" + hotpot_port;
         // Can't use getJSON because of the rule functions
         $.get(
             server,

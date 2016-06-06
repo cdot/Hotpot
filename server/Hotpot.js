@@ -33,25 +33,23 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
             console.log((new Date().toISOString()) + " " + level + ": " + message);
     };
 
-    var config = Config.load(CONFIG_FILE);
+    var config = new Config(CONFIG_FILE);
 
     // Start the controller and when it's ready, start an HTTP server
     // to receive commands for it.
     try {
 	new Controller(
-            config.controller,
+            config.getConfig("controller"),
             function() {
                 var self = this;
-                new Server(config.server, self);
+                new Server(config.getConfig("server"), self);
 
                 // Save config when it changes, so we restart to the
                 // same state
                 self.on("config_change",
                               function() {
-                                  Config.save({
-                                      server: config.server,
-                                      controller: self.serialisable()
-                                  }, CONFIG_FILE);
+                                  config.set("controller", self.serialisable());
+                                  config.save();
                               });
             });
     } catch (e) {

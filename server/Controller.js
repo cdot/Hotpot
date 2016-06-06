@@ -16,23 +16,27 @@ const VALVE_RETURN = 10000;
 
 /**
  * @param config Config object
- * @param when_ready callback function for when the controller is
+ * @param {function} when_ready callback function for when the controller is
  * initialised and ready to accept commands (with this set to the Controller)
+ * @class
  */
 function Controller(config, when_ready) {
     "use strict";
 
     console.TRACE("init", "Creating Controller");
 
-    this.location = config.location;
-    this.createMobiles(config.mobiles);
-    this.createPins(config.pins, function() {
-        this.createThermostats(config.thermostats, when_ready);
+    this.location = config.get("location");
+    this.createMobiles(config.getConfig("mobiles"));
+    this.createPins(config.getConfig("pins"), function() {
+        this.createThermostats(config.getConfig("thermostats"), when_ready);
     });
 }
 util.inherits(Controller, EventEmitter);
 module.exports = Controller;
 
+/**
+ * Release all resources used by the object
+ */
 Controller.prototype.DESTROY = function() {
     "use strict";
     var k;
@@ -47,54 +51,56 @@ Controller.prototype.DESTROY = function() {
 /**
  * Create mobiles specified by config
  */
-Controller.prototype.createMobiles = function(config) {
+Controller.prototype.createMobiles = function(mob_config) {
     "use strict";
 
-    this.mobile = {};
-    for (var id in config) {
-        this.mobile[id] = new Mobile(id, config[id],
-                                     this.location);
-    }
+    var self = this;
+    self.mobile = {};
+    mob_config.each(function(id) {
+        self.mobile[id] = new Mobile(
+            id, mob_config.getConfig(id), self.location);
+    });
 };
 
 /**
  * Create pins as specified by config
  * @private
  */
-Controller.prototype.createPins = function(pins, done) {
+Controller.prototype.createPins = function(pin_config, done) {
     "use strict";
     var self = this;
 
     self.pin = {};
 
     // Set up callback when all pins complete
-    var k, counter = 0;
-    for (k in pins)
+    var counter = 0;
+    pin_config.each(function() {
         counter++;
+    });
     var notify = function() {
         if (--counter === 0)
             done.call(self);
     };
 
     // Create the pins
-    for (k in pins) {
-        self.pin[k] = new Pin(k, pins[k], notify);
-    }
+    pin_config.each(function(k) {
+        self.pin[k] = new Pin(k, pin_config.getConfig(k), notify);
+    });
 };
     
 /**
  * Create thermostats as specified by config
  * @private
  */
-Controller.prototype.createThermostats = function(thermostats, done) {
+Controller.prototype.createThermostats = function(ts_config, done) {
     "use strict";
     var self = this;
 
     self.thermostat = {};
-    for (var k in thermostats) {
-        var th = new Thermostat(k, self, thermostats[k]);
+    ts_config.each(function(k) {
+        var th = new Thermostat(k, self, ts_config.getConfig(k));
         self.thermostat[k] = th;
-    }
+    });
 
     // When we start, turn heating OFF and hot water ON to ensure
     // the valve returns to the A state. Once the valve has settled,
@@ -135,10 +141,10 @@ Controller.prototype.serialisable = function() {
 
 /**
  * Set the on/off state of the system.
- * @param channel e.g. "HW" or "CH"
- * @param actor who is setting e.g. "thermostat" or "command"
- * @param on true or false (on or off)
- * @param respond function called when state is set, parameters
+ * @param {String} channel e.g. "HW" or "CH"
+ * @param {String} actor who is setting e.g. "thermostat" or "command"
+ * @param {boolean} on true or false (on or off)
+ * @param {function> respond function called when state is set, parameters
  * are (this=Controller, channel, state)
  */
 Controller.prototype.set = function(channel, actor, on, respond) {
@@ -198,12 +204,12 @@ Controller.prototype.setMobileLocation = function(info) {
     "use strict";
     var d = info.device;
     if (typeof this.mobile[d] === "undefined")
-        throw "Set location: " + d + " not known";
+        throw "Set location: " + d + " not known" + new Error().stack;
     this.mobile[d].setLocation(info);
     var interval = this.mobile[d].estimateTOA();
     return {
-        home_lat: this.location.latitude,
-        home_long: this.location.longitude,
+        home_lat: this.location.home.latitude,
+        home_long: this.location.home.longitude,
         interval: interval
     };
 };
@@ -211,14 +217,14 @@ Controller.prototype.setMobileLocation = function(info) {
 /**
  * Command handler for a command that modifies the configuration
  * of the controller.
- * @param struct structure containing the command and parameters e.g.
-  * { command: "insert_rule", id: "name", name: "rule name", test: "function text", number: index }
- * { command: "replace_rule", id: "name", index: index, name: "rule name", test: "function text" }
- * { command: "remove_rule", id: "name", index: index }
- * { command: "move_rule", id: "name", index: index, value: rel }
- * { command: "set_window", id: "name", value: width }
- * { command: "set_target", id: "name", value: temp }
- * { command: "set_state", id: "name", value: state }
+ * @param command structure containing the command and parameters e.g.
+ * command: "insert_rule", id: "name", name: "rule name", test: "function text", number: index
+ * command: "replace_rule", id: "name", index: index, name: "rule name", test: "function text"
+ * command: "remove_rule", id: "name", index: index
+ * command: "move_rule", id: "name", index: index, value: rel
+ * command: "set_window", id: "name", value: width
+ * command: "set_target", id: "name", value: temp
+ * command: "set_state", id: "name", value: state
  * id is the controller id e.g. HW
  */
 Controller.prototype.executeCommand = function(command) {
@@ -287,10 +293,6 @@ Controller.prototype.executeCommand = function(command) {
         break;
     case "set_target":
         th.set_target(get("value"));
-        self.emit("config_change");
-        break;
-    case "set_rules_enabled":
-        th.enable_rules(get("value") !== 0);
         self.emit("config_change");
         break;
     case "set_state":

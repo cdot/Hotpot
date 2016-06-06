@@ -1,8 +1,6 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /**
- * Thermostat
- *
  * Talks to DS18x20 thermometers and raises events when the measured
  * temperature passes into or out of a target window.
  *
@@ -29,9 +27,10 @@ const K0 = -273.25; // 0K
 
 /**
  * Construct a thermostat
- * @param name name by which the caller identifies the thermostat
- * @param controller Controller this thermostat is part of
+ * @param name {String} name by which the caller identifies the thermostat
+ * @param {Controller} controller Controller this thermostat is part of
  * @param config configuration for the pin, a Config object
+ * @class
  */
 function Thermostat(name, controller, config) {
     "use strict";
@@ -51,31 +50,29 @@ function Thermostat(name, controller, config) {
 
     var self = this;
     self.name = name;
-    self.id = config.id; // DS18x20 device ID
+    self.id = config.get("id"); // DS18x20 device ID
     self.target = 15;    // target temperature
     self.window = 4;     // slack window
     self.rules = [];     // activation rules, array of Rule
-    self.rules_enabled = true;
     self.active_rule = "none"; // the currently active rule
     self.live = true; // True until destroyed
     
-    if (typeof config.target !== "undefined")
-        self.set_target(config.target);
-    if (typeof config.window !== "undefined")
-        self.set_window(config.window);
+    if (config.has("target"))
+        self.set_target(config.get("target"));
+    if (config.has("window"))
+        self.set_window(config.get("window"));
 
     self.last_temp = K0; // Temperature measured in last poll
 
     if (typeof ds18x20.mapID !== "undefined")
-        ds18x20.mapID(config.id, name);
+        ds18x20.mapID(config.get("id"), name);
 
-    if (typeof config.rules !== "undefined") {
-        var rules = config.rules;
+    if (config.has("rules")) {
+        var rules = config.getConfig("rules");
         self.clear_rules();
-        for (var i in rules)
-            self.insert_rule(
-                new Rule(rules[i].name,
-                         rules[i].test));
+        rules.each(function() {
+            self.insert_rule(new Rule(this.name, this.test));
+        });
     }
 
     // Don't start polling until after a timeout even because otherwise
@@ -89,7 +86,7 @@ function Thermostat(name, controller, config) {
 module.exports = Thermostat;
 
 /**
- * Release all resources used by the thermostat
+ * Release all resources used by the object
  */
 Thermostat.prototype.DESTROY = function() {
     "use strict";
@@ -98,7 +95,7 @@ Thermostat.prototype.DESTROY = function() {
 /**
  * Generate and return a serialisable version of the structure, suitable
  * for use in an AJAX response.
- * @return a serialisable structure
+ * @return {object} a serialisable structure
  */
 Thermostat.prototype.serialisable = function() {
     "use strict";
@@ -111,7 +108,6 @@ Thermostat.prototype.serialisable = function() {
 	temperature: this.temperature(),
         last_temp: this.last_temp,
 	active_rule: this.active_rule,
-        rules_enabled: this.rules_enabled,
         rules: this.rules.map(function(rule) {
             return rule.serialisable();
         })
@@ -120,7 +116,7 @@ Thermostat.prototype.serialisable = function() {
 
 /**
  * Set target temperature.
- * @param target target temperature
+ * @param {float} target target temperature
  */
 Thermostat.prototype.set_target = function(target) {
     "use strict";
@@ -129,12 +125,6 @@ Thermostat.prototype.set_target = function(target) {
                       + this.target);
     this.target = target;
 };
-
-Thermostat.prototype.enable_rules = function(enable) {
-    "use strict";
-    this.rules_enabled = enable;
-};
-
 
 /**
  * Set the temperature window.
@@ -159,7 +149,7 @@ Thermostat.prototype.low = function() {
 };
 
 /**
- * Get the upper bound of the termperature window
+ * Get the upper bound of the temperature window
  */
 Thermostat.prototype.high = function() {
     "use strict";
@@ -192,8 +182,8 @@ Thermostat.prototype.poll = function(controller) {
             for (i = 0; i < self.rules.length; i++) {
                 var rule = self.rules[i];
                 var result;
-               try {
-                    result = rule.test.call(self, controller);
+                try {
+                    result = rule.test(self, controller);
                 } catch (e) {
                     console.TRACE("Rule " + i + " call failed: " + e.message);
                 }
@@ -265,21 +255,31 @@ Thermostat.prototype.renumberRules = function() {
 };
 
 /**
- * Get the current temperature
- * @return the current temperature sensed by the device
+ * Get the current temperature from the device
+ * @return {float} the current temperature sensed by the device
  */
 Thermostat.prototype.temperature = function() {
     "use strict";
-    return ds18x20.get(this.id);
+    this.last_temp = ds18x20.get(this.id);
+    return this.last_temp;
+};
+
+/**
+ * Get the last temperature measured from the device, without re-sensing
+ * @return {float} the last temperature sensed by the device
+ */
+Thermostat.prototype.lastTemperature = function() {
+    "use strict";
+    return this.last_temp;
 };
 
 /**
  * Insert a rule at a given position in the order. Positions are
  * numbered from 0 (highest priority). To add a rule at the lowest
  * priority position, pass i=-1 (or i > max rule position)
- * @param rule the rule, a hash with { name: , test: }
- * @param i the position to insert the rule at, or -1 (or undef) for the end
- * @return the position the rules was added at
+ * @param rule {Rule} the rule, a hash with name: , test:
+ * @param i {integer} the position to insert the rule at, or -1 (or undef) for the end
+ * @return {integer} the position the rules was added at
  */
 Thermostat.prototype.insert_rule = function(rule, i) {
     "use strict";
@@ -300,7 +300,7 @@ Thermostat.prototype.insert_rule = function(rule, i) {
 /**
  * Move a rule a specified number of places in the order
  * @param i the number (or name, or rule object) of the rule to delete
- * @param move number of places to move the rule, negative to move up,
+ * @param move {integer} number of places to move the rule, negative to move up,
  * positive to move down
  */
 Thermostat.prototype.move_rule = function(i, move) {

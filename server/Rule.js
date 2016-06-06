@@ -1,20 +1,21 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /**
- * Rule
- *
  * A rule governing when/if a function is to be turned on/off based on the
  * state of one or more thermostats.
  */
-const Time = require("./Time.js"); // for executing rules
+
+// This can't be "var" or "const" because rules can't see it then
+Time = require("./Time.js"); // for executing rules
 
 /**
  * Constructor
- * @param name name of the rule
- * @param fn either a function or a string that will compile to a function.
+ * @param {string} name name of the rule
+ * @param {function} fn either a function or a string that will compile to a function.
  * The function is called with this set to a thermostat, and is passed the
  * current temperature, and will return true if the rule passes for that
  * temperature, and false otherwise.
+ * @class
  */
 function Rule(name, fn) {
     "use strict";
@@ -30,16 +31,20 @@ function Rule(name, fn) {
     }
     this.index = -1;
     this.name = name;
-    this.test = fn;
+    this.testfn = fn;
 }
 module.exports = Rule;
 
+/**
+ * Get a serialisable version of the rule
+ * @return {object} a serialisable structure
+ */
 Rule.prototype.serialisable = function() {
     "use strict";
     return {
         name: this.name,
         index: this.index,
-        test: this.test
+        test: this.testfn
     };
 };
 
@@ -47,12 +52,12 @@ Rule.prototype.serialisable = function() {
  * Call the test function for this rule for the given thermostat and
  * current temperature. Will return true if the rule passes for the
  * given temperature, and false otherwise.
- * @param thermostat a Thermostat object
- * @param temp the current temperature
+ * @param {Thermostat} thermostat the thermostat that owns the rule
+ * @param {Controller} controller the controller
  */
-Rule.prototype.test = function(thermostat, temp) {
+Rule.prototype.test = function(thermostat, controller) {
     "use strict";
-    var pass = this.test.call(this, thermostat, temp);
+    var pass = this.testfn.call(thermostat, controller);
     //console.TRACE("rule", "Test rule '"+ rule.name + "' = " + pass);
     return pass;
 };

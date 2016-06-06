@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="Hotpot Server">
+        <EditTextPreference
+            android:dialogTitle="Server URL"
+            android:inputType="textUri"
+            android:key="hotpotServerURL"
+            android:summary="The URL for the hotpot server"
+            android:title="URL" />
+        <!--        <EditTextPreference
+                    android:dialogTitle="Server SSL certificate"
+                    android:inputType="text"
+                    android:key="hotpotServerCerts"
+                    android:summary="The SSL certificate for the hotpot server"
+                    android:title="Certificate" />-->
+    </PreferenceCategory>
+</PreferenceScreen>

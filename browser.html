@@ -6,7 +6,21 @@
     <script type="text/javascript" src="browser/jquery/jquery-2.2.3.min.js"></script>
     <script type="text/javascript" src="browser/js/edit_in_place.js"></script>
     <script type="text/javascript" src="browser/js/autoscale_graph.js"></script>
-    <script type="text/javascript" src="http://c-dot.co.uk/hotpot_ip.js"></script>
+
+    <!-- Configuration: set global variables as follows:
+         hotpot_ip to the IP address of the hotpot server
+         hotpot_port to the port used by the hotpot server
+    <script type="text/javascript" src="http://c-dot.co.uk/hotpot_ip.js">
+    </script>
+    <script  type="text/javascript">
+      hotpot_port = 13196;
+    </script> -->
+    <!-- Debug configuration, poitning at a development server -->
+    <script type="text/javascript">
+      hotpot_ip = "192.168.1.12";
+      hotpot_port = 13196;
+    </script>
+
     <script type="text/javascript" src="browser/js/browser.js"></script>
     <link rel="stylesheet" href="browser/css/browser.css">
   </head>
@@ -31,9 +45,6 @@
                   <span class="fixed" data-field="actor"></span>
                 </td>
               </tr>
-                </td>
-              </tr>
-              </tr>
               <tr class="fixed">
                 <th class="ralign">Current Temperature</th>
                 <td data-field="temperature"></td>
@@ -42,12 +53,6 @@
                 <th>Active</th>
                 <td>
                   <input type="checkbox" data-field="state"/>
-                </td>
-              </tr>
-              <tr>
-                <th>Rules enabled</th>
-                <td>
-                  <input type="checkbox" data-field="rules_enabled"/>
                 </td>
               </tr>
               <tr>

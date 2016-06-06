@@ -1,15 +1,13 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 /**
  * Record keeper for a mobile device that is reporting its position
+ * @class
  */
 const https = require("https");
 const Time = require("./Time.js");
 
-const MAPS_API_KEY = "AIzaSyDXPRbq4Q2GRxX9rDp-VsIsUSNcfil0PyI";
-const MAPS_SERVER_IP = "46.208.108.90";
-
 const DEFAULT_INTERVAL = 5 * 60; // 5 minutes in seconds
-const LONG_INTERVAL = 30 * 60 // half an hour in seconds
+const LONG_INTERVAL = 30 * 60; // half an hour in seconds
 
 const MPH = 0.44704; // metres per second -> mph
 const FAST_WALK = 4 * MPH; // in m/s
@@ -20,30 +18,48 @@ const A_LONG_TIME = 10 * 24 * 60 * 60; // 10 days in s
 
 /**
  * Construct a new mobile.
- * @param id unique identifier for the mobile device, as sent by it
+ * @param {String} id unique identifier for the mobile device, as sent by it
  * @param config configuration (which in clude the name)
- * @param home {lat,long} of the server home
+ * @param location_config see README.md
+ * @class
  */
-function Mobile(id, config, home) {
+function Mobile(id, config, location_config) {
     "use strict";
     console.TRACE("mobile", "Creating Mobile " + id);
+    this.maps_api_key = location_config.api_key;
+    this.maps_server_ip = location_config.server_ip;
+    /** @property {String} id Unique ID for this device */
     this.id = id;
-    this.name = config.name;
-    this.mode = "driving";
-    this.lastReport = null;
+    /** @property {String} name Name of this device */
+    this.name = config.get("name");
+    /** @property {Location} location last place this device was seen */
     this.location = null;
+    /** @property {number} time time of last location update, epoch secs */
     this.time = null;
-    this.home = home;
+    // Location of the server
+    this.home = location_config.home;
+    /** @property {Location} last_location last place this device was seen
+        before the last place  */
     this.last_location = null;
+    /** @property {number} last_time time at last_location, epoch secs */
     this.last_time = null;
+
+    /** @property {number} when we are expected home, epoch secs */
     this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
 }
 module.exports = Mobile;
 
+/**
+ * Release all resources used by the object
+ */
 Mobile.prototype.DESTROY = function() {
     "use strict";
 };
 
+/**
+ * Get a serialisable version of the object
+ * @return {object} a serialisable structure
+ */
 Mobile.prototype.serialisable = function() {
     "use strict";
     return {
@@ -54,7 +70,7 @@ Mobile.prototype.serialisable = function() {
 
 /**
  * Set the current location of the mobile device
- * @param loc the location; a structure with fields "latitude" and "longitude"
+ * @param {Location} loc the location; a structure with fields "latitude" and "longitude"
  */
 Mobile.prototype.setLocation = function(loc) {
     "use strict";
@@ -74,7 +90,10 @@ Mobile.prototype.setLocation = function(loc) {
     }
 };
 
-// Convert a number in degress to radians
+/**
+ * Convert a number in degress to radians
+ * @private
+ */
 function toRadians(x) {
     "use strict";
    return x * Math.PI / 180;
@@ -84,6 +103,7 @@ function toRadians(x) {
  * Return the crow-flies distance between two locations,
  * each specified by lat and long.
  * @return distance in metres
+ * @private
  */
 function haversine(p1, p2) {
     "use strict";
@@ -98,24 +118,19 @@ function haversine(p1, p2) {
         Math.sin(dLong / 2) * Math.sin(dLong / 2);
     var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    var d = EARTH_RADIUS * c;
-
-    return d;
+    return EARTH_RADIUS * c;
 }
 
 /**
- * Estimate and return the time at which the mobile will arrive home,
+ * Estimate the time at which the mobile will arrive home,
  * based on average velocity and distance. The mode of transport is
- * guessed based on distance from home and velocity.
- * @param loc the location being navigated to
- * @param callback function called with estimated time of arrival in
- * epoch seconds
- * @return interval before we want another update, in seconds. If the
+ * guessed based on distance from home and velocity. The time of arrival
+ * is stored in the time_of_arrival property.
+ * @return {float} interval before we want another update, in seconds. If the
  * mobile is a long way from home, or moving slowly, we may want to
  * wait quite a while before asking for an update. This gives the mobile
  * device a chance to save power by not consuming a lot of battery.
  */
-
 Mobile.prototype.estimateTOA = function() {
     "use strict";
     var crow_flies = haversine(this.home, this.location); // metres
@@ -179,13 +194,11 @@ Mobile.prototype.estimateTOA = function() {
     // We don't really want to re-route everytime, but how do we know we
     // are on the planned route or not?
 
-    // https://maps.googleapis.com/maps/api/directions/json?units=metric&key=AIzaSyDXPRbq4Q2GRxX9rDp-VsIsUSNcfil0PyI&userIp=46.208.108.90&origin=53,4&destination=54,3&mode=walking
-
     console.TRACE("mobile", "Routing by " + mode);
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
-        + "&key=" + MAPS_API_KEY
-        + "&userIp=" + MAPS_SERVER_IP
+        + "&key=" + this.maps_api_key
+        + "&userIp=" + this.maps_server_ip
         + "&origin=" + this.location.latitude + "," + this.location.longitude
         + "&destination=" + this.home.latitude + "," + this.home.longitude
         + "&departure_time=" + Math.round(Time.nowSeconds())

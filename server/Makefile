@@ -10,13 +10,19 @@ SOURCES := \
 	Rule.js \
 	Server.js \
 	Thermostat.js \
-	Time.js
+	Time.js \
+	Utils.js
 
 %.esl : %.js
 	eslint $^
 	touch $*.esl
 
-eslint: $(subst .js,.esl,$(SOURCES))
+doc/%.js.html : %.js
+	./node_modules/.bin/jsdoc -d doc $^
+
+lint: $(subst .js,.esl,$(SOURCES))
+
+doc: $(patsubst %.js,doc/%.js.html,$(SOURCES))
 
 clean:
 	find . -name '*~' -exec rm \{\} \;
