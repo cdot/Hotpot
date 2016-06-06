@@ -174,7 +174,7 @@ public class ServerConnection {
      */
     private static class UnselectiveHostnameVerifier implements HostnameVerifier {
         public boolean verify(String hostname, SSLSession s) {
-            Log.d(TAG, "Verify hostname " + hostname);
+            //Log.d(TAG, "Verify hostname " + hostname);
             return true;
         }
     }
@@ -271,8 +271,6 @@ public class ServerConnection {
         String sURL = mURL.toString();
         if (path != null)
             sURL += path;
-        if (params.size() > 0)
-            sURL += "?";
         String sep = "?";
         for (String key : params.keySet()) {
             sURL += sep + URLEncoder.encode(key, "UTF-8") + "="

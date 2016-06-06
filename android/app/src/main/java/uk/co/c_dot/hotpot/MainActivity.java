@@ -101,9 +101,9 @@ public class MainActivity
                 if (mServerConnection != null) {
                     Set<String> certs = mServerConnection.getCertificates();
                     // Store the certs in an invisible preference
-                    Log.d(TAG, sURL + " provided " + certs.size() + " certificates");
                     SharedPreferences.Editor ed = prefs.edit();
                     if (certs != null) {
+                        Log.d(TAG, sURL + " provided " + certs.size() + " certificates");
                         ed.putStringSet(PREF_CERTS, certs);
                     } else {
                         ed.remove(PREF_CERTS);
@@ -160,6 +160,14 @@ public class MainActivity
     return writer.toString();
     }*/
 
+    private double safeDouble(String value) {
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException nfe) {
+            return 0;
+        }
+    }
+
     /**
      * Send a location update to the server. If the home location hasn't
      * been set already, use the server response to set it. Schedules the
@@ -172,7 +180,7 @@ public class MainActivity
         if (mServerConnection == null)
             return UPDATE_INTERVAL;
 
-        Log.i(TAG, "Sending location update");
+        Log.d(TAG, "Sending location update");
 
         Map<String, String> params = new HashMap<>();
         params.put("device", mAndroidId);
@@ -202,13 +210,13 @@ public class MainActivity
                 String value = m.group(2);
                 switch (key) {
                     case "home_lat":
-                        latitude = Double.parseDouble(value);
+                        latitude = safeDouble(value);
                         break;
                     case "home_long":
-                        longitude = Double.parseDouble(value);
+                        longitude = safeDouble(value);
                         break;
                     case "interval":
-                        next_update = (long) (Double.parseDouble(value) * 1000);
+                        next_update = (long) (safeDouble(value) * 1000);
                         break;
                     default:
                         Log.i(TAG, "Bad reply from server " + reply);
@@ -486,9 +494,9 @@ public class MainActivity
     @Override
     protected void onStop() {
         Log.d(TAG, "onStop");
-        mWakeUp.cancelWake();
-        if (mApiClient != null)
-            mApiClient.disconnect();
+        // "stop" just means we navigated away. We want to keep sending updates
+        //if (mApiClient != null)
+        //    mApiClient.disconnect();
         super.onStop();
     }
 
