@@ -33,6 +33,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".LocationService"
+            android:exported="false" />
+
         <activity
             android:name=".SettingsActivity"
             android:theme="@android:style/Theme.Black.NoTitleBar"></activity>
