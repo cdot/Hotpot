@@ -1,3 +1,6 @@
+/**
+ * @copyright 2016 Crawford Currie, All Rights Reserved
+ */
 package uk.co.c_dot.hotpot;
 
 import android.os.Bundle;
@@ -5,7 +8,7 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 
 /**
- * Hotpot preferences
+ * Hotpot preferences activity
  * Layout is in res.xml.preferences.xml
  */
 public class SettingsActivity extends PreferenceActivity {

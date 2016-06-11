@@ -1,3 +1,6 @@
+/**
+ * @copyright 2016 Crawford Currie, All Rights Reserved
+ */
 package uk.co.c_dot.hotpot;
 
 import android.content.BroadcastReceiver;
@@ -8,67 +11,83 @@ import android.support.v4.content.LocalBroadcastManager;
 
 import com.google.android.gms.maps.model.LatLng;
 
-import java.util.ArrayList;
-
 /**
- * Simplified interface to broadcast manager used by service and app
+ * Simplified interface to broadcasts used by service and app
  */
 public class Messenger extends BroadcastReceiver {
 
-    public interface MessageHandler {
-        public void handleMessage(Intent intent);
+    private static final String TAG = "HOTPOT/Messenger";
+
+    /**
+     * Interface for an incoming message handler
+     */
+    interface MessageHandler {
+        void handleMessage(Intent intent);
     }
 
     private MessageHandler mHandler;
     private LocalBroadcastManager mBM;
-    private Context mContext;
-    private Class mTarget;
 
     /**
-     * Construct a message receiver using the given local broadcast manager.
-     *
-     * @param context  Context the messenger operates within
-     * @param messages List of messages handled by this receiver
+     * Constructor
+     * @param context the context this messenger works within
+     * @param handles List of messages handled by this receiver
+     * @param handler the received message handler
      */
-    public Messenger(Context context, String[] messages,
-                     MessageHandler actor, Class target) {
-        mContext = context;
+    public Messenger(Context context, String[] handles, MessageHandler handler) {
+        //Log.d(TAG, "Setting up " + TextUtils.join(" ", handles));
         mBM = LocalBroadcastManager.getInstance(context);
 
-        mHandler = actor;
-        mTarget = target;
+        mHandler = handler;
 
         IntentFilter intentFilter = new IntentFilter();
-        for (String message : messages)
+        for (String message : handles)
             intentFilter.addAction(message);
+
         mBM.registerReceiver(this, intentFilter);
     }
 
+    /**
+     * Handler for a received message
+     *
+     * @param context the context this messenger works within
+     * @param intent  the message
+     */
     @Override
     public void onReceive(Context context, Intent intent) {
+        //Log.d(TAG, "Received " + intent.getAction());
         mHandler.handleMessage(intent);
     }
 
-    public Intent getNewIntent(String message) {
-        Intent intent = new Intent(mContext, mTarget);
-        intent.setAction(message);
-        return intent;
+    /**
+     * Send a simple message
+     *
+     * @param intent the message
+     */
+    public void broadcast(Intent intent) {
+        //Log.d(TAG, "Sending " + intent.getAction());
+        mBM.sendBroadcast(intent);
     }
 
+    /**
+     * Send a simple message
+     *
+     * @param message the message
+     */
     public void broadcast(String message) {
-        mBM.sendBroadcast(getNewIntent(message));
+        broadcast(new Intent(message));
     }
 
+    /**
+     * Send a message containing a LatLng in parameters
+     *
+     * @param message the message
+     * @param pos     the location to send
+     */
     public void broadcast(String message, LatLng pos) {
-        Intent intent = getNewIntent(message);
+        Intent intent = new Intent(message);
         intent.putExtra("ARG1", pos.latitude);
         intent.putExtra("ARG2", pos.longitude);
-        mBM.sendBroadcast(intent);
-    }
-
-    public void broadcast(String message, ArrayList<String> s) {
-        Intent intent = getNewIntent(message);
-        intent.putStringArrayListExtra("ARG1", s);
-        mBM.sendBroadcast(intent);
+        broadcast(intent);
     }
 }

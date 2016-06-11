@@ -37,7 +37,7 @@ import java.util.Date;
 public class MainActivity extends AppCompatActivity
         implements OnMapReadyCallback, Messenger.MessageHandler {
 
-    protected static final String TAG = "HOTPOT/MainActivity";
+    private static final String TAG = "HOTPOT/MainActivity";
 
     private LatLng mHomePos = null, mLastPos = null;
 
@@ -146,7 +146,10 @@ public class MainActivity extends AppCompatActivity
                 startActivity(i);
                 return true;
             case R.id.action_pause_resume:
-                mMessenger.broadcast(mServicePaused ? LocationService.PAUSE : LocationService.RESUME);
+                if (mServicePaused)
+                    startLocationService();
+                else
+                    mMessenger.broadcast(LocationService.STOP);
                 mServicePaused = !mServicePaused;
                 if (mOptionsMenu != null)
                     mOptionsMenu.findItem(R.id.action_pause_resume).setIcon(
@@ -205,7 +208,7 @@ public class MainActivity extends AppCompatActivity
 
         mMessenger = new Messenger(this, new String[]{
                 LocationService.HOME_CHANGED,
-                LocationService.LOCATION_CHANGED}, this, LocationService.class);
+                LocationService.LOCATION_CHANGED}, this);
 
         // Check we have permission to get the location - may have to do this in the service?
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)

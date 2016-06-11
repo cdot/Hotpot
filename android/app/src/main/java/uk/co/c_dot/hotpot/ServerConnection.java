@@ -42,7 +42,7 @@ import javax.net.ssl.X509TrustManager;
  */
 public class ServerConnection {
 
-    private static String TAG = "HOTPOT";
+    private static String TAG = "HOTPOT/ServerConnection";
 
     private URL mURL = null;
     private KeyStore mKeyStore = null;

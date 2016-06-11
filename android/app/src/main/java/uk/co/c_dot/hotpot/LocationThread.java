@@ -1,3 +1,6 @@
+/**
+ * @copyright 2016 Crawford Currie, All Rights Reserved
+ */
 package uk.co.c_dot.hotpot;
 
 import android.content.Context;
@@ -28,14 +31,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Scheduler for location updates
+ * Thread that tracks location and sends updates to a remote server.
  */
 class LocationThread extends Thread
         implements Messenger.MessageHandler,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
         SharedPreferences.OnSharedPreferenceChangeListener {
 
-    protected static final String TAG = "HOTPOT/LocationThread";
+    private static final String TAG = "HOTPOT/LocationThread";
 
     // Default update frequency
     private static final long UPDATE_INTERVAL = 5000; // ms
@@ -90,15 +93,12 @@ class LocationThread extends Thread
     private Handler mHandler;
     // Play Store API
     private GoogleApiClient mApiClient;
-    // Current state of location reporting
-    private boolean mIsPaused = false;
 
     // Runnable that is executed when a location is wanted
-    private boolean ignore = false;
     private Runnable mWakeUp = new Runnable() {
         @Override
         public void run() {
-            //Log.d(TAG, "LocationService Woken");
+            //Log.d(TAG, "Woken");
             mHandler.postDelayed(mWakeUp, locationChanged());
         }
     };
@@ -109,15 +109,17 @@ class LocationThread extends Thread
      * @param context the Service
      */
     public LocationThread(Context context) {
-        Log.d(TAG, "LocationService constructing");
         mContext = context;
     }
 
     @Override
     public void run() {
-        Log.d(TAG, "LocationService starting");
+        Log.d(TAG, "run");
+        mAndroidId = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
+        mMessenger = new Messenger(mContext, new String[]{LocationService.STOP}, this);
 
         Looper.prepare();
+        mHandler = new Handler();
 
         mApiClient = new GoogleApiClient.Builder(mContext)
                 .addConnectionCallbacks(this)
@@ -127,37 +129,51 @@ class LocationThread extends Thread
         // A thread has no onCreate so we have to explicitly connect
         mApiClient.connect();
 
-        mAndroidId = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
-
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        String sURL = prefs.getString(LocationService.PREF_URL, null);
-        try {
-            mServerConnection = new ServerConnection(
-                    sURL, prefs.getStringSet(LocationService.PREF_CERTS, null));
-        } catch (MalformedURLException | KeyStoreException e) {
-            Toast.makeText(mContext,
-                    sURL + " is not a valid URL: " + e.getMessage(),
-                    Toast.LENGTH_SHORT).show();
-        }
-
-        prefs.registerOnSharedPreferenceChangeListener(this);
-
-        mMessenger = new Messenger(mContext, new String[]{}, this, MainActivity.class);
-
-        mHandler = new Handler();
-        // Kick off the location server ASAP
-        mHandler.postDelayed(mWakeUp, 1);
         Looper.loop();
+
+        Log.d(TAG, "stopped");
+
+        // Cleanup
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+        prefs.unregisterOnSharedPreferenceChangeListener(this);
+        mApiClient.disconnect();
     }
 
+
     /**
-     * Callback for when an API connection is suspended
+     * Callback for when an API connection is made
      * Implements ConnectionCallbacks
      */
     @Override
     public void onConnected(Bundle connectionHint) throws SecurityException {
-        Log.d(TAG, "LocationService onConnected");
+        Log.d(TAG, "connected to API");
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+        String sURL = prefs.getString(LocationService.PREF_URL, null);
+        if (sURL != null) {
+            try {
+                mServerConnection = new ServerConnection(
+                        sURL, prefs.getStringSet(LocationService.PREF_CERTS, null));
+                Log.d(TAG, "connected to server " + sURL);
+
+            } catch (MalformedURLException | KeyStoreException e) {
+                Toast.makeText(mContext,
+                        "'" + sURL + "' is not a valid URL: " + e.getMessage(),
+                        Toast.LENGTH_LONG).show();
+                Log.e(TAG, "Could not connect to server " + sURL);
+            }
+        } else {
+            Toast.makeText(mContext,
+                    "Cannot establish connection to server; URL is not set",
+                    Toast.LENGTH_LONG).show();
+            Log.e(TAG, "No server set in preferences");
+        }
+        prefs.registerOnSharedPreferenceChangeListener(this);
+
+        // Kick off the location server ASAP
+        mHandler.postDelayed(mWakeUp, 1);
     }
+
 
     /**
      * Callback for when an API connection is suspended
@@ -165,7 +181,7 @@ class LocationThread extends Thread
      */
     @Override
     public void onConnectionSuspended(int cause) {
-        Log.d(TAG, "LocationService onConnectionSuspended");
+        Log.d(TAG, "onConnectionSuspended - trying again");
         // The connection to Google Play services was lost for some
         // reason. We call connect() to attempt to reestablish the
         // connection.
@@ -183,19 +199,15 @@ class LocationThread extends Thread
     public void onConnectionFailed(@NonNull ConnectionResult result) {
         // Refer to the javadoc for ConnectionResult to see what error
         // codes might be returned in onConnectionFailed.
-        Log.i(TAG, "LocationService onConnectionFailed: ConnectionResult.getErrorCode() = "
-                + result.getErrorCode());
+        Log.i(TAG, "onConnectionFailed: " + result.getErrorMessage());
     }
 
     @Override
     public void handleMessage(Intent intent) {
-        Log.d(TAG, "LocationService handleMessage " + intent.getAction());
+        Log.d(TAG, "handleMessage " + intent.getAction());
         switch (intent.getAction()) {
-            case LocationService.PAUSE:
-                mIsPaused = true;
-                break;
-            case LocationService.RESUME:
-                mIsPaused = false;
+            case LocationService.STOP:
+                mHandler.getLooper().quit();
                 break;
         }
     }
@@ -211,8 +223,6 @@ class LocationThread extends Thread
     private long sendUpdate(LatLng loc) {
         if (mServerConnection == null)
             return UPDATE_INTERVAL;
-
-        Log.d(TAG, "Sending location update");
 
         Map<String, String> params = new HashMap<>();
         params.put("device", mAndroidId);
@@ -233,9 +243,7 @@ class LocationThread extends Thread
             Pattern re = Pattern.compile("\"(.*?)\":(.*?)[,}]");
             Matcher m = re.matcher(reply);
             double latitude = 0, longitude = 0;
-            while (m.find())
-
-            {
+            while (m.find()) {
                 String key = m.group(1);
                 String value = m.group(2);
                 switch (key) {
@@ -254,8 +262,8 @@ class LocationThread extends Thread
             }
 
             if (mHomePos == null) {
-                Log.d(TAG, "HOME is at " + mHomePos);
                 mHomePos = new LatLng(latitude, longitude);
+                Log.d(TAG, "HOME is at " + mHomePos);
                 mMessenger.broadcast(LocationService.HOME_CHANGED, mHomePos);
             }
         }
@@ -269,8 +277,6 @@ class LocationThread extends Thread
      * Called from scheduler when location changes
      */
     public long locationChanged() {
-        if (mIsPaused)
-            return UPDATE_INTERVAL;
         Location location;
         try {
             location = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
@@ -304,7 +310,7 @@ class LocationThread extends Thread
     }
 
     public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-        Log.d(TAG, "LocationService onSharedPreferenceChanged");
+        Log.d(TAG, "onSharedPreferenceChanged");
         if (!key.equals(LocationService.PREF_URL))
             return;
         String sURL = prefs.getString(LocationService.PREF_URL, null);
