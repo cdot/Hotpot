@@ -25,9 +25,9 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -47,7 +47,7 @@ public class ServerConnection {
     private URL mURL = null;
     private KeyStore mKeyStore = null;
     private SSLContext mSSLContext = null;
-    Set<String> mCertificates = null;
+    List<String> mCertificates = null;
 
     /**
      * Create a new server connection to the given URL with the given SSL certificates (only used
@@ -58,10 +58,10 @@ public class ServerConnection {
      * @throws MalformedURLException if the URL is bad
      * @throws KeyStoreException     if there's a problem loading the certificates
      */
-    public ServerConnection(String url, Set<String> certs)
+    public ServerConnection(String url, List<String> certs)
             throws MalformedURLException, KeyStoreException {
         mURL = new URL(url);
-        mCertificates = null;
+        mCertificates = certs;
         if (mURL.getProtocol().equals("https")) {
             loadKeyStore(certs);
             mSSLContext = null; // to force reload
@@ -83,7 +83,7 @@ public class ServerConnection {
         mCertificates = null;
         if (mURL.getProtocol().equals("https")) {
             try {
-                Set<String> certs = fetchCertificates();
+                List<String> certs = fetchCertificates();
                 loadKeyStore(certs);
             } catch (KeyStoreException kse) {
                 // We don't treat this as an error, we just assume the server had no useable
@@ -102,12 +102,12 @@ public class ServerConnection {
         return mURL.getProtocol().equals("https");
     }
 
-    /**
+     /**
      * Get the certificates trusted for use with the connection
      *
      * @return a set of base 64 encoded certificates
      */
-    public Set<String> getCertificates() {
+    public List<String> getCertificates() {
         return mCertificates;
     }
 
@@ -117,9 +117,9 @@ public class ServerConnection {
      * @param certs base 64 encoded certificates
      * @throws KeyStoreException if anything goes wrong
      */
-    private void loadKeyStore(Set<String> certs) throws KeyStoreException {
+    private void loadKeyStore(List<String> certs) throws KeyStoreException {
         Log.d(TAG, "Loading key store");
-        mCertificates = new HashSet<>();
+        mCertificates = new ArrayList<>();
         try {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
             // Create a KeyStore containing our trusted CAs
@@ -184,9 +184,9 @@ public class ServerConnection {
      * empty TrustManager implementation, so must only be used under strict conditions
      * e.g. when setting up preferences.
      */
-    private Set<String> fetchCertificates() throws KeyStoreException {
+    private List<String> fetchCertificates() throws KeyStoreException {
         SSLContext sslCtx; // temporary, while we are fetching the certificates
-        Set<String> certs = new HashSet<>();
+        List<String> certs = new ArrayList<>();
 
         try {
             sslCtx = SSLContext.getInstance("TLS");

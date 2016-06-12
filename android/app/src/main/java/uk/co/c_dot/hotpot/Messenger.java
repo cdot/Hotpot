@@ -86,8 +86,8 @@ public class Messenger extends BroadcastReceiver {
      */
     public void broadcast(String message, LatLng pos) {
         Intent intent = new Intent(message);
-        intent.putExtra("ARG1", pos.latitude);
-        intent.putExtra("ARG2", pos.longitude);
+        intent.putExtra("LAT", pos.latitude);
+        intent.putExtra("LONG", pos.longitude);
         broadcast(intent);
     }
 }

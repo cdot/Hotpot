@@ -8,31 +8,28 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
 /**
  * Background service that tracks location and passes it to the server. The service starts
- * a LocationThread that actually does the hard work of tracking the location.
+ * a LocationThread that actually does the hard work of tracking the location. This is a
+ * singleton - there should only ever be one copy of this service running.
  */
 public class LocationService extends Service {
 
     private static final String TAG = "HOTPOT/LocationService";
 
-    // Constants used in preferences and intents
-    public static final String DOMAIN = "uk.co.c_dot.hotpot.";
-
-    // startCommand for the service
-    public static final String INITIALISE = DOMAIN + "INITIALISE";
+    // Commands received by service
+    public static final String START = MainActivity.DOMAIN + "START";
+    public static final String STOP = MainActivity.DOMAIN + "STOP";
 
     // Commands sent by service
-    public static final String LOCATION_CHANGED = DOMAIN + "LOCATION_CHANGED";
-    public static final String HOME_CHANGED = DOMAIN + "HOME_CHANGED";
+    public static final String LOCATION_CHANGED = MainActivity.DOMAIN + "LOCATION_CHANGED";
+    public static final String HOME_CHANGED = MainActivity.DOMAIN + "HOME_CHANGED";
 
-    // Commands received by service
-    public static final String STOP = DOMAIN + "STOP";
-
-    // Preferences
-    public static final String PREF_URL = DOMAIN + "URL";
-    public static final String PREF_CERTS = DOMAIN + "CERTS";
-
+    // Worker thread
     private LocationThread mThread;
 
     /**
@@ -46,26 +43,48 @@ public class LocationService extends Service {
     }
 
     /**
-     * Start the service. The only thing we do is to start the thread that listens for
+     * Start (or restart) the service. The only thing we do is to start the thread that listens for
      * broadcast messages.
      *
-     * @param intent action should always be "INITIALISE"
+     * @param intent action should always be "START"
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "onStartCommand " + intent.getAction() + " id " + startId);
+        if (mThread != null)
+            mThread.interrupt();
+        String url = intent.getStringExtra("URL");
+        List<String> certs = intent.getStringArrayListExtra("CERTS");
 
-        // Start the service thread.
-        mThread = new LocationThread(this);
+        Log.d(TAG, intent.getAction() + " " + url);
+
+        // Start the service thread, if necessary
+        mThread = new LocationThread(this, url, certs);
         mThread.start();
 
-        // If we get killed, after returning from here, restart
+        // If we get killed after returning from here, restart
         return START_STICKY;
     }
 
+    /**
+     * Stop the service.
+     *
+     * @param intent action should always be "STOP"
+     */
+    @Override
+    public boolean stopService(Intent intent) {
+        Log.d(TAG, intent.getAction());
+        mThread.interrupt();
+        mThread = null;
+        return super.stopService(intent);
+    }
+
+    /**
+     * Called when the service is destroyed
+     */
     @Override
     public void onDestroy() {
-        Log.i(TAG, "onDestroy");
+        Log.d(TAG, "onDestroy");
         mThread.interrupt();
+        mThread = null;
     }
 }

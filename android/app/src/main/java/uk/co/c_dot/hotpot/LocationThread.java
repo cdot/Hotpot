@@ -5,12 +5,10 @@ package uk.co.c_dot.hotpot;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.util.Log;
@@ -25,8 +23,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.security.KeyStoreException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,8 +33,7 @@ import java.util.regex.Pattern;
  */
 class LocationThread extends Thread
         implements Messenger.MessageHandler,
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
-        SharedPreferences.OnSharedPreferenceChangeListener {
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     private static final String TAG = "HOTPOT/LocationThread";
 
@@ -93,6 +90,10 @@ class LocationThread extends Thread
     private Handler mHandler;
     // Play Store API
     private GoogleApiClient mApiClient;
+    // The URL of the server receiving location updates
+    private String mServerURL;
+    // SSL certificates that are acceptable for the given server
+    private List<String> mServerCerts;
 
     // Runnable that is executed when a location is wanted
     private Runnable mWakeUp = new Runnable() {
@@ -108,17 +109,44 @@ class LocationThread extends Thread
      *
      * @param context the Service
      */
-    public LocationThread(Context context) {
+    public LocationThread(Context context, String url, List<String> certs) {
+        mServerURL = url;
+        mServerCerts = certs;
         mContext = context;
+        Log.d(TAG, "Constructed " + url + " with " + certs.size() + " certificates");
     }
 
     @Override
     public void run() {
         Log.d(TAG, "run");
-        mAndroidId = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
-        mMessenger = new Messenger(mContext, new String[]{LocationService.STOP}, this);
 
         Looper.prepare();
+
+        mAndroidId = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
+        mMessenger = new Messenger(mContext, new String[]{LocationService.STOP}, this);
+        mServerConnection = null;
+        if (mServerURL != null) {
+            try {
+                mServerConnection = new ServerConnection(mServerURL, mServerCerts);
+                Log.d(TAG, "connected to server " + mServerURL
+                        + " with " + mServerCerts.size() + " certificates");
+
+            } catch (MalformedURLException mue) {
+                String mess =  "'" + mServerURL + "' is not a valid URL: " + mue.getMessage();
+                Log.e(TAG, mess);
+                Toast.makeText(mContext, mess, Toast.LENGTH_LONG).show();
+            } catch (KeyStoreException kse) {
+                String mess = "Could not connect to server at " + mServerURL +  "': " + kse.getMessage();
+                Log.e(TAG, mess);
+                Toast.makeText(mContext, mess, Toast.LENGTH_LONG).show();
+            }
+        } else {
+            Log.e(TAG, "No server set in preferences");
+            Toast.makeText(mContext,
+                    "Cannot establish connection to server; URL is not set",
+                    Toast.LENGTH_LONG).show();
+        }
+
         mHandler = new Handler();
 
         mApiClient = new GoogleApiClient.Builder(mContext)
@@ -133,9 +161,6 @@ class LocationThread extends Thread
 
         Log.d(TAG, "stopped");
 
-        // Cleanup
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        prefs.unregisterOnSharedPreferenceChangeListener(this);
         mApiClient.disconnect();
     }
 
@@ -147,28 +172,6 @@ class LocationThread extends Thread
     @Override
     public void onConnected(Bundle connectionHint) throws SecurityException {
         Log.d(TAG, "connected to API");
-
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        String sURL = prefs.getString(LocationService.PREF_URL, null);
-        if (sURL != null) {
-            try {
-                mServerConnection = new ServerConnection(
-                        sURL, prefs.getStringSet(LocationService.PREF_CERTS, null));
-                Log.d(TAG, "connected to server " + sURL);
-
-            } catch (MalformedURLException | KeyStoreException e) {
-                Toast.makeText(mContext,
-                        "'" + sURL + "' is not a valid URL: " + e.getMessage(),
-                        Toast.LENGTH_LONG).show();
-                Log.e(TAG, "Could not connect to server " + sURL);
-            }
-        } else {
-            Toast.makeText(mContext,
-                    "Cannot establish connection to server; URL is not set",
-                    Toast.LENGTH_LONG).show();
-            Log.e(TAG, "No server set in preferences");
-        }
-        prefs.registerOnSharedPreferenceChangeListener(this);
 
         // Kick off the location server ASAP
         mHandler.postDelayed(mWakeUp, 1);
@@ -221,8 +224,10 @@ class LocationThread extends Thread
      * @return the interval before a new update is wanted
      */
     private long sendUpdate(LatLng loc) {
-        if (mServerConnection == null)
+        if (mServerConnection == null) {
+            Log.w(TAG, "Cannot send location update, no server connection");
             return UPDATE_INTERVAL;
+        }
 
         Map<String, String> params = new HashMap<>();
         params.put("device", mAndroidId);
@@ -232,7 +237,7 @@ class LocationThread extends Thread
         try {
             reply = mServerConnection.GET("/mobile", params);
         } catch (IOException ioe) {
-            Toast.makeText(mContext, "GET failed " + ioe, Toast.LENGTH_SHORT).show();
+            Toast.makeText(mContext, "GET failed " + ioe, Toast.LENGTH_LONG).show();
         }
         long next_update = UPDATE_INTERVAL;
 
@@ -281,13 +286,13 @@ class LocationThread extends Thread
         try {
             location = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
         } catch (SecurityException se) {
-            Log.d(TAG, "locationChanged security exception " + se.getMessage());
+            Log.w(TAG, "locationChanged security exception " + se.getMessage());
             location = null;
         }
         if (location == null) {
             // TODO: back off for longer than this. Consider going back to user for guidance.
             // Repeated location requests are going to get expensive.
-            Log.d(TAG, "locationChanged: location is null");
+            Log.w(TAG, "locationChanged: location is null");
             return UPDATE_INTERVAL;
         }
         Log.d(TAG, "locationChanged " + location);
@@ -307,35 +312,5 @@ class LocationThread extends Thread
 
         mLastPos = curPos;
         return sendUpdate(curPos);
-    }
-
-    public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-        Log.d(TAG, "onSharedPreferenceChanged");
-        if (!key.equals(LocationService.PREF_URL))
-            return;
-        String sURL = prefs.getString(LocationService.PREF_URL, null);
-        mServerConnection = null;
-        try {
-            mServerConnection = new ServerConnection(sURL);
-            Set<String> certs = mServerConnection.getCertificates();
-            // Store the certs in an invisible preference
-            SharedPreferences.Editor ed = prefs.edit();
-            if (certs != null) {
-                Log.d(TAG, sURL + " provided " + certs.size() + " certificates");
-                ed.putStringSet(LocationService.PREF_CERTS, certs);
-            } else {
-                ed.remove(LocationService.PREF_CERTS);
-                if (mServerConnection.isSSL())
-                    Toast.makeText(mContext,
-                            "Protocol is https, but " + sURL + " did not provide any certificates",
-                            Toast.LENGTH_SHORT).show();
-            }
-            ed.apply();
-        } catch (MalformedURLException mue) {
-            mServerConnection = null;
-            Toast.makeText(mContext,
-                    sURL + " is not a valid URL: " + mue.getMessage(),
-                    Toast.LENGTH_SHORT).show();
-        }
     }
 }

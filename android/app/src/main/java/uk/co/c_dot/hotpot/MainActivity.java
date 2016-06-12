@@ -3,12 +3,13 @@
  */
 package uk.co.c_dot.hotpot;
 
-// Generic java
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.StrictMode;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -28,16 +29,33 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.net.MalformedURLException;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-// Android app
-// Google API client. used for location and maps
-
+/**
+ * Hotpot main application.
+ * <p/>
+ * The Hotpot application is divided into two parts; there's this activity, which provides
+ * the UI, and a LocationService that does the actual work of finding the location and
+ * communicating it to the server.
+ */
 public class MainActivity extends AppCompatActivity
-        implements OnMapReadyCallback, Messenger.MessageHandler {
+        implements OnMapReadyCallback, Messenger.MessageHandler,
+        SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String TAG = "HOTPOT/MainActivity";
+
+    // Constants used in preferences and intents
+    public static final String DOMAIN = "uk.co.c_dot.hotpot.";
+
+    // Preferences
+    public static final String PREF_URL = DOMAIN + "URL";
+    public static final String PREF_CERTS = DOMAIN + "CERTS";
 
     private LatLng mHomePos = null, mLastPos = null;
 
@@ -53,15 +71,41 @@ public class MainActivity extends AppCompatActivity
     // Options menu
     private Menu mOptionsMenu = null;
 
-    private boolean mServicePaused = false;
+    private boolean mLocationServiceRunning = false;
 
     /**
-     * Called when we are sure we have all requisite permissions
+     * Call only when we are sure we have all requisite permissions
      */
     private void startLocationService() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String url = prefs.getString(PREF_URL, null);
+        if (url != null) {
+            Intent intent = new Intent(this, LocationService.class);
+            intent.setAction(LocationService.START);
+            intent.putExtra("URL", url);
+            Set<String> sCerts = prefs.getStringSet(PREF_CERTS, null);
+            if (sCerts != null)
+                intent.putExtra("CERTS", new ArrayList<>(sCerts));
+            Log.d(TAG, "Starting location service on " + intent.getStringExtra("URL"));
+            startService(intent);
+            mLocationServiceRunning = true;
+        } else {
+            // TODO: start the settings activity?
+            Toast.makeText(this, "Cannot starting location service; URL not set",
+                    Toast.LENGTH_LONG).show();
+            mLocationServiceRunning = false;
+        }
+    }
+
+    /**
+     * Call to stop the service
+     */
+    private void stopLocationService() {
+        Log.d(TAG, "Stopping location service");
         Intent intent = new Intent(this, LocationService.class);
-        intent.setAction(LocationService.INITIALISE);
-        startService(intent);
+        intent.setAction(LocationService.STOP);
+        stopService(intent);
+        mLocationServiceRunning = false;
     }
 
     /**
@@ -80,7 +124,7 @@ public class MainActivity extends AppCompatActivity
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startLocationService();
         } else {
-            Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Permission Denied", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -146,26 +190,29 @@ public class MainActivity extends AppCompatActivity
                 startActivity(i);
                 return true;
             case R.id.action_pause_resume:
-                if (mServicePaused)
-                    startLocationService();
+                if (mLocationServiceRunning)
+                    stopLocationService();
                 else
-                    mMessenger.broadcast(LocationService.STOP);
-                mServicePaused = !mServicePaused;
+                    startLocationService();
                 if (mOptionsMenu != null)
                     mOptionsMenu.findItem(R.id.action_pause_resume).setIcon(
-                            mServicePaused ? R.drawable.ic_media_play : R.drawable.ic_media_pause);
+                            mLocationServiceRunning ? R.drawable.ic_media_pause : R.drawable.ic_media_play);
 
                 return true;
             case R.id.action_quit:
+                stopLocationService();
+                finish();
+                return true;
             default:
                 // If we got here, the user's action was not recognized.
                 // Invoke the superclass to handle it.
+                Log.e(TAG, "Unexpected options item selected " + item.getItemId());
                 return super.onOptionsItemSelected(item);
         }
     }
 
     /**
-     * Adnroid developer tutorial for toolbar doesn't tell you about this, but without it the
+     * Android developer tutorial for toolbar doesn't tell you about this, but without it the
      * overflow menu doesn't show up.
      *
      * @param menu the menu to inflate (populate from XML)
@@ -178,19 +225,53 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
+    public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+        Log.d(TAG, "onSharedPreferenceChanged " + key);
+        if (!key.equals(PREF_URL))
+            return;
+        stopLocationService();
+        // Pull certificates from the server and store them in an invisible preference
+        String sURL = prefs.getString(PREF_URL, null);
+        SharedPreferences.Editor ed = prefs.edit();
+        ed.remove(PREF_CERTS);
+        if (sURL != null) {
+            try {
+                ServerConnection serverConnection = new ServerConnection(sURL);
+                List<String> certs = serverConnection.getCertificates();
+                if (certs != null && certs.size() > 0) {
+                    Log.d(TAG, sURL + " provided " + certs.size() + " certificates");
+                    // It's a bit crap that preferences can't store an ordered list in extras,
+                    // but fortunately it doesn't matter.
+                    ed.putStringSet(PREF_CERTS, new HashSet<>(certs));
+                } else if (serverConnection.isSSL()) {
+                    String mess = "Protocol is https, but " + sURL + " did not provide any certificates";
+                    Log.d(TAG, mess);
+                    Toast.makeText(this, mess, Toast.LENGTH_SHORT).show();
+                }
+            } catch (MalformedURLException mue) {
+                Toast.makeText(this,
+                        sURL + " is not a valid URL: " + mue.getMessage(),
+                        Toast.LENGTH_LONG).show();
+            }
+        }
+        ed.apply();
+        startLocationService();
+    }
+
     /**
      * Handle a broadcast from the location Service
+     *
      * @param intent the intent behind the broadcast
      */
     public void handleMessage(Intent intent) {
         switch (intent.getAction()) {
             case LocationService.HOME_CHANGED:
-                mHomePos = new LatLng(intent.getDoubleExtra("ARG1", 0),
-                        intent.getDoubleExtra("ARG2", 0));
+                mHomePos = new LatLng(intent.getDoubleExtra("LAT", 0),
+                        intent.getDoubleExtra("LONG", 0));
                 break;
             case LocationService.LOCATION_CHANGED:
-                updateMap(new LatLng(intent.getDoubleExtra("ARG1", 0),
-                        intent.getDoubleExtra("ARG2", 0)));
+                updateMap(new LatLng(intent.getDoubleExtra("LAT", 0),
+                        intent.getDoubleExtra("LONG", 0)));
                 break;
         }
     }
@@ -209,6 +290,9 @@ public class MainActivity extends AppCompatActivity
         mMessenger = new Messenger(this, new String[]{
                 LocationService.HOME_CHANGED,
                 LocationService.LOCATION_CHANGED}, this);
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        prefs.registerOnSharedPreferenceChangeListener(this);
 
         // Check we have permission to get the location - may have to do this in the service?
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
