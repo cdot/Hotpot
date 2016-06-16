@@ -39,11 +39,10 @@ module.exports = Rule;
  * Get a serialisable version of the rule
  * @return {object} a serialisable structure
  */
-Rule.prototype.serialisable = function() {
+Rule.prototype.getConfig = function() {
     "use strict";
     return {
         name: this.name,
-        index: this.index,
         test: this.testfn
     };
 };

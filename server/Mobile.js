@@ -5,6 +5,7 @@
  */
 const https = require("https");
 const Time = require("./Time.js");
+const Server = require("./Server.js");
 
 const DEFAULT_INTERVAL = 5 * 60; // 5 minutes in seconds
 const LONG_INTERVAL = 30 * 60; // half an hour in seconds
@@ -19,25 +20,20 @@ const A_LONG_TIME = 10 * 24 * 60 * 60; // 10 days in s
 /**
  * Construct a new mobile.
  * @param {String} id unique identifier for the mobile device, as sent by it
- * @param config configuration (which in clude the name)
- * @param location_config see README.md
+ * @param config configuration (which includes the name)
  * @class
  */
-function Mobile(id, config, location_config) {
+function Mobile(name, config) {
     "use strict";
-    console.TRACE("mobile", "Creating Mobile " + id);
-    this.maps_api_key = location_config.api_key;
-    this.maps_server_ip = location_config.server_ip;
-    /** @property {String} id Unique ID for this device */
-    this.id = id;
+    console.TRACE("mobile", "Creating Mobile " + name);
     /** @property {String} name Name of this device */
-    this.name = config.get("name");
+    this.name = name;
+    /** @property {String} id Unique ID for this device */
+    this.id = config.get("id");
     /** @property {Location} location last place this device was seen */
     this.location = null;
     /** @property {number} time time of last location update, epoch secs */
     this.time = null;
-    // Location of the server
-    this.home = location_config.home;
     /** @property {Location} last_location last place this device was seen
         before the last place  */
     this.last_location = null;
@@ -60,10 +56,20 @@ Mobile.prototype.DESTROY = function() {
  * Get a serialisable version of the object
  * @return {object} a serialisable structure
  */
-Mobile.prototype.serialisable = function() {
+Mobile.prototype.getConfig = function() {
     "use strict";
     return {
-        name: this.name,
+        id: this.id,
+    };
+};
+
+/**
+ * Get a serialisable version of the object
+ * @return {object} a serialisable structure
+ */
+Mobile.prototype.getState = function() {
+    "use strict";
+    return {
         time_of_arrival: this.time_of_arrival
     };
 };
@@ -133,7 +139,7 @@ function haversine(p1, p2) {
  */
 Mobile.prototype.estimateTOA = function() {
     "use strict";
-    var crow_flies = haversine(this.home, this.location); // metres
+    var crow_flies = haversine(Server.getConfig().get("location"), this.location); // metres
     console.TRACE("mobile", "Crow flies " + crow_flies + " m");
 
     // Are they very close to home?
@@ -174,7 +180,7 @@ Mobile.prototype.estimateTOA = function() {
                   + " / " + speed + " gives " + interval);
 
     // Are they getting any closer?
-    var last_crow = haversine(this.home, this.last_location);
+    var last_crow = haversine(Server.getConfig().get("location"), this.last_location);
     if (crow_flies > last_crow) {
         // no; skip re-routing until we know they are heading home
         console.TRACE("mobile", "Getting further away");
@@ -195,12 +201,15 @@ Mobile.prototype.estimateTOA = function() {
     // are on the planned route or not?
 
     console.TRACE("mobile", "Routing by " + mode);
+    var gmaps = Server.getConfig().get("google_maps");
+    var home = Server.getConfig().get("location");
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
-        + "&key=" + this.maps_api_key
-        + "&userIp=" + this.maps_server_ip
-        + "&origin=" + this.location.latitude + "," + this.location.longitude
-        + "&destination=" + this.home.latitude + "," + this.home.longitude
+        + "&key=" + gmaps.api_key;
+    if (typeof gmaps.ip !== "undefined")
+        url += "&userIp=" + gmaps.ip;
+    url += "&origin=" + this.location.latitude + "," + this.location.longitude
+        + "&destination=" + home.latitude + "," + home.longitude
         + "&departure_time=" + Math.round(Time.nowSeconds())
         + "&mode=" + mode;
     //console.TRACE("mobile", url);

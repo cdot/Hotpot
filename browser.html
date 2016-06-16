@@ -9,94 +9,121 @@
 
     <!-- Configuration: set global variables as follows:
          hotpot_ip to the IP address of the hotpot server
-         hotpot_port to the port used by the hotpot server
+         hotpot_port to the port used by the hotpot server -->
     <script type="text/javascript" src="http://c-dot.co.uk/hotpot_ip.js">
     </script>
     <script  type="text/javascript">
       hotpot_port = 13196;
-    </script> -->
-    <!-- Debug configuration, poitning at a development server -->
+    </script>
+    <!-- Debug configuration, pointing at a development server -->
     <script type="text/javascript">
-      hotpot_ip = "192.168.1.12";
-      hotpot_port = 13196;
+      if (location.search.indexOf("DEBUG") > 0) {
+          console.debug("Using DEBUG server");
+          hotpot_ip = "192.168.1.12";
+          hotpot_port = 13196;
+      }
     </script>
 
     <script type="text/javascript" src="browser/js/browser.js"></script>
     <link rel="stylesheet" href="browser/css/browser.css">
   </head>
   <body>
-    <h1>Hotpot Central Heating Monitor</h1>
+    <h1>Hotpot Monitor for <span id="server_url"></span></h1>
     <div id="comms_error"></div>
-    <div><b>System Time:</b> <span id="time"></span></div>
-    <div id="controllers">
+    <div><b>System Time:</b> <span data-field="time"></span></div>
+    <h2>Thermostats</h2>
+    <div id="thermostat" data-field="thermostat">
     </div>
-    <div style="display:none" id="controller_template">
-      <h2 data-field="name"></h2>
-      <table width="100%">
-        <tr>
-          <td width="50%">
-            <table class="datatable">
-              <tr>
-                <th>Target Temperature</th>
-                <td>
-                  <span data-field="target" class="editable"></span>
-                  <span class="fixed">&plusmn;</span>
-                  <span data-field="window" class="editable"></span><span class="fixed">/2 set by</span>
-                  <span class="fixed" data-field="actor"></span>
-                </td>
-              </tr>
-              <tr class="fixed">
-                <th class="ralign">Current Temperature</th>
-                <td data-field="temperature"></td>
-              </tr>
-              <tr>
-                <th>Active</th>
-                <td>
-                  <input type="checkbox" data-field="state"/>
-                </td>
-              </tr>
-              <tr>
-                <th>Rules</th>
-                <td>
-                  <table data-field="rules">
-                    <thead>
-                      <tr>
-                        <th></th>
-                        <th class="fixed">Index</th>
-                        <th></th>
-                        <th>Name</th>
-                        <th>Function</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                  </table>
-                  <div class="add_rule">&#x2D32; Add new rule</div>
-                </td>
-              </tr>
-            </table>
-          </td>
-          <td width="50%">
-            <canvas class="temperature_canvas"></canvas>
-          </td>
-        </tr>
-      </table>
+    <h2>Pins</h2>
+    <div id="pin" data-field="pin">
     </div>
-    <table style="display:none">
-      <tbody id="rule_template">
+    <h2>Mobiles</h2>
+    <div id="mobile" data-field="mobile">
+    </div>
+
+    <!-- Templates. The template is the content, not the container -->
+
+    <!-- Thermostat Template -->
+    <div class="template" data-template="thermostat">
+      <div>
+        <h3 data-field="name"></h3>
+        <table width="100%">
+          <tr>
+            <td width="50%">
+              <table class="datatable">
+                <tr>
+                  <th>Target Temperature</th>
+                  <td>
+                    <span data-field="target" class="editable"></span>
+                    <span class="fixed">&plusmn;</span>
+                    <span data-field="window" class="editable"></span><span class="fixed">/2 set by</span>
+                    <span class="fixed" data-field="actor"></span>
+                  </td>
+                </tr>
+                <tr class="fixed">
+                  <th class="ralign">Current Temperature</th>
+                  <td data-field="temperature"></td>
+                </tr>
+                <tr>
+                  <th>Rules</th>
+                  <td>
+                    <table data-field="rule">
+                      <thead>
+                        <tr>
+                          <th></th>
+                          <th></th>
+                          <th>Name</th>
+                          <th>Function</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      </tbody>
+                    </table>
+                    <div class="add_rule">&#x2D32; Add new rule</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td width="50%">
+              <canvas class="temperature_canvas"></canvas>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Rule-table template -->
+    <table class="template">
+      <tbody data-template="rule">
         <tr class="rule">
           <td>
-            <span class="remove" title="Delete rule">&#9746;</span>
+            <span class="remove_rule" title="Delete rule">&#9746;</span>
           </td>
-          <td data-field="index" class="fixed"></td>
           <td>
-            <span class="move up" title="Move up">▲</span>
-            <span class="move down" title="Move down">▼</span>
+            <span class="move_rule up" title="Move up">▲</span>
+            <span class="move_rule down" title="Move down">▼</span>
           </td>
           <td data-field="name" class="editable"></td>
           <td data-field="test" class="editable" data-editable="height:'50px',area:true"></td>
         </tr>
       </tbody>
     </table>
+
+    <!-- Pin template -->
+    <div class="template" data-template="pin">
+      <div>
+        <b data-field="name"></b>
+        <input type="checkbox" data-field="state"/>
+        last set by <span data-field="actor"></span>
+      </div>
+    </div>
+
+    <!-- Mobile template -->
+    <div class="template" data-template="mobile">
+      <div>
+        <b data-field="name"></b>
+        is expected at
+        <span data-field="time_of_arrival"></span>
+    </div>
   </body>
 </html>

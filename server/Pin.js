@@ -168,12 +168,22 @@ Pin.prototype.get = function() {
  * for use in an AJAX response.
  * @return {object} a serialisable structure
  */
-Pin.prototype.serialisable = function() {
+Pin.prototype.getConfig = function() {
     "use strict";
     return {
-        name: this.name,
+        gpio: this.gpio
+    };
+}
+
+
+ /**
+ * Generate and return a serialisable version of the structure, suitable
+ * for use in an AJAX response.
+ * @return {object} a serialisable structure
+ */
+Pin.prototype.getState = function() {
+    return {
         actor: this.actor,
-        gpio: this.gpio,
         state: this.get()
     };
 };

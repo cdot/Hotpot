@@ -22,5 +22,20 @@ module.exports = {
                         return process.env[v];
                     return match;
                 });
+    },
+
+    dump: function(data) {
+        var cache = [];
+        return JSON.stringify(data, function(key, value) {
+            if (typeof value === 'object' && value !== null) {
+                if (cache.indexOf(value) !== -1) {
+                    // Circular reference found, discard key
+                    return;
+                }
+                // Store value in our collection
+                cache.push(value);
+            }
+            return value;
+        }, 2);
     }
 };

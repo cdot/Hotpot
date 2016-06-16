@@ -194,12 +194,25 @@ be set to expire after a certain time) by returning the string "remove".
 The browser interface is a low-level debugging tool that gives access to the
 functions of the controller using AJAX requests to the controller.
 
-# Maps
-Setting up to access the API
-* Go to the API console
+# Mobiles
+
+Hot pot includes an Android app that can be run on a mobile device to report
+the location of that device back to the Hotpot server. 
+Mobile devices report their location to the server, which then uses the
+Google maps routing API to estimate when the mobile will get home, based on
+the location, speed and direction of the device.
+
+The Hotpot server rules can use the estimated return time to decide whether
+to enable services or not.
+
+For routing to work, the server has to have access to the Google Maps API.
+
+* Go to the Google API console
 * Click on "Credentials"
 * Add a server key, with your server's IP address
-(you can add a userIp parameter to requests if it isn't stable)
+(If your server changes IP address on a regular basis e.g. your IP provider
+uses DHCP, you can set a random IP address and then set Hotpot up to use
+that random IP address in requests)
 * Go to "Overview" and enable the Maps Directions API
-Getting directions:
+* Set the API key in your server's Hotpot configuration
 

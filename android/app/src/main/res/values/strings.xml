@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Hotpot</string>
-    <string name="title_activity_main">Hotpot</string>
+    <string name="label">Hotpot</string>
+    <string name="description">Hotpot</string>
     <string name="action_settings">Settings</string>
     <string name="action_pause_resume">Pause/Resume location reporting</string>
     <string name="action_quit">Quit</string>

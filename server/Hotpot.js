@@ -29,30 +29,29 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
     // 4: pin setup details
     console.TRACE = function(level, message) {
         if (typeof cliopt.debug !== "undefined" &&
-            (cliopt.debug === "all" || cliopt.debug.indexOf(level) >= 0))
+            (cliopt.debug.indexOf("all") >= 0
+             || cliopt.debug.indexOf(level) >= 0)
+            && (cliopt.debug.indexOf("-" + level) < 0))
             console.log((new Date().toISOString()) + " " + level + ": " + message);
     };
 
     var config = new Config(CONFIG_FILE);
+    Server.configure(config.getConfig("server"));
 
     // Start the controller and when it's ready, start an HTTP server
     // to receive commands for it.
-    try {
-	new Controller(
-            config.getConfig("controller"),
-            function() {
-                var self = this;
-                new Server(config.getConfig("server"), self);
-
-                // Save config when it changes, so we restart to the
-                // same state
-                self.on("config_change",
-                              function() {
-                                  config.set("controller", self.serialisable());
-                                  config.save();
-                              });
-            });
-    } catch (e) {
-	console.error(e.message);
-    }
+    Controller.configure(
+        config.getConfig("controller"),
+        function() {
+            var self = this;
+            Server.setController(self);
+            
+            // Save config when it changes, so we restart to the
+            // same state
+            self.on("config_change",
+                    function() {
+                        config.set("controller", self.getConfig());
+                        config.save();
+                    });
+        });
 })();

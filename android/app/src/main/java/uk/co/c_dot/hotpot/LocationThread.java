@@ -235,9 +235,9 @@ class LocationThread extends Thread
         params.put("longitude", "" + loc.longitude);
         String reply = null;
         try {
-            reply = mServerConnection.GET("/mobile", params);
+            reply = mServerConnection.POST("/mobile/set", params);
         } catch (IOException ioe) {
-            Toast.makeText(mContext, "GET failed " + ioe, Toast.LENGTH_LONG).show();
+            Toast.makeText(mContext, "POST failed " + ioe, Toast.LENGTH_LONG).show();
         }
         long next_update = UPDATE_INTERVAL;
 

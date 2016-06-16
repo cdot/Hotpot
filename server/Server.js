@@ -1,7 +1,10 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /**
- * HTTP server object
+ * HTTP server object (singleton)
+ * The server is a singleton, so the external interface consists of two
+ * methods, "configure" which sets up the server with given configuration,
+ * and "setController" which couple a Controller to the server
  */
 
 const Fs = require("fs");
@@ -9,23 +12,36 @@ const serialize = require("serialize-javascript");
 const Utils = require("./Utils.js");
 const Url = require("url");
 
+var server; // singleton
+module.exports = {
+    configure: function(config) {
+        server = new Server(config);
+    },
+    getConfig: function() {
+        return server.config;
+    },
+    // @param {Controller} controller the service provider for this server
+    setController: function(controller) {
+        server.controller = controller;
+    }
+};
+
 /**
  * HTTP(S) Server object
  * @param {Config} configuration object
- * @param {Controller} controller the service provider for this server
  * @class
  */
-function Server(config, controller) {
+function Server(config) {
     "use strict";
 
     var self = this;
+    self.config = config;
 
     self.favicon = Fs.readFileSync(Utils.expandEnvVars(config.get("favicon")));
-    self.controller = controller;
 
     var handler = function(request, response) {
         if (self[request.method]) {
-            self[request.method].call(self, this, request, response);
+            self[request.method].call(self, request, response);
         } else {
             response.statusCode = 405;
             response.write("No support for " + request.method);
@@ -53,9 +69,27 @@ function Server(config, controller) {
     server.listen(config.get("port"));
 }
 
-/** @private */
-Server.prototype.OK = function(response) {
-    "use strict";
+/**
+ * Common handling for requests, POST or GET
+ * @private
+ */
+Server.prototype.handle = function(path, params, response) {
+    if (path.indexOf("/") !== 0 || path.length === 0)
+        throw "Bad command";
+    path = path.substring(1).split("/");
+    var command = path.shift();
+    if (command === "favicon.ico") {
+        response.writeHead(200, {"Content-Type": "image/x-icon" });
+        response.end(this.favicon, "binary");
+        return;
+    }
+    if (typeof this.controller === "undefined") {
+        // Not ready
+        response.statusCode = 500;
+        response.end();
+        return;
+    }
+    var reply = this.controller.dispatch(command, path, params);
     response.writeHead(
         200, "OK",
 	{
@@ -66,6 +100,9 @@ Server.prototype.OK = function(response) {
             "Access-Control-Allow-Methods": "POST,GET"
         });
     response.statusCode = 200;
+    if (typeof reply !== "undefined" && reply !== null)
+        response.write(serialize(reply));
+    response.end();
 };
 
 /**
@@ -73,58 +110,41 @@ Server.prototype.OK = function(response) {
  * of a device.
  * @private
  */
-Server.prototype.GET = function(server, request, response) {
+Server.prototype.GET = function(request, response) {
     "use strict";
-
-    var req = Url.parse("" + request.url, true);
-    console.TRACE("HTTP", "GET " + JSON.stringify(req));
-    var reply;
     try {
-        switch (req.pathname) {
-        case "/favicon.ico":
-            response.writeHead(200, {"Content-Type": "image/x-icon" });
-            response.end(this.favicon, "binary");
-            return;
-        case "/mobile":
-            reply = this.controller.setMobileLocation(req.query);
-            break;
-        default:
-            reply = this.controller.serialisable();
-        }
-        this.OK(response);
-        response.write(serialize(reply));
+        // Parse URL parameters and pass them as the data
+        var req = Url.parse("" + request.url, true);
+        this.handle(req.pathname, req.query, response);
     } catch (e) {
-        console.TRACE("HTTP", e + " in " + request.url + "\n" + e.stack);
+        console.TRACE("server", e + " in " + request.url + "\n" + e.stack);
         response.write(e + " in " + request.url + "\n");
         response.statusCode = 400;
     }
-    response.end();
-};
+}
 
 /**
  * AJAX request to set the status of the server.
  * @private
  */
-Server.prototype.POST = function(server, request, response) {
+Server.prototype.POST = function(request, response) {
     "use strict";
 
     var body = [], self = this;
     request.on("data", function(chunk) {
         body.push(chunk);
     }).on("end", function() {
-        var json = Buffer.concat(body).toString();
-        console.TRACE("HTTP", "POST " + json);
         try {
-            var data = JSON.parse(json);
-            self.controller.executeCommand(data);
-            self.OK(response);
+            // Parse the JSON body and pass as the data
+            var object;
+            if (typeof body !== "undefined" && body != "")
+                object = JSON.parse(Buffer.concat(body).toString());
+            self.handle(request.url, object, response);
         } catch (e) {
-            console.TRACE("HTTP", e + " in " + json);
-            response.write(e + " in " + json + "\n");
+            console.TRACE("server", e + " in " + request.url + "\n" + e.stack);
+            response.write(e + " in " + request.url + "\n");
             response.statusCode = 400;
         }
-        response.end();
     });
 };
 
-module.exports = Server;
