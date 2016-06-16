@@ -59,7 +59,7 @@ Mobile.prototype.DESTROY = function() {
 Mobile.prototype.getConfig = function() {
     "use strict";
     return {
-        id: this.id,
+        id: this.id
     };
 };
 

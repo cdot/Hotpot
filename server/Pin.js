@@ -173,7 +173,7 @@ Pin.prototype.getConfig = function() {
     return {
         gpio: this.gpio
     };
-}
+};
 
 
  /**
@@ -182,6 +182,7 @@ Pin.prototype.getConfig = function() {
  * @return {object} a serialisable structure
  */
 Pin.prototype.getState = function() {
+    "use strict";
     return {
         actor: this.actor,
         state: this.get()

@@ -3,7 +3,6 @@
 SOURCES := \
 	Config.js \
 	Controller.js \
-	getip.js \
 	Hotpot.js \
 	Mobile.js \
 	Pin.js \
@@ -11,7 +10,8 @@ SOURCES := \
 	Server.js \
 	Thermostat.js \
 	Time.js \
-	Utils.js
+	Utils.js \
+	getip.js
 
 %.esl : %.js
 	eslint $^

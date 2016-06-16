@@ -22,7 +22,7 @@ const Server = require("./Server.js");
 // state, in ms
 const VALVE_RETURN = 10000;
 
-var controller; // singleton
+var controller;
 module.exports = {
     configure: function(config, when_ready) {
         "use strict";
@@ -234,13 +234,14 @@ Controller.prototype.setPin = function(channel, actor, on, respond) {
  * @return {Mobile} mobile found, or null
  */
 Controller.prototype.getMobile = function(id) {
+    "use strict";
     for (var name in this.mobile) {
         var mobile = this.mobile[name];
         if (mobile.id === id)
             return mobile;
     }
     return null;
-}
+};
 
 /**
  * Handler for a location setting
@@ -313,7 +314,6 @@ Controller.prototype.dispatch = function(command, path, data) {
             break;
         case "mobile":
             return self.setMobileLocation(data);
-            break;
         }
         break;
     default:

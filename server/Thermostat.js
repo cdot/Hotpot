@@ -108,7 +108,7 @@ Thermostat.prototype.getConfig = function() {
             return rule.getConfig();
         })
     };
-}
+};
 
 /**
  * Generate and return a serialisable version of the structure, suitable
@@ -116,11 +116,12 @@ Thermostat.prototype.getConfig = function() {
  * @return {object} a serialisable structure
  */
 Thermostat.prototype.getState = function() {
+    "use strict";
     return {
         temperature: this.temperature(),
         last_temp: this.last_temp,
 	active_rule: this.active_rule
-    }
+    };
 };
 
 /**

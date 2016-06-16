@@ -15,13 +15,16 @@ const Url = require("url");
 var server; // singleton
 module.exports = {
     configure: function(config) {
+        "use strict";
         server = new Server(config);
     },
     getConfig: function() {
+        "use strict";
         return server.config;
     },
     // @param {Controller} controller the service provider for this server
     setController: function(controller) {
+        "use strict";
         server.controller = controller;
     }
 };
@@ -48,7 +51,7 @@ function Server(config) {
             response.end();
         }
     };
-    var server, https_key = config.get("key");
+    var httpot, https_key = config.get("key");
     if (typeof https_key !== "undefined") {
         var options = {};
         options.key = Fs.readFileSync(Utils.expandEnvVars(https_key));
@@ -61,12 +64,12 @@ function Server(config) {
         console.TRACE("server", "HTTPS starting on port " + config.get("port")
                      + " with key " + https_key);
     
-        server = require("https").createServer(options, handler);
+        httpot = require("https").createServer(options, handler);
     } else {
         console.TRACE("server", "HTTP starting on port " + config.get("port"));
-        server = require("http").createServer(handler);
+        httpot = require("http").createServer(handler);
     }
-    server.listen(config.get("port"));
+    httpot.listen(config.get("port"));
 }
 
 /**
@@ -74,6 +77,7 @@ function Server(config) {
  * @private
  */
 Server.prototype.handle = function(path, params, response) {
+    "use strict";
     if (path.indexOf("/") !== 0 || path.length === 0)
         throw "Bad command";
     path = path.substring(1).split("/");
@@ -121,7 +125,7 @@ Server.prototype.GET = function(request, response) {
         response.write(e + " in " + request.url + "\n");
         response.statusCode = 400;
     }
-}
+};
 
 /**
  * AJAX request to set the status of the server.
@@ -137,7 +141,7 @@ Server.prototype.POST = function(request, response) {
         try {
             // Parse the JSON body and pass as the data
             var object;
-            if (typeof body !== "undefined" && body != "")
+            if (typeof body !== "undefined" && body !== "")
                 object = JSON.parse(Buffer.concat(body).toString());
             self.handle(request.url, object, response);
         } catch (e) {
@@ -147,4 +151,3 @@ Server.prototype.POST = function(request, response) {
         }
     });
 };
-
