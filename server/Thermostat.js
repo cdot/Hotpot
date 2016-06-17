@@ -19,6 +19,8 @@ const Rule = require("./Rule.js");
 // Thermostat poll
 const POLL_INTERVAL = 1; // seconds
 
+const TAG = "Thermostat";
+
 // Singleton interface to DS18x20 thermometers
 var ds18x20;
 
@@ -78,7 +80,7 @@ function Thermostat(name, controller, config) {
     // Don't start polling until after a timeout even because otherwise
     // the event emitter won't work
     setTimeout(function() {
-        console.TRACE("thermostat", self.name + " "
+        console.TRACE(TAG, self.name + " "
                       + self.low() + " < T < " + self.high() + " started");
         self.poll(controller);
     }, 10);
@@ -97,7 +99,7 @@ Thermostat.prototype.DESTROY = function() {
  * for use in an AJAX response.
  * @return {object} a serialisable structure
  */
-Thermostat.prototype.getConfig = function() {
+Thermostat.prototype.getSerialisableConfig = function() {
     "use strict";
 
     return {
@@ -105,7 +107,7 @@ Thermostat.prototype.getConfig = function() {
         target: this.target,
         window: this.window,
         rule: this.rule.map(function(rule) {
-            return rule.getConfig();
+            return rule.getSerialisableConfig();
         })
     };
 };
@@ -115,7 +117,7 @@ Thermostat.prototype.getConfig = function() {
  * for use in an AJAX response.
  * @return {object} a serialisable structure
  */
-Thermostat.prototype.getState = function() {
+Thermostat.prototype.getSerialisableState = function() {
     "use strict";
     return {
         temperature: this.temperature(),
@@ -132,7 +134,7 @@ Thermostat.prototype.getState = function() {
 Thermostat.prototype.set = function(field, value) {
     "use strict";
     if (value !== this[field])
-        console.TRACE("thermostat", this.name + " " + field + " changed to "
+        console.TRACE(TAG, this.name + " " + field + " changed to "
                       + value);
     this[field] = value;
 };
@@ -182,7 +184,7 @@ Thermostat.prototype.poll = function(controller) {
                 try {
                     result = rule.test(self, controller);
                 } catch (e) {
-                    console.TRACE("Rule " + i + " call failed: " + e.message);
+                    console.TRACE(TAG, self.name + " rule '" + rule.name + "' failed: " + e.message);
                 }
                 if (typeof result === "string") {
                     if (result === "remove")
@@ -196,13 +198,13 @@ Thermostat.prototype.poll = function(controller) {
             // Remove rules flagged for removal
             while (remove.length > 0) {
                 i = remove.pop();
-                console.TRACE("thermostat", "Remove rule " + i);
+                console.TRACE(TAG, "Remove rule " + i);
                 self.rule.splice(i, 1);
                 self.renumberRules();
                 controller.emit("config_change");
             }
 
-            //console.TRACE("thermostat", self.name + " active rule is "
+            //console.TRACE(TAG, self.name + " active rule is "
             //              + self.active_rule
             //              + " current temp " + temp + "C");
             // If rules are not enabled, we leave active_rule at
@@ -289,7 +291,7 @@ Thermostat.prototype.insert_rule = function(rule, i) {
     else
         this.rule.splice(i, 0, rule);
     this.renumberRules();
-    console.TRACE("thermostat", this.name + " rule " + this.rule[i].name
+    console.TRACE(TAG, this.name + " rule " + this.rule[i].name
                   + "(" + i + ") inserted at " + rule.index);
     return i;
 };
@@ -314,7 +316,7 @@ Thermostat.prototype.move_rule = function(i, move) {
     var removed = this.rule.splice(i, 1);
     this.rule.splice(dest, 0, removed[0]);
     this.renumberRules();
-    console.TRACE("thermostat", this.name + " rule " + i + " moved to " + dest);
+    console.TRACE(TAG, this.name + " rule " + i + " moved to " + dest);
 };
 
 /**
@@ -327,7 +329,7 @@ Thermostat.prototype.remove_rule = function(i) {
     i = this.getRuleIndex(i);
     var del = this.rule.splice(i, 1);
     this.renumberRules();
-    console.TRACE("thermostat", this.name + " rule " + del[0].name
+    console.TRACE(TAG, this.name + " rule " + del[0].name
                   + "(" + i + ") removed");
     return del[0];
 };
@@ -337,6 +339,6 @@ Thermostat.prototype.remove_rule = function(i) {
  */
 Thermostat.prototype.clear_rules = function() {
     "use strict";
-    console.TRACE("thermostat", this.name + " rules cleared");
+    console.TRACE(TAG, this.name + " rules cleared");
     this.rule = [];
 };

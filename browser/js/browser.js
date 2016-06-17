@@ -288,7 +288,7 @@
      */
     var fillContainer = function($container, type, data) {
         if (typeof data !== "object")
-            throw "unexpected, can't template a non-container";
+            throw "Can't template a non-container" + JSON.stringify(data);
 
         var tmpl = $("[data-template='" + type + "']").html();
         if (!tmpl)

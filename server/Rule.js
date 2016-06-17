@@ -5,6 +5,8 @@
  * state of one or more thermostats.
  */
 
+const TAG = "Rule";
+
 // This can't be "var" or "const" because rules can't see it then
 Time = require("./Time.js"); // for executing rules
 
@@ -39,7 +41,7 @@ module.exports = Rule;
  * Get a serialisable version of the rule
  * @return {object} a serialisable structure
  */
-Rule.prototype.getConfig = function() {
+Rule.prototype.getSerialisableConfig = function() {
     "use strict";
     return {
         name: this.name,
@@ -57,6 +59,6 @@ Rule.prototype.getConfig = function() {
 Rule.prototype.test = function(thermostat, controller) {
     "use strict";
     var pass = this.testfn.call(thermostat, controller);
-    //console.TRACE("rule", "Test rule '"+ rule.name + "' = " + pass);
+    //console.TRACE(TAG, "Test rule '"+ rule.name + "' = " + pass);
     return pass;
 };

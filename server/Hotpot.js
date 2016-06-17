@@ -50,7 +50,7 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
             // same state
             self.on("config_change",
                     function() {
-                        config.set("controller", self.getConfig());
+                        config.set("controller", self.getSerialisableConfig());
                         config.save();
                     });
         });

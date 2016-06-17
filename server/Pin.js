@@ -2,6 +2,8 @@
 
 var Fs = require("fs");
 
+const TAG = "Pin";
+
 /**
  * GPIO pin
  */
@@ -26,12 +28,12 @@ function Pin(name, config, done) {
     /** @property {String} actor the thing that last changed the pin state e.g. a rule name */
     self.actor = "init";
 
-    console.TRACE("pin " + self.name,
-                  "Creating controller for gpio " + self.gpio);
+    console.TRACE(TAG, self.name +
+                  " gpio " + self.gpio);
 
     var fallBackToDebug = function(err) {
-        console.TRACE("pin " + self.name, "GPIO " + self.gpio
-                      + " setup failed: " + err + "; falling back to debug");
+        console.TRACE(TAG, self.name + " setup failed: "
+                      + err + "; falling back to debug");
         self.debug = require("./TestSupport.js");
         done();
     };
@@ -72,7 +74,7 @@ function Pin(name, config, done) {
 
     var checked = function(err) {
         if (err) {
-            console.TRACE("pin " + self.name, "/value failed: " + err
+            console.TRACE(TAG, self.name + "/value failed: " + err
                           + ", exporting gpio " + self.gpio);
             try {
                 Fs.writeFile("/sys/class/gpio/export",
@@ -90,7 +92,7 @@ function Pin(name, config, done) {
             "/sys/class/gpio/gpio" + self.gpio + "/value",
             checked);
     } catch (e1) {
-        console.TRACE("pin " + self.name, "/value threw: " + e1.message
+        console.TRACE(TAG, self.name + "/value threw: " + e1.message
                       + ", exporting gpio " + self.gpio);
         try {
             Fs.writeFile("/sys/class/gpio/export",
@@ -109,7 +111,7 @@ module.exports = Pin;
 Pin.prototype.DESTROY = function() {
     "use strict";
 
-    console.TRACE("pin", "unexport gpio " + this.gpio);
+    console.TRACE(TAG, "unexport gpio " + this.gpio);
     Fs.writeFile("/sys/class/gpio/unexport", this.gpio, function() {});
 };
 
@@ -123,8 +125,8 @@ Pin.prototype.setFeature = function(feature, value, callback) {
     if (typeof callback === "undefined")
         callback = function() {};
     if (typeof this.debug !== "undefined") {
-        console.TRACE("pin " + this.name,
-                      "Set feature " + feature + " = " + value);
+        console.TRACE(TAG, this.name + 
+                      " set feature " + feature + " = " + value);
         if (callback)
             callback.call(this);
     } else
@@ -141,7 +143,7 @@ Pin.prototype.setFeature = function(feature, value, callback) {
 Pin.prototype.set = function(state, actor, callback) {
     "use strict";
 
-    console.TRACE("pin " + this.name, actor + " set gpio "
+    console.TRACE(TAG, this.name + " " + actor + " set gpio "
                   + this.gpio + " = " + (state === 1 ? "ON" : "OFF"));
 
     this.actor = actor;
@@ -168,7 +170,7 @@ Pin.prototype.get = function() {
  * for use in an AJAX response.
  * @return {object} a serialisable structure
  */
-Pin.prototype.getConfig = function() {
+Pin.prototype.getSerialisableConfig = function() {
     "use strict";
     return {
         gpio: this.gpio
@@ -176,12 +178,12 @@ Pin.prototype.getConfig = function() {
 };
 
 
- /**
+/**
  * Generate and return a serialisable version of the structure, suitable
  * for use in an AJAX response.
  * @return {object} a serialisable structure
  */
-Pin.prototype.getState = function() {
+Pin.prototype.getSerialisableState = function() {
     "use strict";
     return {
         actor: this.actor,

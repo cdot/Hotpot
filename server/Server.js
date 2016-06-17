@@ -12,6 +12,8 @@ const serialize = require("serialize-javascript");
 const Utils = require("./Utils.js");
 const Url = require("url");
 
+var TAG = "Server";
+
 var server; // singleton
 module.exports = {
     configure: function(config) {
@@ -55,18 +57,18 @@ function Server(config) {
     if (typeof https_key !== "undefined") {
         var options = {};
         options.key = Fs.readFileSync(Utils.expandEnvVars(https_key));
-	console.TRACE("server", "Key " + https_key + " loaded");
+	console.TRACE(TAG, "Key " + https_key + " loaded");
         var https_cert = config.get("cert");
         if (typeof https_cert !== "undefined") {
             options.cert = Fs.readFileSync(Utils.expandEnvVars(https_cert));
-            console.TRACE("server", "Certificate " + https_cert + " loaded");
+            console.TRACE(TAG, "Certificate " + https_cert + " loaded");
         }
-        console.TRACE("server", "HTTPS starting on port " + config.get("port")
+        console.TRACE(TAG, "HTTPS starting on port " + config.get("port")
                      + " with key " + https_key);
     
         httpot = require("https").createServer(options, handler);
     } else {
-        console.TRACE("server", "HTTP starting on port " + config.get("port"));
+        console.TRACE(TAG, "HTTP starting on port " + config.get("port"));
         httpot = require("http").createServer(handler);
     }
     httpot.listen(config.get("port"));
@@ -121,7 +123,7 @@ Server.prototype.GET = function(request, response) {
         var req = Url.parse("" + request.url, true);
         this.handle(req.pathname, req.query, response);
     } catch (e) {
-        console.TRACE("server", e + " in " + request.url + "\n" + e.stack);
+        console.TRACE(TAG, e + " in " + request.url + "\n" + e.stack);
         response.write(e + " in " + request.url + "\n");
         response.statusCode = 400;
     }
@@ -145,7 +147,7 @@ Server.prototype.POST = function(request, response) {
                 object = JSON.parse(Buffer.concat(body).toString());
             self.handle(request.url, object, response);
         } catch (e) {
-            console.TRACE("server", e + " in " + request.url + "\n" + e.stack);
+            console.TRACE(TAG, e + " in " + request.url + "\n" + e.stack);
             response.write(e + " in " + request.url + "\n");
             response.statusCode = 400;
         }

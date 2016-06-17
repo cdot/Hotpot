@@ -18,6 +18,8 @@ const Rule = require("./Rule.js");
 const Mobile = require("./Mobile.js");
 const Server = require("./Server.js");
 
+const TAG = "Controller";
+
 // Time to wait for the multiposition valve to return to the discharged
 // state, in ms
 const VALVE_RETURN = 10000;
@@ -39,13 +41,17 @@ module.exports = {
 function Controller(config, when_ready) {
     "use strict";
 
-    console.TRACE("init", "Creating Controller");
+    console.TRACE(TAG, "Creating Controller");
 
     this.location = config.get("location");
     this.createMobiles(config.getConfig("mobile"));
     this.createPins(config.getConfig("pin"), function() {
         this.createThermostats(config.getConfig("thermostat"), when_ready);
     });
+    var weather_config = Server.getConfig().getConfig("weather");
+    if (typeof weather_config !== "undefined")
+        this.weather_agent = require(
+            "./" + weather_config.get("class") + ".js");
 }
 util.inherits(Controller, EventEmitter);
 
@@ -125,7 +131,7 @@ Controller.prototype.createThermostats = function(ts_config, done) {
     // Assume worst-case valve configuration i.e. grey wire live holding
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
-    console.TRACE("init", "Resetting valve");
+    console.TRACE(TAG, "Resetting valve");
     self.pin.HW.set(1, "init", function() {
         self.pin.CH.set(0, "init", function() {
             self.setPin("HW", "init", 0, function() {
@@ -135,13 +141,18 @@ Controller.prototype.createThermostats = function(ts_config, done) {
     });
 };
 
-Controller.prototype.getConfig = function() {
+/**
+ * Generate and return a serialisable version of the structure, suitable
+ * for use in an AJAX response.
+ * @return {object} a serialisable structure
+ */
+Controller.prototype.getSerialisableConfig = function() {
     "use strict";
 
     var sermap = function(m) {
 	var res = {};
 	for (var k in m)
-            res[k] = m[k].getConfig();
+            res[k] = m[k].getSerialisableConfig();
         return res;
     };
 
@@ -153,18 +164,24 @@ Controller.prototype.getConfig = function() {
     };
 };
 
-Controller.prototype.getState = function() {
+/**
+ * Generate and return a serialisable version of the structure, suitable
+ * for use in an AJAX response.
+ * @return {object} a serialisable structure
+ */
+Controller.prototype.getSerialisableState = function() {
     "use strict";
 
     var sermap = function(m) {
 	var res = {};
 	for (var k in m)
-            res[k] = m[k].getState();
+            res[k] = m[k].getSerialisableState();
         return res;
     };
 
     return {
 	time: new Date().toString(), // local time
+        env_temp: this.weather("Temperature"),
         thermostat: sermap(this.thermostat),
         pin: sermap(this.pin),
         mobile: sermap(this.mobile)
@@ -264,6 +281,14 @@ Controller.prototype.setMobileLocation = function(info) {
 };
 
 /**
+ * Get the current state of the weather for use in a rule
+ */
+Controller.prototype.weather = function(field) {
+    "use strict";
+    return this.weather_agent.get(field);
+};
+
+/**
  * Command handler for a command that modifies the configuration
  * of the controller.
  * @params {String} command the command verb
@@ -283,9 +308,9 @@ Controller.prototype.dispatch = function(command, path, data) {
     
     switch (command) {
     case "state":
-        return self.getState();
+        return self.getSerialisableState();
     case "config":
-        return self.getConfig();
+        return self.getSerialisableConfig();
     case "remove_rule":
         // thermostat/{th}/rule/{index}
         self.thermostat[path[1]].remove_rule(parseInt(path[3]));

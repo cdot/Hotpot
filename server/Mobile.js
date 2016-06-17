@@ -17,6 +17,8 @@ const FAST_CYCLE = 20 * MPH; // in m/s
 const EARTH_RADIUS = 6371000; // metres
 const A_LONG_TIME = 10 * 24 * 60 * 60; // 10 days in s
 
+const TAG = "Mobile";
+
 /**
  * Construct a new mobile.
  * @param {String} id unique identifier for the mobile device, as sent by it
@@ -25,7 +27,7 @@ const A_LONG_TIME = 10 * 24 * 60 * 60; // 10 days in s
  */
 function Mobile(name, config) {
     "use strict";
-    console.TRACE("mobile", "Creating Mobile " + name);
+    console.TRACE(TAG, "Creating Mobile " + name);
     /** @property {String} name Name of this device */
     this.name = name;
     /** @property {String} id Unique ID for this device */
@@ -56,7 +58,7 @@ Mobile.prototype.DESTROY = function() {
  * Get a serialisable version of the object
  * @return {object} a serialisable structure
  */
-Mobile.prototype.getConfig = function() {
+Mobile.prototype.getSerialisableConfig = function() {
     "use strict";
     return {
         id: this.id
@@ -67,7 +69,7 @@ Mobile.prototype.getConfig = function() {
  * Get a serialisable version of the object
  * @return {object} a serialisable structure
  */
-Mobile.prototype.getState = function() {
+Mobile.prototype.getSerialisableState = function() {
     "use strict";
     return {
         time_of_arrival: this.time_of_arrival
@@ -87,7 +89,7 @@ Mobile.prototype.setLocation = function(loc) {
     };
     this.last_time = this.time;
     this.time = Time.nowSeconds();
-    console.TRACE("mobile", "setLocation @" + this.time
+    console.TRACE(TAG, "setLocation @" + this.time
                   + ": " + loc.latitude
                   + "," + loc.longitude);
     if (this.last_location === null) {
@@ -140,19 +142,19 @@ function haversine(p1, p2) {
 Mobile.prototype.estimateTOA = function() {
     "use strict";
     var crow_flies = haversine(Server.getConfig().get("location"), this.location); // metres
-    console.TRACE("mobile", "Crow flies " + crow_flies + " m");
+    console.TRACE(TAG, "Crow flies " + crow_flies + " m");
 
     // Are they very close to home?
     if (crow_flies < 1000) {
         this.time_of_arrival = Time.nowSeconds();
-        console.TRACE("mobile", "Too close");
+        console.TRACE(TAG, "Too close");
         return DEFAULT_INTERVAL; // less than 1km; as good as there
     }
 
     // Are they a long way away, >1000km
     if (crow_flies > 1000000) {
         this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
-        console.TRACE("mobile", "Too far away; TOA " + this.time_of_arrival);
+        console.TRACE(TAG, "Too far away; TOA " + this.time_of_arrival);
         return LONG_INTERVAL;
     }
 
@@ -162,12 +164,12 @@ Mobile.prototype.estimateTOA = function() {
 
     if (time === 0) {
         // Shouldn't happen
-        console.TRACE("mobile", "Zero time");
+        console.TRACE(TAG, "Zero time");
         return DEFAULT_INTERVAL;
     }
 
     var speed = distance / time; // metres per second
-    console.TRACE("mobile", "Distance " + distance + "m, time " + time
+    console.TRACE(TAG, "Distance " + distance + "m, time " + time
                  + "s, speed " + speed + "m/s ("
                  + (speed / MPH) + "mph)");
 
@@ -176,14 +178,14 @@ Mobile.prototype.estimateTOA = function() {
     // time to arrival =~ crow_flies / speed
     // divide that by 10 (finger in the air)
     var interval = (crow_flies / speed) / 10;
-    console.TRACE("mobile", "Next interval " + crow_flies
+    console.TRACE(TAG, "Next interval " + crow_flies
                   + " / " + speed + " gives " + interval);
 
     // Are they getting any closer?
     var last_crow = haversine(Server.getConfig().get("location"), this.last_location);
     if (crow_flies > last_crow) {
         // no; skip re-routing until we know they are heading home
-        console.TRACE("mobile", "Getting further away");
+        console.TRACE(TAG, "Getting further away");
         return interval;
     }
 
@@ -200,7 +202,7 @@ Mobile.prototype.estimateTOA = function() {
     // We don't really want to re-route everytime, but how do we know we
     // are on the planned route or not?
 
-    console.TRACE("mobile", "Routing by " + mode);
+    console.TRACE(TAG, "Routing by " + mode);
     var gmaps = Server.getConfig().get("google_maps");
     var home = Server.getConfig().get("location");
     var url = "https://maps.googleapis.com/maps/api/directions/json"
@@ -212,10 +214,10 @@ Mobile.prototype.estimateTOA = function() {
         + "&destination=" + home.latitude + "," + home.longitude
         + "&departure_time=" + Math.round(Time.nowSeconds())
         + "&mode=" + mode;
-    //console.TRACE("mobile", url);
+    //console.TRACE(TAG, url);
 
     var analyseRoutes = function(route) {
-        console.TRACE("mobile", "Got a route");
+        console.TRACE(TAG, "Got a route");
         // Get the time of the best route
         var best_route = A_LONG_TIME;
         for (var r in route.routes) {
@@ -228,7 +230,7 @@ Mobile.prototype.estimateTOA = function() {
             if (route_length < best_route)
                 best_route = route_length;
         }
-        console.TRACE("mobile", "Best route is " + best_route);
+        console.TRACE(TAG, "Best route is " + best_route);
         self.time_of_arrival = Time.nowSeconds() + best_route;
     };
 
@@ -240,7 +242,7 @@ Mobile.prototype.estimateTOA = function() {
                 result += chunk;
             });
             res.on("end", function() {
-                //console.TRACE("mobile", result);
+                //console.TRACE(TAG, result);
                 analyseRoutes(JSON.parse(result));
             });
         })

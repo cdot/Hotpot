@@ -4,6 +4,7 @@ SOURCES := \
 	Config.js \
 	Controller.js \
 	Hotpot.js \
+	MetOffice.js \
 	Mobile.js \
 	Pin.js \
 	Rule.js \

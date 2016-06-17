@@ -3,6 +3,8 @@ const Fs = require("fs");
 const serialize = require("serialize-javascript");
 const Utils = require("./Utils");
 
+const TAG = "Config";
+
 /**
  * Hierarchical configuration object
  * @param file_or_data either a string filename to load the config from, or
@@ -16,7 +18,7 @@ function Config(file) {
         var data = Fs.readFileSync(Utils.expandEnvVars(file), "utf8");
         var config;
         eval("config=" + data);
-        console.TRACE("init", "Configured from " + file);
+        console.TRACE(TAG, "Configured from " + file);
         this.data = config;
     } else if (typeof file === "object" )
         this.data = file;
