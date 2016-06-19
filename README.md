@@ -1,15 +1,16 @@
 # Hotpot
 
 Central heating controller for a Y-plan central heating system, using
-nodjs on Raspberry Pi. Piggybacks on the existing system so that the existing
+nodejs on Raspberry Pi. Piggybacks on the existing system so that the existing
 controller can still be used (though not at the same time).
 
-The controller assumes the Pi is configured with a number of DS18x20
-temperature sensors, usually one for heating (CH) and one for hot water (HW), connected to GPIO.
+The controller collates data from a number of sources to support rules that
+decide if the heating needs to come on.
+- Any number of DS18x20 temperature sensors, usually one for heating (CH) and one for hot water (HW), connected to GPIO.
+- Any number of mobile devices running the 'Hotpot' Android app, reporting their location,
+- Weather information from the UK Meteorological Office data service.
 
-It sets the state of GPIO pins to turn on the relevant heating control. It
-then works to keep the temperatures sensed on the DS18x20's to within defined
-ranges.
+The controller supports user-defined rules that use this information to set the state of RPi GPIO pins to turn on the relevant heating control.
 
 # Hardware
 
@@ -17,34 +18,7 @@ Aside from the Raspberry Pi, the only additional hardware required are two DS18x
 
 The wiring of the temperature sensors and the control side of the relays is shown in 5V-3.5V control.svg
 
-# Software
-
-The controller uses rules defined in javascript functions to control
-the temperature of the different services offered by the central heating
-system. It can operate either as a stand-alone controller or as an HTTPS
-server that supports querying and changing the configuration of the system.
-w
-For example, we might have a DS18x20 called "HW" that senses the hot water
-temperature. A GPIO pin also called "HW" is used to control whether the
-central heating is providing hot water. We set a target temperature of
-60 degrees and a window of 5 degrees on HW. When the temperature falls
-below 57.5 degrees, the HW GPIO will go high. When the temperature rises above
-62.5 degrees, it will go low. the combination of a temperature sensor and
-a GPIO pin is referred to as a "Thermostat".
-
-Thermostats may also be controlled by rules. A rule is a Javascript
-function that is called with 'this' set to the Thermostat. A rules
-function is expected to test conditions such as time and
-temperature, and set the target temperature accordingly.
-
-The server is initially configured from options read from a file in
-$HOME/.config/Hotpot/config.json. After the initial setup, the HTTP interface
-can be used to query and modify the configuration.
-
-# HTTP interface
-The HTTP interface supports GET and POST requests.
-
-# Configuring the Hardware
+## Configuring the Hardware
 
 The included diagram "5V-3.5V control.svg" shows the wiring I use. Note that the
 pin used for the temperature sensors has to be changed in /boot/config.txt,
@@ -60,134 +34,125 @@ ls /sys/bus/w1/devices/w1_bus_master1
 ```
 Expect to see devices such as 28-0316027f81ff
 
-# Configuring software
+# Software
 
-The server is configured from the command-line and from a configuration file
+The controller uses rules defined in javascript functions to control
+the temperature of the different services offered by the central heating
+system. It can operate either as a stand-alone controller or as an HTTPS
+server that supports querying and changing the configuration of the system.
+
+The server is initially configured from options read from a file in
+$HOME/.config/Hotpot/config.json. After the initial setup, the HTTPS interface
+can be used to query and modify the configuration.
+
+## Configuring software
+
+The server is configured from a configuration file
 in ~/.config/Hotpot/config.json
 
 Example configuration file:
 ```Javascript
 {
-  server: {
-      key: "$HOME/.config/Hotpot/hotpot.key",
-      cert: "$HOME/.config/Hotpot/hotpot.crt",
-      port: 13196
+  "server": {
+    key: "$HOME/.config/Hotpot/hotpot.key",
+    cert: "$HOME/.config/Hotpot/hotpot.crt",
+    "port": 13196,
+    "favicon": "$HOME/Hotpot/browser/images/favicon.ico",
+    "google_maps": {
+      "api_key": "Aizg4asuu0982343jkjk--qwiuoie3rfui12jd",
+      "ip": "46.208.108.90"
+    },
+    "weather": {
+      "class" : "MetOffice",
+      "api_key": "f6234ca5-e643-4333-8fdf-59f2123446ed",
+    },
+    "location": {
+      "latitude": 52.2479773,
+      "longitude": -1.504296
+    }
   },
-  controller: {
-     location: {
-        // Private API key, used for accessing google maps
-        api_key: "Abd0982354",
-        // This is no IP in particular
-        server_ip: "123.45.67.89"
-        home: {
-            latitude: 53.2479773,
-            longitude: -2.504296
-        }
-    },
-    thermostats: {
-      HW: {
-          id: "28-0115914ff5ff",
-          rules: "$HOME/.config/Hotpot/hw_rules.json",
-          target: 55,
-          window: 3
+  "controller": {
+    "thermostat": {
+      "HW": {
+        "id": "28-0113414ef5ff"
       },
-      CH: {
-          id: "28-0316027f81ff",
-          rules: "$HOME/.config/Hotpot/ch_rules.json",
-          target: 15,
-          window: 3
+      "CH": {
+        "id": "28-0eee027581ff"
       }
     },
-    pins: {
-      CH: {
-          gpio: 23
+    "pin": {
+      "CH": {
+        "gpio": 23
       },
-      HW: {
-          gpio: 25
+      "HW": {
+        "gpio": 25
       }
     },
-    mobiles: {
-      "7f673fe4926": {
-        name: "Roamer's Phone"
+    "mobile": {
+      "Crawford": {
+        "id": "3e19118c5e36d420"
       }
     }
+    "rule": [
+      {
+          "name" : "normal",
+          "test":
+function () {
+    var ch = this.pin.CH.getState(), hw = this.pin.HW.getState();
+    if (this.mobile.George.isReporting()
+        && this.mobile.George.arrivesIn() > 30 * 60) {
+        ch = 0; hw = 0; // more than 30 minutes away
+    }
+    if (this.weather("Feels Like Temperature") > 14) {
+        ch = 0; // warm enough
+    }
+    if (Time.between('22:00', '06:30')) {
+        ch = 0; // night
+    }
+    if (Time.between('20:00', '06:30')) {
+        hw = 0; // night
+    }
+    if (this.thermostat.CH.temperature > 18) {
+        ch = 0; // warm enough
+    }
+    if (this.thermostat.HW.temperature > 50) {
+        hw = 0; // hot enough
+    }
+    this.setPin("CH", ch);
+    this.setPin("HW", hw);
+}
+      }
+    ]
   }
 }
 ```
 - server - sets up the HTTP(S) server
-  - key server private key
-  - cert server certificate. If no key and cert are given, an HTTP server will be used, otherwise it will be HTTPS.
+  - HTTPS key server private key and certificate. If no key and cert are given, an HTTP server will be used, otherwise it will be HTTPS.
   - port the network port to use (default is 13196)
-- location - sets the latitude and longitude of the home location
-- thermostats - sets up the DS18X20 thermostats available to the system. Each thermostat has:
-  - id - used to communicate with the sensor
-  - rules - (optional) name of a rules file that contains the rules for the thermostat
-  - target (optional) starting target temperature, before any rules are applied. Defaults to 0K (-273 degress C)
-  - window (optional) window over the target temperature.
-- pins - sets up the pins used to control the system.
-  - gpio - the GPIO pin number
-- mobiles - sets the unique ID of roaming devices
+  - favicon icon to use in the browser
+  - weather sets up access to the weather server, class "MetOffice" is the only one currently supported. You will need your own API key.
+  - location - sets the latitude and longitude of the home location
+- controller
+  - thermostat - sets up the DS18X20 thermostats available to the system. Each thermostat is named, and has an id used to communicate with the sensor
+  - pin - sets up the GPIO pins, mapping the pin name to the GPIO pin number
+  - mobile - sets up the mobiles, each name maps to the unique ID of the mobile
+  - rule - list of rules that are used to control state of the system
 
 Note that the pin names "HW" and "CH" are predefined, as Y-plan systems have
 some dependencies between them.
 
-# Rules
+## Rules
 
 Rules are Javascript functions associated with thermostats.
 ```Javascript
-function rule(Controller controller)
-'this' is the Thermostat object
+function rule()
+'this' is the Controller object
 ```
-Each function is
-called in turn each time the temperature is polled, and it it returns true,
+Each function is called in in a polling loop, and it it returns true,
 the evaluation will stop. Rule functions are called with 'this' set to
-the thermostat object and the controller. The simplest
-rules set the configuration of the thermostat by adjusting e.g. the target
-temperature and window. For example,
-```Javascript
-[
-  {
-    name: "morning",
-    test: function() {
-      if (Time.between("06:30", "07:30")) {
-        this.set_target(55);
-        return true;
-      }
-    }
-  },
-  {
-    name: "otherwise",
-    test: function() {
-      this.set_target(0);
-      this.set_window(10);
-    }
-  }
-]
-```
-This will set the temperature to 55 degrees between 06:30 and 07:30 for your morning shower, then switch off the hot water at any other time. The "Time" class is provided to make comparing times easier. All time comparisons are done in system time.
+the Controller.
 
-You can interrogate the status of the thermostat using the methods described in the documentation. You can also interrogate other thermostats by using the controller. For example, you might have a rule for the central heating thermostat as follows:
-```Javascript
-{
-  name: "Turn on heating if CH temp falls below 5 degrees",
-  test: function(controller) {
-    if (controller.thermostat.CH.temperature() < 5)
-      this.set_target(40);
-  }
-}
-```
-A rule can also remove itself from the rule set (for example, a rule may
-be set to expire after a certain time) by returning the string "remove".
-```Javascript
-{
-  name: "One hour pulse for hot water",
-  test: function() {
-    if (Time.after("10:35"))
-      return "remove";
-    this.set_target(55);
-  }
-}
-```
+Rule functions can interrogate any part of the system using the internal APIs. A full list of APIs can be generated using the enclosed Makefile.
 
 # Browser interface
 
@@ -215,4 +180,3 @@ uses DHCP, you can set a random IP address and then set Hotpot up to use
 that random IP address in requests)
 * Go to "Overview" and enable the Maps Directions API
 * Set the API key in your server's Hotpot configuration
-

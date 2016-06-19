@@ -115,7 +115,7 @@
     };
 
     // Support for user clicks that move rules
-    var move_rule = function(dir) {
+    var move = function(dir) {
         var $self = $(this), $rel;
         var $rule = $self.closest(".rule");
         var $rules = $self.closest("[data-field='rule']");
@@ -123,7 +123,7 @@
         if ($rel.length === 0)
             return;
         stop_polling();
-        $.post(server + "/move_rule_" + dir + "/" + getPath($self))
+        $.post(server + "/move_" + dir + "/" + getPath($self))
             .done(function() {
                 if (dir === "down")
                     $rel.after($rule.remove());
@@ -139,13 +139,13 @@
 
     // User clicks move rule down
     var move_down = function() {
-        move_rule.call(this, "down");
+        move.call(this, "down");
         return false; // prevent repeated calls
     };
 
     // User clicks move rule up
     var move_up = function() {
-        move_rule.call(this, "up");
+        move.call(this, "up");
         return false; // prevent repeated calls
     };
 
@@ -158,7 +158,12 @@
                 $ui.prop("checked", value);
         } else {
             // Text / number field
-            $ui.text(value.toString());
+            var v;
+            if ($ui.data("type") === "float")
+                v = value.toPrecision(5);
+            else
+                v = value.toString();
+            $ui.text(v);
         }
         $ui.trigger("data_change");
     };
@@ -228,8 +233,6 @@
     var init_canvas = function($tc) {
         var $div = $tc.closest(".templated");
         var $df = $div.find("[data-field='temperature']");
-        var $dt = $div.find("[data-field='target']");
-        var $dw = $div.find("[data-field='window']");
 
         // Construct the autoscale graph and couple it to
         // DOM elements
@@ -237,12 +240,6 @@
             $thermostat: $div,
             current: function() {
                 return parseFloat($df.text());
-            },
-            target: function() {
-                return parseFloat($dt.text());
-            },
-            window: function() {
-                return parseFloat($dw.text());
             }
         });
 
@@ -314,8 +311,8 @@
 
         // Rule handlers
         $(".remove_rule").on("click", remove_rule);
-        $(".move_rule.up").on("click", move_up);
-        $(".move_rule.down").on("click", move_down);
+        $(".move.up").on("click", move_up);
+        $(".move.down").on("click", move_down);
 
         // Disable the first move-up and the last move-down in
         // any group of rules

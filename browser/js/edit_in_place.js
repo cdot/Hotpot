@@ -48,10 +48,12 @@
 
         if (options.area) {
             var $tick, $cross, $controls, $ta;
+            var h = Math.max($elf.outerHeight(), options.height);
+            var w = Math.max($elf.outerWidth(), options.width);
 
             $editor = $("<div></div>")
-                .css("height", options.height)
-                .css("width", options.width);
+                .css("height", h + "px")
+                .css("width", w + "px");
             var $error = $("<div></div>")
                 .css("color", "white")
                 .css("background-color", "red")
@@ -103,9 +105,8 @@
                             .css("color", "");
                     });
             $editor.append($controls);
-
             $ta = $("<textarea></textarea>")
-                .css("height", options.height - $controls.height())
+                .css("height", h)
                 .css("width", options.width);
             $ta.val($elf.text());
             $editor.append($ta);

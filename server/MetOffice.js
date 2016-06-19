@@ -14,13 +14,9 @@ const TAG = "MetOffice";
 
 const IS_NUMBER = [
     "Feels Like Temperature",
-    "Wind Gust",
     "Screen Relative Humidity",
-    "Precipitation Probability",
     "Wind Speed",
-    "Temperature",
-    "Weather Type",
-    "Max UV Index"
+    "Temperature"
 ];
 
 var MetOffice = function() {
@@ -71,13 +67,14 @@ MetOffice.prototype.findClosest = function(data, callback) {
  */
 MetOffice.prototype.findNearestLocation = function(callback) {
     "use strict";
+
+    var self = this;
     if (typeof this.cached_id !== "undefined") {
         // Don't request again
         callback.call(self, this.cached_id);
         return;
     }
 
-    var self = this;
     var url = URL_ROOT + "all/json/sitelist" + this.api_key();
     http.get(
         url,
@@ -171,9 +168,15 @@ MetOffice.prototype.getWeather = function(id, callback) {
         });
 };
 
+/**
+ * @private
+ * Update the current forecast from the metoffice, and schedule the
+ * next update.
+ */
 MetOffice.prototype.update = function() {
     "use strict";
     var self = this;
+    console.TRACE(TAG, "Updating from MetOffice website");
     this.findNearestLocation(function(id) {
         this.getWeather(id, function() {
             var wait = self.after.$ - Date.now();
@@ -187,15 +190,17 @@ MetOffice.prototype.update = function() {
 };
 
 /**
- * Interpolate linearly between "before" and "after" to get a midpoint for
- * the given field (only useful for numerical fields such as pressure,
- * temperature.
+ * Get the current weather estimate for the given field. If the field
+ * is a number, interpolate linearly between "before" and "after" to get
+ * a midpoint.
  * @param {string} what the field name to interpolate
  * e.g. "Feels Like Temperature"
  * @return the weather item
  */
 MetOffice.prototype.get = function(what) {
     "use strict";
+    if (typeof this.before === "undefined")
+        return 0;
     var est = this.before[what];
     if (this.after[what] !== est && IS_NUMBER.indexOf(what) >= 0) {
         var frac = (Date.now() - this.before.$)

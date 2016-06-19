@@ -95,20 +95,23 @@ Server.prototype.handle = function(path, params, response) {
         response.end();
         return;
     }
-    var reply = this.controller.dispatch(command, path, params);
-    response.writeHead(
-        200, "OK",
-	{
-            // Don't send as application/json or application/javascript; we
-            // don't want the receiver to parse it
-            "Content-Type": "text/plain",
-            "Access-Control-Allow-Origin": null,
-            "Access-Control-Allow-Methods": "POST,GET"
+    this.controller.dispatch(
+        command, path, params,
+        function(reply) {
+            response.writeHead(
+                200, "OK",
+	        {
+                    // Don't send as application/json or application/javascript; we
+                    // don't want the receiver to parse it
+                    "Content-Type": "text/plain",
+                    "Access-Control-Allow-Origin": null,
+                    "Access-Control-Allow-Methods": "POST,GET"
+                });
+            response.statusCode = 200;
+            if (typeof reply !== "undefined" && reply !== null)
+                response.write(serialize(reply));
+            response.end();
         });
-    response.statusCode = 200;
-    if (typeof reply !== "undefined" && reply !== null)
-        response.write(serialize(reply));
-    response.end();
 };
 
 /**

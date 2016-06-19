@@ -1,14 +1,8 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 /**
- * Singleton controller for a number of pins and thermostats. Controls the
- * hardware state, and dispatches incoming commands.
- *
- * The command set is very simple. Each command is delivered as a path
- * that contains a command-verb, such as "set" or "move_rule_up". The rest
- * of the path mirrors the structure of the controller configuration e.g.
- * "thermostat/HW/target" refers to the target setting on thermostat "HW".
- * Extra data, such as values, are passed in a structure that contains
- * command-specific fields.
+ * Singleton controller for a number of pins, thermostats, mobile devices,
+ * and the rules that manage the system state based on inputs from these
+ * elements.
  */
 const EventEmitter = require("events").EventEmitter;  
 const util = require("util");
@@ -23,6 +17,9 @@ const TAG = "Controller";
 // Time to wait for the multiposition valve to return to the discharged
 // state, in ms
 const VALVE_RETURN = 10000;
+
+// Frequency at which rules are re-evaluated
+const RULE_INTERVAL = 5000;
 
 var controller;
 module.exports = {
@@ -48,10 +45,14 @@ function Controller(config, when_ready) {
     this.createPins(config.getConfig("pin"), function() {
         this.createThermostats(config.getConfig("thermostat"), when_ready);
     });
+    this.createRules(config.getConfig("rule"));
+
     var weather_config = Server.getConfig().getConfig("weather");
     if (typeof weather_config !== "undefined")
         this.weather_agent = require(
             "./" + weather_config.get("class") + ".js");
+
+    this.pollRules();
 }
 util.inherits(Controller, EventEmitter);
 
@@ -119,7 +120,8 @@ Controller.prototype.createThermostats = function(ts_config, done) {
 
     self.thermostat = {};
     ts_config.each(function(k) {
-        var th = new Thermostat(k, self, ts_config.getConfig(k));
+        // Pass 'self' as the event listener
+        var th = new Thermostat(k, ts_config.getConfig(k));
         self.thermostat[k] = th;
     });
 
@@ -132,12 +134,21 @@ Controller.prototype.createThermostats = function(ts_config, done) {
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
     console.TRACE(TAG, "Resetting valve");
-    self.pin.HW.set(1, "init", function() {
-        self.pin.CH.set(0, "init", function() {
-            self.setPin("HW", "init", 0, function() {
+    self.pin.HW.set(1, function() {
+        self.pin.CH.set(0, function() {
+            self.setPin("HW", 0, function() {
                 done.call(self);
             });
         });
+    });
+};
+
+Controller.prototype.createRules = function(config) {
+    var self = this;
+    self.rule = [];
+    config.each(function(k) {
+        var r = config.getConfig(k);
+        self.insert_rule(new Rule(r.get("name"), r.get("test")));
     });
 };
 
@@ -160,7 +171,8 @@ Controller.prototype.getSerialisableConfig = function() {
         location: this.location,
         thermostat: sermap(this.thermostat),
         pin: sermap(this.pin),
-        mobile: sermap(this.mobile)
+        mobile: sermap(this.mobile),
+        rule: sermap(this.rule)
     };
 };
 
@@ -193,26 +205,24 @@ Controller.prototype.getSerialisableState = function() {
  * simple pin command, because there is a relationship between the state
  * of the pins in Y-plan systems that must be respected.
  * @param {String} channel e.g. "HW" or "CH"
- * @param {String} actor who is setting e.g. "thermostat" or "command"
  * @param {number} 1 (on) or 0 (off)
- * @param {function> respond function called when state is set, parameters
- * are (this=Controller, channel, state)
+ * @param {function> respond function called when state is set, no parameters
  */
-Controller.prototype.setPin = function(channel, actor, on, respond) {
+Controller.prototype.setPin = function(channel, on, respond) {
     "use strict";
 
     var self = this;
     if (this.pending) {
         setTimeout(function() {
-            self.setPin(channel, actor, on, respond);
+            self.setPin(channel, on, respond);
         }, VALVE_RETURN);
 	return;
     }
 
-    var cur = self.pin[channel].get();
-    if (actor !== "init" && (on && cur === 1 || !on && cur === 0)) {
+    var cur = self.pin[channel].getState();
+    if (on && cur === 1 || !on && cur === 0) {
         if (typeof respond !== "undefined")
-            respond.call(self, channel, on);
+            respond();
         return;
     }
 
@@ -231,16 +241,16 @@ Controller.prototype.setPin = function(channel, actor, on, respond) {
                 self.pending = true;
                 setTimeout(function() {
                     self.pending = false;
-                    self.setPin(channel, actor, on, respond);
+                    self.setPin(channel, on, respond);
                 }, VALVE_RETURN);
             });
         });
     } else {
         // Otherwise this is a simple state transition, just
         // set the appropriate pin
-        this.pin[channel].set(on, actor, function() {
+        this.pin[channel].set(on, function() {
             if (typeof respond !== "undefined")
-                respond.call(self, channel, on);
+                respond();
         });
     }
 };
@@ -290,12 +300,20 @@ Controller.prototype.weather = function(field) {
 
 /**
  * Command handler for a command that modifies the configuration
- * of the controller.
+ * of the controller. Commands may be received from the server.
+ *
+ * The command set is very simple. Each command is delivered as a path
+ * that contains a command-verb, such as "set" or "move_rule_up". The rest
+ * of the path mirrors the structure of the controller configuration e.g.
+ * "thermostat/HW/target" refers to the target setting on thermostat "HW".
+ * Extra data, such as values, are passed in a structure that contains
+ * command-specific fields.
  * @params {String} command the command verb
  * @params {array} path the command noun
  * @param {Object} data structure containing parameters
+ * @param {function} callback passed the response data for serialisation
  */
-Controller.prototype.dispatch = function(command, path, data) {
+Controller.prototype.dispatch = function(command, path, data, respond) {
     "use strict";
 
     var self = this;
@@ -307,42 +325,200 @@ Controller.prototype.dispatch = function(command, path, data) {
     }
     
     switch (command) {
-    case "state":
-        return self.getSerialisableState();
-    case "config":
-        return self.getSerialisableConfig();
-    case "remove_rule":
-        // thermostat/{th}/rule/{index}
-        self.thermostat[path[1]].remove_rule(parseInt(path[3]));
+    case "state": // Return a serialisable version of the current system state
+        respond(self.getSerialisableState());
+        return;
+    case "config": // Return a serialisable version of the system config
+        respond(self.getSerialisableConfig());
+        return;
+    case "remove_rule": // remove a rule
+        // /rule/{index}
+        self.remove_rule(parseInt(path[1]));
         self.emit("config_change");
         break;
-    case "insert_rule":
-        self.thermostat[path[1]].insert_rule(
+    case "insert_rule": // insert a new rule
+        self.insert_rule(
             new Rule(data.name, getFunction(data.test)));
         self.emit("config_change");
         break;
-    case "move_rule_up":
-        self.thermostat[path[1]].move_rule(parseInt(path[3]), -1);
+    case "move_up": // promote a rule in the evaluation order
+        // /rule/{index}
+        self.move_rule(parseInt(path[1]), -1);
         self.emit("config_change");
         break;
-    case "move_rule_down":
-        self.thermostat[path[1]].move_rule(parseInt(path[3]), 1);
+    case "move_down": // demote a rule
+        // /rule/{index}
+        self.move_rule(parseInt(path[1]), 1);
         self.emit("config_change");
         break;
-    case "set":
-        switch (path.shift()) {
-        case "thermostat":
-            self.thermostat[path.shift()].set(path, data);
+    case "set": // change the configuration of a system element
+        switch (path[0]) {
+        case "rule":
+            if (path[2] === "name")
+                self.rule[parseInt(path[1])].name = data.value;
+            else if (path[2] === "test")
+                self.rule[parseInt(path[1])].setTest(data.value);
+            self.emit("config_change");
             break;
         case "pin":
-            self.setPin(path.shift(), "command", data.value);
-            break;
+            self.setPin(parseInt(path[1]), data.value, respond);
+            return;
         case "mobile":
-            return self.setMobileLocation(data);
+            self.setMobileLocation(data, respond);
+            return;
+        // "rule":
+        // "weather":
         }
         break;
     default:
         throw "Unrecognised command " + command;
     }
-    return null;
+    // Default response is no reply
+    respond();
+    return;
 };
+
+/**
+ * Get the index of a rule specified by name, object or index
+ * @private
+ */
+Controller.prototype.getRuleIndex = function(i) {
+    "use strict";
+
+    if (typeof i !== "string") {
+        for (var j in this.rule) {
+            if (this.rule[j].name === i) {
+                return j;
+            }
+        }
+    } else if (typeof i === "object") {
+        return i.index;
+    }
+    return i;
+};
+
+/**
+ * Insert a rule at a given position in the order. Positions are
+ * numbered from 0 (highest priority). To add a rule at the lowest
+ * priority position, pass i=-1 (or i > max rule position)
+ * @param rule {Rule} the rule, a hash with name: , test:
+ * @param i {integer} the position to insert the rule at, or -1 (or undef) for the end
+ * @return {integer} the position the rules was added at
+ */
+Controller.prototype.insert_rule = function(rule, i) {
+    "use strict";
+    if (typeof i === "undefined" || i < 0 || i > this.rule.length)
+        i = this.rule.length;
+    if (i === this.rule.length) {
+        this.rule.push(rule);
+    } else if (i === 0)
+        this.rule.unshift(rule);
+    else
+        this.rule.splice(i, 0, rule);
+    this.renumberRules();
+    console.TRACE(TAG, "rule '" + this.rule[i].name
+                  + "' inserted at " + rule.index);
+    return i;
+};
+
+/**
+ * Move a rule a specified number of places in the order
+ * @param i the number (or name, or rule object) of the rule to delete
+ * @param move {integer} number of places to move the rule, negative to move up,
+ * positive to move down
+ */
+Controller.prototype.move_rule = function(i, move) {
+    "use strict";
+    if (move === 0)
+        return;
+    i = this.getRuleIndex(i);
+    var dest = i + move;
+    if (dest < 0)
+        dest = 0;
+    if (dest >= this.rule.length)
+        dest = this.rule.length - 1;
+
+    var removed = this.rule.splice(i, 1);
+    this.rule.splice(dest, 0, removed[0]);
+    this.renumberRules();
+    console.TRACE(TAG, this.name + " rule " + i + " moved to " + dest);
+};
+
+/**
+* Remove a rule
+* @param i the number (or name, or rule object) of the rule to delete
+* @return the removed rule function
+*/
+Controller.prototype.remove_rule = function(i) {
+    "use strict";
+    i = this.getRuleIndex(i);
+    var del = this.rule.splice(i, 1);
+    this.renumberRules();
+    console.TRACE(TAG, this.name + " rule " + del[0].name
+                  + "(" + i + ") removed");
+    return del[0];
+};
+
+/**
+ * Remove all rules
+ */
+Controller.prototype.clear_rules = function() {
+    "use strict";
+    console.TRACE(TAG, this.name + " rules cleared");
+    this.rule = [];
+};
+
+/**
+ * Reset the index of rules
+ * @private
+ */
+Controller.prototype.renumberRules = function() {
+    "use strict";
+
+    for (var j = 0; j < this.rule.length; j++)
+        this.rule[j].index = j;
+};
+
+/**
+ * Evaluate rules at regular intervals. The evaluation of rules sets a
+ * probability for a service - central heating or water - to be enabled.
+ */
+Controller.prototype.pollRules = function() {
+    var self = this;
+
+    // Test each of the rules in order until one returns true,
+    // then stop testing. This allows us to inject rules
+    // before the standard set and override them completely.
+    var remove = [];
+
+    for (i = 0; i < self.rule.length; i++) {
+        var rule = self.rule[i];
+        var result;
+        try {
+            result = rule.testfn.call(self);
+        } catch (e) {
+            console.TRACE(TAG, "rule '" + rule.name + "' failed: "
+                          + e.message);
+        }
+        if (typeof result === "string") {
+            if (result === "remove")
+                remove.push(i);
+        } else if (typeof result === "boolean" && result) {
+            break;
+        }
+    }
+
+    // Remove rules flagged for removal
+    while (remove.length > 0) {
+        i = remove.pop();
+        console.TRACE(TAG, "Remove rule " + i);
+        self.rule.splice(i, 1);
+        self.renumberRules();
+        self.emit("config_change");
+    }
+
+    setTimeout(function() {
+        self.pollRules();
+    }, RULE_INTERVAL);
+}
+

@@ -5,8 +5,8 @@
 const assert = require('assert');
 
 TestSupport = {
-    pinstate: {},
-    temperature: {},
+    pinstate:    { CH: 0, HW: 0 },
+    temperature: { CH: 20, HW: 40 },
     ID2Name: {},
 
     mapID: function(id, name) {
@@ -18,10 +18,11 @@ TestSupport = {
     get: function(id, fn) {
         var name = TestSupport.ID2Name[id];
         var odl = TestSupport.temperature[name];
+        var offset = Math.random() / 1000;
         if (TestSupport.pinstate[name])
-            TestSupport.temperature[name] += Math.random();
-        else
-            TestSupport.temperature[name] -= Math.random();
+            TestSupport.temperature[name] += offset;
+        else if (TestSupport.temperature[name] > 0)
+            TestSupport.temperature[name] -= offset;
         //console.log("WTF " + name + " (" + TestSupport.pinstate[name] + ") "
         // + odl + " -> " + TestSupport.temperature[name]);
         if (typeof fn !== "undefined")

@@ -21,8 +21,19 @@ Time = require("./Time.js"); // for executing rules
  */
 function Rule(name, fn) {
     "use strict";
+    this.index = -1;
+    this.name = name;
+    this.setTest(fn);
+}
+module.exports = Rule;
+
+/**
+ * Set the test function for this rule
+ * @param {string or function} fn the function
+ */
+Rule.prototype.setTest = function(fn) {
     if (typeof fn === "string") {
-        // Compile the fn function
+        // Compile the function
         try {
             eval("fn=" + fn);
         } catch (e) {
@@ -31,11 +42,8 @@ function Rule(name, fn) {
         }
         fn = eval(fn);
     }
-    this.index = -1;
-    this.name = name;
     this.testfn = fn;
-}
-module.exports = Rule;
+};
 
 /**
  * Get a serialisable version of the rule
@@ -49,16 +57,3 @@ Rule.prototype.getSerialisableConfig = function() {
     };
 };
 
-/**
- * Call the test function for this rule for the given thermostat and
- * current temperature. Will return true if the rule passes for the
- * given temperature, and false otherwise.
- * @param {Thermostat} thermostat the thermostat that owns the rule
- * @param {Controller} controller the controller
- */
-Rule.prototype.test = function(thermostat, controller) {
-    "use strict";
-    var pass = this.testfn.call(thermostat, controller);
-    //console.TRACE(TAG, "Test rule '"+ rule.name + "' = " + pass);
-    return pass;
-};

@@ -27,7 +27,7 @@ const TAG = "Mobile";
  */
 function Mobile(name, config) {
     "use strict";
-    console.TRACE(TAG, "Creating Mobile " + name);
+
     /** @property {String} name Name of this device */
     this.name = name;
     /** @property {String} id Unique ID for this device */
@@ -44,6 +44,8 @@ function Mobile(name, config) {
 
     /** @property {number} when we are expected home, epoch secs */
     this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
+
+    console.TRACE(TAG, "'" + name + "' constructed");
 }
 module.exports = Mobile;
 
@@ -72,7 +74,7 @@ Mobile.prototype.getSerialisableConfig = function() {
 Mobile.prototype.getSerialisableState = function() {
     "use strict";
     return {
-        time_of_arrival: this.time_of_arrival
+        time_of_arrival: new Date(Math.round(this.time_of_arrival * 1000)).toISOString()
     };
 };
 
@@ -148,6 +150,7 @@ Mobile.prototype.estimateTOA = function() {
     if (crow_flies < 1000) {
         this.time_of_arrival = Time.nowSeconds();
         console.TRACE(TAG, "Too close");
+        this.expect_update = Time.nowSeconds() + DEFAULT_INTERVAL;
         return DEFAULT_INTERVAL; // less than 1km; as good as there
     }
 
@@ -155,6 +158,7 @@ Mobile.prototype.estimateTOA = function() {
     if (crow_flies > 1000000) {
         this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
         console.TRACE(TAG, "Too far away; TOA " + this.time_of_arrival);
+        this.expect_update = Time.nowSeconds() + DEFAULT_INTERVAL;
         return LONG_INTERVAL;
     }
 
@@ -165,6 +169,7 @@ Mobile.prototype.estimateTOA = function() {
     if (time === 0) {
         // Shouldn't happen
         console.TRACE(TAG, "Zero time");
+        this.expect_update = Time.nowSeconds() + DEFAULT_INTERVAL;
         return DEFAULT_INTERVAL;
     }
 
@@ -186,6 +191,7 @@ Mobile.prototype.estimateTOA = function() {
     if (crow_flies > last_crow) {
         // no; skip re-routing until we know they are heading home
         console.TRACE(TAG, "Getting further away");
+        this.expect_update = Time.nowSeconds() + interval;
         return interval;
     }
 
@@ -252,3 +258,17 @@ Mobile.prototype.estimateTOA = function() {
 
     return interval;
 };
+
+Mobile.prototype.isReporting = function() {
+    if (this.time_of_arrival < Date.now() / 1000)
+        return false;
+    
+}
+
+/**
+ * Get the currently estimated arrival time from now
+ * @return {float} estimated arrival time in seconds from now
+ */
+Mobile.prototype.arrivesIn = function() {
+    return this.time_of_arrival - Time.nowSeconds();
+}

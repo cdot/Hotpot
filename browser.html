@@ -30,68 +30,53 @@
   <body>
     <h1>Hotpot Monitor for <span id="server_url"></span></h1>
     <div id="comms_error"></div>
-    <div><b>System Time:</b> <span data-field="time"></span></div>
-    <div><b>Outside temperature:</b> <span data-field="env_temp"></span></div>
+
+    <div><b>System Time:</b> <span data-field="time" class="monospace"></span></div>
+
+    <div><b>Outside temperature:</b> <span data-field="env_temp" data-type="float" class="monospace"></span></div>
+
     <h2>Thermostats</h2>
-    <div id="thermostat" data-field="thermostat">
-    </div>
+    <table id="thermostat" data-field="thermostat" width="100%">
+    </table>
+
     <h2>Pins</h2>
-    <div id="pin" data-field="pin">
-    </div>
+    <table id="pin" data-field="pin">
+    </table>
+
     <h2>Mobiles</h2>
     <div id="mobile" data-field="mobile">
     </div>
 
+    <h2>Rules</h2>
+    <table data-field="rule">
+      <thead>
+        <tr>
+          <th></th>
+          <th></th>
+          <th>Name</th>
+          <th>Function</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    <div class="add_rule">&#x2D32; Add new rule</div>
+
     <!-- Templates. The template is the content, not the container -->
 
     <!-- Thermostat Template -->
-    <div class="template" data-template="thermostat">
-      <div>
-        <h3 data-field="name"></h3>
-        <table width="100%">
-          <tr>
-            <td width="50%">
-              <table class="datatable">
-                <tr>
-                  <th>Target Temperature</th>
-                  <td>
-                    <span data-field="target" class="editable"></span>
-                    <span class="fixed">&plusmn;</span>
-                    <span data-field="window" class="editable"></span><span class="fixed">/2 set by</span>
-                    <span class="fixed" data-field="actor"></span>
-                  </td>
-                </tr>
-                <tr class="fixed">
-                  <th class="ralign">Current Temperature</th>
-                  <td data-field="temperature"></td>
-                </tr>
-                <tr>
-                  <th>Rules</th>
-                  <td>
-                    <table data-field="rule">
-                      <thead>
-                        <tr>
-                          <th></th>
-                          <th></th>
-                          <th>Name</th>
-                          <th>Function</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                      </tbody>
-                    </table>
-                    <div class="add_rule">&#x2D32; Add new rule</div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-            <td width="50%">
-              <canvas class="temperature_canvas"></canvas>
-            </td>
-          </tr>
-        </table>
-      </div>
-    </div>
+    <table class="template" data-template="thermostat">
+      <tr>
+        <td>
+          <span data-field="name"></span>
+          <br />
+          <span data-field="temperature" data-type="float" class="monospace"></span>
+        </td>
+        <td>
+          <canvas class="temperature_canvas" style="float:right"></canvas>
+        </td>
+      </tr>
+    </table>
 
     <!-- Rule-table template -->
     <table class="template">
@@ -104,20 +89,21 @@
             <span class="move_rule up" title="Move up">▲</span>
             <span class="move_rule down" title="Move down">▼</span>
           </td>
-          <td data-field="name" class="editable"></td>
-          <td data-field="test" class="editable" data-editable="height:'50px',area:true"></td>
+          <td data-field="name" class="editable monospace"></td>
+          <td>
+            <pre data-field="test" class="editable monospace function" data-editable="height:50,area:true"></pre>
+          </td>
         </tr>
       </tbody>
     </table>
 
     <!-- Pin template -->
-    <div class="template" data-template="pin">
-      <div>
-        <b data-field="name"></b>
-        <input type="checkbox" data-field="state"/>
-        last set by <span data-field="actor"></span>
-      </div>
-    </div>
+    <table class="template" data-template="pin">
+      <tr>
+        <td data-field="name"></td>
+        <td><input type="checkbox" data-field="state"/></td>
+      </tr>
+    </table>
 
     <!-- Mobile template -->
     <div class="template" data-template="mobile">

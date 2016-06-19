@@ -1,6 +1,7 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
 var Fs = require("fs");
+const Rule = require("./Rule.js");
 
 const TAG = "Pin";
 
@@ -25,11 +26,9 @@ function Pin(name, config, done) {
     self.name = name;
     /** @property {integer} gpio gpio port */
     self.gpio = config.get("gpio");
-    /** @property {String} actor the thing that last changed the pin state e.g. a rule name */
-    self.actor = "init";
 
-    console.TRACE(TAG, self.name +
-                  " gpio " + self.gpio);
+    console.TRACE(TAG, "'" + self.name +
+                  "' constructed on gpio " + self.gpio);
 
     var fallBackToDebug = function(err) {
         console.TRACE(TAG, self.name + " setup failed: "
@@ -137,16 +136,14 @@ Pin.prototype.setFeature = function(feature, value, callback) {
 /**
  * Set the pin state
  * @param {integer} state of the pin
- * @param {String} actor name of thing that caused the state to change
  * @param {function} callback called when state has been set
  */
-Pin.prototype.set = function(state, actor, callback) {
+Pin.prototype.set = function(state, callback) {
     "use strict";
 
-    console.TRACE(TAG, this.name + " " + actor + " set gpio "
+    console.TRACE(TAG, this.name + " set gpio "
                   + this.gpio + " = " + (state === 1 ? "ON" : "OFF"));
 
-    this.actor = actor;
     if (typeof this.debug !== "undefined")
         this.debug.pinstate[this.name] = state;
     this.setFeature("value", state, callback);
@@ -156,7 +153,7 @@ Pin.prototype.set = function(state, actor, callback) {
  * Get the pin state
  * @return pin state {integer}
  */
-Pin.prototype.get = function() {
+Pin.prototype.getState = function() {
     "use strict";
     if (typeof this.debug !== "undefined")
         return this.debug.pinstate[this.name];
@@ -186,7 +183,7 @@ Pin.prototype.getSerialisableConfig = function() {
 Pin.prototype.getSerialisableState = function() {
     "use strict";
     return {
-        actor: this.actor,
-        state: this.get()
+        state: this.getState()
     };
 };
+
