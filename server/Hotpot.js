@@ -3,17 +3,19 @@ const DESCRIPTION =
 "DESCRIPTION\nA Raspberry PI central heating control server.\n" +
 "See README.md for details\n\nOPTIONS\n";
 
-const Getopt = require("node-getopt");
-const Server = require("./Server.js");
-const Controller = require("./Controller.js");
-const Config = require("./Config.js");
+const getopt = require("node-getopt");
+
+const Server = require("Server.js");
+const Controller = require("Controller.js");
+const Config = require("Config.js");
+
 const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
 
 /** Main program */
 (function () {
     "use strict";
 
-    var cliopt = Getopt.create([
+    var cliopt = getopt.create([
         [ "h", "help", "Show this help" ],
         [ "d", "debug=ARG", "Run in debug mode e.g. --debug all" ]
     ])

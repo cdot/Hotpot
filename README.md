@@ -53,50 +53,52 @@ in ~/.config/Hotpot/config.json
 Example configuration file:
 ```Javascript
 {
-  "server": {
-    key: "$HOME/.config/Hotpot/hotpot.key",
-    cert: "$HOME/.config/Hotpot/hotpot.crt",
-    "port": 13196,
-    "favicon": "$HOME/Hotpot/browser/images/favicon.ico",
-    "google_maps": {
-      "api_key": "Aizg4asuu0982343jkjk--qwiuoie3rfui12jd",
-      "ip": "46.208.108.90"
+  server: {
+    port: 13196,
+    ssl: {
+        key: "$HOME/.config/Hotpot/hotpot.key",
+        cert: "$HOME/.config/Hotpot/hotpot.crt"
     },
-    "weather": {
-      "class" : "MetOffice",
-      "api_key": "f6234ca5-e643-4333-8fdf-59f2123446ed",
+    favicon: "$HOME/Hotpot/browser/images/favicon.ico",
+    googlemaps: {
+      api_key": "Aizg4asuu0982343jkjk--qwiuoie3rfui12jd",
+      ip: "46.208.108.90"
     },
-    "location": {
-      "latitude": 52.2479773,
-      "longitude": -1.504296
+    weather: {
+      class : "MetOffice",
+      api_key: "f6234ca5-e643-4333-8fdf-59f2123446ed",
+    },
+    location: {
+      latitude: 52.2479773,
+      longitude: -1.504296
     }
   },
-  "controller": {
-    "thermostat": {
-      "HW": {
-        "id": "28-0113414ef5ff"
+  controller: {
+    thermostat: {
+      HW: {
+        id: "28-0113414ef5ff"
       },
-      "CH": {
-        "id": "28-0eee027581ff"
+      CH: {
+        id: "28-0eee027581ff"
       }
     },
-    "pin": {
-      "CH": {
-        "gpio": 23
+    pin: {
+      CH: {
+        gpio: 23
       },
-      "HW": {
-        "gpio": 25
+      HW: {
+        gpio: 25
       }
     },
-    "mobile": {
-      "Crawford": {
-        "id": "3e19118c5e36d420"
+    mobile: {
+      Crawford: {
+        id: "3e19118c5e36d420"
       }
     }
-    "rule": [
+    rule: [
       {
-          "name" : "normal",
-          "test":
+          name : "normal",
+          test:
 function () {
     var ch = this.pin.CH.getState(), hw = this.pin.HW.getState();
     if (this.mobile.George.isReporting()
@@ -127,10 +129,10 @@ function () {
 }
 ```
 - server - sets up the HTTP(S) server
-  - HTTPS key server private key and certificate. If no key and cert are given, an HTTP server will be used, otherwise it will be HTTPS.
-  - port the network port to use (default is 13196)
-  - favicon icon to use in the browser
-  - weather sets up access to the weather server, class "MetOffice" is the only one currently supported. You will need your own API key.
+  - ssl - HTTPS key server private key and certificate. If no key and cert are given, an HTTP server will be used, otherwise it will be HTTPS.
+  - port - the network port to use (default is 13196)
+  - favicon - icon to use in the browser
+  - weather - sets up access to the weather server (see below).
   - location - sets the latitude and longitude of the home location
 - controller
   - thermostat - sets up the DS18X20 thermostats available to the system. Each thermostat is named, and has an id used to communicate with the sensor
@@ -180,3 +182,6 @@ uses DHCP, you can set a random IP address and then set Hotpot up to use
 that random IP address in requests)
 * Go to "Overview" and enable the Maps Directions API
 * Set the API key in your server's Hotpot configuration
+
+# Weather
+Weather information is retireved from the UK Meteorological Office data service, via a simple API that can easily be overridden with your own weather service provider. The class "MetOffice" is the reference implementation.

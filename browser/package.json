@@ -26,7 +26,6 @@
             "blockBindings": true
         },
         "globals": {
-            "hotpot_port" : true,
             "hotpot_ip" : true
         },
         "rules": {

@@ -1,30 +1,30 @@
 # Copyright (C) 2016 Crawford Currie http://c-dot.co.uk / MIT
 
-SOURCES := \
+MODULES := \
 	Config.js \
 	Controller.js \
-	Hotpot.js \
 	MetOffice.js \
 	Mobile.js \
 	Pin.js \
 	Rule.js \
 	Server.js \
-	Thermostat.js \
-	Time.js \
-	Utils.js \
-	getip.js
+	Thermostat.js
+
+SOURCES := \
+	Hotpot.js
+
+MMODULES := $(patsubst %,node_modules/%,$(MODULES))
 
 %.esl : %.js
-	eslint $^
+	eslint --no-ignore $^
 	touch $*.esl
 
-doc/%.js.html : %.js
-	./node_modules/.bin/jsdoc -d doc $^
+lint: $(subst .js,.esl,$(SOURCES) $(MMODULES))
 
-lint: $(subst .js,.esl,$(SOURCES))
-
-doc: $(patsubst %.js,doc/%.js.html,$(SOURCES))
+doc:
+	~/.node_modules/.bin/jsdoc -d ../doc $(SOURCES) $(MMODULES)
 
 clean:
 	find . -name '*~' -exec rm \{\} \;
 	find . -name '*.esl' -exec rm \{\} \;
+	echo $(patsubst %.js,../doc/%.*,$(SOURCES) $(MODULES))

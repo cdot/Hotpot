@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2015 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2015-2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /**
  * Simple in-place editing widget. If the editable thingy has class textarea,
