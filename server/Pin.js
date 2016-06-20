@@ -49,7 +49,7 @@ function Pin(name, config, done) {
             self.setFeature(
                 "active_low", 1,
                 function() {
-                    self.set(0, "init", function() {
+                    self.set(0, function() {
                         self.setFeature(
                             "direction", "out", done);
                     });
