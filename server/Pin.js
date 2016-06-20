@@ -2,8 +2,6 @@
 
 var fs = require("fs");
 
-const Rule = require("Rule.js");
-
 const TAG = "Pin";
 
 /**

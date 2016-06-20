@@ -3,7 +3,7 @@
 // This can't be "var" or "const" because rules can't see it then for some
 // unexplained reason
 /** @ignore */
-Time = require("Time.js"); // for executing rules
+Time = require("../common/Time.js"); // for executing rules
 
 const TAG = "Rule";
 

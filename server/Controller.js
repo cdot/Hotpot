@@ -3,11 +3,11 @@
 const util = require("util");
 const events = require("events").EventEmitter;  
 
-const Thermostat = require("Thermostat.js");
-const Pin = require("Pin.js");
-const Rule = require("Rule.js");
-const Mobile = require("Mobile.js");
-const Server = require("Server.js");
+const Thermostat = require("./Thermostat.js");
+const Pin = require("./Pin.js");
+const Rule = require("./Rule.js");
+const Mobile = require("./Mobile.js");
+const Server = require("./Server.js");
 
 const TAG = "Controller";
 
@@ -51,7 +51,7 @@ function Controller(config, when_ready) {
     var weather_config = Server.getConfig().getConfig("weather");
     if (typeof weather_config !== "undefined")
         this.weather_agent = require(
-            weather_config.get("class") + ".js");
+            "./" + weather_config.get("class") + ".js");
 
     this.pollRules();
 }

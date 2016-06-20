@@ -5,8 +5,9 @@
 
 const http = require("follow-redirects").http;
 
-const Server = require("Server.js");
-const Utils = require("Utils.js");
+const Utils = require("../common/Utils.js");
+
+const Server = require("./Server.js");
 
 /** @private */
 const URL_ROOT = "http://datapoint.metoffice.gov.uk/public/data/val/wxfcs/";

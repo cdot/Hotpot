@@ -9,8 +9,9 @@
  *     current_col: colour of value plot
  *     max_y: optional top of y axis
  *     min_y: optional bottom of y axis
+ * @class
+ * @private
  */
-
 function History() {
     "use strict";
     this.vals = [];

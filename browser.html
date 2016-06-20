@@ -101,15 +101,24 @@
     <table class="template" data-template="pin">
       <tr>
         <td data-field="name"></td>
-        <td><input type="checkbox" data-field="state"/></td>
+        <td><input type="checkbox" data-field="state" data-type="boolean"/></td>
       </tr>
     </table>
 
     <!-- Mobile template -->
     <div class="template" data-template="mobile">
       <div>
+        <iframe
+           width="200"
+           height="200"
+           style="float:right"
+           data-type="location"
+           data-field="location"
+           frameborder="0" style="border:0"
+           src="">
+        </iframe>
         <b data-field="name"></b>
-        is expected at
+        is expected home at
         <span data-field="time_of_arrival"></span>
     </div>
   </body>

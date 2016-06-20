@@ -8,14 +8,11 @@ const ONE_DAY = 86400000; // one day in ms
 /**
  * Functions for comparing times around the current time. All computations are
  * in Local time.
- * @public
- * @namespace Time
+ * @ignore
  */
 var Time = module.exports = {
     /**
      * Get midnight, today, as a Date
-     * @memberof Time
-     * @public
      * @return {Date} date object representing midnight
      */
     midnight: function() {
@@ -29,8 +26,6 @@ var Time = module.exports = {
     /**
      * Convert a HH[:MM] string to a Date
      * @param {string} s time
-     * @memberof Time
-     * @public
      * @return {Date} the date
      */
     parse: function(s) {
@@ -44,8 +39,6 @@ var Time = module.exports = {
 
     /**
      * Get the current time in ms
-     * @memberof Time
-     * @public
      * @return current time in epoch milliseconds
      */
     now: function() {
@@ -55,8 +48,6 @@ var Time = module.exports = {
 
     /**
      * Get the current time in s
-     * @memberof Time
-     * @public
      * @return current time in epoch seconds
      */
     nowSeconds: function() {
@@ -71,8 +62,6 @@ var Time = module.exports = {
      * @param {Date} t1 time, also accepts a string
      * @param {Date} t2 time, also accepts a string
      * @return boolean
-     * @memberof Time
-     * @public
      */
     between: function(t1, t2) {
         "use strict";
@@ -94,8 +83,6 @@ var Time = module.exports = {
      * @return true if the current time is after the given time
      * @param {Date} t1 time, also accepts a string
      * @return boolean
-     * @memberof Time
-     * @public
      */
     after: function(t1) {
         "use strict";
@@ -110,8 +97,6 @@ var Time = module.exports = {
      * @return true if the current time is before the given time
      * @param {Date} t1 time, also accepts a string
      * @return boolean
-     * @memberof Time
-     * @public
      */
     before: function(t1) {
         "use strict";

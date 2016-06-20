@@ -3,7 +3,7 @@
 const fs = require("fs");
 const serialize = require("serialize-javascript");
 
-const Utils = require("Utils");
+const Utils = require("../common/Utils");
 
 const TAG = "Config";
 

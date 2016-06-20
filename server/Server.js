@@ -4,7 +4,7 @@ const fs = require("fs");
 const serialize = require("serialize-javascript");
 const Url = require("url");
 
-const Utils = require("Utils.js");
+const Utils = require("../common/Utils.js");
 
 const TAG = "Server";
 

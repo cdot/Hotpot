@@ -1,12 +1,16 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /**
- * Useful utilities
- * @exports Utils
+ * @module Utils
  */
 
-var Utils = {
-    EARTH_RADIUS: 6371000, // metres
+const EARTH_RADIUS = 6371000; // metres
+
+/**
+ * Useful utilities
+ * @ignore
+ */
+var Utils = module.exports = {
 
     /**
      * Expand environment variables in the data string
@@ -28,6 +32,8 @@ var Utils = {
 
     /**
      * Debugging support for dumping a circular structure
+     * @param {object} data thing to dump
+     * @return {string} dump of data
      */
     dump: function(data) {
         "use strict";
@@ -46,8 +52,9 @@ var Utils = {
     },
 
     /**
-     * Convert a number in degress to radians
-     * @private
+     * Convert a number in degrees to radians
+     * @param {float} x number of degrees
+     * @return {float} x in radians
      */
     toRadians: function(x) {
 	"use strict";
@@ -57,8 +64,9 @@ var Utils = {
     /**
      * Return the crow-flies distance between two locations,
      * each specified by lat and long.
-     * @return distance in metres
-     * @private
+     * @param {Location} p1 first point
+     * @param {Location} p2 second point
+     * @return {float} distance in metres
      */
     haversine: function(p1, p2) {
 	"use strict";
@@ -73,7 +81,7 @@ var Utils = {
             Math.sin(dLong / 2) * Math.sin(dLong / 2);
 	var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-	return Utils.EARTH_RADIUS * c;
+	return EARTH_RADIUS * c;
     }
 };
-module.exports = Utils;
+

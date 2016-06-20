@@ -191,16 +191,23 @@
      * @param value the value to populate it with
      */
     var setValue = function($ui, value) {
-        if ($ui.is(":checkbox")) {
+        var t = $ui.data("type"), v;
+        if (typeof t === "undefined")
+            t = "string";
+        if (t === "boolean") {
             // Binary checkbox
             if (typeof value === "string")
                 $ui.prop("checked", parseInt(value) === 1);
             else
                 $ui.prop("checked", value);
+        } else if (t === "location") {
+            var lat = value.latitude, lon = value.longitude;
+            var nurl = "https://www.google.com/maps/embed/v1/view?key=AIzaSyDXPRbq4Q2GRxX9rDp-VsIsUSNcfil0PyI&zoom=12&center=" + lat + "," + lon;
+            if ($ui.attr("src") !== nurl)
+                $ui.attr("src", nurl);
         } else {
             // Text / number field
-            var v;
-            if ($ui.data("type") === "float")
+            if (t === "float")
                 v = value.toPrecision(5);
             else
                 v = value.toString();
@@ -216,7 +223,8 @@
      * @param {object} data the content of the datum
      */
     var populate = function($ui, name, data) {
-        if (typeof data === "object") {
+        if (typeof $ui.data("type") === "undefined"
+            && typeof data === "object") {
             for (var subname in data) {
                 $ui
                     .find("[data-field='" + subname + "']")

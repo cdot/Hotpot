@@ -5,9 +5,9 @@ const DESCRIPTION =
 
 const getopt = require("node-getopt");
 
-const Server = require("Server.js");
-const Controller = require("Controller.js");
-const Config = require("Config.js");
+const Server = require("./Server.js");
+const Controller = require("./Controller.js");
+const Config = require("./Config.js");
 
 const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
 

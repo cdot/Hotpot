@@ -2,10 +2,10 @@
 
 const https = require("https");
 
-const Time = require("Time.js");
-const Utils = require("Utils.js");
+const Time = require("../common/Time.js");
+const Utils = require("../common/Utils.js");
 
-const Server = require("Server.js");
+const Server = require("./Server.js");
 
 const DEFAULT_INTERVAL = 5 * 60; // 5 minutes in seconds
 const LONG_INTERVAL = 30 * 60; // half an hour in seconds
@@ -45,7 +45,7 @@ function Mobile(name, config) {
      * @type {Location}
      * @public
      */
-    this.location = null;
+    this.location = Server.getConfig().get("location");
 
     /**
      * Time of last location update, epoch secs 
@@ -98,6 +98,7 @@ Mobile.prototype.getSerialisableConfig = function() {
 Mobile.prototype.getSerialisableState = function() {
     "use strict";
     return {
+        location: this.location,
         time_of_arrival: new Date(Math.round(this.time_of_arrival * 1000)).toISOString()
     };
 };
