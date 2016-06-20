@@ -71,7 +71,7 @@ function httpGET(url, ok, fail) {
                 result += chunk;
             });
             res.on("end", function() {
-                ok(statusCode, result);
+                ok(statusCode, result, url);
             });
         })
         .on("error", function(err) {
@@ -87,11 +87,11 @@ if (config.debug)
 else
     console.TRACE = function() { "use strict"; };
 
-function new_address(addr) {
+function new_address(addr, url) {
     "use strict";
     console.TRACE("Current IP address " + addr);
     // Convert to JSON
-    addr = "hotpot_ip=\"" + addr + "\"";
+    addr = "//" + url + "\nhotpot_ip=\"" + addr + "\";";
 
     if (addr !== existing_addr)
         updateAddress(addr);
@@ -121,9 +121,10 @@ function new_address(addr) {
   }
   });
 */
-var chain = [
+var chain1 = 
     {
         // Scrape from netgear router "Router status" page
+	id: "Router",
         url: config.netgear_router,
         ok: function(data) {
             "use strict";
@@ -138,9 +139,12 @@ var chain = [
             }
             return null;
         }
-    },
+    };
+var chain = [
+chain1, chain1,
     {
         // Get from freegeoip
+	id: "freegeoip",
         url: "http://freegeoip.net/json",
         ok: function(data) {
             "use strict";
@@ -153,6 +157,7 @@ var chain = [
     },
     {
         // Get from smart_ip.net (defunct?)
+	id: "smartip",
         url: "http://smart_ip.net/myip",
         ok: function(data) {
             "use strict";
@@ -166,11 +171,11 @@ function askChain(i, after) {
     "use strict";
     console.TRACE("ask " + chain[i].url);
     httpGET(chain[i].url,
-            function(status, res) {
+            function(status, res, url) {
                 if (status === 200) {
                     new_addr = chain[i].ok(res);
                     if (typeof new_addr !== "undefined") {
-                        after(new_addr.trim());
+                        after(new_addr.trim(), chain[i].id);
                         return;
                     }
                     console.TRACE(chain[i].url + " bad data " + res);
@@ -178,7 +183,10 @@ function askChain(i, after) {
                     console.TRACE(chain[i].url + " bad status " + status);
                 }
                 askChain(i + 1, after);
-            });
+            },
+	    function(err) {
+		console.TRACE("Error: " + err);
+	    });
 }
 
 if (!existing_addr) {
