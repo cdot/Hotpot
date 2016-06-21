@@ -8,28 +8,20 @@ const Utils = require("../common/Utils.js");
 
 const TAG = "Server";
 
-var server; // singleton
-module.exports = {
+var setup = {
+    /**
+     * Initialise the singleton server from the given configuration
+     * @param {Config} config the configuration data
+     */
     configure: function(config) {
         "use strict";
-        server = new Server(config);
-    },
-    getConfig: function() {
-        "use strict";
-        return server.config;
-    },
-    // @param {Controller} controller the service provider for this server
-    setController: function(controller) {
-        "use strict";
-        server.controller = controller;
+        setup.server = new Server(config);
     }
 };
+module.exports = setup;
 
 /**
  * HTTP(S) server object (singleton).
- * The server is a singleton, so the external interface consists of two
- * methods, "configure" which sets up the server with given configuration,
- * and "setController" which couple a Controller to the server
  * @param {Config} config configuration object
  * @protected
  * @class
@@ -39,8 +31,6 @@ function Server(config) {
 
     var self = this;
     self.config = config;
-
-    self.favicon = fs.readFileSync(Utils.expandEnvVars(config.get("favicon")));
 
     var handler = function(request, response) {
         if (self[request.method]) {
@@ -79,11 +69,6 @@ Server.prototype.handle = function(path, params, response) {
         throw "Bad command";
     path = path.substring(1).split("/");
     var command = path.shift();
-    if (command === "favicon.ico") {
-        response.writeHead(200, {"Content-Type": "image/x-icon" });
-        response.end(this.favicon, "binary");
-        return;
-    }
     if (typeof this.controller === "undefined") {
         // Not ready
         response.statusCode = 500;

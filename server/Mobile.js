@@ -6,6 +6,7 @@ const Time = require("../common/Time.js");
 const Utils = require("../common/Utils.js");
 
 const Server = require("./Server.js");
+const Apis = require("./Apis.js");
 
 const DEFAULT_INTERVAL = 5 * 60; // 5 minutes in seconds
 const LONG_INTERVAL = 30 * 60; // half an hour in seconds
@@ -45,7 +46,7 @@ function Mobile(name, config) {
      * @type {Location}
      * @public
      */
-    this.location = Server.getConfig().get("location");
+    this.location = Server.server.config.get("location");
 
     /**
      * Time of last location update, epoch secs 
@@ -140,7 +141,7 @@ Mobile.prototype.setLocation = function(loc) {
 Mobile.prototype.estimateTOA = function() {
     "use strict";
 
-    var crow_flies = Utils.haversine(Server.getConfig().get("location"), this.location); // metres
+    var crow_flies = Utils.haversine(Server.server.config.get("location"), this.location); // metres
     console.TRACE(TAG, "Crow flies " + crow_flies + " m");
 
     // Are they very close to home?
@@ -184,7 +185,7 @@ Mobile.prototype.estimateTOA = function() {
                   + " / " + speed + " gives " + interval);
 
     // Are they getting any closer?
-    var last_crow = Utils.haversine(Server.getConfig().get("location"), this.last_location);
+    var last_crow = Utils.haversine(Server.server.config.get("location"), this.last_location);
     if (crow_flies > last_crow) {
         // no; skip re-routing until we know they are heading home
         console.TRACE(TAG, "Getting further away");
@@ -206,8 +207,8 @@ Mobile.prototype.estimateTOA = function() {
     // are on the planned route or not?
 
     console.TRACE(TAG, "Routing by " + mode);
-    var gmaps = Server.getConfig().get("google_maps");
-    var home = Server.getConfig().get("location");
+    var home = Server.server.config.get("location");
+    var gmaps = Apis.get("google_maps");
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
         + "&key=" + gmaps.api_key;

@@ -10,6 +10,7 @@
     var setup_backoff = 5; // seconds
     var update_backoff = 5; // seconds
     var update_rate = 5; // seconds
+    var apis;
 
     var poller;
     var stopPolling = function () {
@@ -202,7 +203,9 @@
                 $ui.prop("checked", value);
         } else if (t === "location") {
             var lat = value.latitude, lon = value.longitude;
-            var nurl = "https://www.google.com/maps/embed/v1/view?key=AIzaSyDXPRbq4Q2GRxX9rDp-VsIsUSNcfil0PyI&zoom=12&center=" + lat + "," + lon;
+            var nurl = "https://www.google.com/maps/embed/v1/view?key="
+                + apis.google_maps.api_key + "&zoom=12&center="
+                + lat + "," + lon;
             if ($ui.attr("src") !== nurl)
                 $ui.attr("src", nurl);
         } else {
@@ -367,14 +370,6 @@
      * the server.
      */
     var configure = function() {
-        var urps = window.location.search.substring(1).split(/[&;]/);
-        for (var i = 0; i < urps.length; i++) {
-            var urp = urps[i].split("=");
-            if (urp[0] === "ip")
-                hotpot_ip = urp[1];
-        }
-
-        server = "http://" + hotpot_ip + ":" + hotpot_port;
 
         $("#server_url").text(server);
 
@@ -406,5 +401,33 @@
             });
     };
 
-    $(document).ready(configure);
+    var get_apis = function() {
+        var urps = window.location.search.substring(1).split(/[&;]/);
+        for (var i = 0; i < urps.length; i++) {
+            var urp = urps[i].split("=");
+            if (urp[0] === "ip")
+                hotpot_ip = urp[1];
+        }
+
+        server = "http://" + hotpot_ip + ":" + hotpot_port;
+
+        $("#server_url").text(server);
+
+        $.get(
+            server + "/apis",
+            function(raw) {
+                eval("apis=" + raw);
+                configure();
+            })
+            .error(function(jqXHR, textStatus, errorThrown) {
+                $("#comms_error").html(
+                    "<div class='error'>Could not contact server "
+                        + server + " for setup: " + errorThrown
+                        + " Will try again in " + setup_backoff
+                        + " seconds</div>");
+                setTimeout(get_apis, setup_backoff * 1000);
+            });
+    };
+
+    $(document).ready(get_apis);
 })(jQuery);

@@ -1,6 +1,7 @@
 # Copyright (C) 2016 Crawford Currie http://c-dot.co.uk / MIT
 
 SOURCES := \
+	server/Apis.js \
 	server/Config.js \
 	server/Controller.js \
 	server/MetOffice.js \

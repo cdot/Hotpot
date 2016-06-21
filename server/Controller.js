@@ -8,6 +8,7 @@ const Pin = require("./Pin.js");
 const Rule = require("./Rule.js");
 const Mobile = require("./Mobile.js");
 const Server = require("./Server.js");
+const Apis = require("./Apis.js");
 
 const TAG = "Controller";
 
@@ -18,11 +19,10 @@ const VALVE_RETURN = 10000;
 // Frequency at which rules are re-evaluated
 const RULE_INTERVAL = 5000;
 
-var controller;
 module.exports = {
     configure: function(config, when_ready) {
         "use strict";
-        controller = new Controller(config, when_ready);
+        Server.server.controller = new Controller(config, when_ready);
     }
 };
 
@@ -48,10 +48,10 @@ function Controller(config, when_ready) {
     });
     this.createRules(config.getConfig("rule"));
 
-    var weather_config = Server.getConfig().getConfig("weather");
+    var weather_config = Apis.get("weather");
     if (typeof weather_config !== "undefined")
         this.weather_agent = require(
-            "./" + weather_config.get("class") + ".js");
+            "./" + weather_config["class"] + ".js");
 
     this.pollRules();
 }
@@ -278,10 +278,10 @@ Controller.prototype.setMobileLocation = function(info) {
     if (d === null)
         throw "Set location: " + d + " not known" + new Error().stack;
     d.setLocation(info);
-    var interval = d.estimateTOA(Server.config);
+    var interval = d.estimateTOA(this);
     return {
-        home_lat: Server.getConfig().get("location").latitude,
-        home_long: Server.getConfig().get("location").longitude,
+        home_lat: Server.server.config.get("location").latitude,
+        home_long: Server.server.config.get("location").longitude,
         interval: interval
     };
 };
@@ -321,11 +321,14 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
     }
     
     switch (command) {
-    case "state": // Return a serialisable version of the current system state
+    case "state": // Return the current system state
         respond(self.getSerialisableState());
         return;
-    case "config": // Return a serialisable version of the system config
+    case "config": // Return the controller config
         respond(self.getSerialisableConfig());
+        return;
+    case "apis": // Return the apis config
+        respond(Apis.getSerialisableConfig());
         return;
     case "remove_rule": // remove a rule
         // /rule/{index}

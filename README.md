@@ -59,18 +59,19 @@ Example configuration file:
         key: "$HOME/.config/Hotpot/hotpot.key",
         cert: "$HOME/.config/Hotpot/hotpot.crt"
     },
-    favicon: "$HOME/Hotpot/browser/images/favicon.ico",
-    googlemaps: {
+    location: {
+      latitude: 52.2479773,
+      longitude: -1.504296
+    }
+  },
+  apis: {
+    google_maps: {
       api_key": "Aizg4asuu0982343jkjk--qwiuoie3rfui12jd",
       ip: "46.208.108.90"
     },
     weather: {
       class : "MetOffice",
       api_key: "f6234ca5-e643-4333-8fdf-59f2123446ed",
-    },
-    location: {
-      latitude: 52.2479773,
-      longitude: -1.504296
     }
   },
   controller: {
@@ -131,9 +132,10 @@ function () {
 - server - sets up the HTTP(S) server
   - ssl - HTTPS key server private key and certificate. If no key and cert are given, an HTTP server will be used, otherwise it will be HTTPS.
   - port - the network port to use (default is 13196)
-  - favicon - icon to use in the browser
-  - weather - sets up access to the weather server (see below).
   - location - sets the latitude and longitude of the home location
+- apis - sets up public API keys
+  - weather - sets up access to the weather server (see "Weather" below).
+  - google_maps - sets up access to Google maps (see "Routing" below).
 - controller
   - thermostat - sets up the DS18X20 thermostats available to the system. Each thermostat is named, and has an id used to communicate with the sensor
   - pin - sets up the GPIO pins, mapping the pin name to the GPIO pin number
@@ -172,6 +174,8 @@ the location, speed and direction of the device.
 The Hotpot server rules can use the estimated return time to decide whether
 to enable services or not.
 
+# Routing
+
 For routing to work, the server has to have access to the Google Maps API.
 
 * Go to the Google API console
@@ -185,3 +189,6 @@ that random IP address in requests)
 
 # Weather
 Weather information is retireved from the UK Meteorological Office data service, via a simple API that can easily be overridden with your own weather service provider. The class "MetOffice" is the reference implementation.
+
+An API key is required to access weather information from the Met Office. These
+are available for free.

@@ -7,6 +7,7 @@ const http = require("follow-redirects").http;
 
 const Utils = require("../common/Utils.js");
 
+const Apis = require("./Apis.js");
 const Server = require("./Server.js");
 
 /** @private */
@@ -43,6 +44,7 @@ var MetOffice = function() {
     // this.cached_id
     // this.before
     // this.after
+    console.TRACE(TAG, "starting");
     this.update();
 };
 
@@ -52,7 +54,7 @@ var MetOffice = function() {
  */
 MetOffice.prototype.api_key = function() {
     "use strict";
-    return "?key=" + Server.getConfig().getConfig("weather").get("api_key");
+    return "?key=" + Apis.get("weather").api_key;
 };
 
 /**
@@ -66,7 +68,7 @@ MetOffice.prototype.findClosest = function(data, callback) {
     "use strict";
     var list = data.Locations.Location;
     var best, mindist = Number.MAX_VALUE;
-    var here = Server.getConfig().get("location");
+    var here = Server.server.config.get("location");
     for (var i in list) {
         var dist = Utils.haversine(here, list[i]);
         if (dist < mindist) {

@@ -5,9 +5,10 @@ const DESCRIPTION =
 
 const getopt = require("node-getopt");
 
+const Config = require("./Config.js");
+const Apis = require("./Apis.js");
 const Server = require("./Server.js");
 const Controller = require("./Controller.js");
-const Config = require("./Config.js");
 
 const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
 
@@ -38,6 +39,7 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
     };
 
     var config = new Config(CONFIG_FILE);
+    Apis.configure(config.getConfig("apis"));
     Server.configure(config.getConfig("server"));
 
     // Start the controller and when it's ready, start an HTTP server
@@ -46,7 +48,6 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
         config.getConfig("controller"),
         function() {
             var self = this;
-            Server.setController(self);
             
             // Save config when it changes, so we restart to the
             // same state
