@@ -33,11 +33,10 @@ eval("config=" + Fs.readFileSync("./getip.config"));
 
 var existing_addr;
 
-// Update the IP address in the file, if it has changed
+// Update the IP address using FTP, if it has changed
 function updateAddress(addr) {
     "use strict";
 
-    console.TRACE("Updating IP address");
     var Ftp = new JSFtp(config.ftp);
 
     if (config.ftp.debugEnable) {
@@ -48,6 +47,7 @@ function updateAddress(addr) {
     }
 
     console.TRACE("Push up new IP address " + addr);
+Ftp.raw.quit();return;
     Ftp.put(new Buffer(addr), config.ftp.path,
             function(hadErr) {
                 if (hadErr)
@@ -75,7 +75,10 @@ function httpGET(url, ok, fail) {
             });
         })
         .on("error", function(err) {
-            fail(err);
+            if (fail)
+		fail(err);
+	    else
+		console.TRACE("GET " + url + "failed: " + err);
         });
     req.on("response", function(mess) {
         statusCode = mess.statusCode;
@@ -84,67 +87,134 @@ function httpGET(url, ok, fail) {
 
 if (config.debug)
     console.TRACE = console.log;
-else
+else {
     console.TRACE = function() { "use strict"; };
-
-function new_address(addr, url) {
-    "use strict";
-    console.TRACE("Current IP address " + addr);
-    // Convert to JSON
-    addr = "//" + url + "\nhotpot_ip=\"" + addr + "\";";
-
-    if (addr !== existing_addr)
-        updateAddress(addr);
 }
 
-// Get known address
-/*httpGET(
-  config.http,
-  function(status, old_addr) {
-  if (status === 200) {
-  if (/^hotpot_ip="\d+(\.\d+)+"$/.test(old_addr)) {
-  var hotpot_ip;
-  eval(old_addr);
-  console.TRACE("Recorded IP address " + hotpot_ip);
-  httpGET(
-  { host: hotpot_ip + ":" + config.target.port,
-  path: config.target.path },
-  function(status, data) {
-  if (status === 200) {
-  existing_addr = old_addr;
-  } else {
-  console.TRACE("Recorded IP address responded " + status);
-  }
-  });
-  } else
-  console.TRACE("Recorded IP address " + old_addr + " is corrupt");
-  }
-  });
-*/
-var chain1 = 
-    {
-        // Scrape from netgear router "Router status" page
-	id: "Router",
+function newAddress(addr, old_addr, id) {
+    "use strict";
+    console.TRACE("Determined current IP address to be " + addr);
+    if (addr !== existing_addr) {
+	// Convert to JSON
+	addr = "hotpot_ip=\"" + addr + "\"; /*" + id + "*/";
+	updateAddress(addr);
+    }
+}
+
+
+var chain = [];
+
+function nextInChain(i, after, old_addr) {
+    "use strict";
+    chain[i].fn(i, after, old_addr);
+}
+
+function chainGET(i, after, old_addr) {
+    console.TRACE("ask " + chain[i].url);
+    httpGET(chain[i].url,
+	    function(status, res, url) {
+                if (status === 200) {
+		    var new_addr = chain[i].ok(res);
+		    if (typeof new_addr !== "undefined") {
+                        after(new_addr.trim(), old_addr, chain[i].id);
+                        return;
+		    }
+		    console.TRACE(chain[i].url + " bad data " + res);
+                } else {
+		    console.TRACE(chain[i].url + " bad status " + status);
+                }
+                if (chain[i].repeats-- == 0)
+		    i++;
+		nextInChain(i, after, old_addr);
+	    },
+	    function(err) {
+		console.TRACE("Error: " + err);
+	    });
+}
+
+function chainTelnet(i, after, old_addr) {
+    var tn = chain[i].telnet;
+    var Telnet = require("telnet-client");
+
+    var connection = new Telnet();
+    connection
+	.connect(tn)
+	.then(
+	    function(prompt) {
+		connection
+		    .exec('ip iplist')
+		    .then(
+			function(resp) {
+			    //console.TRACE(resp);
+			    var m = tn.extract.exec(resp);
+			    console.TRACE(chain[i].id + " says IP address is "
+					  + m[1]);
+			    after(m[1], old_addr, chain[i].id);
+			    connection.end();
+			},
+			function(err) {
+			    console.TRACE("Telnet error " + err);
+			    nextInChain(i + 1, after, old_addr);
+			})
+	    },
+	    function (err) {
+		console.TRACE("Telnet error " + err);
+		nextInChain(i + 1, after, old_addr);
+	    });
+}
+
+if (config.gateway_router) {
+    chain.push({
+	id: "Gateway Router",
+	fn: chainTelnet,
+	telnet: config.gateway_router
+    });
+}
+
+if (config.netgear_router) {
+    chain.push({
+	// Scrape from netgear router "Router status" page
+	id: "Netgear Router",
+	fn: chainGET,
         url: config.netgear_router,
         ok: function(data) {
-            "use strict";
-            var l = data.split(/\n/);
-            var il;
-            for (var i = 0; i < l.length; i++) {
+	    "use strict";
+	    var l = data.split(/\n/);
+	    var il;
+	    for (var i = 0; i < l.length; i++) {
                 if (/IP Address/.test(l[i])) {
-                    i++;
-                    il = l[i].replace(/^.*?>([\d.]+).*/, "$1");
-                    return il;
+		    i++;
+		    il = l[i].replace(/^.*?>([\d.]+).*/, "$1");
+		    return il;
                 }
+	    }
+	    return null;
+        },
+	repeats: 2
+    });
+}
+
+chain.push(
+    {
+        // Get from freegeoip
+	id: "icanhazip",
+	fn: chainGET,
+        url: "http://icanhazip.com",
+        ok: function(data) {
+            "use strict";
+            try {
+                return ("" + data).trim();
+            } catch (e) {
+                return null;
             }
-            return null;
         }
-    };
-var chain = [
-chain1, chain1,
+    });
+
+chain.push(
     {
         // Get from freegeoip
 	id: "freegeoip",
+	fn: chainGET,
         url: "http://freegeoip.net/json",
         ok: function(data) {
             "use strict";
@@ -154,43 +224,53 @@ chain1, chain1,
                 return null;
             }
         }
-    },
+    });
+
+chain.push(
     {
         // Get from smart_ip.net (defunct?)
 	id: "smartip",
+	fn: chainGET,
         url: "http://smart_ip.net/myip",
         ok: function(data) {
             "use strict";
             return data;
         }
-    }
-];
+    });
 
-var new_addr;
-function askChain(i, after) {
-    "use strict";
-    console.TRACE("ask " + chain[i].url);
-    httpGET(chain[i].url,
-            function(status, res, url) {
-                if (status === 200) {
-                    new_addr = chain[i].ok(res);
-                    if (typeof new_addr !== "undefined") {
-                        after(new_addr.trim(), chain[i].id);
-                        return;
-                    }
-                    console.TRACE(chain[i].url + " bad data " + res);
-                } else {
-                    console.TRACE(chain[i].url + " bad status " + status);
-                }
-                askChain(i + 1, after);
-            },
-	    function(err) {
-		console.TRACE("Error: " + err);
-	    });
-}
-
-if (!existing_addr) {
-    askChain(
+function refreshAddr(old_address) {
+    nextInChain(
         0,
-        new_address);
+        newAddress, old_address);
 }
+
+// Get known address
+httpGET(
+    config.http,
+    function(status, old_addr) {
+	if (status === 200) {
+	    var hotpot_ip;
+	    try {
+		eval(old_addr);
+		console.TRACE("IP address from web " + hotpot_ip);
+/*		httpGET(
+		    "http://" + hotpot_ip + ":" + config.target.port +
+		      config.target.path,
+		    function(status, data) {
+			if (status === 200) {
+			    console.TRACE("Validated recorded IP address");
+			} else {
+			    console.TRACE("Recorded IP address responded "
+					  + status);
+			    refreshAddr(old_addr);
+			}
+		    });
+*/
+		refreshAddr(old_addr); // test
+	    } catch (e) {
+		console.TRACE("Recorded IP address " + old_addr
+			      + " is corrupt: " + e);
+		refreshAddr(old_addr);
+	    }
+	}
+    });
