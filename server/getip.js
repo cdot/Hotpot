@@ -101,39 +101,46 @@ function newAddress(addr, old_addr, id) {
     }
 }
 
-
 var chain = [];
 
-function nextInChain(i, after, old_addr) {
+function nextInChain(after, old_addr) {
     "use strict";
-    chain[i].fn(i, after, old_addr);
+    if (chain.length === 0)
+	return;
+    if (typeof chain[0].repeats === "undefined")
+	chain[0].repeats = 0;
+    else if (chain[0].repeats === 0)
+	chain.shift();
+    else
+	chain[0].repeats--;
+    chain[0].fn.call(chain[0], after, old_addr);
 }
 
-function chainGET(i, after, old_addr) {
-    console.TRACE("ask " + chain[i].url);
-    httpGET(chain[i].url,
+function chainGET(after, old_addr) {
+    var self = this;
+    console.TRACE("ask " + self.url);
+    httpGET(self.url,
 	    function(status, res, url) {
                 if (status === 200) {
-		    var new_addr = chain[i].ok(res);
+		    var new_addr = self.ok(res);
 		    if (typeof new_addr !== "undefined") {
-                        after(new_addr.trim(), old_addr, chain[i].id);
+                        after(new_addr.trim(), old_addr, self.id);
                         return;
 		    }
-		    console.TRACE(chain[i].url + " bad data " + res);
+		    console.TRACE(self.url + " bad data " + res);
                 } else {
-		    console.TRACE(chain[i].url + " bad status " + status);
+		    console.TRACE(self.url + " bad status " + status);
                 }
-                if (chain[i].repeats-- == 0)
-		    i++;
-		nextInChain(i, after, old_addr);
+		nextInChain(after, old_addr);
 	    },
 	    function(err) {
 		console.TRACE("Error: " + err);
 	    });
 }
 
-function chainTelnet(i, after, old_addr) {
-    var tn = chain[i].telnet;
+function chainTelnet(after, old_addr) {
+    var self = this;
+    var tn = self.telnet;
     var Telnet = require("telnet-client");
 
     var connection = new Telnet();
@@ -147,20 +154,24 @@ function chainTelnet(i, after, old_addr) {
 			function(resp) {
 			    //console.TRACE(resp);
 			    var m = tn.extract.exec(resp);
-			    console.TRACE(chain[i].id + " says IP address is "
+			    console.TRACE(self.id + " says IP address is "
 					  + m[1]);
-			    after(m[1], old_addr, chain[i].id);
+			    after(m[1], old_addr, self.id);
 			    connection.end();
 			},
 			function(err) {
 			    console.TRACE("Telnet error " + err);
-			    nextInChain(i + 1, after, old_addr);
+			    nextInChain(after, old_addr);
 			})
 	    },
 	    function (err) {
 		console.TRACE("Telnet error " + err);
-		nextInChain(i + 1, after, old_addr);
+		nextInChain(after, old_addr);
 	    });
+    connection.on("error", function(e) {
+	console.TRACE("Telnet " + e);
+	nextInChain(after, old_addr);
+    });
 }
 
 if (config.gateway_router) {
@@ -239,9 +250,7 @@ chain.push(
     });
 
 function refreshAddr(old_address) {
-    nextInChain(
-        0,
-        newAddress, old_address);
+    nextInChain(newAddress, old_address);
 }
 
 // Get known address
