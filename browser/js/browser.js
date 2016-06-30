@@ -264,16 +264,16 @@
     };
 
     /**
-     * Prepare a temperature graph canvas
-     * @param $tc the canvas
+     * Add a trace to the temperature graph canvas
+     * @param $df the field that carries the temperature
      */
-    var initTemperatureCanvas = function($tc) {
-        var $div = $tc.closest(".templated");
-        var $df = $div.find("[data-field='temperature']");
+    var addTrace = function(name, $df) {
 
+        var $tc = $("#temperature_canvas");
         // Construct the autoscale graph and couple it to
         // DOM elements
         $tc.autoscale_graph({
+            label: name,
             current: function() {
                 return parseFloat($df.text());
             }
@@ -348,9 +348,16 @@
         $("input:checkbox", $root).on("click", toggleField);
 
         // Thermostat canvas
-        $(".temperature_canvas", $root).each(
+        $("[data-field='temperature']").each(
             function() {
-                initTemperatureCanvas($(this));
+                var $div = $(this).closest(".templated");
+                if ($div.length === 0)
+                    return; // in a template
+                addTrace($div.attr("data-field"), $(this));
+            });
+        $("[data-field='env_temp']").each(
+            function() {
+                addTrace("Outside", $(this));
             });
 
         // Rule handlers

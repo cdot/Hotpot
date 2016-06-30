@@ -3,6 +3,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>HotPot remote monitor</title>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.6/Chart.bundle.min.js"></script>
     <script type="text/javascript" src="browser/jquery/jquery-2.2.3.min.js"></script>
     <script type="text/javascript" src="browser/js/edit_in_place.js"></script>
     <script type="text/javascript" src="browser/js/autoscale_graph.js"></script>
@@ -34,6 +35,7 @@
     <div><b>System Time:</b> <span data-field="time" class="monospace"></span></div>
 
     <div><b>Outside temperature:</b> <span data-field="env_temp" data-type="float" class="monospace"></span></div>
+    <canvas id="temperature_canvas" style="width:100%"></canvas>
 
     <h2>Thermostats</h2>
     <table id="thermostat" data-field="thermostat" width="100%">
@@ -71,9 +73,6 @@
           <span data-field="name"></span>
           <br />
           <span data-field="temperature" data-type="float" class="monospace"></span>
-        </td>
-        <td>
-          <canvas class="temperature_canvas" style="float:right"></canvas>
         </td>
       </tr>
     </table>

@@ -3,10 +3,12 @@
 /**
  * Simple auto-scaling graph for a single value trace using an HTML5 canvas
  * Options:
- *     current: required function returning current value
+ *     traces: array of objects
+ *        label: label for this trace
+ *        current: required function returning current value
+ *        colour: RGB colour of value plot
  *     background_col: colour of background
  *     text_col: colour of text
- *     current_col: colour of value plot
  *     max_y: optional top of y axis
  *     min_y: optional bottom of y axis
  * @class
@@ -40,20 +42,32 @@ History.prototype.get = function(num) {
     return trace;
 };
 
+const trace_cols = [ "yellow", "green", "orange", "red" ];
+
 (function($) {
     "use strict";
-    $.fn.autoscale_graph = function(options) {
+    $.fn.autoscale_graph = function(trace, options) {
         var $canvas = $(this);
         var font_height = 10;
         var window = 5; // degrees either side of measured temp
 
-        options = $.extend({
-            background_col: "black",
-            current_col: "yellow",
-            text_col: "white",
-            min_y: Number.MAX_VALUE,
-            max_y: Number.MIN_VALUE
-        }, options);
+        if (typeof options !== "undefined" ||
+            typeof $canvas.data("options") === "undefined") {
+            options = $.extend({
+                background_col: "black",
+                text_col: "white",
+                min_y: Number.MAX_VALUE,
+                max_y: Number.MIN_VALUE,
+                traces: []
+            }, options);
+            $canvas.data("options", options);
+        } else
+            options = $canvas.data("options");
+
+        if (typeof trace.colour === "undefined")
+            trace.colour = trace_cols[options.traces.length];
+
+        options.traces.push(trace);
 
         function y(v) {
             return $canvas.height() -
@@ -75,13 +89,6 @@ History.prototype.get = function(num) {
                 $canvas.data("attrs_set", true);
             }
 
-            var current = options.current();
-
-            if (current < options.min_y)
-                options.min_y = Math.round(current - window / 2);
-            if (current > options.max_y)
-                options.max_y = Math.round(current + window / 2);
-
             var ctx = $canvas[0].getContext("2d");
 
             // Always fill the background and paint the window. We may blat
@@ -92,41 +99,66 @@ History.prototype.get = function(num) {
             ctx.fillStyle = options.background_col;
             ctx.fillRect(0, 0, $canvas.width(), $canvas.height());
 
-            var history = $canvas.data("history");
-            if (typeof history === "undefined") {
-                history = new History();
-                $canvas.data("history", history);
+            var history, line, current;
+            for (var i in options.traces) {
+                line = options.traces[i];
+                current = line.current();
+
+                if (current < options.min_y)
+                    options.min_y = Math.round(current - window / 2);
+                if (current > options.max_y)
+                    options.max_y = Math.round(current + window / 2);
+
+                history = line.history;
+                if (typeof history === "undefined") {
+                    history = new History();
+                    line.history = history;
+                }
+                history.push(current);
             }
-            history.push(current);
-
-            // Current
-            ctx.strokeStyle = options.current_col;
-            ctx.beginPath();
             
-            var trace = history.get($canvas.width());
-            ctx.moveTo(0, y(trace[0]));
-            for (var i = 1; i < trace.length; i++)
-                ctx.lineTo(i, y(trace[i]));
-            ctx.stroke();
+            for (var i in options.traces) {
+                line = options.traces[i];
+                history = line.history;
 
+                ctx.strokeStyle =
+                    (typeof line.colour !== "undefined") ?
+                    line.colour : "yellow";
+
+                // Current
+                ctx.beginPath();
+            
+                var trace = history.get($canvas.width());
+                ctx.moveTo(0, y(trace[0]));
+                for (var i = 1; i < trace.length; i++)
+                    ctx.lineTo(i, y(trace[i]));
+
+                ctx.stroke();
+            }
+
+            // Legend
             ctx.fillStyle = options.text_col;
             ctx.strokeStyle = options.text_col;
             ctx.font = font_height + "px sans-serif";
 
             var t = "" + options.max_y;
             ctx.textBaseline = "top";
-            ctx.fillText(
-                t,
-                $canvas.width() - ctx.measureText(t).width,
-                0);
+            ctx.fillText(t, 0, 0);
 
             t = "" + options.min_y;
             ctx.textBaseline = "bottom";
-            ctx.fillText(
-                t,
-                $canvas.width() - ctx.measureText(t).width,
-                $canvas.height());
+            ctx.fillText(t, 0, $canvas.height());
+
+            var x = ctx.measureText(t).width + 20;
+            for (var i in options.traces) {
+                line = options.traces[i];
+                ctx.fillStyle = line.colour;
+                ctx.strokeStyle = line.colour;
+                ctx.fillText(line.label, x, $canvas.height());
+                x += ctx.measureText(line.label).width + 20;
+            }
         };
+
         $canvas.on("data_change", data_change);
     };
 })(jQuery);
