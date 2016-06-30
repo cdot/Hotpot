@@ -388,7 +388,7 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
             self.emit("config_change");
             break;
         case "pin":
-            self.setPin(parseInt(path[1]), data.value, respond);
+            self.setPin(path[1], data.value, respond);
             return;
         case "mobile":
             self.setMobileState(data, respond);
