@@ -25,6 +25,7 @@ var setup = {
      * Get a serialisable version of the config
      */
     getSerialisableConfig: function() {
+        "use strict";
         return setup.apis;
     }
 };

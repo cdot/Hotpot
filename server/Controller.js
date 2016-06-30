@@ -194,6 +194,26 @@ Controller.prototype.getSerialisableState = function() {
 };
 
 /**
+ * Generate and return a serialisable version of the structure, suitable
+ * for use in an AJAX response.
+ * @return {object} a serialisable structure
+ */
+Controller.prototype.getSerialisableLog = function() {
+    "use strict";
+
+    var sermap = function(m) {
+	var res = {};
+	for (var k in m)
+            res[k] = m[k].getSerialisableLog();
+        return res;
+    };
+
+    return {
+        thermostat: sermap(this.thermostat)
+    };
+};
+
+/**
  * Set the on/off state of a pin. This is more sophisticated than a 
  * simple pin command, because there is a relationship between the state
  * of the pins in Y-plan systems that must be respected.
@@ -206,6 +226,11 @@ Controller.prototype.setPin = function(channel, on, respond) {
     "use strict";
 
     var self = this;
+
+    // Duck race condition during initialisation
+    if (self.pin[channel] === "undefined")
+        return;
+
     if (this.pending) {
         setTimeout(function() {
             self.setPin(channel, on, respond);
@@ -266,18 +291,18 @@ Controller.prototype.getMobile = function(id) {
 };
 
 /**
- * Handler for a location setting
- * @param info structure containing location in "latitude", "longitude" and
- * device identifier in "device"
+ * Handler for mobile state setting
+ * @param info structure containing location in "latitude", "longitude",
+ * device identifier in "device", and demand
  * @return location of server
  * @private
  */
-Controller.prototype.setMobileLocation = function(info) {
+Controller.prototype.setMobileState = function(info) {
     "use strict";
     var d = this.getMobile(info.device);
     if (d === null)
-        throw "Set location: " + d + " not known" + new Error().stack;
-    d.setLocation(info);
+        throw TAG + " setMobileState: " + d + " not known" + new Error().stack;
+    d.setState(info);
     var interval = d.estimateTOA(this);
     return {
         home_lat: Server.server.config.get("location").latitude,
@@ -324,6 +349,9 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
     case "state": // Return the current system state
         respond(self.getSerialisableState());
         return;
+    case "log":
+        respond(self.getSerialisableLog());
+        return;
     case "config": // Return the controller config
         respond(self.getSerialisableConfig());
         return;
@@ -363,7 +391,7 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
             self.setPin(parseInt(path[1]), data.value, respond);
             return;
         case "mobile":
-            self.setMobileLocation(data, respond);
+            self.setMobileState(data, respond);
             return;
         // "rule":
         // "weather":

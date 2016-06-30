@@ -100,27 +100,31 @@ Mobile.prototype.getSerialisableState = function() {
     "use strict";
     return {
         location: this.location,
-        time_of_arrival: new Date(Math.round(this.time_of_arrival * 1000)).toISOString()
+        time_of_arrival: new Date(
+            Math.round(this.time_of_arrival * 1000)).toISOString()
     };
 };
 
 /**
- * Set the current location of the mobile device
- * @param {Location} loc the location; a structure with fields "latitude" and "longitude"
+ * Set the current state of the mobile device in response to a message from
+ * the device.
+ * @param {object} info info about the device, including "latitude",
+ * "longitude" and "demand".
  * @protected
  */
-Mobile.prototype.setLocation = function(loc) {
+Mobile.prototype.setState = function(info) {
     "use strict";
     this.last_location = this.location;
     this.location = {
-        latitude: loc.latitude,
-        longitude: loc.longitude
+        latitude: info.latitude,
+        longitude: info.longitude
     };
+    this.demand = info.demand;
     this.last_time = this.time;
     this.time = Time.nowSeconds();
-    console.TRACE(TAG, "setLocation @" + this.time
-                  + ": " + loc.latitude
-                  + "," + loc.longitude);
+    console.TRACE(TAG, "set location @" + this.time
+                  + ": " + info.latitude
+                  + "," + info.longitude);
     if (this.last_location === null) {
         this.last_location = this.location;
         this.last_time = this.time;
@@ -272,4 +276,15 @@ Mobile.prototype.isReporting = function() {
 Mobile.prototype.arrivesIn = function() {
     "use strict";
     return this.time_of_arrival - Time.nowSeconds();
+};
+
+/**
+ * Return true if the device is currently demanding the given service
+ * @param {string} service name of service to check e.g. "HW"
+ * @return {boolean} if the service is demanded
+ */
+Mobile.prototype.demanding = function(service) {
+    "use strict";
+    return (typeof this.demand !== "undefined" &&
+            this.demand[service]);
 };

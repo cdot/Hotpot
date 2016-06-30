@@ -48,87 +48,8 @@ can be used to query and modify the configuration.
 ## Configuring software
 
 The server is configured from a configuration file
-in ~/.config/Hotpot/config.json
-
-Example configuration file:
-```Javascript
-{
-  server: {
-    port: 13196,
-    ssl: {
-        key: "$HOME/.config/Hotpot/hotpot.key",
-        cert: "$HOME/.config/Hotpot/hotpot.crt"
-    },
-    location: {
-      latitude: 52.2479773,
-      longitude: -1.504296
-    }
-  },
-  apis: {
-    google_maps: {
-      api_key": "Aizg4asuu0982343jkjk--qwiuoie3rfui12jd",
-      ip: "46.208.108.90"
-    },
-    weather: {
-      class : "MetOffice",
-      api_key: "f6234ca5-e643-4333-8fdf-59f2123446ed",
-    }
-  },
-  controller: {
-    thermostat: {
-      HW: {
-        id: "28-0113414ef5ff"
-      },
-      CH: {
-        id: "28-0eee027581ff"
-      }
-    },
-    pin: {
-      CH: {
-        gpio: 23
-      },
-      HW: {
-        gpio: 25
-      }
-    },
-    mobile: {
-      Crawford: {
-        id: "3e19118c5e36d420"
-      }
-    }
-    rule: [
-      {
-          name : "normal",
-          test:
-function () {
-    var ch = this.pin.CH.getState(), hw = this.pin.HW.getState();
-    if (this.mobile.George.isReporting()
-        && this.mobile.George.arrivesIn() > 30 * 60) {
-        ch = 0; hw = 0; // more than 30 minutes away
-    }
-    if (this.weather("Feels Like Temperature") > 14) {
-        ch = 0; // warm enough
-    }
-    if (Time.between('22:00', '06:30')) {
-        ch = 0; // night
-    }
-    if (Time.between('20:00', '06:30')) {
-        hw = 0; // night
-    }
-    if (this.thermostat.CH.temperature > 18) {
-        ch = 0; // warm enough
-    }
-    if (this.thermostat.HW.temperature > 50) {
-        hw = 0; // hot enough
-    }
-    this.setPin("CH", ch);
-    this.setPin("HW", hw);
-}
-      }
-    ]
-  }
-}
-```
+in ~/.config/Hotpot/config.json. This contains a structured Javascript object
+with contents as follows:
 - server - sets up the HTTP(S) server
   - ssl - HTTPS key server private key and certificate. If no key and cert are given, an HTTP server will be used, otherwise it will be HTTPS.
   - port - the network port to use (default is 13196)
@@ -137,10 +58,18 @@ function () {
   - weather - sets up access to the weather server (see "Weather" below).
   - google_maps - sets up access to Google maps (see "Routing" below).
 - controller
-  - thermostat - sets up the DS18X20 thermostats available to the system. Each thermostat is named, and has an id used to communicate with the sensor
+  - thermostat - sets up the DS18X20 thermostats available to the system. Each thermostat is named, and has:
+    - id - used to communicate with the sensor
+    - poll_interval - (optional) gap between polls, in ms (1000)
+    - history (optional)
+      - file - (required) pathname to file to store history
+      - interval - gap between history snapshots, in s (60 i.e. once every minute)
+      - limit - number of snapshots to keep in history file. At least this many, and on occasion up to 2X as many, snapshots will be stored (24 * 60)
   - pin - sets up the GPIO pins, mapping the pin name to the GPIO pin number
   - mobile - sets up the mobiles, each name maps to the unique ID of the mobile
   - rule - list of rules that are used to control state of the system
+
+See example.config.json for a complete example.
 
 Note that the pin names "HW" and "CH" are predefined, as Y-plan systems have
 some dependencies between them.
@@ -172,7 +101,8 @@ Google maps routing API to estimate when the mobile will get home, based on
 the location, speed and direction of the device.
 
 The Hotpot server rules can use the estimated return time to decide whether
-to enable services or not.
+to enable services or not. Mobiles can also demand an override, if the rules
+allow it.
 
 # Routing
 

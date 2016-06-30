@@ -47,7 +47,7 @@ function updateAddress(addr) {
     }
 
     console.TRACE("Push up new IP address " + addr);
-Ftp.raw.quit();return;
+
     Ftp.put(new Buffer(addr), config.ftp.path,
             function(hadErr) {
                 if (hadErr)
@@ -131,6 +131,8 @@ function chainGET(after, old_addr) {
                 } else {
 		    console.TRACE(self.url + " bad status " + status);
                 }
+                if (self.logout_url)
+                    httpGET(self.logout_url, function() { } );
 		nextInChain(after, old_addr);
 	    },
 	    function(err) {
@@ -187,7 +189,8 @@ if (config.netgear_router) {
 	// Scrape from netgear router "Router status" page
 	id: "Netgear Router",
 	fn: chainGET,
-        url: config.netgear_router,
+        url: config.netgear_router.url,
+        logout_url: config.netgear_router.logout_url,
         ok: function(data) {
 	    "use strict";
 	    var l = data.split(/\n/);

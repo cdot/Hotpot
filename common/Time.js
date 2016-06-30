@@ -70,8 +70,9 @@ var Time = module.exports = {
         if (typeof t2 === "string")
             t2 = Time.parse(t2);
 
-        if (t1.getTime() > t2.getTime())
+        if (t1.getTime() > t2.getTime()) {
             t2 = new Date(t2.getTime() + ONE_DAY);
+        }
 
         var now = Time.now();
         return (t1.getTime() <= now && now < t2.getTime());

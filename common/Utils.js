@@ -84,4 +84,3 @@ var Utils = module.exports = {
 	return EARTH_RADIUS * c;
     }
 };
-
