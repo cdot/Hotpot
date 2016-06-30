@@ -51,7 +51,7 @@ function Controller(config, when_ready) {
     var weather_config = Apis.get("weather");
     if (typeof weather_config !== "undefined")
         this.weather_agent = require(
-            "./" + weather_config["class"] + ".js");
+            "./" + weather_config.class + ".js");
 
     this.pollRules();
 }

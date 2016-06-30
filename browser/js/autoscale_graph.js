@@ -117,7 +117,7 @@ const trace_cols = [ "yellow", "green", "orange", "red" ];
                 history.push(current);
             }
             
-            for (var i in options.traces) {
+            for (i in options.traces) {
                 line = options.traces[i];
                 history = line.history;
 
@@ -128,10 +128,10 @@ const trace_cols = [ "yellow", "green", "orange", "red" ];
                 // Current
                 ctx.beginPath();
             
-                var trace = history.get($canvas.width());
-                ctx.moveTo(0, y(trace[0]));
-                for (var i = 1; i < trace.length; i++)
-                    ctx.lineTo(i, y(trace[i]));
+                var tr = history.get($canvas.width());
+                ctx.moveTo(0, y(tr[0]));
+                for (var j = 1; j < tr.length; j++)
+                    ctx.lineTo(j, y(tr[j]));
 
                 ctx.stroke();
             }
@@ -150,7 +150,7 @@ const trace_cols = [ "yellow", "green", "orange", "red" ];
             ctx.fillText(t, 0, $canvas.height());
 
             var x = ctx.measureText(t).width + 20;
-            for (var i in options.traces) {
+            for (i in options.traces) {
                 line = options.traces[i];
                 ctx.fillStyle = line.colour;
                 ctx.strokeStyle = line.colour;

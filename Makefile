@@ -17,13 +17,17 @@ SOURCES := \
 	browser/js/browser.js \
 	browser/js/edit_in_place.js
 
+DOC := $(patsubst %.js,doc/%.js.html,$(subst /,_,$(SOURCES)))
+
 %.esl : %.js
 	eslint --no-ignore $^
 	touch $*.esl
 
 lint: $(subst .js,.esl,$(SOURCES))
 
-doc:
+doc: $(DOC)
+
+$(DOC): $(SOURCES)
 	~/.node_modules/.bin/jsdoc -d doc $(SOURCES)
 
 clean:

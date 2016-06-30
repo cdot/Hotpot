@@ -192,6 +192,7 @@ Thermostat.prototype.pollHistory = function() {
                 // If we hit 2 * the size limit, open the file and
                 // reduce the size. Each sample is about 25 bytes.
                 var maxbytes = 1.5 * self.history_config.limit * 25;
+                var t = self.temperature.toPrecision(5);
                 if (stats.size() > maxbytes * 1.5)
                     fs.readFile(self.history_config.file, update);
                 else
@@ -199,10 +200,10 @@ Thermostat.prototype.pollHistory = function() {
                     fs.appendFile(
                         self.history_config.file,
                         new Date().getTime() + "," + t,
-                        function(err) {
+                        function(ferr) {
                             console.error(
                                 TAG + " failed to append to  history file '"
-                                    + self.history_config.file + "': " + err);
+                                    + self.history_config.file + "': " + ferr);
                         });
             } else
                 update();
