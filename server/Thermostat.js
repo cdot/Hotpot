@@ -1,5 +1,6 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 var fs = require("fs");
+var Time = require("../common/Time.js");
 
 const TAG = "Thermostat";
 
@@ -86,8 +87,8 @@ function Thermostat(name, config) {
 module.exports = Thermostat;
 
 /**
- * Generate and return a serialisable version of the structure, suitable
- * for use in an AJAX response.
+ * Generate and return a serialisable version of the configuration, suitable
+ * for use in an AJAX response and for storing in a file.
  * @return {object} a serialisable structure
  * @protected
  */
@@ -95,13 +96,14 @@ Thermostat.prototype.getSerialisableConfig = function() {
     "use strict";
 
     return {
-        id: this.id
+        id: this.id,
+        history: this.history_config
     };
 };
 
 /**
- * Generate and return a serialisable version of the structure, suitable
- * for use in an AJAX response.
+ * Generate and return a serialisable version of the state of the object,
+ * suitable for use in an AJAX response.
  * @return {object} a serialisable structure
  * @protected
  */
@@ -113,14 +115,38 @@ Thermostat.prototype.getSerialisableState = function() {
 };
 
 /**
- * Generate and return a serialisable version of the structure, suitable
- * for use in an AJAX response.
- * @return {object} a serialisable structure
+ * Synchronously get the temperature history of the thermostat as a
+ * serialisable structure. Note that the history is sampled at intervals,
+ * but not every sample time will have a event. The history is only
+ * updated if the temperature changes.
+ * @return {object} structure containing log data. basetime is an offset for
+ * all times in the data; data is an array of alternating times and temps.
  * @protected
  */
 Thermostat.prototype.getSerialisableLog = function() {
     "use strict";
-    return this.getHistory();
+    if (typeof this.history === "undefined")
+        return null;
+
+    var data = fs.readFileSync(this.history_config.file).toString();    
+console.TRACE("LOG", "data is " + data);
+    data = "report=[" + data.substring(0, data.length - 1) + "]";
+    var report;
+    eval(data);
+    var res = [];
+    var basetime;
+console.TRACE("LOG", "Report has " + report.length);
+    for (var i in report) {
+        if (typeof basetime === "undefined")
+            basetime = report[i][0];
+        res.push(report[i][0] - basetime);
+        res.push(report[i][1]);
+    }
+console.TRACE("LOG", "Report containes" + res.length);
+    return {
+        basetime: basetime,
+        data: res
+    };
 };
 
 /**
@@ -147,7 +173,7 @@ Thermostat.prototype.pollTemperature = function() {
 
 /**
  * Function for keeping temperature records
- * Records are written every minute
+ * Records are written every minute or so (set in config)
  * @private
  */
 Thermostat.prototype.pollHistory = function() {
@@ -160,25 +186,30 @@ Thermostat.prototype.pollHistory = function() {
             console.error(TAG + " failed to write history file '"
                           + self.history_config.file + "': " + err);
     };
-
+self.history_config.interval=2;//DEBUG
     var update = function(err, data) {
         if (err) {
             console.error(TAG + " failed to read history file '"
                           + self.history_config.file + "': " + err);
             update();
         }
-        var report = (typeof data === "undefined") ? []
-            : data.toString().split("\n");
-        var t = self.temperature.toPrecision(5);
+        var report;
+        if (typeof data === "undefined")
+            report = [];
+        else
+            eval("report=" + data);
+        var t = parseFloat(self.temperature.toPrecision(3));
         if (report.length > 0) {
-            var last = report[report.length - 1].split(",");
-            if (parseFloat(last[1]) === t)
+            var last = report[report.length - 1];
+            if (last[1] === t)
                 return;
         }
         while (report.length > self.history_config.limit - 1)
             report.shift();
-        report.push(new Date().getTime() + "," + t);
-        fs.writeFile(self.history_config.file, report.join("\n"),
+        report.push([Time.now(), t]);
+        var s = JSON.stringify(report);
+        fs.writeFile(self.history_config.file,
+                     s.substring(1, s.length - 1) + ",",
                      written);
     };
 
@@ -186,20 +217,20 @@ Thermostat.prototype.pollHistory = function() {
         self.history_config.file,
         function(err, stats) {
             if (err)
-                console.error(TAG + " failed to stat history file '"
+                console.TRACE(TAG, "Failed to stat history file '"
                               + self.history_config.file + "': " + err);
             if (stats && stats.isFile()) {
                 // If we hit 2 * the size limit, open the file and
                 // reduce the size. Each sample is about 25 bytes.
                 var maxbytes = 1.5 * self.history_config.limit * 25;
-                var t = self.temperature.toPrecision(5);
+                var t = self.temperature.toPrecision(3);
                 if (stats.length > maxbytes * 1.5)
                     fs.readFile(self.history_config.file, update);
                 else
                     // otherwise open for append
                     fs.appendFile(
                         self.history_config.file,
-                        new Date().getTime() + "," + t,
+                        "[" + new Date().getTime() + "," + t + "],",
                         function(ferr) {
                             if (ferr)
                                 console.error(
@@ -214,25 +245,4 @@ Thermostat.prototype.pollHistory = function() {
         self.pollHistory();
     }, self.history_config.interval * 1000);
 
-};
-
-/**
- * Synchornously get the temperature history of the thermostat. Note that
- * the history is sampled at intervals, but not every sample time will
- * have a event. The history is only updated if the temperature changes.
- * @return {object} serialisable array of events, each with fields
- * time and temperature
- */
-Thermostat.prototype.getHistory = function() {
-    "use strict";
-    if (typeof this.history === "undefined")
-        return null;
-
-    var data = fs.readFileSync(this.history_config.file).toString();
-    var report = data.split("\n");
-    for (var i in report) {
-        var l = report[i].split(",");
-        report[i] = { time: parseFloat(l[0]), temperature: parseFloat(l[1]) };
-    }
-    return report;
 };

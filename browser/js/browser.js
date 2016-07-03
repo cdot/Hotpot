@@ -267,23 +267,63 @@
      * Add a trace to the temperature graph canvas
      * @param $df the field that carries the temperature
      */
-    var addTrace = function(name, $df) {
-
+    function addTrace(name, $df) {
         var $tc = $("#temperature_canvas");
-        // Construct the autoscale graph and couple it to
-        // DOM elements
+
+        $df.on("data_change", function() {
+            // addpoint(trace, x, y)
+            $tc.trigger("addpoint",
+                        {
+                            trace: name,
+                            point: {
+                                x: Date.now(),
+                                y: parseFloat($df.text())
+                            }
+                        });
+        });
+    };
+
+    function initialiseTemperatureGraph() {
+        var $tc = $("#temperature_canvas");
         $tc.autoscale_graph({
-            label: name,
-            current: function() {
-                return parseFloat($df.text());
+            render_label: function(axis, data) {
+                if (axis === "minx" || axis === "maxx")
+                    return new Date(data).toString();
+                return data.toPrecision(4).toString();
+            },
+            min: {
+                x: Date.now() - 8 * 60 * 60 * 1000,
+                y: 5
+            },
+            max: {
+                x: Date.now(),
+                y: 40
             }
         });
-
-        $df.data("canvas", $tc)
-            .on("data_change", function() {
-                $(this).data("canvas").trigger("data_change");
+        $.get(
+            server + "/log",
+            function(raw) {
+                var data;
+                eval("data=" + raw);
+                for (var i in data.thermostat) {
+                    var th = data.thermostat[i];
+                    for (var j = 0; j < th.data.length; j += 2)
+                        $tc.trigger("addpoint",
+                                    {
+                                        trace: i,
+                                        point: {
+                                            x: th.basetime + th.data[j],
+                                            y: th.data[j + 1]
+                                        }
+                                    });
+                }
+            })
+            .error(function(jqXHR, textStatus, errorThrown) {
+                console.log("Could not contact server "
+                        + server + " for logs: " + errorThrown);
             });
-    };
+
+    }
 
     /**
      * Expand the given template string
@@ -347,7 +387,6 @@
         $(".editable", $root).on("click", editField);
         $("input:checkbox", $root).on("click", toggleField);
 
-        // Thermostat canvas
         $("[data-field='temperature']").each(
             function() {
                 var $div = $(this).closest(".templated");
@@ -393,6 +432,7 @@
                         $("[data-field='" + type + "']").first(),
                         type, data[type]);
                 }
+                initialiseTemperatureGraph();
                 attachHandlers();
 
                 // immediately refresh to get the state
