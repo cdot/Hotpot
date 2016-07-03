@@ -1,6 +1,7 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 var fs = require("fs");
 var Time = require("../common/Time.js");
+var Utils = require("../common/Utils.js");
 
 const TAG = "Thermostat";
 
@@ -127,22 +128,19 @@ Thermostat.prototype.getSerialisableLog = function() {
     "use strict";
     if (typeof this.history === "undefined")
         return null;
-
-    var data = fs.readFileSync(this.history_config.file).toString();    
-console.TRACE("LOG", "data is " + data);
+    var fn = Utils.expandEnvVars(this.history_config.file);
+    var data = fs.readFileSync(fn).toString();    
     data = "report=[" + data.substring(0, data.length - 1) + "]";
     var report;
     eval(data);
     var res = [];
     var basetime;
-console.TRACE("LOG", "Report has " + report.length);
     for (var i in report) {
         if (typeof basetime === "undefined")
             basetime = report[i][0];
         res.push(report[i][0] - basetime);
         res.push(report[i][1]);
     }
-console.TRACE("LOG", "Report containes" + res.length);
     return {
         basetime: basetime,
         data: res
@@ -180,17 +178,18 @@ Thermostat.prototype.pollHistory = function() {
     "use strict";
 
     var self = this;
+    var fn = Utils.expandEnvVars(this.history_config.file);
 
     var written = function(err) {
         if (err)
             console.error(TAG + " failed to write history file '"
-                          + self.history_config.file + "': " + err);
+                          + fn + "': " + err);
     };
-self.history_config.interval=2;//DEBUG
+
     var update = function(err, data) {
         if (err) {
             console.error(TAG + " failed to read history file '"
-                          + self.history_config.file + "': " + err);
+                          + fn + "': " + err);
             update();
         }
         var report;
@@ -208,34 +207,34 @@ self.history_config.interval=2;//DEBUG
             report.shift();
         report.push([Time.now(), t]);
         var s = JSON.stringify(report);
-        fs.writeFile(self.history_config.file,
+        fs.writeFile(fn,
                      s.substring(1, s.length - 1) + ",",
                      written);
     };
 
     fs.stat(
-        self.history_config.file,
+        fn,
         function(err, stats) {
             if (err)
                 console.TRACE(TAG, "Failed to stat history file '"
-                              + self.history_config.file + "': " + err);
+                              + fn + "': " + err);
             if (stats && stats.isFile()) {
                 // If we hit 2 * the size limit, open the file and
                 // reduce the size. Each sample is about 25 bytes.
                 var maxbytes = 1.5 * self.history_config.limit * 25;
                 var t = self.temperature.toPrecision(3);
                 if (stats.length > maxbytes * 1.5)
-                    fs.readFile(self.history_config.file, update);
+                    fs.readFile(fn, update);
                 else
                     // otherwise open for append
                     fs.appendFile(
-                        self.history_config.file,
+                        fn,
                         "[" + new Date().getTime() + "," + t + "],",
                         function(ferr) {
                             if (ferr)
                                 console.error(
                                     TAG + " failed to append to  history file '"
-                                        + self.history_config.file + "': "
+                                        + fn + "': "
                                         + ferr);
                         });
             } else
