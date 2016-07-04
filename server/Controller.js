@@ -44,16 +44,20 @@ function Controller(config, when_ready) {
     this.location = config.get("location");
     this.createMobiles(config.getConfig("mobile"));
     this.createPins(config.getConfig("pin"), function() {
-        this.createThermostats(config.getConfig("thermostat"), when_ready);
+        this.createThermostats(
+            config.getConfig("thermostat"),
+            function() {
+                // Thermostats and pins are ready. Can poll rules.
+                self.pollRules();
+                when_ready();
+            });
     });
     this.createRules(config.getConfig("rule"));
 
     var weather_config = Apis.get("weather");
     if (typeof weather_config !== "undefined")
-        this.weather_agent = require(
-            "./" + weather_config.class + ".js");
+        this.weather_agent = require("./" + weather_config.class + ".js");
 
-    this.pollRules();
 }
 util.inherits(Controller, events);
 

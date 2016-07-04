@@ -161,7 +161,9 @@ Thermostat.prototype.pollTemperature = function() {
         if (err !== null) {
             console.error("ERROR: " + err);
         } else {
-            self.temperature = temp;
+            if (typeof temp === "number")
+                // At least once this has been "boolean"!
+                self.temperature = temp;
             setTimeout(function() {
                 self.pollTemperature();
             }, self.poll_interval);
@@ -212,34 +214,37 @@ Thermostat.prototype.pollHistory = function() {
                      written);
     };
 
-    fs.stat(
-        fn,
-        function(err, stats) {
-            if (err)
-                console.TRACE(TAG, "Failed to stat history file '"
-                              + fn + "': " + err);
-            if (stats && stats.isFile()) {
-                // If we hit 2 * the size limit, open the file and
-                // reduce the size. Each sample is about 25 bytes.
-                var maxbytes = 1.5 * self.history_config.limit * 25;
-                var t = self.temperature.toPrecision(3);
-                if (stats.length > maxbytes * 1.5)
-                    fs.readFile(fn, update);
-                else
-                    // otherwise open for append
-                    fs.appendFile(
-                        fn,
-                        "[" + new Date().getTime() + "," + t + "],",
-                        function(ferr) {
-                            if (ferr)
-                                console.error(
-                                    TAG + " failed to append to  history file '"
-                                        + fn + "': "
-                                        + ferr);
-                        });
-            } else
-                update();
-        });
+    if (typeof self.temperature === "number") {
+        fs.stat(
+            fn,
+            function(err, stats) {
+                if (err)
+                    console.TRACE(TAG, "Failed to stat history file '"
+                                  + fn + "': " + err);
+                if (stats && stats.isFile()) {
+                    // If we hit 2 * the size limit, open the file and
+                    // reduce the size. Each sample is about 25 bytes.
+                    var maxbytes = 1.5 * self.history_config.limit * 25;
+                    var t = self.temperature.toPrecision(3);
+                    if (stats.length > maxbytes * 1.5)
+                        fs.readFile(fn, update);
+                    else
+                        // otherwise open for append
+                        fs.appendFile(
+                            fn,
+                            "[" + new Date().getTime() + "," + t + "],",
+                            function(ferr) {
+                                if (ferr)
+                                    console.error(
+                                        TAG + " failed to append to  history file '"
+                                            + fn + "': "
+                                            + ferr);
+                            });
+                } else
+                    update();
+            });
+    }
+
     setTimeout(function() {
         self.pollHistory();
     }, self.history_config.interval * 1000);
