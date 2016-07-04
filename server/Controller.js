@@ -366,6 +366,8 @@ Controller.prototype.setMobileState = function(info) {
  */
 Controller.prototype.weather = function(field) {
     "use strict";
+    if (typeof this.weather_agent === "undefined")
+        return 20; // random pick, if the agent isn't ready yet
     return this.weather_agent.get(field);
 };
 

@@ -75,7 +75,8 @@ function Pin(name, config, done) {
         writeFile(EXPORT_PATH, self.gpio, "utf8")
             .then(function() {
                 console.TRACE(TAG, m + " OK");
-                readCheck();
+                // Use a timeout to give it time to get set up
+                setTimeout(readCheck, 1000);
             })
             .catch(function(err) {
                 fallBackToDebug(m + " failed " + err);
