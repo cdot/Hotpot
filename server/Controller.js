@@ -39,8 +39,6 @@ module.exports = {
 function Controller(config, when_ready) {
     "use strict";
 
-    var self = this;
-
     console.TRACE(TAG, "Creating Controller");
 
     this.location = config.get("location");
@@ -50,8 +48,8 @@ function Controller(config, when_ready) {
             config.getConfig("thermostat"),
             function() {
                 // Thermostats and pins are ready. Can poll rules.
-                self.pollRules();
-                when_ready();
+                this.pollRules();
+                when_ready.call(this);
             });
     });
     this.createRules(config.getConfig("rule"));
