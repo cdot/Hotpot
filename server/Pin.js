@@ -40,14 +40,14 @@ function Pin(name, config, done) {
     console.TRACE(TAG, "'" + self.name +
                   "' construction starting on gpio " + self.gpio);
 
-    var fallBackToDebug = function(err) {
+    function fallBackToDebug(err) {
         console.TRACE(TAG, self.name + " setup failed: "
                       + err + "; falling back to debug");
         self.debug = require("./TestSupport.js");
         done();
-    };
+    }
 
-    var setup = function(err) {
+    function setup(err) {
         if (err) {
             fallBackToDebug("Export was OK, but check failed: "
                             + err);
@@ -67,7 +67,7 @@ function Pin(name, config, done) {
         }
     };
 
-    var exported = function(err) {
+    function exported(err) {
         if (err) {
             fallBackToDebug(EXPORT_PATH + "=" + self.gpio + " failed " + err);
         } else {
@@ -80,11 +80,11 @@ function Pin(name, config, done) {
         }
     };
 
-    var checked = function(err) {
+    function checked(err) {
         if (err) {
             console.TRACE(TAG, self.value_path + " failed: " + err);
             try {
-                console.TRACE(EXPORT_PATH + "=" + self.gpio);
+                console.TRACE(TAG, EXPORT_PATH + "=" + self.gpio);
                 fs.writeFile(EXPORT_PATH, self.gpio, exported);
             } catch (e) {
                 fallBackToDebug("Export " + self.gpio + " failed " + e.message);
@@ -122,6 +122,8 @@ Pin.prototype.DESTROY = function() {
 
 /**
  * Set a feature of the controller e.g. direction, value
+ * @param {function} callback called when state has been set.
+ * callback(err), this is the Pin object.
  * @private
  */
 Pin.prototype.setFeature = function(feature, value, callback) {
@@ -136,14 +138,20 @@ Pin.prototype.setFeature = function(feature, value, callback) {
         if (callback)
             callback.call(this);
     } else
-        fs.writeFile(path, value, callback);
+        fs.writeFile(path, value, function(err) {
+            if (err)
+                console.TRACE(TAG, "failed to write " + path + ": " + err);
+            else
+                callback.call(this);
+        });
 };
 
 /**
  * Set the pin state. Don't use this on a Y-plan system, use
  * {@link Controller.Controller#setPin|Controller.setPin} instead.
  * @param {integer} state of the pin
- * @param {function} callback called when state has been set
+ * @param {function} callback called when state has been set.
+ * callback(err), this is the Pin object.
  * @public
  */
 Pin.prototype.set = function(state, callback) {

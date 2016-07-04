@@ -210,9 +210,12 @@
                 $ui.attr("src", nurl);
         } else {
             // Text / number field
-            if (t === "float")
-                v = value.toPrecision(5);
-            else
+            if (t === "float") {
+                if (typeof value === "number")
+                    v = value.toPrecision(5);
+                else
+                    v = typeof value;
+            } else
                 v = value.toString();
             $ui.text(v);
         }
