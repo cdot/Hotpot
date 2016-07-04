@@ -73,23 +73,23 @@ function Pin(name, config, done) {
         } else {
             console.TRACE(TAG, "Exported gpio " + self.gpio + " OK");
             try {
-                fs.readFile(value_path, setup);
+                fs.readFile(self.value_path, setup);
             } catch (e) {
-                fallBackToDebug(value_path + " threw: " + e.message);
+                fallBackToDebug(self.value_path + " threw: " + e.message);
             }
         }
     };
 
     var checked = function(err) {
         if (err) {
-            console.TRACE(TAG, value_path + " failed: " + err);
+            console.TRACE(TAG, self.value_path + " failed: " + err);
             try {
                 console.TRACE(EXPORT_PATH + "=" + self.gpio);
                 fs.writeFile(EXPORT_PATH, self.gpio, exported);
             } catch (e) {
                 fallBackToDebug("Export " + self.gpio + " failed " + e.message);
             }
-        } else, {
+        } else {
             console.TRACE(TAG, "Checked " + self.value_path + " OK");
             setup();
         }
@@ -97,13 +97,13 @@ function Pin(name, config, done) {
 
     try {
         console.TRACE(TAG, "'" + self.name + "' checking " + self.value_path);
-	fs.readFile(value_path, checked);
+	fs.readFile(self.value_path, checked);
     } catch (e1) {
-        console.TRACE(TAG, value_path + " threw: " + e1.message);
+        console.TRACE(TAG, self.value_path + " threw: " + e1.message);
         try {
             fs.writeFile(EXPORT_PATH, self.gpio, exported);
         } catch (e2) {
-            fallBackToDebug("/export threw: " + e2.message);
+            fallBackToDebug(EXPORT_PATH + "=" + self.gpio + " threw: " + e2.message);
         }
     }
 }
