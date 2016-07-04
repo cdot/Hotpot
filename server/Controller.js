@@ -39,6 +39,8 @@ module.exports = {
 function Controller(config, when_ready) {
     "use strict";
 
+    var self = this;
+
     console.TRACE(TAG, "Creating Controller");
 
     this.location = config.get("location");
