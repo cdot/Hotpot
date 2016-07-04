@@ -51,7 +51,7 @@ function Pin(name, config, done) {
     }
 
     function setup() {
-        console.TRACE(TAG, "gpio " + self.gpio + " is ready");
+        console.TRACE(TAG, self.name + " gpio " + self.gpio + " is ready");
         // This seems backwards, and runs counter to the documentation.
         // If we don't set the pin active_low, then writing a 1 to value
         // sets the pin low, and vice-versa. Ho hum.
@@ -75,19 +75,27 @@ function Pin(name, config, done) {
 
     function exportPin() {
         writeFile(EXPORT_PATH, self.gpio, "utf8")
-            .then(readCheck)
+            .then(function() {
+                console.TRACE(TAG, EXPORTPATH + "=" + self.gpio + " OK");
+                readCheck(2);
+            })
             .catch(function(err) {
                 fallBackToDebug(EXPORT_PATH + "=" + self.gpio
                                 + " failed " + err);
             });
     }
 
-    function writeCheck(first) {
-        writeFile(self.value.path, 0, "utf8")
-            .then(setup)
+    function writeCheck(num) {
+        writeFile(self.value_path, 0, "utf8")
+            .then(function() {
+                console.TRACE(TAG, self.value_path + " writeCheck "
+                              + num + " OK");
+                setup();
+            })
             .catch(function(e) {
-                var m = self.value_path + " writeCheck failed: " + e;
-                if (first) {
+                var m = self.value_path + " writeCheck "
+                    + num + " failed: " + e;
+                if (num === 1) {
                     console.TRACE(TAG, m);
                     exportPin();
                 } else
@@ -95,18 +103,19 @@ function Pin(name, config, done) {
             });
     }
 
-    function readCheck(first) {
+    function readCheck(num) {
         readFile(self.value_path, "utf8")
             .then(function() {
-                console.TRACE(TAG, self.value_path + " readCheck OK");
-                writeCheck(first);
+                console.TRACE(TAG, self.value_path + " readCheck "
+                              + num + " OK");
+                writeCheck(num);
             })
             .catch(function(e) {
                 fallBackToDebug(self.value_path + " readCheck failed: " + e);
             });
     }
 
-    readCheck(true);
+    readCheck(1);
 }
 module.exports = Pin;
 
