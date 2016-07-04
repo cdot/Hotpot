@@ -132,26 +132,20 @@ Controller.prototype.createThermostats = function(ts_config, done) {
                 self.pin.CH.set(0)
                     .then(
                         function() {
-                            self.setPin("HW", 0)
-                                .then(
-                                    function() {
-                                        done.call(self);
-                                    },
-                                    function(e1) {
-                                        console.TRACE(TAG,
-                                                      "Reset failed " + e1);
-                                        done.call(self);
-                                    });
-                        },
-                        function(e2) {
-                            console.TRACE(TAG, "Reset failed " + e2);
-                            done.call(self);
-                        });
-            },
-            function(e3) {
-                console.TRACE(TAG, "Reset failed " + e3);
-                done.call(self);
-            });
+                            self.setPin("HW", 0,
+                                        function() {
+                                            done.call(self);
+                                        });
+                        })
+                    .catch(function(e2) {
+                        console.TRACE(TAG, "Reset 0 failed " + e2);
+                        done.call(self);
+                    });
+            })
+        .catch(function(e3) {
+            console.TRACE(TAG, "Reset 1 failed " + e3);
+            done.call(self);
+        });
 };
 
 /**

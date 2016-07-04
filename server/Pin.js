@@ -1,7 +1,9 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
-var Fs = require("fs");
+const Fs = require("fs");
 const Promise = require("promise");
+const readFile = Promise.denodeify(Fs.readFile);
+const writeFile = Promise.denodeify(Fs.writeFile);
 
 const TAG = "Pin";
 
@@ -40,7 +42,7 @@ function Pin(name, config, done) {
 
     console.TRACE(TAG, "'" + self.name +
                   "' construction starting on gpio " + self.gpio);
-
+    
     function fallBackToDebug(err) {
         console.TRACE(TAG, self.name + " setup failed: "
                       + err + "; falling back to debug");
@@ -48,65 +50,63 @@ function Pin(name, config, done) {
         done();
     }
 
-    function setup(err) {
-        if (err) {
-            fallBackToDebug("Export was OK, but check failed: "
-                            + err);
-        } else {
-            console.TRACE(TAG, "gpio " + self.gpio + " is ready");
-            // This seems backwards, and runs counter to the documentation.
-            // If we don't set the pin active_low, then writing a 1 to value
-            // sets the pin low, and vice-versa. Ho hum.
-            self.setFeature(
-                "active_low", 1,
-                function() {
-                    self.set(0, function() {
+    function setup() {
+        console.TRACE(TAG, "gpio " + self.gpio + " is ready");
+        // This seems backwards, and runs counter to the documentation.
+        // If we don't set the pin active_low, then writing a 1 to value
+        // sets the pin low, and vice-versa. Ho hum.
+        self.setFeature(
+            "active_low", 1,
+            function() {
+                self.set(0)
+                    .then(function() {
                         self.setFeature(
-                            "direction", "out", done);
+                            "direction", "out")
+                            .then(done)
+                            .catch(function(e) {
+                                fallBackToDebug("set direction: " + e);
+                            });
+                    })
+                    .catch(function(e) {
+                        fallBackToDebug("set: " + e);
                     });
-                });
-        }
-    };
-
-    function exported(err) {
-        if (err) {
-            fallBackToDebug(EXPORT_PATH + "=" + self.gpio + " failed " + err);
-        } else {
-            console.TRACE(TAG, "Exported gpio " + self.gpio + " OK");
-            try {
-                Fs.readFile(self.value_path, setup);
-            } catch (e) {
-                fallBackToDebug(self.value_path + " threw: " + e.message);
-            }
-        }
-    };
-
-    function checked(err) {
-        if (err) {
-            console.TRACE(TAG, self.value_path + " failed: " + err);
-            try {
-                console.TRACE(TAG, EXPORT_PATH + "=" + self.gpio);
-                Fs.writeFile(EXPORT_PATH, self.gpio, exported);
-            } catch (e) {
-                fallBackToDebug("Export " + self.gpio + " failed " + e.message);
-            }
-        } else {
-            console.TRACE(TAG, "Checked " + self.value_path + " OK");
-            setup();
-        }
-    };
-
-    try {
-        console.TRACE(TAG, "'" + self.name + "' checking " + self.value_path);
-	Fs.readFile(self.value_path, checked);
-    } catch (e1) {
-        console.TRACE(TAG, self.value_path + " threw: " + e1.message);
-        try {
-            Fs.writeFile(EXPORT_PATH, self.gpio, exported);
-        } catch (e2) {
-            fallBackToDebug(EXPORT_PATH + "=" + self.gpio + " threw: " + e2.message);
-        }
+            });
     }
+
+    function exportPin() {
+        writeFile(EXPORT_PATH, self.gpio, "utf8")
+            .then(readCheck)
+            .catch(function(err) {
+                fallBackToDebug(EXPORT_PATH + "=" + self.gpio
+                                + " failed " + err);
+            });
+    }
+
+    function writeCheck(first) {
+        writeFile(self.value.path, 0, "utf8")
+            .then(setup)
+            .catch(function(e) {
+                var m = self.value_path + " writeCheck failed: " + e;
+                if (first) {
+                    console.TRACE(TAG, m);
+                    exportPin();
+                } else
+                    fallBackToDebug(m);
+            });
+    }
+
+    function readCheck(first) {
+        readFile(self.value_path, "utf8")
+            .then(function() {
+                console.TRACE(TAG, self.value_path + " readCheck OK");
+                writeCheck(first);
+            })
+            .catch(function(e) {
+                fallBackToDebug(self.value_path + " readCheck failed: " + e);
+            });
+    }
+
+    readCheck(true);
 }
 module.exports = Pin;
 
@@ -118,7 +118,7 @@ Pin.prototype.DESTROY = function() {
     "use strict";
 
     console.TRACE(TAG, "Unexport gpio " + this.gpio);
-    Fs.writeFile(UNEXPORT_PATH, this.gpio, function() {});
+    writeFile(UNEXPORT_PATH, this.gpio, "utf8");
 };
 
 /**
@@ -130,20 +130,21 @@ Pin.prototype.DESTROY = function() {
 Pin.prototype.setFeature = function(feature, value) {
     "use strict";
 
-    var path = GPIO_PATH + "gpio" + this.gpio + "/" + feature;
+    var self = this;
+    var path = GPIO_PATH + "gpio" + self.gpio + "/" + feature;
 
     return new Promise(function(fulfill, reject) {
-        if (typeof this.debug !== "undefined") {
-            console.TRACE(TAG, this.name + " " + path + " = " + value);
+        if (typeof self.debug !== "undefined") {
+            console.TRACE(TAG, self.name + " " + path + " = " + value);
             fulfill();
-        } else
-            Fs.writeFile(path, value, function(err) {
-                if (err) {
+        } else {
+            writeFile(path, value, "utf8")
+                .then(fulfill)
+                .catch(function(err) {
                     console.TRACE(TAG, "failed to write " + path + ": " + err);
                     reject(err);
-                } else
-                    fulfill();
-            });
+                });
+        }
     });
 };
 
@@ -190,7 +191,6 @@ Pin.prototype.getSerialisableConfig = function() {
         gpio: this.gpio
     };
 };
-
 
 /**
  * Generate and return a serialisable version of the structure, suitable

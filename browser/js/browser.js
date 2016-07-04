@@ -284,7 +284,7 @@
                             }
                         });
         });
-    };
+    }
 
     function initialiseTemperatureGraph() {
         var $tc = $("#temperature_canvas");
