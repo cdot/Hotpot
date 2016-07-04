@@ -4,6 +4,13 @@ var fs = require("fs");
 
 const TAG = "Pin";
 
+// Base path of all GPIO operations
+const GPIO_PATH = "/sys/class/gpio/";
+
+// Paths to write to to export/unexport GPIO pins
+const EXPORT_PATH = GPIO_PATH + "export";
+const UNEXPORT_PATH = GPIO_PATH + "unexport";
+
 /**
  * A Pin is the interface to a RPi GPIO pin.
  * @class
@@ -28,8 +35,10 @@ function Pin(name, config, done) {
     /** @property {integer} gpio gpio port */
     self.gpio = config.get("gpio");
 
+    self.value_path = GPIO_PATH + "gpio" + self.gpio + "/value";
+
     console.TRACE(TAG, "'" + self.name +
-                  "' constructed on gpio " + self.gpio);
+                  "' construction starting on gpio " + self.gpio);
 
     var fallBackToDebug = function(err) {
         console.TRACE(TAG, self.name + " setup failed: "
@@ -40,9 +49,10 @@ function Pin(name, config, done) {
 
     var setup = function(err) {
         if (err) {
-            fallBackToDebug("/export was OK, but check /value faile: "
+            fallBackToDebug("Export was OK, but check failed: "
                             + err);
         } else {
+            console.TRACE(TAG, "gpio " + self.gpio + " is ready");
             // This seems backwards, and runs counter to the documentation.
             // If we don't set the pin active_low, then writing a 1 to value
             // sets the pin low, and vice-versa. Ho hum.
@@ -59,45 +69,39 @@ function Pin(name, config, done) {
 
     var exported = function(err) {
         if (err) {
-            fallBackToDebug("/export failed " + err);
+            fallBackToDebug(EXPORT_PATH + "=" + self.gpio + " failed " + err);
         } else {
+            console.TRACE(TAG, "Exported gpio " + self.gpio + " OK");
             try {
-                fs.readFile(
-                    "/sys/class/gpio/gpio" + self.gpio + "/value",
-                    setup);
+                fs.readFile(value_path, setup);
             } catch (e) {
-                fallBackToDebug("/export was OK, but check /value threw: "
-                                + e.message);
+                fallBackToDebug(value_path + " threw: " + e.message);
             }
         }
     };
 
     var checked = function(err) {
         if (err) {
-            console.TRACE(TAG, self.name + "/value failed: " + err
-                          + ", exporting gpio " + self.gpio);
+            console.TRACE(TAG, value_path + " failed: " + err);
             try {
-                fs.writeFile("/sys/class/gpio/export",
-                             self.gpio,
-                             exported);
+                console.TRACE(EXPORT_PATH + "=" + self.gpio);
+                fs.writeFile(EXPORT_PATH, self.gpio, exported);
             } catch (e) {
-                fallBackToDebug("Export failed " + e.message);
+                fallBackToDebug("Export " + self.gpio + " failed " + e.message);
             }
-        } else
+        } else, {
+            console.TRACE(TAG, "Checked " + self.value_path + " OK");
             setup();
+        }
     };
 
     try {
-	fs.readFile(
-            "/sys/class/gpio/gpio" + self.gpio + "/value",
-            checked);
+        console.TRACE(TAG, "'" + self.name + "' checking " + self.value_path);
+	fs.readFile(value_path, checked);
     } catch (e1) {
-        console.TRACE(TAG, self.name + "/value threw: " + e1.message
-                      + ", exporting gpio " + self.gpio);
+        console.TRACE(TAG, value_path + " threw: " + e1.message);
         try {
-            fs.writeFile("/sys/class/gpio/export",
-                         self.gpio,
-                         exported);
+            fs.writeFile(EXPORT_PATH, self.gpio, exported);
         } catch (e2) {
             fallBackToDebug("/export threw: " + e2.message);
         }
@@ -112,8 +116,8 @@ module.exports = Pin;
 Pin.prototype.DESTROY = function() {
     "use strict";
 
-    console.TRACE(TAG, "unexport gpio " + this.gpio);
-    fs.writeFile("/sys/class/gpio/unexport", this.gpio, function() {});
+    console.TRACE(TAG, "Unexport gpio " + this.gpio);
+    fs.writeFile(UNEXPORT_PATH, this.gpio, function() {});
 };
 
 /**
@@ -123,16 +127,16 @@ Pin.prototype.DESTROY = function() {
 Pin.prototype.setFeature = function(feature, value, callback) {
     "use strict";
 
+    var path = GPIO_PATH + "gpio" + this.gpio + "/" + feature;
+
     if (typeof callback === "undefined")
         callback = function() {};
     if (typeof this.debug !== "undefined") {
-        console.TRACE(TAG, this.name + 
-                      " set feature " + feature + " = " + value);
+        console.TRACE(TAG, this.name + " " + path + " = " + value);
         if (callback)
             callback.call(this);
     } else
-        fs.writeFile("/sys/class/gpio/gpio" + this.gpio + "/" + feature,
-                     value, callback);
+        fs.writeFile(path, value, callback);
 };
 
 /**
@@ -163,8 +167,7 @@ Pin.prototype.getState = function() {
     if (typeof this.debug !== "undefined")
         return this.debug.pinstate[this.name];
     else
-        return parseInt(fs.readFileSync(
-            "/sys/class/gpio/gpio" + this.gpio + "/value", "utf8"));
+        return parseInt(fs.readFileSync(this.value_path, "utf8"));
 };
 
 /**
