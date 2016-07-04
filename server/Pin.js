@@ -1,6 +1,7 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
-var fs = require("fs");
+var Fs = require("fs");
+const Promise = require("promise");
 
 const TAG = "Pin";
 
@@ -73,7 +74,7 @@ function Pin(name, config, done) {
         } else {
             console.TRACE(TAG, "Exported gpio " + self.gpio + " OK");
             try {
-                fs.readFile(self.value_path, setup);
+                Fs.readFile(self.value_path, setup);
             } catch (e) {
                 fallBackToDebug(self.value_path + " threw: " + e.message);
             }
@@ -85,7 +86,7 @@ function Pin(name, config, done) {
             console.TRACE(TAG, self.value_path + " failed: " + err);
             try {
                 console.TRACE(TAG, EXPORT_PATH + "=" + self.gpio);
-                fs.writeFile(EXPORT_PATH, self.gpio, exported);
+                Fs.writeFile(EXPORT_PATH, self.gpio, exported);
             } catch (e) {
                 fallBackToDebug("Export " + self.gpio + " failed " + e.message);
             }
@@ -97,11 +98,11 @@ function Pin(name, config, done) {
 
     try {
         console.TRACE(TAG, "'" + self.name + "' checking " + self.value_path);
-	fs.readFile(self.value_path, checked);
+	Fs.readFile(self.value_path, checked);
     } catch (e1) {
         console.TRACE(TAG, self.value_path + " threw: " + e1.message);
         try {
-            fs.writeFile(EXPORT_PATH, self.gpio, exported);
+            Fs.writeFile(EXPORT_PATH, self.gpio, exported);
         } catch (e2) {
             fallBackToDebug(EXPORT_PATH + "=" + self.gpio + " threw: " + e2.message);
         }
@@ -117,7 +118,7 @@ Pin.prototype.DESTROY = function() {
     "use strict";
 
     console.TRACE(TAG, "Unexport gpio " + this.gpio);
-    fs.writeFile(UNEXPORT_PATH, this.gpio, function() {});
+    Fs.writeFile(UNEXPORT_PATH, this.gpio, function() {});
 };
 
 /**
@@ -126,35 +127,34 @@ Pin.prototype.DESTROY = function() {
  * callback(err), this is the Pin object.
  * @private
  */
-Pin.prototype.setFeature = function(feature, value, callback) {
+Pin.prototype.setFeature = function(feature, value) {
     "use strict";
 
     var path = GPIO_PATH + "gpio" + this.gpio + "/" + feature;
 
-    if (typeof callback === "undefined")
-        callback = function() {};
-    if (typeof this.debug !== "undefined") {
-        console.TRACE(TAG, this.name + " " + path + " = " + value);
-        if (callback)
-            callback.call(this);
-    } else
-        fs.writeFile(path, value, function(err) {
-            if (err)
-                console.TRACE(TAG, "failed to write " + path + ": " + err);
-            else
-                callback.call(this);
-        });
+    return new Promise(function(fulfill, reject) {
+        if (typeof this.debug !== "undefined") {
+            console.TRACE(TAG, this.name + " " + path + " = " + value);
+            fulfill();
+        } else
+            Fs.writeFile(path, value, function(err) {
+                if (err) {
+                    console.TRACE(TAG, "failed to write " + path + ": " + err);
+                    reject(err);
+                } else
+                    fulfill();
+            });
+    });
 };
 
 /**
  * Set the pin state. Don't use this on a Y-plan system, use
  * {@link Controller.Controller#setPin|Controller.setPin} instead.
  * @param {integer} state of the pin
- * @param {function} callback called when state has been set.
- * callback(err), this is the Pin object.
+ * @return a Promise
  * @public
  */
-Pin.prototype.set = function(state, callback) {
+Pin.prototype.set = function(state) {
     "use strict";
 
     console.TRACE(TAG, this.name + " set gpio "
@@ -162,7 +162,7 @@ Pin.prototype.set = function(state, callback) {
 
     if (typeof this.debug !== "undefined")
         this.debug.pinstate[this.name] = state;
-    this.setFeature("value", state, callback);
+    return this.setFeature("value", state);
 };
 
 /**
@@ -175,7 +175,7 @@ Pin.prototype.getState = function() {
     if (typeof this.debug !== "undefined")
         return this.debug.pinstate[this.name];
     else
-        return parseInt(fs.readFileSync(this.value_path, "utf8"));
+        return parseInt(Fs.readFileSync(this.value_path, "utf8"));
 };
 
 /**

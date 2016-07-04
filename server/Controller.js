@@ -1,7 +1,7 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
-const util = require("util");
-const events = require("events").EventEmitter;  
+const Util = require("util");
+const Events = require("events").EventEmitter;  
 
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
@@ -59,7 +59,7 @@ function Controller(config, when_ready) {
         this.weather_agent = require("./" + weather_config.class + ".js");
 
 }
-util.inherits(Controller, events);
+Util.inherits(Controller, Events);
 
 /**
  * Create mobiles specified by config
@@ -126,13 +126,32 @@ Controller.prototype.createThermostats = function(ts_config, done) {
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
     console.TRACE(TAG, "Resetting valve");
-    self.pin.HW.set(1, function() {
-        self.pin.CH.set(0, function() {
-            self.setPin("HW", 0, function() {
+    self.pin.HW.set(1)
+        .then(
+            function() {
+                self.pin.CH.set(0)
+                    .then(
+                        function() {
+                            self.setPin("HW", 0)
+                                .then(
+                                    function() {
+                                        done.call(self);
+                                    },
+                                    function(e1) {
+                                        console.TRACE(TAG,
+                                                      "Reset failed " + e1);
+                                        done.call(self);
+                                    });
+                        },
+                        function(e2) {
+                            console.TRACE(TAG, "Reset failed " + e2);
+                            done.call(self);
+                        });
+            },
+            function(e3) {
+                console.TRACE(TAG, "Reset failed " + e3);
                 done.call(self);
             });
-        });
-    });
 };
 
 /**
@@ -259,22 +278,31 @@ Controller.prototype.setPin = function(channel, on, respond) {
     // return. Then after a timeout, set the desired state.
     if (channel === "CH" && !on
         && this.pin.HW.state === 1 && this.pin.HW.state === 0) {
-        this.pin.CH.set(0, function() {
-            this.pin.HW.set(1, function() {
-                self.pending = true;
-                setTimeout(function() {
-                    self.pending = false;
-                    self.setPin(channel, on, respond);
-                }, VALVE_RETURN);
+        this.pin.CH.set(0)
+            .then(function() {
+                this.pin.HW.set(1)
+                    .then(function() {
+                        self.pending = true;
+                        setTimeout(function() {
+                            self.pending = false;
+                            self.setPin(channel, on, respond);
+                        }, VALVE_RETURN);
+                    });
             });
-        });
     } else {
         // Otherwise this is a simple state transition, just
         // set the appropriate pin
-        this.pin[channel].set(on, function() {
-            if (typeof respond !== "undefined")
-                respond();
-        });
+        this.pin[channel].set(on)
+            .then(
+                function() {
+                    if (typeof respond !== "undefined")
+                        respond();
+                },
+                function(e) {
+                    console.TRACE(
+                        TAG, "Failed to set pin " + channel + ": " + e);
+                    respond();
+                });
     }
 };
 
