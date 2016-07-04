@@ -93,13 +93,9 @@ function Pin(name, config, done) {
                 setup();
             })
             .catch(function(e) {
-                var m = self.value_path + " writeCheck "
-                    + num + " failed: " + e;
-                if (num === 1) {
-                    console.TRACE(TAG, m);
-                    exportPin();
-                } else
-                    fallBackToDebug(m);
+                fallBackToDebug(
+                    self.value_path + " writeCheck "
+                        + num + " failed: " + e);
             });
     }
 
@@ -111,7 +107,13 @@ function Pin(name, config, done) {
                 writeCheck(num);
             })
             .catch(function(e) {
-                fallBackToDebug(self.value_path + " readCheck failed: " + e);
+                var m = self.value_path + " readCheck "
+                    + num + " failed: " + e;
+                if (num === 1) {
+                    exportPin();
+                } else {
+                    fallBackToDebug(m);
+                }
             });
     }
 
