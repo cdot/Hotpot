@@ -5,11 +5,11 @@ const https = require("https");
 const Time = require("../common/Time.js");
 const Utils = require("../common/Utils.js");
 
-const Server = require("./Server.js");
 const Apis = require("./Apis.js");
 
 const DEFAULT_INTERVAL = 5 * 60; // 5 minutes in seconds
 const LONG_INTERVAL = 30 * 60; // half an hour in seconds
+const DEFAULT_LOCATION = { latitude: 0, longitude: 0 };
 
 const MPH = 0.44704; // metres per second -> mph
 const FAST_WALK = 4 * MPH; // in m/s
@@ -46,34 +46,41 @@ function Mobile(name, config) {
      * @type {Location}
      * @public
      */
-    this.location = Server.server.config.get("location");
+    this.location = DEFAULT_LOCATION;
+
+    /**
+     * Home location (location of the server, cache)
+     * @type {Location}
+     * @public
+     */
+    this.home_location = DEFAULT_LOCATION;
 
     /**
      * Time of last location update, epoch secs 
      * @type {number}
      */
-    this.time = null;
+    this.time = Time.nowSeconds();
 
     /**
      * Last place this device was seen
      * @type {Location}
      * @public
      */
-    this.last_location = null;
+    this.last_location = DEFAULT_LOCATION;
 
     /**
      * Time at last_location, epoch secs 
      * @type {number}
      * @public
      */
-    this.last_time = null;
+    this.last_time = Time.nowSeconds();
 
     /**
      * When we are expected home, epoch secs 
      * @type {number}
      * @public
      */
-    this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
+    this.time_of_arrival = this.last_time + A_LONG_TIME;
 
     console.TRACE(TAG, "'" + name + "' constructed");
 }
@@ -103,6 +110,16 @@ Mobile.prototype.getSerialisableState = function() {
         time_of_arrival: new Date(
             Math.round(this.time_of_arrival * 1000)).toISOString()
     };
+};
+
+/**
+ * Set the home location of the mobile device
+ * @param {Location} location where the mobile is based
+ * @protected
+ */
+Mobile.prototype.setHomeLocation = function(location) {
+    "use strict";
+    this.home_location = location;
 };
 
 /**
@@ -144,8 +161,9 @@ Mobile.prototype.setState = function(info) {
  */
 Mobile.prototype.estimateTOA = function() {
     "use strict";
+    var self = this;
 
-    var crow_flies = Utils.haversine(Server.server.config.get("location"), this.location); // metres
+    var crow_flies = Utils.haversine(this.home_location, this.location); // metres
     console.TRACE(TAG, "Crow flies " + crow_flies + " m");
 
     // Are they very close to home?
@@ -189,7 +207,7 @@ Mobile.prototype.estimateTOA = function() {
                   + " / " + speed + " gives " + interval);
 
     // Are they getting any closer?
-    var last_crow = Utils.haversine(Server.server.config.get("location"), this.last_location);
+    var last_crow = Utils.haversine(this.home_location, this.last_location);
     if (crow_flies > last_crow) {
         // no; skip re-routing until we know they are heading home
         console.TRACE(TAG, "Getting further away");
@@ -211,7 +229,6 @@ Mobile.prototype.estimateTOA = function() {
     // are on the planned route or not?
 
     console.TRACE(TAG, "Routing by " + mode);
-    var home = Server.server.config.get("location");
     var gmaps = Apis.get("google_maps");
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
@@ -219,12 +236,13 @@ Mobile.prototype.estimateTOA = function() {
     if (typeof gmaps.ip !== "undefined")
         url += "&userIp=" + gmaps.ip;
     url += "&origin=" + this.location.latitude + "," + this.location.longitude
-        + "&destination=" + home.latitude + "," + home.longitude
+        + "&destination=" + this.home_location.latitude + ","
+        + this.home_location.longitude
         + "&departure_time=" + Math.round(Time.nowSeconds())
         + "&mode=" + mode;
     //console.TRACE(TAG, url);
 
-    var analyseRoutes = function(route) {
+    function analyseRoutes(route) {
         console.TRACE(TAG, "Got a route");
         // Get the time of the best route
         var best_route = A_LONG_TIME;
@@ -240,10 +258,9 @@ Mobile.prototype.estimateTOA = function() {
         }
         console.TRACE(TAG, "Best route is " + best_route);
         self.time_of_arrival = Time.nowSeconds() + best_route;
-    };
+    }
 
     var result = "";
-    var self = this;
     https.get(url,
         function(res) {
             res.on("data", function(chunk) {

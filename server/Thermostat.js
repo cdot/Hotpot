@@ -79,11 +79,10 @@ function Thermostat(name, config) {
     if (typeof ds18x20.mapID !== "undefined")
         ds18x20.mapID(config.get("id"), name);
 
-    console.TRACE(TAG, "'" + this.name + "' constructed");
-
     this.pollTemperature();
     if (typeof this.history_config !== "undefined")
         this.pollHistory();
+    console.TRACE(TAG, "'" + this.name + "' constructed");
 }
 module.exports = Thermostat;
 
@@ -157,6 +156,7 @@ Thermostat.prototype.pollTemperature = function() {
     "use strict";
 
     var self = this;
+
     ds18x20.get(this.id, function(err, temp) {
         if (err !== null) {
             console.error("ERROR: " + err);

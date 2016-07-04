@@ -13,8 +13,9 @@ var setup = {
      * Initialise the singleton server from the given configuration
      * @param {Config} config the configuration data
      */
-    configure: function(config) {
+    configure: function(config, controller) {
         "use strict";
+        setup.controller = controller;
         setup.server = new Server(config);
     }
 };
@@ -26,7 +27,7 @@ module.exports = setup;
  * @protected
  * @class
  */
-function Server(config) {
+function Server(config, controller) {
     "use strict";
 
     var self = this;
@@ -69,13 +70,13 @@ Server.prototype.handle = function(path, params, response) {
         throw "Bad command";
     path = path.substring(1).split("/");
     var command = path.shift();
-    if (typeof this.controller === "undefined") {
+    if (typeof setup.controller === "undefined") {
         // Not ready
         response.statusCode = 500;
         response.end();
         return;
     }
-    this.controller.dispatch(
+    setup.controller.dispatch(
         command, path, params,
         function(reply) {
             response.writeHead(

@@ -42,8 +42,13 @@ Config.prototype.save = function(file) {
         file = this.file;
     if (typeof file !== "string")
         throw "Cannot save this level of config; no file";
-    fs.writeFileSync(Utils.expandEnvVars(file), serialize(this.data, 2), "utf8");
+    fs.writeFileSync(Utils.expandEnvVars(file), this.toString(), "utf8");
     console.log(file + " updated");
+};
+
+Config.prototype.toString = function() {
+    "use strict";
+    return serialize(this.data, 2);
 };
 
 /**

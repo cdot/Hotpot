@@ -2,12 +2,12 @@
 
 const Util = require("util");
 const Events = require("events").EventEmitter;  
+const promise = require("promise");
 
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
 const Rule = require("./Rule.js");
 const Mobile = require("./Mobile.js");
-const Server = require("./Server.js");
 const Apis = require("./Apis.js");
 
 const TAG = "Controller";
@@ -19,47 +19,51 @@ const VALVE_RETURN = 10000;
 // Frequency at which rules are re-evaluated
 const RULE_INTERVAL = 5000;
 
-module.exports = {
-    configure: function(config, when_ready) {
-        "use strict";
-        Server.server.controller = new Controller(config, when_ready);
-    }
-};
+const DEFAULT_LOCATION = { latitude: 0, longitude: 0 };
 
 /**
  * Singleton controller for a number of pins, thermostats, mobile devices,
  * and the rules that manage the system state based on inputs from these
  * elements.
  * @param {Config} config Config object
- * @param {function} when_ready callback function for when the controller is
- * initialised and ready to accept commands (with this set to the Controller)
  * @protected
  * @class
  */
-function Controller(config, when_ready) {
+function Controller(config) {
     "use strict";
 
-    console.TRACE(TAG, "Creating Controller");
-
-    this.location = config.get("location");
-    this.createMobiles(config.getConfig("mobile"));
-    this.createPins(config.getConfig("pin"), function() {
-        this.createThermostats(
-            config.getConfig("thermostat"),
-            function() {
-                // Thermostats and pins are ready. Can poll rules.
-                this.pollRules();
-                when_ready.call(this);
-            });
-    });
-    this.createRules(config.getConfig("rule"));
-
-    var weather_config = Apis.get("weather");
-    if (typeof weather_config !== "undefined")
-        this.weather_agent = require("./" + weather_config.class + ".js");
-
+    this.config = config;
 }
 Util.inherits(Controller, Events);
+module.exports = Controller;
+
+Controller.prototype.initialise = function() {
+    "use strict";
+    console.TRACE(TAG, "Initialising Controller");
+
+    var self = this;
+
+    return new promise(function(fulfill, fail) {
+        //self.location = undefined;
+        self.createMobiles(self.config.getConfig("mobile"));
+        self.createPins(self.config.getConfig("pin"))
+            .then(function() {
+                self.createThermostats(self.config.getConfig("thermostat"))
+                    .then(function() {
+                        // Thermostats and pins are ready. Can poll rules.
+                        self.pollRules();
+                        fulfill();
+                    })
+                    .catch(function(e) {
+                        fail("Error creating thermostats: " + e);
+                    });
+            })
+            .catch(function(e) {
+                fail("Error creating pins: " + e);
+            });
+        self.createRules(self.config.getConfig("rule"));
+    });
+};
 
 /**
  * Create mobiles specified by config
@@ -80,7 +84,7 @@ Controller.prototype.createMobiles = function(mob_config) {
  * Create pins as specified by config
  * @private
  */
-Controller.prototype.createPins = function(pin_config, done) {
+Controller.prototype.createPins = function(pin_config) {
     "use strict";
     var self = this;
 
@@ -91,14 +95,17 @@ Controller.prototype.createPins = function(pin_config, done) {
     pin_config.each(function() {
         counter++;
     });
-    var notify = function() {
-        if (--counter === 0)
-            done.call(self);
-    };
 
-    // Create the pins
-    pin_config.each(function(k) {
-        self.pin[k] = new Pin(k, pin_config.getConfig(k), notify);
+    return new promise(function(fulfill) {
+        function pinDone() {
+            if (--counter === 0)
+                fulfill();
+        }
+
+        // Create the pins
+        pin_config.each(function(k) {
+            self.pin[k] = new Pin(k, pin_config.getConfig(k), pinDone);
+        });
     });
 };
     
@@ -106,7 +113,7 @@ Controller.prototype.createPins = function(pin_config, done) {
  * Create thermostats as specified by config
  * @private
  */
-Controller.prototype.createThermostats = function(ts_config, done) {
+Controller.prototype.createThermostats = function(ts_config) {
     "use strict";
     var self = this;
 
@@ -125,27 +132,26 @@ Controller.prototype.createThermostats = function(ts_config, done) {
     // Assume worst-case valve configuration i.e. grey wire live holding
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
-    console.TRACE(TAG, "Resetting valve");
-    self.pin.HW.set(1)
-        .then(
-            function() {
-                self.pin.CH.set(0)
-                    .then(
-                        function() {
-                            self.setPin("HW", 0,
-                                        function() {
-                                            done.call(self);
-                                        });
-                        })
-                    .catch(function(e2) {
-                        console.TRACE(TAG, "Reset 0 failed " + e2);
-                        done.call(self);
-                    });
-            })
-        .catch(function(e3) {
-            console.TRACE(TAG, "Reset 1 failed " + e3);
-            done.call(self);
-        });
+    return new promise(function(fulfill, fail) {
+        console.TRACE(TAG, "Resetting valve");
+        self.pin.HW.set(1)
+            .then(
+                function() {
+                    self.pin.CH.set(0)
+                        .then(
+                            function() {
+                                self.setPin("HW", 0, fulfill);
+                            })
+                        .catch(function(e2) {
+                            console.TRACE(TAG, "Reset CH=0 failed " + e2);
+                            fail();
+                        });
+                })
+            .catch(function(e3) {
+                console.TRACE(TAG, "Reset HW=1 failed " + e3);
+                fail();
+            });
+    });
 };
 
 /**
@@ -160,6 +166,21 @@ Controller.prototype.createRules = function(config) {
         var r = config.getConfig(k);
         self.insert_rule(new Rule(r.get("name"), r.get("test")));
     });
+};
+
+Controller.prototype.setLocation = function(location) {
+    "use strict";
+
+    this.location = location;
+    for (var id in this.mobile) {
+        this.mobile[id].setHomeLocation(location);
+    }
+
+    var weather_config = Apis.get("weather");
+    if (typeof weather_config !== "undefined") {
+        this.weather_agent = require("./" + weather_config.class + ".js");
+        this.weather_agent.setLocation(location);
+    }
 };
 
 /**
@@ -178,7 +199,8 @@ Controller.prototype.getSerialisableConfig = function() {
     };
 
     return {
-        location: this.location,
+        location: (typeof this.location !== "undefined")
+            ? this.location : DEFAULT_LOCATION,
         thermostat: sermap(this.thermostat),
         pin: sermap(this.pin),
         mobile: sermap(this.mobile),
@@ -330,9 +352,11 @@ Controller.prototype.setMobileState = function(info) {
         throw TAG + " setMobileState: " + d + " not known" + new Error().stack;
     d.setState(info);
     var interval = d.estimateTOA(this);
+    var loc = (typeof this.location !== "undefined")
+        ? this.location : DEFAULT_LOCATION;
     return {
-        home_lat: Server.server.config.get("location").latitude,
-        home_long: Server.server.config.get("location").longitude,
+        home_lat: loc.latitude,
+        home_long: loc.longitude,
         interval: interval
     };
 };

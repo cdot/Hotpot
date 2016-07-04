@@ -12,6 +12,8 @@ const Controller = require("./Controller.js");
 
 const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
 
+const TAG = "Hotpot";
+
 /** Main program */
 (function () {
     "use strict";
@@ -40,21 +42,24 @@ const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
 
     var config = new Config(CONFIG_FILE);
     Apis.configure(config.getConfig("apis"));
-    Server.configure(config.getConfig("server"));
+    var controller = new Controller(config.getConfig("controller"));
 
-    // Start the controller and when it's ready, start an HTTP server
-    // to receive commands for it.
-    Controller.configure(
-        config.getConfig("controller"),
-        function() {
-            var self = this;
-            
+    controller.initialise()
+        .then(function() {
+            Server.configure(config.getConfig("server"), controller);
+
+            controller.setLocation(Server.server.config.get("location"));
+
             // Save config when it changes, so we restart to the
             // same state
-            self.on("config_change",
+            controller.on("config_change",
                     function() {
-                        config.set("controller", self.getSerialisableConfig());
+                        config.set("controller",
+                                   controller.getSerialisableConfig());
                         config.save();
                     });
+        })
+        .catch(function(e) {
+            console.TRACE(TAG, "Controller initialisation failed " + e);
         });
 })();

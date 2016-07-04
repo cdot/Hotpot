@@ -8,7 +8,6 @@ const http = require("follow-redirects").http;
 const Utils = require("../common/Utils.js");
 
 const Apis = require("./Apis.js");
-const Server = require("./Server.js");
 
 /** @private */
 const URL_ROOT = "http://datapoint.metoffice.gov.uk/public/data/val/wxfcs/";
@@ -32,6 +31,9 @@ const IS_NUMBER = [
  * own implementation simply by calling e.g.
  * this.weather.get("Feels Like Temperature")
  *
+ * Note that nothing will happen until you call setLocation to set the
+ * location for which the weather is being received.
+ *
  * This reference implementation gets current and predicted
  * weather information from the UK Met Office 3 hourly forecast updates.
  * It then performs a simple interpolation to guess the current weather at
@@ -41,11 +43,10 @@ const IS_NUMBER = [
  */
 var MetOffice = function() {
     "use strict";
-    // this.cached_id
-    // this.before
-    // this.after
     console.TRACE(TAG, "starting");
-    this.update();
+    // this.before = undefined
+    // this.after = undefined
+    // this.location_id = undefined;
 };
 
 /**
@@ -58,43 +59,51 @@ MetOffice.prototype.api_key = function() {
 };
 
 /**
+ * Set the lat/long of the place we are getting weather data for
+ *@param {Location} loc where
+ */
+MetOffice.prototype.setLocation = function(loc) {
+    "use strict";
+    var self = this;
+    this.findNearestLocation(loc, function() { self.update(); });
+};
+
+/**
  * Process a list of locations returned by the weather service
  * to find the ID of the closest.
+ * @param {Location} loc where is "here"
  * @param data data returned from the metoffice server
- * @param callback function to call when finished, passing the id
+ * @param {function} chain a function to call when we've got a result
  * @private
  */
-MetOffice.prototype.findClosest = function(data, callback) {
+MetOffice.prototype.findClosest = function(data, loc, chain) {
     "use strict";
+
     var list = data.Locations.Location;
     var best, mindist = Number.MAX_VALUE;
-    var here = Server.server.config.get("location");
     for (var i in list) {
-        var dist = Utils.haversine(here, list[i]);
+        var dist = Utils.haversine(loc, list[i]);
         if (dist < mindist) {
             mindist = dist;
             best = list[i];
         }
     }
     console.TRACE(TAG, "Nearest location is " + best.name);
-    this.cached_id = best.id;
-    callback.call(this, best.id);
+    this.location_id = best.id;
+    if (typeof chain === "function")
+        chain();
 };
 
 /**
  * Find the ID of the nearest location to the given lat,long.
- * @param callback function called when the ID has been determined
+ * @param {Location} loc where is "here"
+ * @param {function} chain a function to call when we've got a result
  * @private
  */
-MetOffice.prototype.findNearestLocation = function(callback) {
+MetOffice.prototype.findNearestLocation = function(loc, chain) {
     "use strict";
 
     var self = this;
-    if (typeof this.cached_id !== "undefined") {
-        // Don't request again
-        callback.call(self, this.cached_id);
-        return;
-    }
 
     var url = URL_ROOT + "all/json/sitelist" + this.api_key();
     http.get(
@@ -105,7 +114,7 @@ MetOffice.prototype.findNearestLocation = function(callback) {
                 result += chunk;
             });
             res.on("end", function() {
-                self.findClosest(JSON.parse(result), callback);
+                self.findClosest(JSON.parse(result), loc, chain);
             });
         })
         .on("error", function(err) {
@@ -198,15 +207,13 @@ MetOffice.prototype.update = function() {
     "use strict";
     var self = this;
     console.TRACE(TAG, "Updating from MetOffice website");
-    this.findNearestLocation(function(id) {
-        this.getWeather(id, function() {
-            var wait = self.after.$ - Date.now();
-            console.TRACE(TAG, "Next update in "
-                          + (wait / 60000) + " minutes");
-            setTimeout(function() {
-                self.update();
-            }, wait);
-        });
+    this.getWeather(this.location_id, function() {
+        var wait = self.after.$ - Date.now();
+        console.TRACE(TAG, "Next update in "
+                      + (wait / 60000) + " minutes");
+        setTimeout(function() {
+            self.update();
+        }, wait);
     });
 };
 

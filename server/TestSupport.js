@@ -3,11 +3,13 @@
 // Test support
 
 const assert = require('assert');
+const Server = require("./Server.js");
 
 TestSupport = {
-    pinstate:    { CH: 0, HW: 0 },
+    gpiopath:    "/tmp",
     temperature: { CH: 20, HW: 40 },
     ID2Name: {},
+    pinstate: {},
 
     mapID: function(id, name) {
         TestSupport.ID2Name[id] = name;
@@ -19,7 +21,7 @@ TestSupport = {
         var name = TestSupport.ID2Name[id];
         var odl = TestSupport.temperature[name];
         var offset = Math.random() / 1000;
-        if (TestSupport.pinstate[name])
+        if (TestSupport.pinstate[name] > 0)
             TestSupport.temperature[name] += offset;
         else if (TestSupport.temperature[name] > 0)
             TestSupport.temperature[name] -= offset;
