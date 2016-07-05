@@ -199,8 +199,7 @@ Controller.prototype.getSerialisableConfig = function() {
     };
 
     return {
-        location: (typeof this.location !== "undefined")
-            ? this.location : DEFAULT_LOCATION,
+        location: this.location,
         thermostat: sermap(this.thermostat),
         pin: sermap(this.pin),
         mobile: sermap(this.mobile),

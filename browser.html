@@ -12,15 +12,16 @@
          hotpot_port to the port used by the hotpot server -->
     <script type="text/javascript" src="http://c-dot.co.uk/hotpot_ip.js">
     </script>
-    <script  type="text/javascript">
-      hotpot_port = 13196;
-    </script>
     <!-- Debug configuration, pointing at a development server -->
     <script type="text/javascript">
+      hotpot_port = 13196;
       if (location.search.indexOf("DEBUG") > 0) {
           console.debug("Using DEBUG server");
           hotpot_ip = "192.168.1.12";
-          hotpot_port = 13196;
+      }
+      else if (location.search.indexOf("LAN") > 0) {
+          console.debug("Using LAN server");
+          hotpot_ip = "192.168.1.16";
       }
     </script>
 
@@ -106,15 +107,10 @@
     <!-- Mobile template -->
     <div class="template" data-template="mobile">
       <div>
-        <iframe
-           width="200"
-           height="200"
-           style="float:right"
-           data-type="location"
-           data-field="location"
-           frameborder="0" style="border:0"
-           src="">
-        </iframe>
+        <div data-type="location"
+             data-field="location"
+             style="width: 200; height: 200; float: right;border:0">
+        </div>
         <b data-field="name"></b>
         is expected home at
         <span data-field="time_of_arrival"></span>

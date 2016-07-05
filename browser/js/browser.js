@@ -203,11 +203,7 @@
                 $ui.prop("checked", value);
         } else if (t === "location") {
             var lat = value.latitude, lon = value.longitude;
-            var nurl = "https://www.google.com/maps/embed/v1/view?key="
-                + apis.google_maps.api_key + "&zoom=12&center="
-                + lat + "," + lon;
-            if ($ui.attr("src") !== nurl)
-                $ui.attr("src", nurl);
+            $ui.data("map").panTo(new LatLng(lat, lon));
         } else {
             // Text / number field
             if (t === "float") {
@@ -422,6 +418,10 @@
 
         $("#server_url").text(server);
 
+        $("body").append("<script src='https://maps.googleapis.com/maps/api/js"
+                         + "?key=" + apis.google_maps.browser_key
+                         + "&callback=initialiseMap' async defer></script>");
+
         // Can't use getJSON because of the rule functions
         $.get(
             server + "/config",
@@ -481,3 +481,16 @@
 
     $(document).ready(get_apis);
 })(jQuery);
+
+// Global callback invoked when google maps API is ready
+// Attach a map to each data-type=location
+function initialiseMap() {
+    (function($) {
+        $("[data-type='location']").each(function() {
+            var m = new google.maps.Map(
+                this,
+                { zoom: 12 });
+            $(this).data("map", m);
+        });
+    })(jQuery);
+}

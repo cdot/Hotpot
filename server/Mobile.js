@@ -120,6 +120,8 @@ Mobile.prototype.getSerialisableState = function() {
 Mobile.prototype.setHomeLocation = function(location) {
     "use strict";
     this.home_location = location;
+    if (this.location === DEFAULT_LOCATION)
+        this.location = this.home_location;
 };
 
 /**
@@ -232,7 +234,7 @@ Mobile.prototype.estimateTOA = function() {
     var gmaps = Apis.get("google_maps");
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
-        + "&key=" + gmaps.api_key;
+        + "&key=" + gmaps.server_key;
     if (typeof gmaps.ip !== "undefined")
         url += "&userIp=" + gmaps.ip;
     url += "&origin=" + this.location.latitude + "," + this.location.longitude
