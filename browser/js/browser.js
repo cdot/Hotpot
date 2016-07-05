@@ -203,7 +203,7 @@
                 $ui.prop("checked", value);
         } else if (t === "location") {
             var lat = value.latitude, lon = value.longitude;
-            $ui.data("map").panTo(new LatLng(lat, lon));
+            $ui.data("map").panTo({lat: lat, lng: lon});
         } else {
             // Text / number field
             if (t === "float") {
@@ -486,7 +486,10 @@
 // Attach a map to each data-type=location
 function initialiseMap() {
     (function($) {
-        $("[data-type='location']").each(function() {
+        $(".map").each(function() {
+            var $div = $(this).closest(".templated");
+            if ($div.length === 0)
+                return; // in a template
             var m = new google.maps.Map(
                 this,
                 { zoom: 12 });

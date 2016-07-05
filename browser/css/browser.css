@@ -60,3 +60,9 @@ body {
 .active_rule {
     color: yellow;
 }
+
+.map {
+    width: 200px;
+    height: 200px;
+    float: right;
+}
