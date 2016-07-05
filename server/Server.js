@@ -94,7 +94,7 @@ Server.prototype.handle = function(path, params, response) {
                     "Access-Control-Allow-Methods": "POST,GET"
                 });
             response.statusCode = 200;
-            response.write(serialize(s));
+            response.write(s);
             response.end();
 	    console.TRACE(TAG, "Handled " + command);
         });

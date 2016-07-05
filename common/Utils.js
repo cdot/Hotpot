@@ -97,7 +97,7 @@ Utils.byteLength = function(str) {
         if (code > 0x7f && code <= 0x7ff)
             s++;
         else if (code > 0x7ff && code <= 0xffff)
-            s+=2;
+            s += 2;
         if (code >= 0xDC00 && code <= 0xDFFF)
             i--; // trail surrogate
     }

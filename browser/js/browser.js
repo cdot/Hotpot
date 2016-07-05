@@ -10,7 +10,9 @@
     var setup_backoff = 5; // seconds
     var update_backoff = 5; // seconds
     var update_rate = 5; // seconds
+    
     var apis;
+    var config;
 
     var poller;
     var stopPolling = function () {
@@ -53,11 +55,11 @@
                         $self.text(s);
                     })
                     .always(function() {
-                        poll();
+                        $(document).trigger("poll");
                     });
             },
             cancel: function() {
-                poll();
+                $(document).trigger("poll");
             }
         });
         return false; // prevent repeated calls
@@ -75,7 +77,7 @@
         $.post(server + "/set/" + getPath($self),
                JSON.stringify(params))
             .always(function() {
-                poll();
+                $(document).trigger("poll");
             });
         return false; // prevent repeated calls
     };
@@ -116,7 +118,7 @@
                 renumberRules($self.closest("[data-field='rule']"));
             })
             .always(function() {
-                poll();
+                $(document).trigger("poll");
             });
         return false; // prevent repeated calls
     };
@@ -137,7 +139,7 @@
                 renumberRules($rules);
             })
             .always(function() {
-                poll();
+                $(document).trigger("poll");
             });
         return false; // prevent repeated calls
     };
@@ -164,7 +166,7 @@
                 renumberRules($rules);
             })
             .always(function() {
-                poll();
+                $(document).trigger("poll");
             });
         return false; // prevent repeated calls
     };
@@ -202,8 +204,12 @@
             else
                 $ui.prop("checked", value);
         } else if (t === "location") {
-            var lat = value.latitude, lon = value.longitude;
-            $ui.data("map").panTo({lat: lat, lng: lon});
+            var m = $ui.data("marker");
+            if (m)
+                m.setPosition({
+                    lat: value.latitude,
+                    lng: value.longitude
+                });
         } else {
             // Text / number field
             if (t === "float") {
@@ -244,7 +250,7 @@
     /**
      * Wake up on schedule and refresh the state
      */
-    var poll = function() {
+    $(document).on("poll", function() {
         $.get(
             server + "/state",
             function(raw) {
@@ -252,15 +258,19 @@
                 eval("data=" + raw);
                 $("#comms_error").html("");
                 populate($("body"), "", data);
-                poller = setTimeout(poll, update_rate * 1000);
+                poller = setTimeout(function() {
+                    $(document).trigger("poll");
+                }, update_rate * 1000);
             })
             .error(function(jqXHR, status, err) {
                 $("#comms_error").html(
                     "<div class='error'>Could not contact server "
                         + server + " for update: " + err + "</div>");
-                poller = setTimeout(poll, update_backoff * 1000);
+                poller = setTimeout(function() {
+                    $(document).trigger("poll");
+                }, update_backoff * 1000);
             });
-    };
+    });
 
     /**
      * Add a trace to the temperature graph canvas
@@ -282,7 +292,7 @@
         });
     }
 
-    function initialiseTemperatureGraph() {
+    $(document).on("initialise_temperature_graph", function() {
         var $tc = $("#temperature_canvas");
         $tc.autoscale_graph({
             render_label: function(axis, data) {
@@ -302,27 +312,28 @@
         $.get(
             server + "/log",
             function(raw) {
+                var g = $tc.data("graph");
                 var data;
                 eval("data=" + raw);
                 for (var i in data.thermostat) {
                     var th = data.thermostat[i];
-                    for (var j = 0; j < th.data.length; j += 2)
-                        $tc.trigger("addpoint",
-                                    {
-                                        trace: i,
-                                        point: {
-                                            x: th.basetime + th.data[j],
-                                            y: th.data[j + 1]
-                                        }
-                                    });
+                    for (var j = 0; j < th.data.length; j += 2) {
+                        g.addPoint(
+                            i,
+                            {
+                                x: th.basetime + th.data[j],
+                                y: th.data[j + 1]
+                            });
+                    }
                 }
+                $tc.trigger("update");
             })
             .error(function(jqXHR, textStatus, errorThrown) {
                 console.log("Could not contact server "
                         + server + " for logs: " + errorThrown);
             });
 
-    }
+    });
 
     /**
      * Expand the given template string
@@ -382,7 +393,7 @@
      * @param $root the root below which to attach handlers. undef
      * will attach to eveything in the document.
      */
-    var attachHandlers = function($root) {
+    function attachHandlers($root) {
         $(".editable", $root).on("click", editField);
         $("input:checkbox", $root).on("click", toggleField);
 
@@ -408,38 +419,69 @@
         $(".move_rule.up", $root).first().addClass("disabled");
         $(".move_rule.down", $root).last().addClass("disabled");
         $(".add_rule", $root).on("click", addRule);
-    };
+    }
+
+    $(document).on("initialise_map", function() {
+        $.getScript(
+            "https://maps.googleapis.com/maps/api/js"
+                + "?key=" + apis.google_maps.browser_key)
+            .done(function(a,b,c) {
+                var here = {
+                    lat: config.location.latitude,
+                    lng: config.location.longitude
+                };
+                $("#map").each(function() {
+                    var map = new google.maps.Map(
+                        {
+                            center: here,
+                            zoom: 12
+                        },
+                        this);
+                    $(this).data("map", map);
+
+                    $(".marker").each(function() {
+                        var $div = $(this).closest(".templated");
+                        if ($div.length === 0)
+                            return; // in a template
+                        var marker = new google.maps.Marker({
+                            position: here,
+                            map: map
+                        });
+                        $(this).data("marker", marker);
+                    });
+                });
+            });
+    });
 
     /**
      * Populate the document by getting the configuration from
      * the server.
      */
-    var configure = function() {
+    $(document).on("configure", function() {
 
         $("#server_url").text(server);
-
-        $("body").append("<script src='https://maps.googleapis.com/maps/api/js"
-                         + "?key=" + apis.google_maps.browser_key
-                         + "&callback=initialiseMap' async defer></script>");
 
         // Can't use getJSON because of the rule functions
         $.get(
             server + "/config",
             function(raw) {
-                var data;
-                eval("data=" + raw);
+                eval("config=" + raw);
                 $("#comms_error").html("");
                 // data is a map containing thermostat, pin, mobile
-                for (var type in data) {
+                for (var type in config) {
                     fillContainer(
                         $("[data-field='" + type + "']").first(),
-                        type, data[type]);
+                        type, config[type]);
                 }
-                initialiseTemperatureGraph();
+                // Templates all expanded
                 attachHandlers();
 
-                // immediately refresh to get the state
-                setTimeout(poll, 1);
+                // immediately refresh to get the state ASAP
+                $(document).trigger("poll");
+
+                $(document).trigger("initialise_temperature_graph");
+
+                $(document).trigger("initialise_map");
             })
             .error(function(jqXHR, textStatus, errorThrown) {
                 $("#comms_error").html(
@@ -447,11 +489,13 @@
                         + server + " for setup: " + errorThrown
                         + " Will try again in " + setup_backoff
                         + " seconds</div>");
-                setTimeout(configure, setup_backoff * 1000);
+                setTimeout(function() {
+                    $(document).trigger("configure");
+                }, setup_backoff * 1000);
             });
-    };
+    });
 
-    var get_apis = function() {
+    function get_apis() {
         var urps = window.location.search.substring(1).split(/[&;]/);
         for (var i = 0; i < urps.length; i++) {
             var urp = urps[i].split("=");
@@ -467,7 +511,7 @@
             server + "/apis",
             function(raw) {
                 eval("apis=" + raw);
-                configure();
+                $(document).trigger("configure");
             })
             .error(function(jqXHR, textStatus, errorThrown) {
                 $("#comms_error").html(
@@ -477,23 +521,7 @@
                         + " seconds</div>");
                 setTimeout(get_apis, setup_backoff * 1000);
             });
-    };
+    }
 
     $(document).ready(get_apis);
 })(jQuery);
-
-// Global callback invoked when google maps API is ready
-// Attach a map to each data-type=location
-function initialiseMap() {
-    (function($) {
-        $(".map").each(function() {
-            var $div = $(this).closest(".templated");
-            if ($div.length === 0)
-                return; // in a template
-            var m = new google.maps.Map(
-                this,
-                { zoom: 12 });
-            $(this).data("map", m);
-        });
-    })(jQuery);
-}

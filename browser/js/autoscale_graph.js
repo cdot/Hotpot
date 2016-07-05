@@ -225,7 +225,6 @@ Graph.prototype.addPoint = function(tracename, x, y) {
         this.traces[tracename] = new Trace(tracename);
     }
     this.traces[tracename].addPoint(x, y);
-    this.$canvas.trigger("update");
 };
 
 Graph.prototype.update = function() {
@@ -328,6 +327,7 @@ Graph.prototype.update = function() {
     
         $canvas.on("addpoint", function(e, data) {
             $canvas.data("graph").addPoint(data.trace, data.point);
+            $canvas.trigger("update");
         });
 
         $canvas.on("update", function() {
