@@ -70,6 +70,8 @@ Server.prototype.handle = function(path, params, response) {
         throw "Bad command";
     path = path.substring(1).split("/");
     var command = path.shift();
+
+    console.TRACE(TAG, "Handling " + command);
     if (typeof setup.controller === "undefined") {
         // Not ready
         response.statusCode = 500;
@@ -92,6 +94,7 @@ Server.prototype.handle = function(path, params, response) {
             if (typeof reply !== "undefined" && reply !== null)
                 response.write(serialize(reply));
             response.end();
+	    console.TRACE(TAG, "Handled " + command);
         });
 };
 
