@@ -79,18 +79,20 @@ Server.prototype.handle = function(path, params, response) {
     setup.controller.dispatch(
         command, path, params,
         function(reply) {
+            var s = (typeof reply !== "undefined" && reply !== null)
+                ? serialize(reply) : "";
             response.writeHead(
                 200, "OK",
                 {
                     // Don't send as application/json; we
                     // don't want the receiver to parse it
                     "Content-Type": "text/plain",
+                    "Content-Length": Utils.byteLength(s),
                     "Access-Control-Allow-Origin": null,
                     "Access-Control-Allow-Methods": "POST,GET"
                 });
             response.statusCode = 200;
-            if (typeof reply !== "undefined" && reply !== null)
-                response.write(serialize(reply));
+            response.write(serialize(s));
             response.end();
         });
 };
