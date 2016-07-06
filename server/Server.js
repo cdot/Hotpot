@@ -1,5 +1,7 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
+/*eslint-env node */
+
 const fs = require("fs");
 const serialize = require("serialize-javascript");
 const Url = require("url");
@@ -96,7 +98,7 @@ Server.prototype.handle = function(path, params, response) {
             response.statusCode = 200;
             response.write(s);
             response.end();
-	    console.TRACE(TAG, "Handled " + command);
+            console.TRACE(TAG, "Handled " + command);
         });
 };
 

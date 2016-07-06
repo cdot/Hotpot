@@ -43,14 +43,10 @@
             "blockBindings": true
         },
         "globals": {
-            "require": true,
-            "module": true,
-            "Buffer": true,
-            "process" : true,
-            "Time": true,
-            "Config": true
+            "Time": true
         },
         "rules": {
+            "strict": [ "error", "global" ],
             "no-underscore-dangle": 0,
             "curly": 0,
             "camelcase": 0,

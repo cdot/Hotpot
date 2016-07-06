@@ -1,7 +1,9 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
-// This can't be "var" or "const" because rules can't see it then for some
-// unexplained reason
+/*eslint-env node */
+
+// We need this to be gloabl (outside the scope of the node module)
+// so the module can't be strict
 /** @ignore */
 Time = require("../common/Time.js"); // for executing rules
 

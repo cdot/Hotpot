@@ -1,7 +1,10 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
-var fs = require("fs");
-var Time = require("../common/Time.js");
-var Utils = require("../common/Utils.js");
+
+/*eslint-env node */
+
+const fs = require("fs");
+const Time = require("../common/Time.js");
+const Utils = require("../common/Utils.js");
 
 const TAG = "Thermostat";
 

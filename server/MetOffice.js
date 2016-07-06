@@ -3,9 +3,12 @@
  * @module MetOffice
  */
 
+/*eslint-env node */
+
 const http = require("follow-redirects").http;
 
-const Utils = require("../common/Utils.js");
+//const Utils = require("../common/Utils.js");
+const Location = require("../common/Location.js");
 
 const Apis = require("./Apis.js");
 
@@ -82,13 +85,15 @@ MetOffice.prototype.findClosest = function(data, loc, chain) {
     var list = data.Locations.Location;
     var best, mindist = Number.MAX_VALUE;
     for (var i in list) {
-        var dist = Utils.haversine(loc, list[i]);
+        var ll = new Location(list[i]);
+        var dist = loc.haversine(ll);
         if (dist < mindist) {
             mindist = dist;
             best = list[i];
         }
     }
-    console.TRACE(TAG, "Nearest location is " + best.name);
+    console.TRACE(TAG, "Nearest location is " + best.name
+                 + " at " + new Location(best));
     this.location_id = best.id;
     if (typeof chain === "function")
         chain();

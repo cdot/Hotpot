@@ -4,13 +4,15 @@ SOURCES := \
 	server/Apis.js \
 	server/Config.js \
 	server/Controller.js \
+	server/Hotpot.js \
 	server/MetOffice.js \
 	server/Mobile.js \
 	server/Pin.js \
 	server/Rule.js \
 	server/Server.js \
 	server/Thermostat.js \
-	server/Hotpot.js \
+	common/BrowserStubs.js \
+	common/Location.js \
 	common/Time.js \
 	common/Utils.js \
 	browser/js/autoscale_graph.js \

@@ -1,5 +1,7 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
+/*eslint-env node */
+
 const fs = require("fs");
 const serialize = require("serialize-javascript");
 
@@ -15,7 +17,6 @@ const TAG = "Config";
  * @protected
  */
 function Config(file) {
-    "use strict";
     if (typeof file === "string") {
         this.file = file;
         var data = fs.readFileSync(Utils.expandEnvVars(file), "utf8");

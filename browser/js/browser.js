@@ -205,11 +205,8 @@
                 $ui.prop("checked", value);
         } else if (t === "location") {
             var m = $ui.data("marker");
-            if (m)
-                m.setPosition({
-                    lat: value.latitude,
-                    lng: value.longitude
-                });
+            if (typeof m !== "undefined")
+                m.setPosition(value);
         } else {
             // Text / number field
             if (t === "float") {
@@ -425,34 +422,31 @@
         $.getScript(
             "https://maps.googleapis.com/maps/api/js"
                 + "?key=" + apis.google_maps.browser_key)
-            .done(function(a,b,c) {
-                var here = {
-                    lat: config.location.latitude,
-                    lng: config.location.longitude
-                };
+            .done(function() {
+                var here = new Location(config.location);
                 $("#map").each(function() {
                     var map = new google.maps.Map(
+                        this,
                         {
                             center: here,
-                            zoom: 12
-                        },
-                        this);
+                            zoom: 8
+                        });
                     $(this).data("map", map);
 
-                    $(".marker").each(function() {
+                   $(".marker").each(function() {
                         var $div = $(this).closest(".templated");
                         if ($div.length === 0)
                             return; // in a template
                         var marker = new google.maps.Marker({
                             position: here,
                             map: map
-                        });
+                            });
                         $(this).data("marker", marker);
-                    });
+                   });
                 });
             });
     });
-
+    
     /**
      * Populate the document by getting the configuration from
      * the server.

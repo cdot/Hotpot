@@ -1,9 +1,14 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+
+/*eslint-env node */
+
 const DESCRIPTION =
 "DESCRIPTION\nA Raspberry PI central heating control server.\n" +
 "See README.md for details\n\nOPTIONS\n";
 
 const getopt = require("node-getopt");
+
+const Location = require("../common/Location.js");
 
 const Config = require("./Config.js");
 const Apis = require("./Apis.js");
@@ -27,6 +32,10 @@ const TAG = "Hotpot";
         .parseSystem()
         .options;
    
+    if (typeof cliopt.debug !== "undefined")
+        // Development only
+        require("promise/lib/rejection-tracking").enable();
+
     // 0: initialisation
     // 1: pin on/off
     // 2: command tracing
@@ -48,7 +57,7 @@ const TAG = "Hotpot";
         .then(function() {
             Server.configure(config.getConfig("server"), controller);
 
-            controller.setLocation(Server.server.config.get("location"));
+            controller.setLocation(new Location(Server.server.config.get("location")));
 
             // Save config when it changes, so we restart to the
             // same state
@@ -59,7 +68,7 @@ const TAG = "Hotpot";
                         config.save();
                     });
         })
-        .catch(function(e) {
+/*        .catch(function(e) {
             console.TRACE(TAG, "Controller initialisation failed " + e);
-        });
+        })*/;
 })();

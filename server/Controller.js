@@ -1,8 +1,12 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
+/*eslint-env node */
+
 const Util = require("util");
 const Events = require("events").EventEmitter;  
 const promise = require("promise");
+
+const Location = require("../common/Location.js");
 
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
@@ -19,8 +23,6 @@ const VALVE_RETURN = 10000;
 // Frequency at which rules are re-evaluated
 const RULE_INTERVAL = 5000;
 
-const DEFAULT_LOCATION = { latitude: 0, longitude: 0 };
-
 /**
  * Singleton controller for a number of pins, thermostats, mobile devices,
  * and the rules that manage the system state based on inputs from these
@@ -30,8 +32,6 @@ const DEFAULT_LOCATION = { latitude: 0, longitude: 0 };
  * @class
  */
 function Controller(config) {
-    "use strict";
-
     this.config = config;
 }
 Util.inherits(Controller, Events);
@@ -54,13 +54,13 @@ Controller.prototype.initialise = function() {
                         self.pollRules();
                         fulfill();
                     })
-                    .catch(function(e) {
+/*                    .catch(function(e) {
                         fail("Error creating thermostats: " + e);
-                    });
+                    })*/;
             })
-            .catch(function(e) {
+/*            .catch(function(e) {
                 fail("Error creating pins: " + e);
-            });
+            })*/;
         self.createRules(self.config.getConfig("rule"));
     });
 };
@@ -71,7 +71,6 @@ Controller.prototype.initialise = function() {
  */
 Controller.prototype.createMobiles = function(mob_config) {
     "use strict";
-
     var self = this;
     self.mobile = {};
     mob_config.each(function(id) {
@@ -168,9 +167,11 @@ Controller.prototype.createRules = function(config) {
     });
 };
 
+/**
+ * Set the location of the server
+ */
 Controller.prototype.setLocation = function(location) {
     "use strict";
-
     this.location = location;
     for (var id in this.mobile) {
         this.mobile[id].setHomeLocation(location);
@@ -190,13 +191,12 @@ Controller.prototype.setLocation = function(location) {
  */
 Controller.prototype.getSerialisableConfig = function() {
     "use strict";
-
-    var sermap = function(m) {
+    function sermap(m) {
 	var res = {};
 	for (var k in m)
             res[k] = m[k].getSerialisableConfig();
         return res;
-    };
+    }
 
     return {
         location: this.location,
@@ -214,13 +214,12 @@ Controller.prototype.getSerialisableConfig = function() {
  */
 Controller.prototype.getSerialisableState = function() {
     "use strict";
-
-    var sermap = function(m) {
+    function sermap(m) {
 	var res = {};
 	for (var k in m)
             res[k] = m[k].getSerialisableState();
         return res;
-    };
+    }
 
     return {
 	time: new Date().toString(), // local time
@@ -238,13 +237,12 @@ Controller.prototype.getSerialisableState = function() {
  */
 Controller.prototype.getSerialisableLog = function() {
     "use strict";
-
-    var sermap = function(m) {
+    function sermap(m) {
 	var res = {};
 	for (var k in m)
             res[k] = m[k].getSerialisableLog();
         return res;
-    };
+    }
 
     return {
         thermostat: sermap(this.thermostat)
@@ -262,7 +260,6 @@ Controller.prototype.getSerialisableLog = function() {
  */
 Controller.prototype.setPin = function(channel, on, respond) {
     "use strict";
-
     var self = this;
 
     // Duck race condition during initialisation
@@ -339,8 +336,8 @@ Controller.prototype.getMobile = function(id) {
 
 /**
  * Handler for mobile state setting
- * @param info structure containing location in "latitude", "longitude",
- * device identifier in "device", and demand
+ * @param info structure containing location in "lat", "lng",
+ * device identifier in "device", and boolean "demand"
  * @return location of server
  * @private
  */
@@ -352,10 +349,10 @@ Controller.prototype.setMobileState = function(info) {
     d.setState(info);
     var interval = d.estimateTOA(this);
     var loc = (typeof this.location !== "undefined")
-        ? this.location : DEFAULT_LOCATION;
+        ? this.location : new Location();
     return {
-        home_lat: loc.latitude,
-        home_long: loc.longitude,
+        home_lat: loc.lat,
+        home_long: loc.lng,
         interval: interval
     };
 };
@@ -387,7 +384,6 @@ Controller.prototype.weather = function(field) {
  */
 Controller.prototype.dispatch = function(command, path, data, respond) {
     "use strict";
-
     var self = this;
 
     function getFunction(field) {
@@ -462,7 +458,6 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
  */
 Controller.prototype.getRuleIndex = function(i) {
     "use strict";
-
     if (typeof i !== "string") {
         for (var j in this.rule) {
             if (this.rule[j].name === i) {
@@ -553,7 +548,6 @@ Controller.prototype.clear_rules = function() {
  */
 Controller.prototype.renumberRules = function() {
     "use strict";
-
     for (var j = 0; j < this.rule.length; j++)
         this.rule[j].index = j;
 };

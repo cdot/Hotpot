@@ -1,15 +1,16 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
+/*eslint-env node */
+
 const https = require("https");
 
 const Time = require("../common/Time.js");
-const Utils = require("../common/Utils.js");
+const Location = require("../common/Location.js");
 
 const Apis = require("./Apis.js");
 
 const DEFAULT_INTERVAL = 5 * 60; // 5 minutes in seconds
 const LONG_INTERVAL = 30 * 60; // half an hour in seconds
-const DEFAULT_LOCATION = { latitude: 0, longitude: 0 };
 
 const MPH = 0.44704; // metres per second -> mph
 const FAST_WALK = 4 * MPH; // in m/s
@@ -28,7 +29,6 @@ const TAG = "Mobile";
  */
 function Mobile(name, config) {
     "use strict";
-
     /**
      * Name of this device 
      * @public
@@ -46,14 +46,14 @@ function Mobile(name, config) {
      * @type {Location}
      * @public
      */
-    this.location = DEFAULT_LOCATION;
+    this.location = new Location();
 
     /**
      * Home location (location of the server, cache)
      * @type {Location}
      * @public
      */
-    this.home_location = DEFAULT_LOCATION;
+    this.home_location = new Location();
 
     /**
      * Time of last location update, epoch secs 
@@ -66,7 +66,7 @@ function Mobile(name, config) {
      * @type {Location}
      * @public
      */
-    this.last_location = DEFAULT_LOCATION;
+    this.last_location = new Location();
 
     /**
      * Time at last_location, epoch secs 
@@ -120,30 +120,25 @@ Mobile.prototype.getSerialisableState = function() {
 Mobile.prototype.setHomeLocation = function(location) {
     "use strict";
     this.home_location = location;
-    if (this.location === DEFAULT_LOCATION)
+    if (this.location.equals(new Location()))
         this.location = this.home_location;
 };
 
 /**
  * Set the current state of the mobile device in response to a message from
  * the device.
- * @param {object} info info about the device, including "latitude",
- * "longitude" and "demand".
+ * @param {object} info info about the device, including "lat",
+ * "lng" and "demand".
  * @protected
  */
 Mobile.prototype.setState = function(info) {
     "use strict";
     this.last_location = this.location;
-    this.location = {
-        latitude: info.latitude,
-        longitude: info.longitude
-    };
+    this.location = new Location(info);
     this.demand = info.demand;
     this.last_time = this.time;
     this.time = Time.nowSeconds();
-    console.TRACE(TAG, "set location @" + this.time
-                  + ": " + info.latitude
-                  + "," + info.longitude);
+    console.TRACE(TAG, "set location @" + this.time + ": " + info);
     if (this.last_location === null) {
         this.last_location = this.location;
         this.last_time = this.time;
@@ -165,7 +160,7 @@ Mobile.prototype.estimateTOA = function() {
     "use strict";
     var self = this;
 
-    var crow_flies = Utils.haversine(this.home_location, this.location); // metres
+    var crow_flies = this.home_location.haversine(this.location); // metres
     console.TRACE(TAG, "Crow flies " + crow_flies + " m");
 
     // Are they very close to home?
@@ -185,7 +180,7 @@ Mobile.prototype.estimateTOA = function() {
     }
 
     // What's their speed over the ground?
-    var distance = Utils.haversine(this.last_location, this.location);
+    var distance = this.last_location.haversine(this.location);
     var time = this.time - this.last_time; // seconds
 
     if (time === 0) {
@@ -209,7 +204,7 @@ Mobile.prototype.estimateTOA = function() {
                   + " / " + speed + " gives " + interval);
 
     // Are they getting any closer?
-    var last_crow = Utils.haversine(this.home_location, this.last_location);
+    var last_crow = this.home_location.haversine(this.last_location);
     if (crow_flies > last_crow) {
         // no; skip re-routing until we know they are heading home
         console.TRACE(TAG, "Getting further away");
@@ -237,9 +232,8 @@ Mobile.prototype.estimateTOA = function() {
         + "&key=" + gmaps.server_key;
     if (typeof gmaps.ip !== "undefined")
         url += "&userIp=" + gmaps.ip;
-    url += "&origin=" + this.location.latitude + "," + this.location.longitude
-        + "&destination=" + this.home_location.latitude + ","
-        + this.home_location.longitude
+    url += "&origin=" + this.location
+        + "&destination=" + this.home_location
         + "&departure_time=" + Math.round(Time.nowSeconds())
         + "&mode=" + mode;
     //console.TRACE(TAG, url);
