@@ -298,11 +298,11 @@
                 return data.toPrecision(4).toString();
             },
             min: {
-                x: Date.now() - 8 * 60 * 60 * 1000,
+                x: Date.now() / 1000 - 24 * 60 * 60, // 24 hours ago
                 y: 5
             },
             max: {
-                x: Date.now(),
+                x: Date.now() / 1000,
                 y: 40
             }
         });

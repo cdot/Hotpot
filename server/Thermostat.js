@@ -185,13 +185,13 @@ Thermostat.prototype.pollHistory = function() {
     var self = this;
     var fn = Utils.expandEnvVars(this.history_config.file);
 
-    var written = function(err) {
+    function written(err) {
         if (err)
             console.error(TAG + " failed to write history file '"
                           + fn + "': " + err);
-    };
+    }
 
-    var update = function(err, data) {
+    function update(err, data) {
         if (err) {
             console.error(TAG + " failed to read history file '"
                           + fn + "': " + err);
@@ -210,12 +210,12 @@ Thermostat.prototype.pollHistory = function() {
         }
         while (report.length > self.history_config.limit - 1)
             report.shift();
-        report.push([Time.now(), t]);
+        report.push([Mathi.round(Time.now() / 1000), t]);
         var s = JSON.stringify(report);
         fs.writeFile(fn,
                      s.substring(1, s.length - 1) + ",",
                      written);
-    };
+    }
 
     if (typeof self.temperature === "number") {
         fs.stat(
@@ -235,7 +235,8 @@ Thermostat.prototype.pollHistory = function() {
                         // otherwise open for append
                         fs.appendFile(
                             fn,
-                            "[" + new Date().getTime() + "," + t + "],",
+                            "[" + Math.round(new Date().getTime() / 1000)
+                                + "," + t + "],",
                             function(ferr) {
                                 if (ferr)
                                     console.error(

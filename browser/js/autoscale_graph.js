@@ -141,6 +141,7 @@ Trace.prototype.render = function(g) {
     var p = g.l2v(this.points[0]);
     g.ctx.moveTo(p.x, p.y);
     for (var j = 1; j < this.points.length; j++) {
+if (j == this.points.length - 1) debugger;
         p = g.l2v(this.points[j]);
         g.ctx.lineTo(p.x, p.y);
     }
