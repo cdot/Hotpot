@@ -42,13 +42,13 @@ system. It can operate either as a stand-alone controller or as an HTTPS
 server that supports querying and changing the configuration of the system.
 
 The server is initially configured from options read from a file in
-$HOME/.config/Hotpot/config.json. After the initial setup, the HTTPS interface
+./hotpot.cfg. After the initial setup, the HTTP interface
 can be used to query and modify the configuration.
 
 ## Configuring software
 
 The server is configured from a configuration file
-in ~/.config/Hotpot/config.json. This contains a structured Javascript object
+in ./hotpot.cfg (you can change this using a command-line option). This contains a structured Javascript object
 with contents as follows:
 - server - sets up the HTTP(S) server
   - ssl - HTTPS key server private key and certificate. If no key and cert are given, an HTTP server will be used, otherwise it will be HTTPS.
@@ -62,14 +62,14 @@ with contents as follows:
     - id - used to communicate with the sensor
     - poll_interval - (optional) gap between polls, in ms (1000)
     - history (optional)
-      - file - (required) pathname to file to store history
+      - file - (required) pathname to file to store history for this thermostat
       - interval - gap between history snapshots, in s (60 i.e. once every minute)
       - limit - number of snapshots to keep in history file. At least this many, and on occasion up to 2X as many, snapshots will be stored (24 * 60)
   - pin - sets up the GPIO pins, mapping the pin name to the GPIO pin number
   - mobile - sets up the mobiles, each name maps to the unique ID of the mobile
   - rule - list of rules that are used to control state of the system
 
-See example.config.json for a complete example.
+See example.hotpot.cfg for a complete example.
 
 Note that the pin names "HW" and "CH" are predefined, as Y-plan systems have
 some dependencies between them.
@@ -90,11 +90,11 @@ Rule functions can interrogate any part of the system using the internal APIs. A
 # Browser interface
 
 The browser interface is a low-level debugging tool that gives access to the
-functions of the controller using AJAX requests to the controller.
+functions of the controller using AJAX requests to the server.
 
 # Mobiles
 
-Hot pot includes an Android app that can be run on a mobile device to report
+Hotpot includes an Android app that can be run on a mobile device to report
 the location of that device back to the Hotpot server. 
 Mobile devices report their location to the server, which then uses the
 Google maps routing API to estimate when the mobile will get home, based on

@@ -54,13 +54,13 @@ Controller.prototype.initialise = function() {
                         self.pollRules();
                         fulfill();
                     })
-/*                    .catch(function(e) {
+                    .catch(function(e) {
                         fail("Error creating thermostats: " + e);
-                    })*/;
+                    });
             })
-/*            .catch(function(e) {
+            .catch(function(e) {
                 fail("Error creating pins: " + e);
-            })*/;
+            });
         self.createRules(self.config.getConfig("rule"));
     });
 };

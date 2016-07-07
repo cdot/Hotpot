@@ -15,8 +15,6 @@ const Apis = require("./Apis.js");
 const Server = require("./Server.js");
 const Controller = require("./Controller.js");
 
-const CONFIG_FILE = "$HOME/.config/Hotpot/config.json";
-
 const TAG = "Hotpot";
 
 /** Main program */
@@ -25,6 +23,7 @@ const TAG = "Hotpot";
 
     var cliopt = getopt.create([
         [ "h", "help", "Show this help" ],
+        [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ],
         [ "d", "debug=ARG", "Run in debug mode e.g. --debug all" ]
     ])
         .bindHelp()
@@ -32,9 +31,13 @@ const TAG = "Hotpot";
         .parseSystem()
         .options;
    
+    if (typeof cliopt.config === "undefined")
+        cliopt.config = "./hotpot.cfg";
+
     if (typeof cliopt.debug !== "undefined")
         // Development only
-        require("promise/lib/rejection-tracking").enable();
+        require("promise/lib/rejection-tracking").enable(
+            { allRejections: true });
 
     // 0: initialisation
     // 1: pin on/off
@@ -46,10 +49,11 @@ const TAG = "Hotpot";
             (cliopt.debug.indexOf("all") >= 0
              || cliopt.debug.indexOf(level) >= 0)
             && (cliopt.debug.indexOf("-" + level) < 0))
-            console.log((new Date().toISOString()) + " " + level + ": " + message);
+            console.log((new Date().toISOString()) + " " + level
+                        + ": " + message);
     };
 
-    var config = new Config(CONFIG_FILE);
+    var config = new Config(cliopt.config);
     Apis.configure(config.getConfig("apis"));
     var controller = new Controller(config.getConfig("controller"));
 
@@ -57,7 +61,8 @@ const TAG = "Hotpot";
         .then(function() {
             Server.configure(config.getConfig("server"), controller);
 
-            controller.setLocation(new Location(Server.server.config.get("location")));
+            controller.setLocation(new Location(
+                Server.server.config.get("location")));
 
             // Save config when it changes, so we restart to the
             // same state
@@ -68,7 +73,7 @@ const TAG = "Hotpot";
                         config.save();
                     });
         })
-/*        .catch(function(e) {
+        .catch(function(e) {
             console.TRACE(TAG, "Controller initialisation failed " + e);
-        })*/;
+        });
 })();

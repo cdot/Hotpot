@@ -1,5 +1,8 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
+/*eslint-env browser */
+/* global Location, google */
+
 /**
  * Main module for managing the browser interface to a hotpot server.
  */
@@ -29,19 +32,19 @@
      * @param $node the element to get the path of
      * @return {string} /-separated path
      */
-    var getPath = function($node) {
+    function getPath($node) {
         var path = [];
         $node.parents("[data-field]").each(function() {
             path.unshift($(this).data("field"));
         });
         path.push($node.data("field"));
         return path.join("/");
-    };
+    }
 
     /**
      * User clicks edit text of a value field
      */
-    var editField = function() {
+    function editField() {
         stopPolling();
         $(this).edit_in_place({
             changed: function(s) {
@@ -63,13 +66,13 @@
             }
         });
         return false; // prevent repeated calls
-    };
+    }
 
     /**
      * User toggles a checkbox field
      * @return {boolean} false to terminate event handling
      */
-    var toggleField = function() {
+    function toggleField() {
         var $self = $(this);
         var params = {
             value: $self.prop("checked") ? 1 : 0
@@ -80,25 +83,25 @@
                 $(document).trigger("poll");
             });
         return false; // prevent repeated calls
-    };
+    }
 
     /**
      * Rule has been moved, need to renumber
      * @param $rules the rule list element
      */
-    var renumberRules = function($rules) {
+    function renumberRules($rules) {
         var index = 0;
         $rules.find(".rule").each(function() {
             $(this).attr("data-field", index);
             index++;
         });
-    };
+    }
 
     /**
      * User clicks add rule
      * @return {boolean} false to terminate event handling
      */
-    var addRule = function() {
+    function addRule() {
         var $self = $(this);
         stopPolling();
         var $rules = $self.closest("[data-field='rule']");
@@ -121,13 +124,13 @@
                 $(document).trigger("poll");
             });
         return false; // prevent repeated calls
-    };
+    }
 
     /**
      * User clicks remove rule
      * @return {boolean} false to terminate event handling
      */
-    var removeRule = function() {
+    function removeRule() {
         var $self = $(this);
         var $rules = $self.closest("[data-field='rule']");
         var $rule = $self.closest(".rule");
@@ -142,14 +145,14 @@
                 $(document).trigger("poll");
             });
         return false; // prevent repeated calls
-    };
+    }
 
     /**
      * Support for user clicks that move rules
      * @param {int} dir the direction to move, -1 = up, 1 = down
      * @return {boolean} false to terminate event handling
      */
-    var moveRule = function(dir) {
+    function moveRule(dir) {
         var $self = $(this);
         var $rule = $self.closest(".rule");
         var $rules = $self.closest("[data-field='rule']");
@@ -169,23 +172,23 @@
                 $(document).trigger("poll");
             });
         return false; // prevent repeated calls
-    };
+    }
 
     /**
      * User clicks move rule down
      * @return {boolean} false to terminate event handling
      */
-    var moveDown = function() {
+    function moveDown() {
         return moveRule.call(this, "down");
-    };
+    }
 
     /**
      * User clicks move rule up
      * @return {boolean} false to terminate event handling
      */
-    var moveUp = function() {
+    function moveUp() {
         return moveRule.call(this, "up");
-    };
+    }
 
     /**
      * Set the value of a typed field from a data value
@@ -193,7 +196,7 @@
      * @param $ui the element to populate
      * @param value the value to populate it with
      */
-    var setValue = function($ui, value) {
+    function setValue($ui, value) {
         var t = $ui.data("type"), v;
         if (typeof t === "undefined")
             t = "string";
@@ -219,7 +222,7 @@
             $ui.text(v);
         }
         $ui.trigger("data_change");
-    };
+    }
 
     /**
      * Populate UI from structure
@@ -227,22 +230,23 @@
      * @param {string} name the identifier for the datum
      * @param {object} data the content of the datum
      */
-    var populate = function($ui, name, data) {
+    function populate($ui, name, data) {
+        function subpop() {
+            populate($(this),
+                     subname,
+                     data[subname]);
+        }
         if (typeof $ui.data("type") === "undefined"
             && typeof data === "object") {
             for (var subname in data) {
                 $ui
                     .find("[data-field='" + subname + "']")
                     .first()
-                    .each(function() {
-                        populate($(this),
-                                 subname,
-                                 data[subname]);
-                    });
+                    .each(subpop);
             }
         } else // leaf
             setValue($ui, data);
-    };
+    }
 
     /**
      * Wake up on schedule and refresh the state
@@ -282,7 +286,7 @@
                         {
                             trace: name,
                             point: {
-                                x: Date.now(),
+                                x: Time.nowSeconds(),
                                 y: parseFloat($df.text())
                             }
                         });
@@ -314,14 +318,23 @@
                 eval("data=" + raw);
                 for (var i in data.thermostat) {
                     var th = data.thermostat[i];
-                    for (var j = 0; j < th.data.length; j += 2) {
+                    var basetime = th[0];
+                    for (var j = 1; j < th.length; j += 2) {
                         g.addPoint(
                             i,
                             {
-                                x: th.basetime + th.data[j],
-                                y: th.data[j + 1]
+                                x: basetime + th[j],
+                                y: th[j + 1]
                             });
                     }
+                    // Closing point at same level as last measurement,
+                    // just in case it was a long time ago
+                    g.addPoint(
+                        i,
+                        {
+                            x: Time.nowSeconds(),
+                            y: th[th.length - 1]
+                        });
                 }
                 $tc.trigger("update");
             })

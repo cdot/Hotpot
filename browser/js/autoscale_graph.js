@@ -131,8 +131,9 @@ Trace.prototype.getExtents = function() {
 Trace.prototype.render = function(g) {
     "use strict";
 
-    if (this.points.length === 0)
+    if (this.points.length < 2)
         return;
+
     g.ctx.strokeStyle = this.colour;
 
     // Current
@@ -277,8 +278,9 @@ Graph.prototype.update = function() {
                 clip = true;
             }
         }
-        if (clip)
+        if (clip) {
             t.clip(options.min, options.max);
+        }
     }
     
     // Paint the traces
