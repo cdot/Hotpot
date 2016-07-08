@@ -220,7 +220,9 @@ Thermostat.prototype.pollHistory = function() {
     "use strict";
 
     var self = this;
-    var t = Math.round(self.temperature / 10) * 10;
+
+    // Only log temperatures to one decimal place
+    var t = Math.round(self.temperature * 10) / 10;
 
     var fn = Utils.expandEnvVars(this.history_config.file);
 
@@ -250,11 +252,11 @@ Thermostat.prototype.pollHistory = function() {
         return;
     }
 
-/*    if (t === self.last_recorded_temp) {
+    if (t === self.last_recorded_temp) {
         repoll();
         return;
     }
-*/
+
     console.TRACE(TAG + "History", "Add " + t + " to "
                   + this.name + " history");
     self.last_recorded_temp = t;
