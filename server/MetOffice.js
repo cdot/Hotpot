@@ -157,7 +157,7 @@ MetOffice.prototype.bracketWeather = function(data) {
             }
             var time = new Date(baseline + report.$ * 60 * 1000);
             report.$ = time.valueOf();
-            if (time.valueOf() < Date.now())
+            if (time.valueOf() < Time.now())
                 this.before = report;
             else {
                 this.after = report;
@@ -180,7 +180,7 @@ MetOffice.prototype.getWeather = function(id, callback) {
     "use strict";
 
     if (typeof this.after !== "undefined"
-        && Date.now() < this.after.$) {
+        && Time.now() < this.after.$) {
         callback.call(self);
     }
 
@@ -213,7 +213,7 @@ MetOffice.prototype.update = function() {
     var self = this;
     console.TRACE(TAG, "Updating from MetOffice website");
     this.getWeather(this.location_id, function() {
-        var wait = self.after.$ - Date.now();
+        var wait = self.after.$ - Time.now();
         console.TRACE(TAG, "Next update in "
                       + (wait / 60000) + " minutes");
         setTimeout(function() {
@@ -237,7 +237,7 @@ MetOffice.prototype.get = function(what) {
         return 0;
     var est = this.before[what];
     if (this.after[what] !== est && IS_NUMBER.indexOf(what) >= 0) {
-        var frac = (Date.now() - this.before.$)
+        var frac = (Time.now() - this.before.$)
             / (this.after.$ - this.before.$);
         est += (this.after[what] - est) * frac;
     }

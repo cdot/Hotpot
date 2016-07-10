@@ -276,7 +276,7 @@ Mobile.prototype.estimateTOA = function() {
 
 Mobile.prototype.isReporting = function() {
     "use strict";
-    if (this.time_of_arrival < Date.now() / 1000)
+    if (this.time_of_arrival < Time.now() / 1000)
         return false;
     
 };

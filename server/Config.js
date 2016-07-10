@@ -28,7 +28,8 @@ function Config(file) {
         this.data = file;
     else if (typeof file === "undefined")
         this.data = {};
-    else throw "WTF " + new Error().stack;
+    else
+        throw "WTF " + new Error().stack;
 }
 module.exports = Config;
 
@@ -44,7 +45,7 @@ Config.prototype.save = function(file) {
     if (typeof file !== "string")
         throw "Cannot save this level of config; no file";
     fs.writeFileSync(Utils.expandEnvVars(file), this.toString(), "utf8");
-    console.log(file + " updated");
+    console.TRACE(TAG, file + " updated");
 };
 
 Config.prototype.toString = function() {
