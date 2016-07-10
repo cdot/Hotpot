@@ -78,6 +78,10 @@ function clipLine(a, b, min, max) {
 
 var trace_cols = [ "yellow", "red", "orange", "magenta" ];
 
+/**
+ * Construct a new trace line
+ * @param {string} name name of the trace
+ */
 function Trace(name) {
     "use strict";
     this.name = name;
@@ -85,7 +89,10 @@ function Trace(name) {
     this.colour = trace_cols.shift();
 }
 
-// TODO: add data
+/**
+ * Add a point to the trace
+ * @param {point} p {x,y}
+ */
 Trace.prototype.addPoint = function(p) {
     "use strict";
     this.points.push(p);
@@ -93,7 +100,24 @@ Trace.prototype.addPoint = function(p) {
 };
 
 /**
+ * In-place sort the points in the data along the given axis
+ * @param {string} axis x or y
+ */
+Trace.prototype.sortPoints = function(axis) {
+    "use strict";
+    this.points.sort(function(a, b) {
+        if (a[axis] > b[axis])
+            return 1;
+        if (a[axis] < b[axis])
+            return -1;
+        return 0;
+    });
+};
+
+/**
  * Clip the data in the trace to the given range
+ * @param {number} min bottom of range
+ * @param {number} max top of range
  */
 Trace.prototype.clip = function(min, max) {
     "use strict";
@@ -108,6 +132,7 @@ Trace.prototype.clip = function(min, max) {
 
 /**
  * Get the limits of the points in the trace
+ * @return {object} {min:{x:,y:}, max:{x:,y:}}
  */
 Trace.prototype.getExtents = function() {
     "use strict";
@@ -127,7 +152,10 @@ Trace.prototype.getExtents = function() {
     return e;
 };
 
-// TODO colour and trace
+/**
+ * Render the trace in the given graph
+ * @param {Graph} g the graph we are rendering within
+ */
 Trace.prototype.render = function(g) {
     "use strict";
 
@@ -150,8 +178,11 @@ Trace.prototype.render = function(g) {
 };
 
 /**
-* Render the label at (x, y) and return the width of the label
-*/
+ * Render the label at (x, y) and return the width of the label
+ * @param {Graph} g the graph we are rendering within
+ * @param {number} x coordinate
+ * @param {number} y coordinate
+ */
 Trace.prototype.renderLabel = function(g, x, y) {
     "use strict";
     g.ctx.fillStyle = this.colour;
@@ -160,12 +191,19 @@ Trace.prototype.renderLabel = function(g, x, y) {
     return g.ctx.measureText(this.name).width;
 };
 
+/**
+ * Construct a new graph
+ * @param {object} options options for the graph
+ * @param {jquery} $canvas jQuery object around canvas element
+ */
 function Graph(options, $canvas) {
     "use strict";
-    this.$canvas = $canvas;
-    this.ctx = $canvas[0].getContext("2d");
+    var self = this;
 
-    this.options = $.extend({
+    self.$canvas = $canvas;
+    self.ctx = $canvas[0].getContext("2d");
+
+    self.options = $.extend({
         min: {},
         max: {},
         background_col: "black",
@@ -174,33 +212,98 @@ function Graph(options, $canvas) {
         window: 5, // degrees either side of measured temp
         adjust: {}
     }, options);
-    this.options.min = $.extend({
+    self.options.min = $.extend({
         x: Number.MAX_VALUE,
         y: Number.MAX_VALUE
-    }, this.options.min);
-    this.options.max = $.extend({
+    }, self.options.min);
+    self.options.max = $.extend({
         x: Number.MIN_VALUE,
         y: Number.MIN_VALUE
-    }, this.options.max);
-    this.options.adjust = $.extend({
+    }, self.options.max);
+    self.options.adjust = $.extend({
         max: {},
         min: {}     
-    }, this.options.adjust);
+    }, self.options.adjust);
     // TODO: can't have clip at both ends of an axis
-    this.options.adjust.min = $.extend({
+    self.options.adjust.min = $.extend({
             x: "clip",
             y: "scale"
-    }, this.options.adjust.min);
-    this.options.adjust.max = $.extend({
+    }, self.options.adjust.min);
+    self.options.adjust.max = $.extend({
             x: "scale",
             y: "scale"
-    }, this.options.adjust.max);
+    }, self.options.adjust.max);
 
-    this.traces = [];
+    $canvas.on("mousemove", function(e) {
+        var targ;
+        if (!e)
+            e = window.event;
+        if (e.target)
+            targ = e.target;
+        else if (e.srcElement)
+            targ = e.srcElement;
+        if (targ.nodeType == 3) // defeat Safari bug
+            targ = targ.parentNode;
+
+        var targ_left = $canvas.offset().left;
+        var targ_top = $canvas.offset().top;
+
+        // jQuery normalizes the pageX and pageY
+        // pageX,Y are the mouse positions relative to the document
+        var p = { x: e.pageX - targ_left, y: e.pageY - targ_top };
+        var th = self.options.font_height;
+
+        if (p.y >= th && p.y <= $canvas.height() - th) {
+            var l = self.v2l(p);
+            var text = options.render_label("x", l.x) + ","
+                + options.render_label("y", l.y);
+
+            var $tipCanvas = $("#tip_canvas");
+            var tipCtx = $tipCanvas[0].getContext("2d");
+            var tw = tipCtx.measureText(text).width;
+
+            // CSS just stretches the content
+            tipCtx.canvas.width = tw;
+            tipCtx.canvas.height = th;
+
+            tipCtx.fillStyle = self.options.background_col;
+            tipCtx.fillRect(0, 0, tw, th);
+
+            tipCtx.fillStyle = "white";
+            tipCtx.strokeStyle = "white";
+            tipCtx.font = th + "px sans-serif";
+
+            // Move the tip to the left if too near right edge
+            if (p.x + tw > $canvas.width())
+                p.x -= tw;
+
+            $tipCanvas.css({
+                left: (p.x + targ_left) + "px",
+                top: (p.y + targ_top) + "px",
+                width: tw,
+                height: th
+            });
+            tipCtx.textBaseline = "top";
+            tipCtx.fillText(text, 0, 0);
+            $("#tip_canvas").show();
+        } else
+            $("#tip_canvas").hide();           
+    })
+    .hover(
+        function(e) {
+            $("#tip_canvas").show();
+        },
+        function(e) {
+            $("#tip_canvas").hide();
+        });
+
+    self.traces = [];
 }
 
 /**
  * Convert logical point on a trace to a physical point
+ * @param {object} p {x:,y:} logical point (float)
+ * @return {object} {x:,y:} physical point (int)
  */
 Graph.prototype.l2v = function(p) {
     "use strict";
@@ -220,6 +323,30 @@ Graph.prototype.l2v = function(p) {
     };
 };
 
+/**
+ * Convert a physical point on the canvas to a logical point
+ * @param {object} p {x:,y:} physical point (int)
+ * @return {object} {x:,y:} logical point (float)
+ */
+Graph.prototype.v2l = function(p) {
+    "use strict";
+    var full_width = this.$canvas.width();
+    var full_height = this.$canvas.height();
+    var font_height = this.options.font_height;
+
+    return {
+        x: this.options.min.x + 
+            (this.options.max.x - this.options.min.x) * p.x / full_width,
+        y: this.options.min.y + 
+            (this.options.max.y - this.options.min.y)
+            * (full_height - p.y - font_height)
+            / (full_height - 2 * font_height)
+    };
+};
+
+/**
+ * Add a point to the given trace on the graph
+ */
 Graph.prototype.addPoint = function(tracename, x, y) {
     "use strict";
     if (typeof this.traces[tracename] === "undefined") {
@@ -228,6 +355,19 @@ Graph.prototype.addPoint = function(tracename, x, y) {
     this.traces[tracename].addPoint(x, y);
 };
 
+/**
+ * Sort the points in a trace along the given axis
+ */
+Graph.prototype.sortPoints = function(tracename, axis) {
+    "use strict";
+    if (typeof this.traces[tracename] === "undefined")
+        return;
+    this.traces[tracename].sortPoints();
+};
+
+/**
+ * Update the graph
+ */
 Graph.prototype.update = function() {
     "use strict";
     var $canvas = this.$canvas;
@@ -285,6 +425,8 @@ Graph.prototype.update = function() {
     
     // Paint the traces
     for (i in this.traces) {
+       if (typeof options.sort_axis[i] !== "undefined")
+           this.traces[i].sortPoints(options.sort_axis[i]);
         this.traces[i].render(this);
     }
 
@@ -298,7 +440,7 @@ Graph.prototype.update = function() {
     for (i in { max: 0, min: 1 }) {
         for (j in { x: 0, y: 1 }) {
             if (options.render_label)
-                labels[i][j] = options.render_label(i + j, options[i][j]);
+                labels[i][j] = options.render_label(j, options[i][j]);
             else
                 labels[i][j] = "" + options[i][j].toPrecision(4);
         }

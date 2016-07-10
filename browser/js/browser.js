@@ -297,9 +297,9 @@
         var $tc = $("#temperature_canvas");
         $tc.autoscale_graph({
             render_label: function(axis, data) {
-                if (axis === "minx" || axis === "maxx")
-                    return new Date(data).toString();
-                return data.toPrecision(4).toString();
+                if (axis === "x")
+                    return new Date(data * 1000).toISOString();
+                return (Math.round(data * 10) / 10).toString();
             },
             min: {
                 x: Date.now() / 1000 - 24 * 60 * 60, // 24 hours ago
@@ -308,6 +308,10 @@
             max: {
                 x: Date.now() / 1000,
                 y: 40
+            },
+            sort_axis: {
+                HW: "x",
+                CH: "x"
             }
         });
         $.get(
@@ -316,12 +320,13 @@
                 var g = $tc.data("graph");
                 var data;
                 eval("data=" + raw);
-                for (var i in data.thermostat) {
-                    var th = data.thermostat[i];
+                for (var tname in data.thermostat) {
+                    var th = data.thermostat[tname];
                     var basetime = th[0];
+                    var points = [];
                     for (var j = 1; j < th.length; j += 2) {
                         g.addPoint(
-                            i,
+                            tname,
                             {
                                 x: basetime + th[j],
                                 y: th[j + 1]
@@ -330,7 +335,7 @@
                     // Closing point at same level as last measurement,
                     // just in case it was a long time ago
                     g.addPoint(
-                        i,
+                        tname,
                         {
                             x: Time.nowSeconds(),
                             y: th[th.length - 1]

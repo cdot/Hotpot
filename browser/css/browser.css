@@ -40,9 +40,19 @@ body {
     display:none;
 }
 
-.temperature_canvas {
+#temperature_canvas {
     width: 100%;
-    height: 100%;
+}
+
+#tip_canvas {
+    left:-200px; 
+    top:-200px;
+    width: 200px;
+    height: 200px;
+    color: white;
+    background-color: transparent;
+    display: none;
+    position: absolute;
 }
 
 .move.disabled {
