@@ -222,7 +222,7 @@ Controller.prototype.getSerialisableState = function() {
     }
 
     return {
-	time: new Date().toString(), // local time
+	time: new Date(Time.now()).toString(), // local time
         env_temp: this.weather("Temperature"),
         thermostat: sermap(this.thermostat),
         pin: sermap(this.pin),
