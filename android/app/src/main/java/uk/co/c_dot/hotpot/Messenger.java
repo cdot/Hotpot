@@ -3,6 +3,8 @@
  */
 package uk.co.c_dot.hotpot;
 
+import android.util.Log;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -67,27 +69,5 @@ public class Messenger extends BroadcastReceiver {
     public void broadcast(Intent intent) {
         //Log.d(TAG, "Sending " + intent.getAction());
         mBM.sendBroadcast(intent);
-    }
-
-    /**
-     * Send a simple message
-     *
-     * @param message the message
-     */
-    public void broadcast(String message) {
-        broadcast(new Intent(message));
-    }
-
-    /**
-     * Send a message containing a LatLng in parameters
-     *
-     * @param message the message
-     * @param pos     the location to send
-     */
-    public void broadcast(String message, LatLng pos) {
-        Intent intent = new Intent(message);
-        intent.putExtra("LAT", pos.latitude);
-        intent.putExtra("LONG", pos.longitude);
-        broadcast(intent);
     }
 }

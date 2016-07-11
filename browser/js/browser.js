@@ -190,6 +190,18 @@
         return moveRule.call(this, "up");
     }
 
+    function recomputeMapBounds() {
+        var $map = $("#map");
+        var bounds = new google.maps.LatLngBounds();
+        bounds.extend($map.data("home").getPosition());
+        $(".marker").each(function() {
+            var m = $(this).data("marker");
+            if (m)
+                bounds.extend(m.getPosition());
+        });
+        $map.data("map").fitBounds(bounds);
+    }
+
     /**
      * Set the value of a typed field from a data value
      * Only used for non-object data
@@ -208,8 +220,11 @@
                 $ui.prop("checked", value);
         } else if (t === "location") {
             var m = $ui.data("marker");
-            if (typeof m !== "undefined")
-                m.setPosition(value);
+            if (typeof m !== "undefined") {
+                m.setPosition({ lat: parseFloat(value.lat),
+                                lng: parseFloat(value.lng) });
+                recomputeMapBounds();
+            }
         } else {
             // Text / number field
             if (t === "float") {
@@ -450,14 +465,20 @@
                             zoom: 8
                         });
                     $(this).data("map", map);
+                    $(this).data("home", new google.maps.Marker({
+                        position: here,
+                        map: map,
+                        title: "Home"
+                    }));
 
-                   $(".marker").each(function() {
+                    $(".marker").each(function() {
                         var $div = $(this).closest(".templated");
                         if ($div.length === 0)
                             return; // in a template
                         var marker = new google.maps.Marker({
                             position: here,
-                            map: map
+                            map: map,
+                            title: $div.attr("data-field")
                             });
                         $(this).data("marker", marker);
                    });

@@ -7,6 +7,7 @@ const Events = require("events").EventEmitter;
 const promise = require("promise");
 
 const Location = require("../common/Location.js");
+const Utils = require("../common/Utils.js");
 
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
@@ -142,12 +143,12 @@ Controller.prototype.createThermostats = function(ts_config) {
                                 self.setPin("HW", 0, fulfill);
                             })
                         .catch(function(e2) {
-                            console.TRACE(TAG, "Reset CH=0 failed " + e2);
+                            console.TRACE(TAG, "Reset CH=0 failed: ", e2);
                             fail();
                         });
                 })
             .catch(function(e3) {
-                console.TRACE(TAG, "Reset HW=1 failed " + e3);
+                console.TRACE(TAG, "Reset HW=1 failed: ", e3);
                 fail();
             });
     });
@@ -312,7 +313,7 @@ Controller.prototype.setPin = function(channel, on, respond) {
                 },
                 function(e) {
                     console.TRACE(
-                        TAG, "Failed to set pin " + channel + ": " + e);
+                        TAG, "Failed to set pin ", channel, ": ", e);
                     respond();
                 });
     }
@@ -337,24 +338,25 @@ Controller.prototype.getMobile = function(id) {
 /**
  * Handler for mobile state setting
  * @param info structure containing location in "lat", "lng",
- * device identifier in "device", and boolean "demand"
+ * device identifier in "device", and boolean "request_HW" and "request_CH"
  * @return location of server
  * @private
  */
-Controller.prototype.setMobileState = function(info) {
+Controller.prototype.setMobileState = function(info, respond) {
     "use strict";
     var d = this.getMobile(info.device);
     if (d === null)
         throw TAG + " setMobileState: " + d + " not known" + new Error().stack;
     d.setState(info);
-    var interval = d.estimateTOA(this);
     var loc = (typeof this.location !== "undefined")
         ? this.location : new Location();
-    return {
-        home_lat: loc.lat,
-        home_long: loc.lng,
-        interval: interval
-    };
+    d.estimateTOA(function(interval) {
+        respond({
+            lat: loc.lat,
+            lng: loc.lng,
+            interval: interval
+        });
+    });
 };
 
 /**
@@ -438,6 +440,7 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
             self.setPin(path[1], data.value, respond);
             return;
         case "mobile":
+            console.TRACE(TAG, "set/mobile ", data);
             self.setMobileState(data, respond);
             return;
         // "rule":
@@ -490,8 +493,8 @@ Controller.prototype.insert_rule = function(rule, i) {
     else
         this.rule.splice(i, 0, rule);
     this.renumberRules();
-    console.TRACE(TAG, "rule '" + this.rule[i].name
-                  + "' inserted at " + rule.index);
+    console.TRACE(TAG, "rule '", this.rule[i].name,
+                  "' inserted at ", rule.index);
     return i;
 };
 
@@ -515,7 +518,7 @@ Controller.prototype.move_rule = function(i, move) {
     var removed = this.rule.splice(i, 1);
     this.rule.splice(dest, 0, removed[0]);
     this.renumberRules();
-    console.TRACE(TAG, this.name + " rule " + i + " moved to " + dest);
+    console.TRACE(TAG, this.name, " rule ", i, " moved to ", dest);
 };
 
 /**
@@ -528,8 +531,8 @@ Controller.prototype.remove_rule = function(i) {
     i = this.getRuleIndex(i);
     var del = this.rule.splice(i, 1);
     this.renumberRules();
-    console.TRACE(TAG, this.name + " rule " + del[0].name
-                  + "(" + i + ") removed");
+    console.TRACE(TAG, this.name, " rule ", del[0].name,
+                  "(", i, ") removed");
     return del[0];
 };
 
@@ -538,7 +541,7 @@ Controller.prototype.remove_rule = function(i) {
  */
 Controller.prototype.clear_rules = function() {
     "use strict";
-    console.TRACE(TAG, this.name + " rules cleared");
+    console.TRACE(TAG, this.name, " rules cleared");
     this.rule = [];
 };
 
@@ -571,8 +574,7 @@ Controller.prototype.pollRules = function() {
         try {
             result = rule.testfn.call(self);
         } catch (e) {
-            console.TRACE(TAG, "rule '" + rule.name + "' failed: "
-                          + e.message);
+            console.TRACE(TAG, "rule '", rule.name, "' failed: ", e.message);
         }
         if (typeof result === "string") {
             if (result === "remove")
@@ -585,7 +587,7 @@ Controller.prototype.pollRules = function() {
     // Remove rules flagged for removal
     while (remove.length > 0) {
         i = remove.pop();
-        console.TRACE(TAG, "Remove rule " + i);
+        console.TRACE(TAG, "Remove rule ", i);
         self.rule.splice(i, 1);
         self.renumberRules();
         self.emit("config_change");

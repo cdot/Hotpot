@@ -46,7 +46,7 @@ function updateAddress(addr) {
         });
     }
 
-    console.TRACE("Push up new IP address " + addr);
+    console.TRACE("Push up new IP address "+ addr);
 
     Ftp.put(new Buffer(addr), config.ftp.path,
             function(hadErr) {

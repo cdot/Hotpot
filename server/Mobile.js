@@ -9,12 +9,14 @@ const Location = require("../common/Location.js");
 
 const Apis = require("./Apis.js");
 
-const DEFAULT_INTERVAL = 5 * 60; // 5 minutes in seconds
+const SHORT_INTERVAL = 5 * 60; // 5 minutes in seconds
+const MEDIUM_INTERVAL = 10 * 60; // 10 minutes in seconds
 const LONG_INTERVAL = 30 * 60; // half an hour in seconds
 
 const MPH = 0.44704; // metres per second -> mph
 const FAST_WALK = 4 * MPH; // in m/s
 const FAST_CYCLE = 20 * MPH; // in m/s
+const FAST_DRIVE = 60 * MPH; // in m/s
 
 const A_LONG_TIME = 10 * 24 * 60 * 60; // 10 days in s
 
@@ -82,7 +84,12 @@ function Mobile(name, config) {
      */
     this.time_of_arrival = this.last_time + A_LONG_TIME;
 
-    console.TRACE(TAG, "'" + name + "' constructed");
+    /**
+     * What we are requesting; HW:, CH:
+     */
+    this.request = {};
+
+    console.TRACE(TAG, "'", name, "' constructed");
 }
 module.exports = Mobile;
 
@@ -128,17 +135,18 @@ Mobile.prototype.setHomeLocation = function(location) {
  * Set the current state of the mobile device in response to a message from
  * the device.
  * @param {object} info info about the device, including "lat",
- * "lng" and "demand".
+ * "lng", "request_hw" and "request_ch".
  * @protected
  */
 Mobile.prototype.setState = function(info) {
     "use strict";
     this.last_location = this.location;
     this.location = new Location(info);
-    this.demand = info.demand;
+    this.request["HW"] = info.request_HW;
+    this.request["CH"] = info.request_CH;
     this.last_time = this.time;
     this.time = Time.nowSeconds();
-    console.TRACE(TAG, "set location @" + this.time + ": " + info);
+    console.TRACE(TAG, "set location @", this.time, ": ", info);
     if (this.last_location === null) {
         this.last_location = this.location;
         this.last_time = this.time;
@@ -150,33 +158,34 @@ Mobile.prototype.setState = function(info) {
  * based on average velocity and distance. The mode of transport is
  * guessed based on distance from home and velocity. The time of arrival
  * is stored in the time_of_arrival property.
- * @return {float} interval before we want another update, in seconds. If the
+ * @param {function} callback callback function, passed the interval in (int)
+ * before we want another update, in seconds. If the
  * mobile is a long way from home, or moving slowly, we may want to
  * wait quite a while before asking for an update. This gives the mobile
  * device a chance to save power by not consuming a lot of battery.
  * @public
  */
-Mobile.prototype.estimateTOA = function() {
+Mobile.prototype.estimateTOA = function(callback) {
     "use strict";
     var self = this;
 
     var crow_flies = this.home_location.haversine(this.location); // metres
-    console.TRACE(TAG, "Crow flies " + crow_flies + " m");
+    console.TRACE(TAG, "Crow flies ", crow_flies, "m");
 
-    // Are they very close to home?
-    if (crow_flies < 1000) {
+    // Are they very close to home (within 100m)?
+    if (crow_flies < 100) {
         this.time_of_arrival = Time.nowSeconds();
-        console.TRACE(TAG, "Too close");
-        this.expect_update = Time.nowSeconds() + DEFAULT_INTERVAL;
-        return DEFAULT_INTERVAL; // less than 1km; as good as there
+        console.TRACE(TAG, "Too close to care, update me in ", MEDIUM_INTERVAL);
+        callback(MEDIUM_INTERVAL); // less than 1km; as good as there
+        return;
     }
 
     // Are they a long way away, >1000km
     if (crow_flies > 1000000) {
         this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
-        console.TRACE(TAG, "Too far away; TOA " + this.time_of_arrival);
-        this.expect_update = Time.nowSeconds() + DEFAULT_INTERVAL;
-        return LONG_INTERVAL;
+        console.TRACE(TAG, "Too far away; TOA ", this.time_of_arrival);
+        callback(LONG_INTERVAL);
+        return;
     }
 
     // What's their speed over the ground?
@@ -186,30 +195,30 @@ Mobile.prototype.estimateTOA = function() {
     if (time === 0) {
         // Shouldn't happen
         console.TRACE(TAG, "Zero time");
-        this.expect_update = Time.nowSeconds() + DEFAULT_INTERVAL;
-        return DEFAULT_INTERVAL;
+        callback(MEDIUM_INTERVAL);
+        return;
     }
 
     var speed = distance / time; // metres per second
-    console.TRACE(TAG, "Distance " + distance + "m, time " + time
-                 + "s, speed " + speed + "m/s ("
-                 + (speed / MPH) + "mph)");
+    console.TRACE(TAG, "Distance ", distance, "m, time ", time,
+                  "s, speed ", speed, "m/s (",
+                  speed / MPH, "mph)");
 
     // When far away, we want a wider interval. When closer, we want a
     // smaller interval.
     // time to arrival =~ crow_flies / speed
     // divide that by 10 (finger in the air)
     var interval = (crow_flies / speed) / 10;
-    console.TRACE(TAG, "Next interval " + crow_flies
-                  + " / " + speed + " gives " + interval);
+    console.TRACE(TAG, "Next interval ", crow_flies,
+                  " / ", speed, " gives ", interval);
 
     // Are they getting any closer?
     var last_crow = this.home_location.haversine(this.last_location);
     if (crow_flies > last_crow) {
         // no; skip re-routing until we know they are heading home
         console.TRACE(TAG, "Getting further away");
-        this.expect_update = Time.nowSeconds() + interval;
-        return interval;
+        callback(interval);
+        return;
     }
 
     // So they are getting closer. What's their mode of transport?
@@ -225,7 +234,6 @@ Mobile.prototype.estimateTOA = function() {
     // We don't really want to re-route everytime, but how do we know we
     // are on the planned route or not?
 
-    console.TRACE(TAG, "Routing by " + mode);
     var gmaps = Apis.get("google_maps");
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
@@ -236,9 +244,15 @@ Mobile.prototype.estimateTOA = function() {
         + "&destination=" + this.home_location
         + "&departure_time=" + Math.round(Time.nowSeconds())
         + "&mode=" + mode;
-    //console.TRACE(TAG, url);
 
+    console.TRACE(TAG, "Routing by ", mode, " using ", url);
     function analyseRoutes(route) {
+        if (typeof result.error_message !== "undefined") {
+            console.error("Error getting route: " + result.error_message);
+            callback(SHORT_INTERVAL);
+            return;
+        }
+            
         console.TRACE(TAG, "Got a route");
         // Get the time of the best route
         var best_route = A_LONG_TIME;
@@ -249,11 +263,18 @@ Mobile.prototype.estimateTOA = function() {
                 var leg_length = legs[l].duration.value; // seconds
                 route_length += leg_length;
             }
+            console.TRACE(TAG, "Route of ", route_length, "s found");
             if (route_length < best_route)
                 best_route = route_length;
         }
-        console.TRACE(TAG, "Best route is " + best_route);
+        if (best_route < A_LONG_TIME)
+            console.TRACE(TAG, "Best route is ", best_route);
+        else {
+            console.TRACE(TAG, "No good route found, guessing");
+            best_route = crow_flies / FAST_DRIVE;
+        }
         self.time_of_arrival = Time.nowSeconds() + best_route;
+        callback(best_route / 3);
     }
 
     var result = "";
@@ -269,16 +290,14 @@ Mobile.prototype.estimateTOA = function() {
         })
         .on("error", function(err) {
             console.error("Failed to GET from " + url.host + ": " + err);
+            callback(SHORT_INTERVAL);
         });
-
-    return interval;
 };
 
 Mobile.prototype.isReporting = function() {
     "use strict";
-    if (this.time_of_arrival < Time.now() / 1000)
-        return false;
-    
+    // TODO: fix this
+    return true;
 };
 
 /**
@@ -292,12 +311,12 @@ Mobile.prototype.arrivesIn = function() {
 };
 
 /**
- * Return true if the device is currently demanding the given service
+ * Return true if the device is currently requesting the given service
  * @param {string} service name of service to check e.g. "HW"
- * @return {boolean} if the service is demanded
+ * @return {boolean} if the service is requested
  */
-Mobile.prototype.demanding = function(service) {
+Mobile.prototype.requesting = function(service) {
     "use strict";
-    return (typeof this.demand !== "undefined" &&
-            this.demand[service]);
+    return (typeof this.request !== "undefined" &&
+            this.request[service]);
 };

@@ -72,6 +72,8 @@ public class MainActivity extends AppCompatActivity
     private Menu mOptionsMenu = null;
 
     private boolean mLocationServiceRunning = false;
+    private boolean mRequestingCH = false;
+    private boolean mRequestingHW = false;
 
     /**
      * Call only when we are sure we have all requisite permissions
@@ -183,6 +185,7 @@ public class MainActivity extends AppCompatActivity
      */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        Intent intent;
         switch (item.getItemId()) {
             case R.id.action_settings:
                 // User chose the "Settings" item, show the app settings UI...
@@ -198,6 +201,18 @@ public class MainActivity extends AppCompatActivity
                     mOptionsMenu.findItem(R.id.action_pause_resume).setIcon(
                             mLocationServiceRunning ? R.drawable.ic_media_pause : R.drawable.ic_media_play);
 
+                return true;
+            case R.id.action_request_CH:
+                intent = new Intent(LocationService.REQUEST);
+                intent.putExtra("WHAT", "CH");
+                intent.putExtra("ONOFF", !mOptionsMenu.findItem(R.id.action_request_CH).isChecked());
+                mMessenger.broadcast(intent);
+                return true;
+            case R.id.action_request_HW:
+                intent = new Intent(LocationService.REQUEST);
+                intent.putExtra("WHAT", "HW");
+                intent.putExtra("ONOFF", !mOptionsMenu.findItem(R.id.action_request_HW).isChecked());
+                mMessenger.broadcast(intent);
                 return true;
             case R.id.action_quit:
                 stopLocationService();
@@ -273,6 +288,17 @@ public class MainActivity extends AppCompatActivity
                 updateMap(new LatLng(intent.getDoubleExtra("LAT", 0),
                         intent.getDoubleExtra("LONG", 0)));
                 break;
+            case LocationService.REQUEST:
+                boolean onoff = intent.getBooleanExtra("ONOFF", false);
+                switch (intent.getStringExtra("WHAT")) {
+                    case "HW":
+                        mOptionsMenu.findItem(R.id.action_request_HW).setChecked(onoff);
+                        break;
+                    case "CH":
+                        mOptionsMenu.findItem(R.id.action_request_CH).setChecked(onoff);
+                        break;
+                }
+                break;
         }
     }
 
@@ -289,7 +315,8 @@ public class MainActivity extends AppCompatActivity
 
         mMessenger = new Messenger(this, new String[]{
                 LocationService.HOME_CHANGED,
-                LocationService.LOCATION_CHANGED}, this);
+                LocationService.LOCATION_CHANGED,
+                LocationService.REQUEST}, this);
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         prefs.registerOnSharedPreferenceChangeListener(this);

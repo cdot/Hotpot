@@ -22,7 +22,7 @@ function Config(file) {
         var data = fs.readFileSync(Utils.expandEnvVars(file), "utf8");
         var config;
         eval("config=" + data);
-        console.TRACE(TAG, "Configured from " + file);
+        console.TRACE(TAG, "Configured from ", file);
         this.data = config;
     } else if (typeof file === "object" )
         this.data = file;
@@ -45,7 +45,7 @@ Config.prototype.save = function(file) {
     if (typeof file !== "string")
         throw "Cannot save this level of config; no file";
     fs.writeFileSync(Utils.expandEnvVars(file), this.toString(), "utf8");
-    console.TRACE(TAG, file + " updated");
+    console.TRACE(TAG, file, " updated");
 };
 
 Config.prototype.toString = function() {

@@ -11,6 +11,16 @@
         android:title="@string/action_settings"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_request_HW"
+        android:title="@string/action_request_HW"
+        android:checkable="true"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_request_CH"
+        android:title="@string/action_request_CH"
+        android:checkable="true"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_quit"
         android:title="@string/action_quit"
         app:showAsAction="never" />

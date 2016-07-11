@@ -38,7 +38,7 @@ class LocationThread extends Thread
     private static final String TAG = "HOTPOT/LocationThread";
 
     // Default update frequency
-    private static final long UPDATE_INTERVAL = 5000; // ms
+    private static final long DEFAULT_INTERVAL = 1 * 60 * 1000; // 1 minute in ms
 
     // Radius of the earth, for haversine
     private static final double EARTH_RADIUS = 6371000; // metres
@@ -94,15 +94,32 @@ class LocationThread extends Thread
     private String mServerURL;
     // SSL certificates that are acceptable for the given server
     private List<String> mServerCerts;
+    // Boolean that record whether services are being demanded
+    private boolean mRequestHW = false;
+    private boolean mRequestCH = false;
 
     // Runnable that is executed when a location is wanted
-    private Runnable mWakeUp = new Runnable() {
+    private Runnable mLCRun = new Runnable() {
         @Override
         public void run() {
-            //Log.d(TAG, "Woken");
-            mHandler.postDelayed(mWakeUp, locationChanged());
+            Log.d(TAG, "Timeout check location");
+            // check the location, and schedule the next update from the interval returned
+            locationChanged();
         }
     };
+
+    /**
+     * Queue a request for a location update after the given interval. This will replace any
+     * queued update.
+     * @param interval number of ms to wait before posting (uptime)
+     */
+    private void queueLocationUpdate(long interval) {
+        Log.d(TAG, "Check location in " + (interval / 1000) + "s");
+        // Remove existing update callbacks
+        mHandler.removeCallbacks(mLCRun);
+        // Replace with the new callback
+        mHandler.postDelayed(mLCRun, interval);
+    }
 
     /**
      * Initialise the service thread
@@ -113,9 +130,12 @@ class LocationThread extends Thread
         mServerURL = url;
         mServerCerts = certs;
         mContext = context;
-        Log.d(TAG, "Constructed " + url + " with " + certs.size() + " certificates");
+        Log.d(TAG, "Constructed " + url + " with " + (certs != null ? certs.size() : 0) + " certificates");
     }
 
+    /**
+     * Run the thread
+     */
     @Override
     public void run() {
         Log.d(TAG, "run");
@@ -123,20 +143,21 @@ class LocationThread extends Thread
         Looper.prepare();
 
         mAndroidId = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
-        mMessenger = new Messenger(mContext, new String[]{LocationService.STOP}, this);
+        mMessenger = new Messenger(mContext, new String[]{
+                LocationService.STOP, LocationService.REQUEST}, this);
         mServerConnection = null;
         if (mServerURL != null) {
             try {
                 mServerConnection = new ServerConnection(mServerURL, mServerCerts);
                 Log.d(TAG, "connected to server " + mServerURL
-                        + " with " + mServerCerts.size() + " certificates");
+                        + " with " + (mServerCerts != null ? mServerCerts.size() : 0) + " certificates");
 
             } catch (MalformedURLException mue) {
-                String mess =  "'" + mServerURL + "' is not a valid URL: " + mue.getMessage();
+                String mess = "'" + mServerURL + "' is not a valid URL: " + mue.getMessage();
                 Log.e(TAG, mess);
                 Toast.makeText(mContext, mess, Toast.LENGTH_LONG).show();
             } catch (KeyStoreException kse) {
-                String mess = "Could not connect to server at " + mServerURL +  "': " + kse.getMessage();
+                String mess = "Could not connect to server at " + mServerURL + "': " + kse.getMessage();
                 Log.e(TAG, mess);
                 Toast.makeText(mContext, mess, Toast.LENGTH_LONG).show();
             }
@@ -174,7 +195,7 @@ class LocationThread extends Thread
         Log.d(TAG, "connected to API");
 
         // Kick off the location server ASAP
-        mHandler.postDelayed(mWakeUp, 1);
+        queueLocationUpdate(1);
     }
 
 
@@ -205,12 +226,29 @@ class LocationThread extends Thread
         Log.i(TAG, "onConnectionFailed: " + result.getErrorMessage());
     }
 
+     /**
+     * * Handle a broadcast message coming from the UI
+     * @param intent
+     */
     @Override
     public void handleMessage(Intent intent) {
-        Log.d(TAG, "handleMessage " + intent.getAction());
+        Log.d(TAG, "handle broadcast message " + intent.getAction());
         switch (intent.getAction()) {
             case LocationService.STOP:
                 mHandler.getLooper().quit();
+                break;
+            case LocationService.REQUEST:
+                boolean onoff = intent.getBooleanExtra("ONOFF", false);
+                switch (intent.getStringExtra("WHAT")) {
+                    case "HW":
+                        mRequestHW = onoff;
+                        break;
+                    case "CH":
+                        mRequestCH = onoff;
+                        break;
+                }
+                // Send an update asynchronously from the location update queue
+                sendUpdate();
                 break;
         }
     }
@@ -219,69 +257,86 @@ class LocationThread extends Thread
      * Send a location update to the server. If the home location hasn't
      * been set already, use the server response to set it. Schedules the
      * next update.
-     *
-     * @param loc new location
-     * @return the interval before a new update is wanted
      */
-    private long sendUpdate(LatLng loc) {
+    private void sendUpdate() {
         if (mServerConnection == null) {
             Log.w(TAG, "Cannot send location update, no server connection");
-            return UPDATE_INTERVAL;
+            queueLocationUpdate(DEFAULT_INTERVAL);
+            return;
         }
+        Log.d(TAG, "Sending update to server");
 
-        Map<String, String> params = new HashMap<>();
+        final Map<String, String> params = new HashMap<>();
         params.put("device", mAndroidId);
-        params.put("latitude", "" + loc.latitude);
-        params.put("longitude", "" + loc.longitude);
-        String reply = null;
-        try {
-            reply = mServerConnection.POST("/mobile/set", params);
-        } catch (IOException ioe) {
-            Toast.makeText(mContext, "POST failed " + ioe, Toast.LENGTH_LONG).show();
-        }
-        long next_update = UPDATE_INTERVAL;
+        params.put("lat", "" + mLastPos.latitude);
+        params.put("lng", "" + mLastPos.longitude);
+        if (mRequestHW)
+            params.put("request_HW", "true");
+        if (mRequestCH)
+            params.put("request_CH", "true");
 
-        if (reply != null) {
-            // Reply includes:
-            // latitude, longitude (location of the server)
-            // next_update (earliest time to send the next update, in epoch seconds)
-            Pattern re = Pattern.compile("\"(.*?)\":(.*?)[,}]");
-            Matcher m = re.matcher(reply);
-            double latitude = 0, longitude = 0;
-            while (m.find()) {
-                String key = m.group(1);
-                String value = m.group(2);
-                switch (key) {
-                    case "home_lat":
-                        latitude = safeDouble(value);
-                        break;
-                    case "home_long":
-                        longitude = safeDouble(value);
-                        break;
-                    case "interval":
-                        next_update = (long) (safeDouble(value) * 1000);
-                        break;
-                    default:
-                        Log.i(TAG, "Bad reply from server " + reply);
+        // Handle the request in a new thread to avoid blocking the message queue
+        Thread ut = new Thread() {
+            public void run() {
+                String reply = null;
+                Looper.prepare(); // So we can Toast
+                try {
+                    reply = mServerConnection.POST("/set/mobile", params);
+                } catch (IOException ioe) {
+                    Toast.makeText(mContext, "POST failed " + ioe, Toast.LENGTH_LONG).show();
                 }
-            }
 
-            if (mHomePos == null) {
-                mHomePos = new LatLng(latitude, longitude);
-                Log.d(TAG, "HOME is at " + mHomePos);
-                mMessenger.broadcast(LocationService.HOME_CHANGED, mHomePos);
-            }
-        }
-        if (next_update < UPDATE_INTERVAL)
-            next_update = UPDATE_INTERVAL;
+                if (reply == null) {
+                    queueLocationUpdate(DEFAULT_INTERVAL);
+                    return;
+                }
 
-        return next_update;
+                // Reply includes:
+                // lat, lng (location of the server)
+                // interval (time before next update wanted, in epoch seconds)
+                Pattern re = Pattern.compile("\"(.*?)\":(.*?)[,}]");
+                Matcher m = re.matcher(reply);
+                double latitude = 0, longitude = 0;
+                long interval = DEFAULT_INTERVAL;
+                while (m.find()) {
+                    String key = m.group(1);
+                    String value = m.group(2);
+                    switch (key) {
+                        case "lat":
+                            latitude = safeDouble(value);
+                            break;
+                        case "lng":
+                            longitude = safeDouble(value);
+                            break;
+                        case "interval":
+                            interval = (long) (safeDouble(value) * 1000);
+                            break;
+                        default:
+                            Log.i(TAG, "Bad reply from server " + reply);
+                    }
+                }
+
+                if (mHomePos == null) {
+                    mHomePos = new LatLng(latitude, longitude);
+                    Log.d(TAG, "HOME is at " + mHomePos);
+                    Intent intent = new Intent(LocationService.HOME_CHANGED);
+                    intent.putExtra("LAT", mHomePos.latitude);
+                    intent.putExtra("LONG", mHomePos.longitude);
+                    mMessenger.broadcast(intent);
+                }
+                if (interval < DEFAULT_INTERVAL)
+                    interval = DEFAULT_INTERVAL;
+
+                queueLocationUpdate(interval);
+            }
+        };
+        ut.start();
     }
 
     /**
      * Called from scheduler when location changes
      */
-    public long locationChanged() {
+    private void locationChanged() {
         Location location;
         try {
             location = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
@@ -293,10 +348,11 @@ class LocationThread extends Thread
             // TODO: back off for longer than this. Consider going back to user for guidance.
             // Repeated location requests are going to get expensive.
             Log.w(TAG, "locationChanged: location is null");
-            return UPDATE_INTERVAL;
+            queueLocationUpdate(DEFAULT_INTERVAL);
+            return;
         }
-        Log.d(TAG, "locationChanged " + location);
         LatLng curPos = new LatLng(location.getLatitude(), location.getLongitude());
+        Log.d(TAG, "locationChanged " + curPos);
 
         if (mLastPos != null) {
             double dist = haversine(mLastPos, curPos);
@@ -304,13 +360,17 @@ class LocationThread extends Thread
             // If within 20m of the old position, then not moving, Do no more
             if (dist < 20 && mHomePos != null) {
                 Log.d(TAG, "Not sending location update, not moved enough: " + dist + "m");
-                return UPDATE_INTERVAL;
+                queueLocationUpdate(DEFAULT_INTERVAL);
+                return;
             }
         }
 
-        mMessenger.broadcast(LocationService.LOCATION_CHANGED, curPos);
+        Intent intent = new Intent(LocationService.LOCATION_CHANGED);
+        intent.putExtra("LAT", curPos.latitude);
+        intent.putExtra("LONG", curPos.longitude);
+        mMessenger.broadcast(intent);
 
         mLastPos = curPos;
-        return sendUpdate(curPos);
+        sendUpdate();
     }
 }

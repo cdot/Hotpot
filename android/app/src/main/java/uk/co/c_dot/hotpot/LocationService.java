@@ -24,6 +24,7 @@ public class LocationService extends Service {
     // Commands received by service
     public static final String START = MainActivity.DOMAIN + "START";
     public static final String STOP = MainActivity.DOMAIN + "STOP";
+    public static final String REQUEST = MainActivity.DOMAIN + "REQUEST";
 
     // Commands sent by service
     public static final String LOCATION_CHANGED = MainActivity.DOMAIN + "LOCATION_CHANGED";

@@ -48,15 +48,15 @@ function Server(config, controller) {
     if (typeof https !== "undefined") {
         var options = {};
         options.key = fs.readFileSync(Utils.expandEnvVars(https.key));
-	console.TRACE(TAG, "Key " + https.key + " loaded");
+	console.TRACE(TAG, "Key ", https.key, " loaded");
         options.cert = fs.readFileSync(Utils.expandEnvVars(https.cert));
-        console.TRACE(TAG, "Certificate " + https.cert + " loaded");
-        console.TRACE(TAG, "HTTPS starting on port " + config.get("port")
-                     + " with key " + https.key);
+        console.TRACE(TAG, "Certificate ", https.cert, " loaded");
+        console.TRACE(TAG, "HTTPS starting on port ", config.get("port"),
+                      " with key ", https.key);
     
         httpot = require("https").createServer(options, handler);
     } else {
-        console.TRACE(TAG, "HTTP starting on port " + config.get("port"));
+        console.TRACE(TAG, "HTTP starting on port ", config.get("port"));
         httpot = require("http").createServer(handler);
     }
     httpot.listen(config.get("port"));
@@ -73,7 +73,7 @@ Server.prototype.handle = function(path, params, response) {
     path = path.substring(1).split("/");
     var command = path.shift();
 
-    console.TRACE(TAG, "Handling " + command);
+    console.TRACE(TAG, "Handling ", command);
     if (typeof setup.controller === "undefined") {
         // Not ready
         response.statusCode = 500;
@@ -98,7 +98,7 @@ Server.prototype.handle = function(path, params, response) {
             response.statusCode = 200;
             response.write(s);
             response.end();
-            console.TRACE(TAG, "Handled " + command);
+            console.TRACE(TAG, "Handled ", command);
         });
 };
 
@@ -114,7 +114,7 @@ Server.prototype.GET = function(request, response) {
         var req = Url.parse("" + request.url, true);
         this.handle(req.pathname, req.query, response);
     } catch (e) {
-        console.TRACE(TAG, e + " in " + request.url + "\n" + e.stack);
+        console.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
         response.write(e + " in " + request.url + "\n");
         response.statusCode = 400;
     }
@@ -134,11 +134,14 @@ Server.prototype.POST = function(request, response) {
         try {
             // Parse the JSON body and pass as the data
             var object;
-            if (typeof body !== "undefined" && body !== "")
-                object = JSON.parse(Buffer.concat(body).toString());
+            if (body.length > 0) {
+                var sbody = Buffer.concat(body).toString();
+                //console.TRACE(TAG, "Parsing message ", sbody);
+                object = JSON.parse(sbody);
+            }
             self.handle(request.url, object, response);
         } catch (e) {
-            console.TRACE(TAG, e + " in " + request.url + "\n" + e.stack);
+            console.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
             response.write(e + " in " + request.url + "\n");
             response.statusCode = 400;
         }

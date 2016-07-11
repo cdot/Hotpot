@@ -3,19 +3,26 @@
  */
 package uk.co.c_dot.hotpot;
 
+import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -258,29 +265,16 @@ public class ServerConnection {
         }
     }
 
-    /**
-     * Send a GET to the server
-     *
-     * @param path   additional path to add to the URL e.g. "/mobile"
-     * @param params map of parameter names to values
-     * @return the result of the GET
-     */
-    public String GET(String path, Map<String, String> params) throws IOException {
-
-        // Build a new URL with parameters encoded
-        String sURL = mURL.toString();
-        if (path != null)
-            sURL += path;
-        String sep = "?";
+    private String makeParamString(Map<String, String> params) throws IOException {
+        ArrayList<String> data = new ArrayList<>();
         for (String key : params.keySet()) {
-            sURL += sep + URLEncoder.encode(key, "UTF-8") + "="
-                    + URLEncoder.encode(params.get(key), "UTF-8");
-            sep = "&";
+            data.add(URLEncoder.encode(key, "UTF-8") + "="
+                    + URLEncoder.encode(params.get(key), "UTF-8"));
         }
+        return TextUtils.join("&", data);
+    }
 
-        // Open the connection
-        HttpURLConnection connection = connect(new URL(sURL));
-
+    private String readReply(HttpURLConnection connection) throws IOException {
         // Read the reply
         String reply = null;
         try {
@@ -296,5 +290,56 @@ public class ServerConnection {
             connection.disconnect();
         }
         return reply;
+    }
+
+    /**
+     * Send a GET to the server
+     *
+     * @param path   additional path to add to the URL e.g. "/mobile"
+     * @param params map of parameter names to values
+     * @return the result of the GET
+     */
+    public String GET(String path, Map<String, String> params) throws IOException {
+
+        // Build a new URL with parameters encoded
+        String sURL = mURL.toString()
+                + (path != null ? path : "")
+                + "?" + makeParamString(params);
+
+        HttpURLConnection connection = connect(new URL(sURL));
+        return readReply(connection);
+    }
+
+
+    /**
+     * Send a POST to the server
+     *
+     * @param path   additional path to add to the URL e.g. "/mobile"
+     * @param params map of parameter names to values
+     * @return the result of the POST
+     */
+    public String POST(String path, Map<String, String> params) throws IOException {
+
+        String sURL = mURL.toString()
+            + (path != null ? path : "");
+        JSONObject json = new JSONObject();
+        try {
+            for (String key : params.keySet()) {
+                json.put(key, params.get(key));
+            }
+        } catch (JSONException jse) {
+            throw new IOException(jse.getMessage());
+        }
+
+        byte[] b = json.toString().getBytes(Charset.forName("UTF-8"));
+
+        HttpURLConnection connection = connect(new URL(sURL));
+
+        connection.setDoOutput(true);
+        connection.setFixedLengthStreamingMode(b.length);
+        OutputStream out = new BufferedOutputStream(connection.getOutputStream());
+        out.write(b);
+        out.close();
+        return readReply(connection);
     }
 }

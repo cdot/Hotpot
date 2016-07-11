@@ -92,7 +92,7 @@ function Thermostat(name, config) {
     this.pollTemperature();
     if (typeof this.history_config !== "undefined")
         this.pollHistory();
-    console.TRACE(TAG, "'" + this.name + "' constructed");
+    console.TRACE(TAG, "'", this.name, "' constructed");
 }
 module.exports = Thermostat;
 
@@ -257,8 +257,8 @@ Thermostat.prototype.pollHistory = function() {
         return;
     }
 
-    console.TRACE(TAG + "History", "Add " + t + " to "
-                  + this.name + " history");
+    console.TRACE(TAG, "History", "Add ", t, " to ",
+                  this.name, " history");
     self.last_recorded_temp = t;
 
     statFile(fn).then(
@@ -269,7 +269,7 @@ Thermostat.prototype.pollHistory = function() {
                 2 * (self.history_config.limit
                        / self.history_config.interval) * 15;
             if (stats.size > maxbytes) {
-                console.TRACE(TAG, self.name + " history is full");
+                console.TRACE(TAG, self.name, " history is full");
                 readFile(fn)
                     .then(
                         function(data) {
@@ -299,8 +299,8 @@ Thermostat.prototype.pollHistory = function() {
                     });
         },
         function(err) {
-            console.TRACE(TAG, "Failed to stat history file '"
-                          + fn + "': " + err);
+            console.TRACE(TAG, "Failed to stat history file '",
+                          fn, "': ", err);
             // Probably the first time; write the whole history file
             rewriteHistory(undefined);
         });

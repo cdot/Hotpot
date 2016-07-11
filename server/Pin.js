@@ -42,8 +42,8 @@ function Pin(name, config, done) {
 
     self.value_path = GPIO_PATH + "gpio" + self.gpio + "/value";
 
-    console.TRACE(TAG, "'" + self.name +
-                  "' construction starting on gpio " + self.gpio);
+    console.TRACE(TAG, "'", self.name,
+                  "' construction starting on gpio ", self.gpio);
     
     var exported = false;
 
@@ -56,7 +56,7 @@ function Pin(name, config, done) {
             .then(function() {
                 // Check passed, so we know it's exported
                 exported = true;
-                console.TRACE(TAG, m + " OK");
+                console.TRACE(TAG, m, " OK");
                 setDirection();
             })
             .catch(function(e) {
@@ -76,7 +76,7 @@ function Pin(name, config, done) {
         var m = EXPORT_PATH + "=" + self.gpio;
         writeFile(EXPORT_PATH, self.gpio, "utf8")
             .then(function() {
-                console.TRACE(TAG, m + " OK");
+                console.TRACE(TAG, m, " OK");
                 // Use a timeout to give it time to get set up
                 setTimeout(readCheck, 1000);
             })
@@ -90,7 +90,7 @@ function Pin(name, config, done) {
         var path = GPIO_PATH + "gpio" + self.gpio + "/direction";
         writeFile(path, "out")
             .then(function() {
-                console.TRACE(TAG, path + "=out OK");
+                console.TRACE(TAG, path, "=out OK");
                 setActive();
             })
             .catch(function(e) {
@@ -116,7 +116,7 @@ function Pin(name, config, done) {
     function writeCheck() {
         writeFile(self.value_path, 0, "utf8")
             .then(function() {
-                console.TRACE(TAG, self.value_path + " writeCheck OK");
+                console.TRACE(TAG, self.value_path, " writeCheck OK");
                 done();
             })
             .catch(function(e) {
@@ -127,8 +127,8 @@ function Pin(name, config, done) {
 
     // Something went wrong, but still use a file
     function fallBackToDebug(err) {
-        console.TRACE(TAG, self.name + ":" + self.gpio + " setup failed: "
-                      + err + "; falling back to debug");
+        console.TRACE(TAG, self.name, ":", self.gpio, " setup failed: ",
+                      err, "; falling back to debug");
         self.value_path = "/tmp/gpio" + self.gpio;
         writeCheck();
     }
@@ -144,7 +144,7 @@ module.exports = Pin;
 Pin.prototype.DESTROY = function() {
     "use strict";
 
-    console.TRACE(TAG, "Unexport gpio " + this.gpio);
+    console.TRACE(TAG, "Unexport gpio ", this.gpio);
     writeFile(UNEXPORT_PATH, this.gpio, "utf8");
 };
 
@@ -157,7 +157,7 @@ Pin.prototype.DESTROY = function() {
  */
 Pin.prototype.set = function(state) {
     "use strict";
-    console.TRACE(TAG, this.value_path + " = " + (state === 1 ? "ON" : "OFF"));
+    console.TRACE(TAG, this.value_path, " = ", (state === 1 ? "ON" : "OFF"));
     if (this.debug)
         this.debug.pinstate[this.name] = state;
     return writeFile(this.value_path, state, "utf8");

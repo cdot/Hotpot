@@ -3,6 +3,8 @@
     <string name="label">Hotpot</string>
     <string name="description">Hotpot</string>
     <string name="action_settings">Settings</string>
+    <string name="action_request_HW">Request Hot Water</string>
+    <string name="action_request_CH">Request Central Heating</string>
     <string name="action_pause_resume">Pause/Resume location reporting</string>
     <string name="action_quit">Quit</string>
     <string name="prefs_title">Hotpot Server</string>

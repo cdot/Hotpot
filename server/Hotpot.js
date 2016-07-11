@@ -8,6 +8,7 @@ const DESCRIPTION =
 
 const getopt = require("node-getopt");
 
+const Utils = require("../common/Utils.js");
 const Location = require("../common/Location.js");
 
 const Config = require("./Config.js");
@@ -44,13 +45,22 @@ const TAG = "Hotpot";
     // 2: command tracing
     // 3: test module tracing
     // 4: pin setup details
-    console.TRACE = function(level, message) {
+    console.TRACE = function() {
+        var level = arguments[0];
         if (typeof cliopt.debug !== "undefined" &&
             (cliopt.debug.indexOf("all") >= 0
              || cliopt.debug.indexOf(level) >= 0)
-            && (cliopt.debug.indexOf("-" + level) < 0))
-            console.log((new Date().toISOString()) + " " + level
-                        + ": " + message);
+            && (cliopt.debug.indexOf("-" + level) < 0)) {
+            var mess = new Date().toISOString() + " " + level + ": ";
+            for (var i = 1; i < arguments.length; i++) {
+                if (typeof arguments[i] === "object"
+                    && arguments[i].toString === Object.prototype.toString)
+                    mess += Utils.dump(arguments[i]);
+                else
+                    mess += arguments[i];
+            }
+            console.log(mess);
+        }
     };
 
     var config = new Config(cliopt.config);
@@ -74,6 +84,6 @@ const TAG = "Hotpot";
                     });
         })
         .catch(function(e) {
-            console.TRACE(TAG, "Controller initialisation failed " + e);
+            console.TRACE(TAG, "Controller initialisation failed: ", e);
         });
 })();
