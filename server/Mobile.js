@@ -82,7 +82,7 @@ function Mobile(name, config) {
      * @type {number}
      * @public
      */
-    this.time_of_arrival = this.last_time + A_LONG_TIME;
+    this.time_of_arrival = this.last_time - SHORT_INTERVAL;
 
     /**
      * What we are requesting; HW:, CH:
@@ -112,11 +112,23 @@ Mobile.prototype.getSerialisableConfig = function() {
  */
 Mobile.prototype.getSerialisableState = function() {
     "use strict";
-    return {
-        location: this.location,
-        time_of_arrival: new Date(
-            Math.round(this.time_of_arrival * 1000)).toISOString()
+    var state = {
+        location: this.location
     };
+
+    if (this.time_of_arrival > Time.nowSeconds())
+        state.time_of_arrival =
+            new Date(Math.round(this.time_of_arrival * 1000)).toISOString();
+
+    if (typeof this.request.HW !== "undefined")
+        state.request_HW = new Date(
+            Math.round(this.request.HW * 1000)).toISOString();
+
+    if (typeof this.request.CH !== "undefined")
+        state.request_CH = new Date(
+            Math.round(this.request.CH * 1000)).toISOString();
+
+    return state;
 };
 
 /**
@@ -132,25 +144,38 @@ Mobile.prototype.setHomeLocation = function(location) {
 };
 
 /**
- * Set the current state of the mobile device in response to a message from
+ * Set the current location of the mobile device in response to a message from
  * the device.
  * @param {object} info info about the device, including "lat",
  * "lng", "request_hw" and "request_ch".
  * @protected
  */
-Mobile.prototype.setState = function(info) {
+Mobile.prototype.setLocation = function(info) {
     "use strict";
     this.last_location = this.location;
     this.location = new Location(info);
-    this.request["HW"] = info.request_HW;
-    this.request["CH"] = info.request_CH;
     this.last_time = this.time;
     this.time = Time.nowSeconds();
-    console.TRACE(TAG, "set location @", this.time, ": ", info);
     if (this.last_location === null) {
         this.last_location = this.location;
         this.last_time = this.time;
     }
+};
+
+Mobile.prototype.setRequests = function(info, deftime) {
+    if (typeof info.request_HW !== "undefined") {
+        if (typeof info.request_HW !== "number")
+            info.request_HW = interval + 10; // seconds
+        this.request.HW = Time.now() + info.request_HW * 1000;
+    } else
+        delete this.request.HW;
+
+    if (typeof info.request_CH !== "undefined") {
+        if (typeof info.request_CH !== "number")
+            info.request_CH = interval + 10; // seconds
+        this.request.CH = Time.now() + info.request_CH * 1000;
+    } else
+        delete this.request.CH;
 };
 
 /**
@@ -174,7 +199,7 @@ Mobile.prototype.estimateTOA = function(callback) {
 
     // Are they very close to home (within 100m)?
     if (crow_flies < 100) {
-        this.time_of_arrival = Time.nowSeconds();
+        this.time_of_arrival = Time.nowSeconds() - SHORT_INTERVAL;
         console.TRACE(TAG, "Too close to care, update me in ", MEDIUM_INTERVAL);
         callback(MEDIUM_INTERVAL); // less than 1km; as good as there
         return;
@@ -317,6 +342,10 @@ Mobile.prototype.arrivesIn = function() {
  */
 Mobile.prototype.requesting = function(service) {
     "use strict";
-    return (typeof this.request !== "undefined" &&
-            this.request[service]);
+    if (typeof this.request[service] !== "undefined") {
+        if (Time.nowSeconds() <= this.request[service])
+            return true;
+        delete this.request[service];
+    }
+    return false;
 };

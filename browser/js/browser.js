@@ -212,6 +212,16 @@
         var t = $ui.data("type"), v;
         if (typeof t === "undefined")
             t = "string";
+
+        if (typeof value !== "undefined" && value !== null) {
+            // Only show if they have a value
+            $ui .parents(".showif")
+                .filter("." + $ui.data("field"))
+                .each(function() {
+                    $(this).show();
+                });
+        }
+
         if (t === "boolean") {
             // Binary checkbox
             if (typeof value === "string")
@@ -273,6 +283,7 @@
                 var data;
                 eval("data=" + raw);
                 $("#comms_error").html("");
+                $(".showif").hide(); // hide optional content
                 populate($("body"), "", data);
                 poller = setTimeout(function() {
                     $(document).trigger("poll");

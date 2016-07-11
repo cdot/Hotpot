@@ -338,19 +338,22 @@ Controller.prototype.getMobile = function(id) {
 /**
  * Handler for mobile state setting
  * @param info structure containing location in "lat", "lng",
- * device identifier in "device", and boolean "request_HW" and "request_CH"
- * @return location of server
+ * device identifier in "device", and "request_HW" and "request_CH"
+ * which may be a number to set a timeout on the request. If they are present
+ * but not a number, the request times out after the next request is due.
  * @private
  */
 Controller.prototype.setMobileState = function(info, respond) {
     "use strict";
-    var d = this.getMobile(info.device);
-    if (d === null)
-        throw TAG + " setMobileState: " + d + " not known" + new Error().stack;
-    d.setState(info);
+    var mob = this.getMobile(info.device);
+    if (mob === null)
+        throw TAG + " setMobileState: " + info.device + " not known";
     var loc = (typeof this.location !== "undefined")
         ? this.location : new Location();
-    d.estimateTOA(function(interval) {
+    mob.setLocation(info);
+    mob.estimateTOA(function(interval) {
+        // A request stays "live" until the next request is expected
+        mob.setRequests(info, interval);
         respond({
             lat: loc.lat,
             lng: loc.lng,

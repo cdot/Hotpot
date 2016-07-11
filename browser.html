@@ -115,8 +115,16 @@
       <div>
         <span class="marker" data-type="location" data-field="location"></span>
         <b data-field="name"></b>
-        is expected home at
-        <span data-field="time_of_arrival"></span>
+        <span class="showif time_of_arrival">
+          is expected home at
+          <span data-field="time_of_arrival"></span>
+        </span>
+        <span class="showif request_CH">
+          is requesting CH until <span data-field="request_CH"></span>
+          </span>
+        <span class="showif request_HW">
+        is requesting HW until <span data-field="request_HW"></span>
+        </span>
     </div>
   </body>
 </html>
