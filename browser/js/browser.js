@@ -452,8 +452,8 @@
 
         // Rule handlers
         $(".removeRule", $root).on("click", removeRule);
-        $(".move.up", $root).on("click", moveUp);
-        $(".move.down", $root).on("click", moveDown);
+        $(".move_rule.up", $root).on("click", moveUp);
+        $(".move_rule.down", $root).on("click", moveDown);
 
         // Disable the first move-up and the last move-down in
         // any group of rules

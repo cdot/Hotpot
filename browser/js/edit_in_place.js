@@ -53,7 +53,9 @@
 
             $editor = $("<div></div>")
                 .css("height", h + "px")
-                .css("width", w + "px");
+                .css("width", w + "px")
+                .height(h)
+                .width(w);
             var $error = $("<div></div>")
                 .css("color", "white")
                 .css("background-color", "red")
@@ -80,7 +82,7 @@
                     }
                 });
             $cross = $("<div>&#9746;</div>")
-            .addClass("editable_button")
+                .addClass("editable_button")
                 .css("float", "right")
                 .on("click", function() {
                     if (options.cancel)
