@@ -13,17 +13,27 @@
     var setup_backoff = 5; // seconds
     var update_backoff = 5; // seconds
     var update_rate = 5; // seconds
-    
+
     var apis;
     var config;
 
     var poller;
-    var stopPolling = function () {
+    function stopPolling() {
         if (poller) {
             clearTimeout(poller);
             poller = null;
         }
-    };
+    }
+
+    var location;
+    var requests = {};
+    var reporter;
+    function stopReporting() {
+        if (reporter) {
+            clearTimeout(reporter);
+            reporter = null;
+        }
+    }
 
     /**
      * Get the path of an element, as used in AJAX requests to
@@ -69,19 +79,19 @@
     }
 
     /**
-     * User toggles a checkbox field
+     * User clicks a requests field
      * @return {boolean} false to terminate event handling
      */
-    function toggleField() {
-        var $self = $(this);
-        var params = {
-            value: $self.prop("checked") ? 1 : 0
-        };
-        $.post(server + "/set/" + getPath($self),
-               JSON.stringify(params))
-            .always(function() {
-                $(document).trigger("poll");
-            });
+    function changeRequest() {
+        var val = parseInt($(this).val());
+        $(this).parents(".templated[data-field]").each(function() {
+            var pin = ($(this).data("field"));
+            if (val < 0)
+                delete requests[pin];
+            else
+                requests[pin] = val;
+        });
+        reportLocation();
         return false; // prevent repeated calls
     }
 
@@ -192,14 +202,27 @@
 
     function recomputeMapBounds() {
         var $map = $("#map");
-        var bounds = new google.maps.LatLngBounds();
-        bounds.extend($map.data("home").getPosition());
-        $(".marker").each(function() {
-            var m = $(this).data("marker");
-            if (m)
-                bounds.extend(m.getPosition());
-        });
-        $map.data("map").fitBounds(bounds);
+        var gmap = $map.data("map");
+        var $markers = $(".marker");
+        if ($markers.length > 1) {
+            var bounds = gmap.getBounds();
+            var extended = false;
+            bounds.extend($map.data("home").getPosition());
+            $markers.each(function() {
+                var m = $(this).data("marker");
+                if (m && !bounds.contains(m.getPosition())) {
+                    bounds.extend(m.getPosition());
+                    extended = true;
+                }
+            });
+            var span = bounds.toSpan();
+            if (span.lat() < 0.01 && span.lng() < 0.01)
+                // Keep home in the middle
+                $map.data("map").setCenter($map.data("home").getPosition());
+            else if (extended)
+                // Make sure we can see all the markers
+                gmap.fitBounds(bounds);
+        }
     }
 
     /**
@@ -222,19 +245,16 @@
                 });
         }
 
-        if (t === "boolean") {
-            // Binary checkbox
-            if (typeof value === "string")
-                $ui.prop("checked", parseInt(value) === 1);
-            else
-                $ui.prop("checked", value);
-        } else if (t === "location") {
+        if (t === "location") {
             var m = $ui.data("marker");
             if (typeof m !== "undefined") {
-                m.setPosition({ lat: parseFloat(value.lat),
-                                lng: parseFloat(value.lng) });
+                m.setPosition({
+                    lat: parseFloat(value.lat),
+                    lng: parseFloat(value.lng)
+                });
                 recomputeMapBounds();
             }
+            v = value.lat + "," + value.lng;
         } else {
             // Text / number field
             if (t === "float") {
@@ -242,6 +262,8 @@
                     v = value.toPrecision(5);
                 else
                     v = typeof value;
+            } if (t === "date") {
+                v = new Date(Math.round(value)).toString();
             } else
                 v = value.toString();
             $ui.text(v);
@@ -349,7 +371,6 @@
                 for (var tname in data.thermostat) {
                     var th = data.thermostat[tname];
                     var basetime = th[0];
-                    var points = [];
                     for (var j = 1; j < th.length; j += 2) {
                         g.addPoint(
                             tname,
@@ -401,7 +422,14 @@
                 setValue($expansion.find(
                     "[data-field='" + subname + "']").first(), data[subname]);
         }
-
+        // Name radio group unique to this template
+        $expansion
+            .find("input[type='radio']")
+            .each(function() {
+                $(this)
+                    .attr("name", "radio_" + name)
+                    .addClass("pin_radio");
+            });
         return $expansion;
     };
 
@@ -436,7 +464,6 @@
      */
     function attachHandlers($root) {
         $(".editable", $root).on("click", editField);
-        $("input:checkbox", $root).on("click", toggleField);
 
         $("[data-field='temperature']").each(
             function() {
@@ -460,6 +487,37 @@
         $(".move_rule.up", $root).first().addClass("disabled");
         $(".move_rule.down", $root).last().addClass("disabled");
         $(".add_rule", $root).on("click", addRule);
+
+        $(".pin_radio").on("change", changeRequest);
+    }
+
+    function reportLocation(loc) {
+        // Send emulated position info to server
+        stopReporting();
+
+        if (loc)
+            location = loc;
+
+        var params = {
+            lat: location.lat,
+            lng: location.lng,
+            device: "debug"
+        };
+        var req = [];
+        for (var k in requests) {
+            req.push(k + "=" + requests[k]);
+        }
+        if (req.length > 0)
+            params.requests = req.join(",");
+        
+        // Away from home, set up to report after interval
+        $.post(server + "/set/mobile",
+               JSON.stringify(params),
+               function(raw) {
+                   var data;
+                   eval("data=" + raw);
+                   setTimeout(reportLocation, data.interval * 1000);
+               });
     }
 
     $(document).on("initialise_map", function() {
@@ -468,12 +526,19 @@
                 + "?key=" + apis.google_maps.browser_key)
             .done(function() {
                 var here = new Location(config.location);
+                location = here;
                 $("#map").each(function() {
                     var map = new google.maps.Map(
                         this,
                         {
                             center: here,
-                            zoom: 8
+                            zoom: 12
+                        });
+                    google.maps.event.addListener(
+                        map, "click", function(event) {
+                            reportLocation(new Location(
+                                event.latLng.lat(),
+                                event.latLng.lng()));
                         });
                     $(this).data("map", map);
                     $(this).data("home", new google.maps.Marker({

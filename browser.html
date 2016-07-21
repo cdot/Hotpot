@@ -36,7 +36,7 @@
     <h1>Hotpot Monitor for <span id="server_url"></span></h1>
     <div id="comms_error"></div>
 
-    <div><b>System Time:</b> <span data-field="time" class="monospace"></span></div>
+    <div><b>System Time:</b> <span data-field="time" data-type="date" class="monospace"></span></div>
 
     <div><b>Outside temperature:</b> <span data-field="env_temp" data-type="float" class="monospace"></span></div>
     <canvas id="temperature_canvas"></canvas>
@@ -106,7 +106,21 @@
     <table class="template" data-template="pin">
       <tr>
         <td data-field="name"></td>
-        <td><input type="checkbox" data-field="state" data-type="boolean"/></td>
+        <td class="monospace" data-field="state">X</td>
+        <td>
+          <input type="radio" checked="checked" value="-1">No request
+          <input type="radio" value="0">Request OFF
+          <input type="radio" value="1">Request ON
+        </td>
+        <td data-field="request">
+          <span class="showif source state until">
+            <span data-field="source"></span>
+            is requesting state
+            <span class="monospace" data-field="state"></span>
+            until
+            <span class="monospace" data-field="until" data-type="date"></span>
+          </span>
+        </td>
       </tr>
     </table>
 
@@ -119,12 +133,7 @@
           is expected home at
           <span data-field="time_of_arrival"></span>
         </span>
-        <span class="showif request_CH">
-          is requesting CH until <span data-field="request_CH"></span>
-          </span>
-        <span class="showif request_HW">
-        is requesting HW until <span data-field="request_HW"></span>
-        </span>
+      </div>
     </div>
   </body>
 </html>

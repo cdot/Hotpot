@@ -19,6 +19,9 @@ var Time = {
 if (typeof module !== "undefined") // browserify
     module.exports = Time;
  
+/**
+ * Convert a variety f types to a Date
+ */
 Time.toDate = function(d) {
     switch (typeof d) {
     case "string":
@@ -29,7 +32,7 @@ Time.toDate = function(d) {
         return d;
     }
     throw "Unconvertible date type " + (typeof d);
-}
+};
 
 /**
  * Debug support - force now to a specific time
@@ -51,7 +54,7 @@ Time.unforce_now = function() {
 Time.midnight = function() {
     "use strict";
     var d = new Date(Time.now());
-    d.setHours(0,0,0,0);
+    d.setHours(0, 0, 0, 0);
     return d;
 };
 
@@ -61,9 +64,9 @@ Time.midnight = function() {
  * @param {string} s time string
  * @return {Date} the date
  */
-Time.parse = function(s) {
+Time.parse = function(str) {
     "use strict";
-    var hms = s.split(/:/);
+    var hms = str.split(/:/);
     var h = hms.shift();
     var m = hms.shift() || 0;
     var s = hms.shift() || 0;
@@ -132,6 +135,6 @@ Time.after = function(t1) {
  */
 Time.before = function(t1) {
     "use strict";
-    t1 = Time.toDate(t1)
+    t1 = Time.toDate(t1);
     return (Time.now() < t1);
 };

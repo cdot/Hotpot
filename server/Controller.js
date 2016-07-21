@@ -7,7 +7,6 @@ const Events = require("events").EventEmitter;
 const promise = require("promise");
 
 const Location = require("../common/Location.js");
-const Utils = require("../common/Utils.js");
 
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
@@ -222,13 +221,15 @@ Controller.prototype.getSerialisableState = function() {
         return res;
     }
 
-    return {
-	time: new Date(Time.now()).toString(), // local time
+    var state = {
+	time: Time.now(), // local time
         env_temp: this.weather("Temperature"),
         thermostat: sermap(this.thermostat),
         pin: sermap(this.pin),
         mobile: sermap(this.mobile)
     };
+
+    return state;
 };
 
 /**
@@ -338,25 +339,37 @@ Controller.prototype.getMobile = function(id) {
 /**
  * Handler for mobile state setting
  * @param info structure containing location in "lat", "lng",
- * device identifier in "device", and "request_HW" and "request_CH"
- * which may be a number to set a timeout on the request. If they are present
- * but not a number, the request times out after the next request is due.
+ * device identifier in "device", and "requests" which maps a pin name to
+ * a state (1 or 0). The request times out after the next request is due.
  * @private
  */
 Controller.prototype.setMobileState = function(info, respond) {
     "use strict";
+    var self = this;
     var mob = this.getMobile(info.device);
     if (mob === null)
         throw TAG + " setMobileState: " + info.device + " not known";
-    var loc = (typeof this.location !== "undefined")
-        ? this.location : new Location();
     mob.setLocation(info);
+    console.TRACE(TAG, "Set location of ", mob.name, " @", mob.location);
+    var serv_loc = (typeof this.location !== "undefined")
+        ? this.location : new Location();
+
     mob.estimateTOA(function(interval) {
-        // A request stays "live" until the next request is expected
-        mob.setRequests(info, interval);
+        console.TRACE(TAG, mob.name, " interval is ", interval, "s");
+        // A request stays "live" until the next update is expected
+        var slist = info.requests.split(",");
+        for (var i in slist) {
+            var s = slist[i].split("=");
+            if (typeof self.pin[s[0]] !== "undefined")
+                self.pin[s[0]].addRequest({
+                    state: parseInt(s[1]),
+                    until: Time.now() + (interval + 10) * 1000,
+                    source: "Mobile " + mob.name
+                });
+        }
         respond({
-            lat: loc.lat,
-            lng: loc.lng,
+            lat: serv_loc.lat,
+            lng: serv_loc.lng,
             interval: interval
         });
     });

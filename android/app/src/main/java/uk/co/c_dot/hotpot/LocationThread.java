@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.security.KeyStoreException;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -270,10 +271,12 @@ class LocationThread extends Thread
         params.put("device", mAndroidId);
         params.put("lat", "" + mLastPos.latitude);
         params.put("lng", "" + mLastPos.longitude);
+        ArrayList<String> requests = new ArrayList<>();
         if (mRequestHW)
-            params.put("request_HW", "true");
+            requests.add("HW");
         if (mRequestCH)
-            params.put("request_CH", "true");
+            requests.add("CH");
+        params.put("request", TextUtils.join(",", requests);
 
         // Handle the request in a new thread to avoid blocking the message queue
         Thread ut = new Thread() {

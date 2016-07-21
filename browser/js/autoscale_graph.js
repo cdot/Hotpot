@@ -242,7 +242,7 @@ function Graph(options, $canvas) {
             targ = e.target;
         else if (e.srcElement)
             targ = e.srcElement;
-        if (targ.nodeType == 3) // defeat Safari bug
+        if (targ.nodeType === 3) // defeat Safari bug
             targ = targ.parentNode;
 
         var targ_left = $canvas.offset().left;
@@ -290,10 +290,10 @@ function Graph(options, $canvas) {
             $("#tip_canvas").hide();           
     })
     .hover(
-        function(e) {
+        function() {
             $("#tip_canvas").show();
         },
-        function(e) {
+        function() {
             $("#tip_canvas").hide();
         });
 
@@ -362,7 +362,7 @@ Graph.prototype.sortPoints = function(tracename, axis) {
     "use strict";
     if (typeof this.traces[tracename] === "undefined")
         return;
-    this.traces[tracename].sortPoints();
+    this.traces[tracename].sortPoints(axis);
 };
 
 /**

@@ -35,12 +35,16 @@ function Pin(name, config, done) {
      * @type {string}
      * @public
      */
-    this.name = name;
+    self.name = name;
 
     /** @property {integer} gpio gpio port */
     self.gpio = config.get("gpio");
 
     self.value_path = GPIO_PATH + "gpio" + self.gpio + "/value";
+
+    /** @property {object} requests List of requests for this pin
+     * (see #addRequest) */
+    self.requests = [];
 
     console.TRACE(TAG, "'", self.name,
                   "' construction starting on gpio ", self.gpio);
@@ -194,7 +198,67 @@ Pin.prototype.getSerialisableConfig = function() {
  */
 Pin.prototype.getSerialisableState = function() {
     "use strict";
-    return {
+    this.purgeRequests();
+    var state = {
         state: this.getState()
     };
+    var ar = this.getActiveRequest();
+    if (typeof ar !== "undefined")
+        state.request = ar;
+    return state;
+};
+
+/**
+ * Purge requests that have passed their timeout, or have the same source
+ * as specified by "purge". Each mobile can only have one request outstanding
+ * against a pin.
+ * @purge {string} source of requests to force-purge
+ * @private
+ */
+Pin.prototype.purgeRequests = function(purge) {
+    var reqs = this.requests;
+    for (var i = 0; i < reqs.length;) {
+        if (reqs[i].source === purge
+            || Time.now() > reqs[i].until) {
+            console.TRACE(TAG, "Expire/purge request ", reqs[i]);
+            reqs.splice(i, 1);
+        } else
+            i++;
+    }
+};
+
+/**
+ * Add a request.
+ * Requests time out after a period of time.
+ * Active requests for state 0 override those for state 1.
+ * @param {object} request { until: epoch ms, state: 1|0, source: string }
+ */ 
+Pin.prototype.addRequest = function(request) {
+    console.TRACE(TAG, "Add request ", request);
+    this.purgeRequests(request.source);
+    this.requests.push(request);
+};
+
+/**
+ * Test what state is requested for the pin.
+ * @return {object} request, if the service is requested. Requests that
+ * turn off the pin (state 0) override those that turn it on. Format of a
+ * request is documented in #addRequest.
+ */
+Pin.prototype.getActiveRequest = function() {
+    "use strict";
+
+    var active_req;
+    this.purgeRequests();
+    for (var i = 0; i < this.requests.length; i++) { 
+        if (typeof active_req === "undefined") {
+            active_req = this.requests[i];
+            if (active_req.state === 0)
+                return active_req;
+        }
+        else if (this.requests[i].state === 0)
+            // Override active_req.state === 1
+            return this.requests[i];
+    }
+    return active_req;
 };

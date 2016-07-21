@@ -84,12 +84,7 @@ function Mobile(name, config) {
      */
     this.time_of_arrival = this.last_time - SHORT_INTERVAL;
 
-    /**
-     * What we are requesting; HW:, CH:
-     */
-    this.request = {};
-
-    console.TRACE(TAG, "'", name, "' constructed");
+    console.TRACE(TAG, name, " constructed");
 }
 module.exports = Mobile;
 
@@ -112,6 +107,7 @@ Mobile.prototype.getSerialisableConfig = function() {
  */
 Mobile.prototype.getSerialisableState = function() {
     "use strict";
+
     var state = {
         location: this.location
     };
@@ -119,14 +115,6 @@ Mobile.prototype.getSerialisableState = function() {
     if (this.time_of_arrival > Time.nowSeconds())
         state.time_of_arrival =
             new Date(Math.round(this.time_of_arrival * 1000)).toISOString();
-
-    if (typeof this.request.HW !== "undefined")
-        state.request_HW = new Date(
-            Math.round(this.request.HW * 1000)).toISOString();
-
-    if (typeof this.request.CH !== "undefined")
-        state.request_CH = new Date(
-            Math.round(this.request.CH * 1000)).toISOString();
 
     return state;
 };
@@ -147,7 +135,7 @@ Mobile.prototype.setHomeLocation = function(location) {
  * Set the current location of the mobile device in response to a message from
  * the device.
  * @param {object} info info about the device, including "lat",
- * "lng", "request_hw" and "request_ch".
+ * "lng".
  * @protected
  */
 Mobile.prototype.setLocation = function(info) {
@@ -160,22 +148,6 @@ Mobile.prototype.setLocation = function(info) {
         this.last_location = this.location;
         this.last_time = this.time;
     }
-};
-
-Mobile.prototype.setRequests = function(info, deftime) {
-    if (typeof info.request_HW !== "undefined") {
-        if (typeof info.request_HW !== "number")
-            info.request_HW = interval + 10; // seconds
-        this.request.HW = Time.now() + info.request_HW * 1000;
-    } else
-        delete this.request.HW;
-
-    if (typeof info.request_CH !== "undefined") {
-        if (typeof info.request_CH !== "number")
-            info.request_CH = interval + 10; // seconds
-        this.request.CH = Time.now() + info.request_CH * 1000;
-    } else
-        delete this.request.CH;
 };
 
 /**
@@ -195,12 +167,12 @@ Mobile.prototype.estimateTOA = function(callback) {
     var self = this;
 
     var crow_flies = this.home_location.haversine(this.location); // metres
-    console.TRACE(TAG, "Crow flies ", crow_flies, "m");
+    console.TRACE(TAG, this.name, " crow flies ", crow_flies, "m");
 
     // Are they very close to home (within 100m)?
     if (crow_flies < 100) {
         this.time_of_arrival = Time.nowSeconds() - SHORT_INTERVAL;
-        console.TRACE(TAG, "Too close to care, update me in ", MEDIUM_INTERVAL);
+        console.TRACE(TAG, this.name, " too close to care");
         callback(MEDIUM_INTERVAL); // less than 1km; as good as there
         return;
     }
@@ -208,7 +180,8 @@ Mobile.prototype.estimateTOA = function(callback) {
     // Are they a long way away, >1000km
     if (crow_flies > 1000000) {
         this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
-        console.TRACE(TAG, "Too far away; TOA ", this.time_of_arrival);
+        console.TRACE(TAG, this.name, " too far away; TOA ",
+                      this.time_of_arrival);
         callback(LONG_INTERVAL);
         return;
     }
@@ -219,34 +192,35 @@ Mobile.prototype.estimateTOA = function(callback) {
 
     if (time === 0) {
         // Shouldn't happen
-        console.TRACE(TAG, "Zero time");
+        console.TRACE(TAG, this.name, " zero time");
         callback(MEDIUM_INTERVAL);
         return;
     }
 
     var speed = distance / time; // metres per second
-    console.TRACE(TAG, "Distance ", distance, "m, time ", time,
+    console.TRACE(TAG, this.name, " distance ", distance, "m, time ", time,
                   "s, speed ", speed, "m/s (",
                   speed / MPH, "mph)");
+
+    // Are they getting any closer?
+    var last_crow = this.home_location.haversine(this.last_location);
+    if (crow_flies > last_crow) {
+        // no; skip re-routing until we know they are heading home
+        console.TRACE(TAG, this.name, " is getting further away");
+        callback(SHORT_INTERVAL);
+        return;
+    }
+
+    // So they are getting closer.
 
     // When far away, we want a wider interval. When closer, we want a
     // smaller interval.
     // time to arrival =~ crow_flies / speed
     // divide that by 10 (finger in the air)
     var interval = (crow_flies / speed) / 10;
-    console.TRACE(TAG, "Next interval ", crow_flies,
-                  " / ", speed, " gives ", interval);
+    console.TRACE(TAG, this.name,
+                  crow_flies, " / ", speed, " gives interval ", interval);
 
-    // Are they getting any closer?
-    var last_crow = this.home_location.haversine(this.last_location);
-    if (crow_flies > last_crow) {
-        // no; skip re-routing until we know they are heading home
-        console.TRACE(TAG, "Getting further away");
-        callback(interval);
-        return;
-    }
-
-    // So they are getting closer. What's their mode of transport?
 
     // This is too crude, should take account of transitions from one
     // mode to another
@@ -270,7 +244,7 @@ Mobile.prototype.estimateTOA = function(callback) {
         + "&departure_time=" + Math.round(Time.nowSeconds())
         + "&mode=" + mode;
 
-    console.TRACE(TAG, "Routing by ", mode, " using ", url);
+    console.TRACE(TAG, this.name, " routing by ", mode);
     function analyseRoutes(route) {
         if (typeof result.error_message !== "undefined") {
             console.error("Error getting route: " + result.error_message);
@@ -278,7 +252,7 @@ Mobile.prototype.estimateTOA = function(callback) {
             return;
         }
             
-        console.TRACE(TAG, "Got a route");
+        console.TRACE(TAG, self.name, " got a route");
         // Get the time of the best route
         var best_route = A_LONG_TIME;
         for (var r in route.routes) {
@@ -288,14 +262,15 @@ Mobile.prototype.estimateTOA = function(callback) {
                 var leg_length = legs[l].duration.value; // seconds
                 route_length += leg_length;
             }
-            console.TRACE(TAG, "Route of ", route_length, "s found");
+            console.TRACE(TAG, self.name, " route of ",
+                          route_length, "s found");
             if (route_length < best_route)
                 best_route = route_length;
         }
         if (best_route < A_LONG_TIME)
-            console.TRACE(TAG, "Best route is ", best_route);
+            console.TRACE(TAG, self.name, " best route is ", best_route);
         else {
-            console.TRACE(TAG, "No good route found, guessing");
+            console.TRACE(TAG, self.name, " no good route found, guessing");
             best_route = crow_flies / FAST_DRIVE;
         }
         self.time_of_arrival = Time.nowSeconds() + best_route;
@@ -319,12 +294,6 @@ Mobile.prototype.estimateTOA = function(callback) {
         });
 };
 
-Mobile.prototype.isReporting = function() {
-    "use strict";
-    // TODO: fix this
-    return true;
-};
-
 /**
  * Get the currently estimated arrival time from now
  * @return {float} estimated arrival time in seconds from now
@@ -333,19 +302,4 @@ Mobile.prototype.isReporting = function() {
 Mobile.prototype.arrivesIn = function() {
     "use strict";
     return this.time_of_arrival - Time.nowSeconds();
-};
-
-/**
- * Return true if the device is currently requesting the given service
- * @param {string} service name of service to check e.g. "HW"
- * @return {boolean} if the service is requested
- */
-Mobile.prototype.requesting = function(service) {
-    "use strict";
-    if (typeof this.request[service] !== "undefined") {
-        if (Time.nowSeconds() <= this.request[service])
-            return true;
-        delete this.request[service];
-    }
-    return false;
 };
