@@ -2,24 +2,12 @@
 
 /*eslint-env node */
 
-const fs = require("fs");
-const Time = require("../common/Time.js");
-const Utils = require("../common/Utils.js");
-const promise = require("promise");
-const readFile = promise.denodeify(fs.readFile);
-const writeFile = promise.denodeify(fs.writeFile);
-const statFile = promise.denodeify(fs.stat);
-const appendFile = promise.denodeify(fs.appendFile);
+const Historian = require("./Historian.js");
 
 const TAG = "Thermostat";
 
 // Default interval between polls
 const DEFAULT_POLL_INTERVAL = 1; // seconds
-
-// Default history interval - once a minute
-const DEFAULT_HISTORY_INTERVAL = 60; // seconds
-// Default history limit - number of seconds to store history for
-const DEFAULT_HISTORY_LIMIT = 24 * 60 * 60;
 
 // Singleton driver interface to DS18x20 thermometers
 var ds18x20;
@@ -68,19 +56,21 @@ function Thermostat(name, config) {
      */
     this.temperature = null;
 
-    this.basetime = Math.floor(Time.nowSeconds());
-
     /**
      * Temperature history
      */
     var hc = config.get("history");
     if (typeof hc !== "undefined") {
-        this.history_config = hc;
-        if (typeof hc.interval === "undefined")
-            hc.interval = DEFAULT_HISTORY_INTERVAL;
-        if (typeof hc.limit === "undefined")
-            hc.limit = DEFAULT_HISTORY_LIMIT;
-        this.history = [];
+	this.historian = new Historian({
+	    name: this.name,
+	    file: hc.file,
+	    interval: hc.interval,
+	    limit: hc.limit,
+	    datum: function() {
+		// Only log temperatures to one decimal place
+		return Math.round(self.temperature * 10) / 10;
+	    }
+	});
     }
 
     /** @private */
@@ -90,8 +80,8 @@ function Thermostat(name, config) {
         ds18x20.mapID(config.get("id"), name);
 
     this.pollTemperature();
-    if (typeof this.history_config !== "undefined")
-        this.pollHistory();
+    if (this.historian)
+        this.historian.pollHistory();
     console.TRACE(TAG, "'", this.name, "' constructed");
 }
 module.exports = Thermostat;
@@ -107,7 +97,6 @@ Thermostat.prototype.getSerialisableConfig = function() {
 
     return {
         id: this.id,
-        basetime: this.basetime,
         history: this.history_config
     };
 };
@@ -125,65 +114,20 @@ Thermostat.prototype.getSerialisableState = function() {
     };
 };
 
-Thermostat.prototype.loadHistory = function(data) {
-    if (typeof data === "undefined") {
-        var fn = Utils.expandEnvVars(this.history_config.file);
-        data = fs.readFileSync(fn);
-    }
-    var lines = data.toString().split("\n");
-    var basetime = this.basetime;
-    var cutoff = Time.nowSeconds() - this.history_config.limit;
-    var report = [];
-    var p0;
-
-    // Load report, discarding points that are before the cutoff
-    for (var i in lines) {
-        var point = lines[i].split(",");
-        if (point.length === 1) // basetime
-            basetime = parseFloat(point[0]);
-        else if (point.length === 2) {
-            point[0] = basetime + parseFloat(point[0]);
-            point[1] = parseFloat(point[1]);
-            if (point[0] < cutoff)
-                p0 = point;
-            else {
-                if (p0 && p0[0] < point[0]) {
-                    // Interpolate a point at the cutoff
-                    report.push([
-                        cutoff,
-                        (point[0] - cutoff) /
-                            (point[0] - p0[0]) * (point[1] - p0[1]) + p0[1]
-                    ]);
-                    p0 = null;
-                }
-                report.push(point);
-            }
-        } else
-            throw "Corrupt history at line " + i;
-    }
-    return report;
-};
-
 /**
  * Synchronously get the temperature history of the thermostat as a
  * serialisable structure. Note that the history is sampled at intervals,
  * but not every sample time will have a event. The history is only
  * updated if the temperature changes.
  * @return {object} array of alternating times and temps. Times are all
- * relative to basetime.
+ * relative to a base time, which is in the first array element.
  * @protected
  */
 Thermostat.prototype.getSerialisableLog = function() {
     "use strict";
-    if (typeof this.history === "undefined")
-        return null;
-    var report = this.loadHistory();
-    var res = [ this.basetime ];
-    for (var i in report) {
-        res.push(report[i][0] - this.basetime);
-        res.push(report[i][1]);
-    }
-    return res;
+    if (!this.historian)
+	return null;
+    return this.historian.getSerialisableHistory();
 };
 
 /**
@@ -209,99 +153,4 @@ Thermostat.prototype.pollTemperature = function() {
             }, self.poll_interval);
         }
     });
-};
-
-/**
- * Function for keeping temperature records
- * Records are written every minute or so (set in config)
- * @private
- */
-Thermostat.prototype.pollHistory = function() {
-    "use strict";
-
-    var self = this;
-
-    // Only log temperatures to one decimal place
-    var t = Math.round(self.temperature * 10) / 10;
-
-    var fn = Utils.expandEnvVars(this.history_config.file);
-
-    function rewriteHistory(data) {
-        var report = (typeof data === "undefined")
-            ? [] : self.loadHistory(data);
-        var s = self.basetime + "\n";
-        for (var i in report)
-            s += (report[i][0] - self.basetime) + "," + report[i][1] + "\n";
-        writeFile(fn, s)
-            .then(repoll,
-                  function(err) {
-                      console.error(TAG + " failed to write history file '"
-                                    + fn + "': " + err);
-                      repoll();
-                  });
-    }
-
-    function repoll() {
-        setTimeout(function() {
-            self.pollHistory();
-        }, self.history_config.interval * 1000);
-    }
-
-    if (typeof self.temperature !== "number") {
-        repoll();
-        return;
-    }
-
-    if (t === self.last_recorded_temp) {
-        repoll();
-        return;
-    }
-
-    console.TRACE(TAG, "History", "Add ", t, " to ",
-                  this.name, " history");
-    self.last_recorded_temp = t;
-
-    statFile(fn).then(
-        function(stats) {
-            // If we hit 2 * the size limit, open the file and
-            // reduce the size. Each sample is about 15 bytes.
-            var maxbytes =
-                2 * (self.history_config.limit
-                       / self.history_config.interval) * 15;
-            if (stats.size > maxbytes) {
-                console.TRACE(TAG, self.name, " history is full");
-                readFile(fn)
-                    .then(
-                        function(data) {
-                            rewriteHistory(data);
-                        },
-                        function(err) {
-                            console.error(
-                                TAG + " failed to read history file '"
-                                    + fn + "': " + err);
-                            repoll();
-                        });
-                return;
-            }
-            // otherwise simply append
-            appendFile(
-                fn,
-                Math.round(Time.nowSeconds() - self.basetime)
-                    + "," + t + "\n")
-                .then(
-                    repoll,
-                    function(ferr) {
-                        console.error(
-                            TAG + " failed to append to  history file '"
-                                + fn + "': "
-                                + ferr);
-                        repoll();
-                    });
-        },
-        function(err) {
-            console.TRACE(TAG, "Failed to stat history file '",
-                          fn, "': ", err);
-            // Probably the first time; write the whole history file
-            rewriteHistory(undefined);
-        });
 };

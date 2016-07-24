@@ -21,11 +21,7 @@
       hotpot_port = 13196;
       if (location.search.indexOf("DEBUG") > 0) {
           console.debug("Using DEBUG server");
-          hotpot_ip = "192.168.1.12";
-      }
-      else if (location.search.indexOf("LAN") > 0) {
-          console.debug("Using LAN server");
-          hotpot_ip = "192.168.1.16";
+          hotpot_ip = "127.0.0.1";
       }
     </script>
 
