@@ -60,9 +60,10 @@ function Thermostat(name, config) {
      * Temperature history
      */
     var hc = config.get("history");
+    var self = this;
     if (typeof hc !== "undefined") {
 	this.historian = new Historian({
-	    name: this.name,
+	    name: self.name,
 	    file: hc.file,
 	    interval: hc.interval,
 	    limit: hc.limit,

@@ -4,6 +4,7 @@ SOURCES := \
 	server/Apis.js \
 	server/Config.js \
 	server/Controller.js \
+	server/Historian.js \
 	server/Hotpot.js \
 	server/MetOffice.js \
 	server/Mobile.js \

@@ -48,15 +48,20 @@ Controller.prototype.initialise = function() {
         self.createMobiles(self.config.getConfig("mobile"));
         self.createPins(self.config.getConfig("pin"))
             .then(function() {
-                self.createThermostats(self.config.getConfig("thermostat"))
-                    .then(function() {
-                        // Thermostats and pins are ready. Can poll rules.
-                        self.pollRules();
-                        fulfill();
-                    })
-                    .catch(function(e) {
-                        fail("Error creating thermostats: " + e);
-                    });
+		try {
+                    self.createThermostats(self.config.getConfig("thermostat"))
+			.then(function() {
+                            // Thermostats and pins are ready. Can poll rules.
+                            self.pollRules();
+                            fulfill();
+			})
+			.catch(function(e) {
+                            fail("Error creating thermostats: " + e);
+			});
+		} catch (e) {
+		    console.error(e.stack);
+		    throw e;
+		}
             })
             .catch(function(e) {
                 fail("Error creating pins: " + e);

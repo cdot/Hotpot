@@ -16,6 +16,8 @@ const DEFAULT_INTERVAL = 60; // seconds
 // Default history limit - number of seconds to store history for
 const DEFAULT_LIMIT = 24 * 60 * 60;
 
+const TAG = "Historian";
+
 /**
  * interval: time
  * limit: time
@@ -31,17 +33,22 @@ function Historian(options) {
     if (typeof options.datum !== "function")
 	throw "datum is not a function";
 
+    this.name = options.name;
     this.datum = options.datum;
     this.limit = options.limit;
+    this.interval = options.interval;
     this.file = Utils.expandEnvVars(options.file);
 
     // @private
     this.basetime = Math.floor(Time.nowSeconds());
     // @private
     this.history = [];
-
+    console.TRACE(TAG, "Set up Historian for ", this.name,
+		  " with limit ", this.limit, " and interval ",
+		  this.interval, " in ", this.file);
     this.rewriteHistory();
 }
+module.exports = Historian;
 
 /**
  * @private
@@ -50,7 +57,7 @@ Historian.prototype.rewriteHistory = function(callback) {
     "use strict";
     var self = this;
 
-    var report = self.history();
+    var report = self.history;
     var s = "B," + self.basetime + "\n";
     for (var i in report)
         s += (report[i].time - self.basetime) + "," + report[i][1] + "\n";
@@ -59,7 +66,8 @@ Historian.prototype.rewriteHistory = function(callback) {
               function(err) {
                   console.error(TAG + " failed to write history file '"
                                 + self.file + "': " + err);
-		  callback();
+		  if (typeof callback !== "undefined")
+		      callback();
               });
 };
 
@@ -148,7 +156,7 @@ Historian.prototype.pollHistory = function() {
         return;
     }
 
-    console.TRACE(TAG, "Add ", t, " to", self.name, " history");
+    console.TRACE(TAG, "Log ", t, " to ", self.name, " history");
     self.last_recorded = t;
 
     statFile(self.file).then(

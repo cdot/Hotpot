@@ -84,6 +84,7 @@ const TAG = "Hotpot";
                     });
         })
         .catch(function(e) {
-            console.TRACE(TAG, "Controller initialisation failed: ", e);
+            console.TRACE(TAG, "Controller initialisation failed: ",
+			  e, " ", e.stack);
         });
 })();
