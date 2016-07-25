@@ -82,7 +82,7 @@ function Thermostat(name, config) {
 
     this.pollTemperature();
     if (this.historian)
-        this.historian.pollHistory();
+        this.historian.start();
     console.TRACE(TAG, "'", this.name, "' constructed");
 }
 module.exports = Thermostat;

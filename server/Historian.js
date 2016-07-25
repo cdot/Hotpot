@@ -133,7 +133,7 @@ Historian.prototype.getSerialisableHistory = function() {
  * Start the history polling loop.
  * Records are written every minute or so (set in config)
  */
-Historian.prototype.pollHistory = function() {
+Historian.prototype.start = function(quiet) {
     "use strict";
 
     var self = this;
@@ -142,10 +142,9 @@ Historian.prototype.pollHistory = function() {
 
     function repoll() {
         setTimeout(function() {
-            self.pollHistory();
+            self.start(true);
         }, self.interval * 1000);
     }
-
     if (typeof t !== "number") {
         repoll();
         return;
@@ -155,6 +154,9 @@ Historian.prototype.pollHistory = function() {
         repoll();
         return;
     }
+
+    if (!quiet)
+	console.TRACE(TAG, this.name, " started");
 
     console.TRACE(TAG, "Log ", t, " to ", self.name, " history");
     self.last_recorded = t;

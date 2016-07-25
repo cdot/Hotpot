@@ -6,6 +6,7 @@ const Fs = require("fs");
 const promise = require("promise");
 const readFile = promise.denodeify(Fs.readFile);
 const writeFile = promise.denodeify(Fs.writeFile);
+const Historian = require("./Historian");
 
 const TAG = "Pin";
 
@@ -50,6 +51,18 @@ function Pin(name, config, done) {
                   "' construction starting on gpio ", self.gpio);
     
     var exported = false;
+    var hc = config.get("history");
+    if (typeof hc !== "undefined") {
+	self.historian = new Historian({
+	    name: self.name + "_pin",
+	    file: hc.file,
+	    interval: hc.interval,
+	    limit: hc.limit,
+	    datum: function() {
+		return self.getState();
+	    }
+	});
+    }
 
     // First check if the pin can be read. If it can, it is already
     // exported and we can move on to setting the direction, otherwise
@@ -121,6 +134,8 @@ function Pin(name, config, done) {
         writeFile(self.value_path, 0, "utf8")
             .then(function() {
                 console.TRACE(TAG, self.value_path, " writeCheck OK");
+		if (self.historian)
+		    self.historian.start();
                 done();
             })
             .catch(function(e) {
@@ -174,7 +189,8 @@ Pin.prototype.set = function(state) {
  */
 Pin.prototype.getState = function() {
     "use strict";
-    return parseInt(Fs.readFileSync(this.value_path, "utf8"));
+    var data = Fs.readFileSync(this.value_path, "utf8");
+    return parseInt(data);
 };
 
 /**
