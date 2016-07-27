@@ -26,17 +26,18 @@ const TAG = "Historian";
  */
 function Historian(options) {
     "use strict";
-    if (typeof options.interval === "undefined")
-        options.interval = DEFAULT_INTERVAL;
-    if (typeof options.limit === "undefined")
+    if (typeof options.interval !== "number")
+	options.interval = DEFAULT_INTERVAL;
+    if (typeof options.limit !== "number")
         options.limit = DEFAULT_LIMIT;
-    if (typeof options.datum !== "function")
-	throw "datum is not a function";
+    if (typeof options.maxbytes !== "number")
+	options.maxbytes = 2 * (options.limit / options.interval) * 15;
 
     this.name = options.name;
     this.datum = options.datum;
     this.limit = options.limit;
     this.interval = options.interval;
+    this.maxbytes = options.maxbytes;
     this.file = Utils.expandEnvVars(options.file);
 
     // @private
@@ -145,6 +146,7 @@ Historian.prototype.start = function(quiet) {
             self.start(true);
         }, self.interval * 1000);
     }
+
     if (typeof t !== "number") {
         repoll();
         return;
@@ -159,17 +161,27 @@ Historian.prototype.start = function(quiet) {
 	console.TRACE(TAG, this.name, " started");
 
     console.TRACE(TAG, "Log ", t, " to ", self.name, " history");
+
+    self.record(t, repoll);
+}
+
+/**
+ * Record a datum in the log.
+ * @param {number} t the data to record
+ * @param {function} callback callback when recording is done
+ */
+Historian.prototype.record = function(t, callback) {
+    "use strict";
+
     self.last_recorded = t;
 
     statFile(self.file).then(
         function(stats) {
             // If we hit 2 * the size limit, open the file and
             // reduce the size. Each sample is about 15 bytes.
-            var maxbytes =
-                2 * (self.limit / self.interval) * 15;
-            if (stats.size > maxbytes) {
+            if (stats.size > self.maxbytes) {
                 console.TRACE(TAG, self.name, " history is full");
-                self.rewriteHistory(repoll);
+                self.rewriteHistory(callback);
                 return;
             }
             // otherwise simply append
@@ -178,19 +190,19 @@ Historian.prototype.start = function(quiet) {
                 Math.round(Time.nowSeconds() - self.basetime)
                     + "," + t + "\n")
                 .then(
-                    repoll,
+                    callback,
                     function(ferr) {
                         console.error(
                             TAG + " failed to append to  history file '"
                                 + self.file + "': "
                                 + ferr);
-                        repoll();
+                        callback();
                     });
         },
         function(err) {
             console.TRACE(TAG, "Failed to stat history file '",
                           self.file, "': ", err);
             // Probably the first time; write the whole history file
-            self.rewriteHistory(repoll);
+            self.rewriteHistory(callback);
         });
 };
