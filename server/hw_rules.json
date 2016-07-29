@@ -1,0 +1,59 @@
+function () {
+    var state = this.pin.HW.getState();
+    var TAG = "HW";
+
+    if (this.thermostat.HW.temperature > 40) {
+        // Hot enough, so switch off regardless of other rules
+        if (state === 1) {
+            console.TRACE(TAG, "Tank is ", this.thermostat.HW.temperature,
+                          " so off");
+            this.setPin("HW", 0);
+            // Purge boost requests (state 2)
+            this.pin.HW.purgeRequests(2);
+        }
+        return;
+    }
+
+    // See if there's any demand from requests
+    var req = this.pin.HW.getActiveRequest();
+    if (req) {
+        this.setPin("HW", req.state === 0 ? 0 : 1);
+        return;
+    }
+
+    // Now see if there's any demand from mobile devices
+    var at_home = 0, arrive_soon = 0;
+    for (var moby in this.mobile) {
+        var m = this.mobile[moby];
+        if (m.arrivesIn() < 60)
+            at_home++;
+        else if (m.arrivesIn() < 20 * 60)
+            arrive_soon++;
+    }
+
+    if (at_home + arrive_soon === 0) {
+        if (state === 1) {
+            console.TRACE(TAG, "No demand so off");
+            this.setPin("HW", 0);
+        }
+        return;
+    }
+    
+    if (arrive_soon === 0 // someone is at home
+        && (Time.between('08:30', '18:00') // day
+            || Time.between('20:00', '06:30')) // night
+       ) {
+        if (state === 1)
+            console.TRACE(TAG,
+                          "Demand is at home, and out of time band, so off");
+        this.setPin("HW", 0);
+        return;
+    }
+
+    // Demand is away from home, or we are in time band
+    if (state === 0 && this.thermostat.HW.temperature < 34) {
+        console.TRACE(TAG, "on");
+        this.setPin("HW", 1);
+        return;
+    }
+}

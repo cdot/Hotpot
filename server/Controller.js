@@ -42,32 +42,27 @@ Controller.prototype.initialise = function() {
     console.TRACE(TAG, "Initialising Controller");
 
     var self = this;
+    //self.location = undefined;
 
-    return new promise(function(fulfill, fail) {
-        //self.location = undefined;
-        self.createMobiles(self.config.getConfig("mobile"));
-        self.createPins(self.config.getConfig("pin"))
-            .then(function() {
-		try {
-                    self.createThermostats(self.config.getConfig("thermostat"))
-			.then(function() {
-                            // Thermostats and pins are ready. Can poll rules.
-                            self.pollRules();
-                            fulfill();
-			})
-			.catch(function(e) {
-                            fail("Error creating thermostats: " + e);
-			});
-		} catch (e) {
-		    console.error(e.stack);
-		    throw e;
-		}
-            })
-            .catch(function(e) {
-                fail("Error creating pins: " + e);
-            });
-        self.createRules(self.config.getConfig("rule"));
+    var prom = self.createMobiles(self.config.getConfig("mobile"));
+
+    prom = prom.then(function() {
+        return self.createPins(self.config.getConfig("pin"));
     });
+
+    prom = prom.then(function() {
+        return self.createThermostats(self.config.getConfig("thermostat"));
+    });
+
+    prom = prom.then(function() {
+        return self.createRules(self.config.getConfig("rule"));
+    });
+
+    prom = prom.then(function() {
+        self.pollRules();
+    });
+
+    return prom;
 };
 
 /**
@@ -77,10 +72,14 @@ Controller.prototype.initialise = function() {
 Controller.prototype.createMobiles = function(mob_config) {
     "use strict";
     var self = this;
-    self.mobile = {};
-    mob_config.each(function(id) {
-        self.mobile[id] = new Mobile(
-            id, mob_config.getConfig(id));
+
+    return new promise(function(fulfill, reject) {
+        self.mobile = {};
+        mob_config.each(function(id) {
+            self.mobile[id] = new Mobile(
+                id, mob_config.getConfig(id));
+        });
+        fulfill();
     });
 };
 
@@ -94,23 +93,14 @@ Controller.prototype.createPins = function(pin_config) {
 
     self.pin = {};
 
-    // Set up callback when all pins complete
-    var counter = 0;
-    pin_config.each(function() {
-        counter++;
+    var pin_proms = [];
+    pin_config.each(function(k) {
+        pin_proms.push(new promise(function(fulfil, reject) {
+            self.pin[k] = new Pin(k, pin_config.getConfig(k), fulfil);
+        }));
     });
 
-    return new promise(function(fulfill) {
-        function pinDone() {
-            if (--counter === 0)
-                fulfill();
-        }
-
-        // Create the pins
-        pin_config.each(function(k) {
-            self.pin[k] = new Pin(k, pin_config.getConfig(k), pinDone);
-        });
-    });
+    return promise.all(pin_proms);
 };
     
 /**
@@ -136,26 +126,23 @@ Controller.prototype.createThermostats = function(ts_config) {
     // Assume worst-case valve configuration i.e. grey wire live holding
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
-    return new promise(function(fulfill, fail) {
-        console.TRACE(TAG, "Resetting valve");
+    console.TRACE(TAG, "Resetting valve");
+    return 
         self.pin.HW.set(1)
-            .then(
-                function() {
-                    self.pin.CH.set(0)
-                        .then(
-                            function() {
-                                self.setPin("HW", 0, fulfill);
-                            })
-                        .catch(function(e2) {
-                            console.TRACE(TAG, "Reset CH=0 failed: ", e2);
-                            fail();
-                        });
+        .catch(function(e3) {
+            console.TRACE(TAG, "Reset HW=1 failed: ", e3);
+            fail();
+        })
+        .then(function() {
+            return self.pin.CH.set(0)
+                .catch(function(e2) {
+                    console.TRACE(TAG, "Reset CH=0 failed: ", e2);
+                    fail();
                 })
-            .catch(function(e3) {
-                console.TRACE(TAG, "Reset HW=1 failed: ", e3);
-                fail();
-            });
-    });
+                .then(function() {
+                    return self.pin.HW.set(0);
+                });
+        });
 };
 
 /**
@@ -165,10 +152,17 @@ Controller.prototype.createThermostats = function(ts_config) {
 Controller.prototype.createRules = function(config) {
     "use strict";
     var self = this;
-    self.rule = [];
-    config.each(function(k) {
-        var r = config.getConfig(k);
-        self.insert_rule(new Rule(r.get("name"), r.get("test")));
+
+    return new promise(function(fulfill, fail) {
+        self.rule = [];
+        config.each(function(k) {
+            var r = config.getConfig(k);
+            var rule = r.has("from_file")
+                ? Rule.fromFile(r.get("name"), r.get("from_file"))
+                : new Rule(r.get("name"), r.get("test"));
+            self.insert_rule(rule);
+        });
+        fulfill();
     });
 };
 
@@ -192,14 +186,15 @@ Controller.prototype.setLocation = function(location) {
 /**
  * Generate and return a serialisable version of the structure, suitable
  * for use in an AJAX response.
+ * @param {boolean} ajax set true if this config is for AJAX
  * @return {object} a serialisable structure
  */
-Controller.prototype.getSerialisableConfig = function() {
+Controller.prototype.getSerialisableConfig = function(ajax) {
     "use strict";
     function sermap(m) {
 	var res = {};
 	for (var k in m)
-            res[k] = m[k].getSerialisableConfig();
+            res[k] = m[k].getSerialisableConfig(ajax);
         return res;
     }
 
@@ -409,12 +404,6 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
     "use strict";
     var self = this;
 
-    function getFunction(field) {
-        var fn;
-        eval("fn=" + field);
-        return fn;
-    }
-    
     switch (command) {
     case "state": // Return the current system state
         respond(self.getSerialisableState());
@@ -423,10 +412,10 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
         respond(self.getSerialisableLog());
         return;
     case "config": // Return the controller config
-        respond(self.getSerialisableConfig());
+        respond(self.getSerialisableConfig(true));
         return;
     case "apis": // Return the apis config
-        respond(Apis.getSerialisableConfig());
+        respond(Apis.getSerialisableConfig(true));
         return;
     case "remove_rule": // remove a rule
         // /rule/{index}
@@ -435,7 +424,7 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
         break;
     case "insert_rule": // insert a new rule
         self.insert_rule(
-            new Rule(data.name, getFunction(data.test)));
+            new Rule(data.name, Utils.safeEval(data.test)));
         self.emit("config_change");
         break;
     case "move_up": // promote a rule in the evaluation order

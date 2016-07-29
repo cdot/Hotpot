@@ -25,8 +25,9 @@ var setup = {
 
     /**
      * Get a serialisable version of the config
+     * @param {boolean} ajax set true if this config is for AJAX
      */
-    getSerialisableConfig: function() {
+    getSerialisableConfig: function(ajax) {
         "use strict";
         return setup.apis;
     }

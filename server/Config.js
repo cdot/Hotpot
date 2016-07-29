@@ -20,8 +20,7 @@ function Config(file) {
     if (typeof file === "string") {
         this.file = file;
         var data = fs.readFileSync(Utils.expandEnvVars(file), "utf8");
-        var config;
-        eval("config=" + data);
+        var config = Utils.safeEval(data);
         console.TRACE(TAG, "Configured from ", file);
         this.data = config;
     } else if (typeof file === "object" )

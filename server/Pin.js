@@ -41,6 +41,9 @@ function Pin(name, config, done) {
     /** @property {integer} gpio gpio port */
     self.gpio = config.get("gpio");
 
+    if (typeof HOTPOT_DEBUG !== "undefined")
+        HOTPOT_DEBUG.mapPin(self.gpio, self.name);
+
     self.value_path = GPIO_PATH + "gpio" + self.gpio + "/value";
 
     /** @property {object} requests List of requests for this pin
@@ -146,9 +149,11 @@ function Pin(name, config, done) {
 
     // Something went wrong, but still use a file
     function fallBackToDebug(err) {
-        console.TRACE(TAG, self.name, ":", self.gpio, " setup failed: ",
-                      err, "; falling back to debug");
-        self.value_path = "/tmp/gpio" + self.gpio;
+        console.TRACE(TAG, self.name, ":", self.gpio, " setup failed: ", err);
+        if (typeof HOTPOT_DEBUG !== "undefined") {
+            console.TRACE(TAG, "Falling back to debug");
+            self.value_path = HOTPOT_DEBUG.pin_path + self.gpio;
+        }
         writeCheck();
     }
 
@@ -177,8 +182,6 @@ Pin.prototype.DESTROY = function() {
 Pin.prototype.set = function(state) {
     "use strict";
     console.TRACE(TAG, this.value_path, " = ", (state === 1 ? "ON" : "OFF"));
-    if (this.debug)
-        this.debug.pinstate[this.name] = state;
     return writeFile(this.value_path, state, "utf8");
 };
 
@@ -196,10 +199,11 @@ Pin.prototype.getState = function() {
 /**
  * Generate and return a serialisable version of the structure, suitable
  * for use in an AJAX response.
+ * @param {boolean} ajax set true if this config is for AJAX
  * @return {object} a serialisable structure
  * @protected
  */
-Pin.prototype.getSerialisableConfig = function() {
+Pin.prototype.getSerialisableConfig = function(ajax) {
     "use strict";
     return {
         gpio: this.gpio
@@ -225,18 +229,20 @@ Pin.prototype.getSerialisableState = function() {
 };
 
 /**
- * Purge requests that have passed their timeout, or have the same source
- * as specified by "purge". Each mobile can only have one request outstanding
- * against a pin.
- * @purge {string} source of requests to force-purge
+ * Purge requests that have timed out, or are force-purged by matching
+ * the parameters.
+ * @param {number} state state of requests to force-purge, or undefined
+ * @param {string} source source of requests to force-purge, or undefined
  * @private
  */
-Pin.prototype.purgeRequests = function(purge) {
+Pin.prototype.purgeRequests = function(state, source) {
     var reqs = this.requests;
     for (var i = 0; i < reqs.length;) {
-        if (reqs[i].source === purge
-            || Time.now() > reqs[i].until) {
-            console.TRACE(TAG, "Expire/purge request ", reqs[i]);
+        var r = reqs[i];
+        if ((typeof source !== "undefined" && r.source === source)
+            || (typeof state !== "undefined" && r.state === state)
+            || (r.state !== 2 && Time.now() > r.until)) {
+            console.TRACE(TAG, "Purge request ", r);
             reqs.splice(i, 1);
         } else
             i++;
@@ -244,15 +250,20 @@ Pin.prototype.purgeRequests = function(purge) {
 };
 
 /**
- * Add a request.
- * Requests time out after a period of time.
- * Active requests for state 0 override those for state 1.
- * @param {object} request { until: epoch ms, state: 1|0, source: string }
+ * Add a request. A request is an override for rules that suspends the
+ * normal rules either for a period of time ('until' is a number), or until
+ * the rules purge the request. The interpretation
+ * of requests is in the hands of the rules; the pin simply stores them. The
+ * only thing the Pin does with a request is to expire those that have
+ * passed their timeout (see #purgeRequests)
+ * Active requests for state 0 override those for state 1 or 2.
+ * @param {object} request { until: epoch ms, state: 2|1|0, source: string }
  */ 
 Pin.prototype.addRequest = function(request) {
     console.TRACE(TAG, "Add request ", request);
-    this.purgeRequests(request.source);
-    this.requests.push(request);
+    this.purgeRequests(undefined, request.source);
+    if (request.state >= 0)
+        this.requests.push(request);
 };
 
 /**

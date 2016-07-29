@@ -18,6 +18,8 @@ const Controller = require("./Controller.js");
 
 const TAG = "Hotpot";
 
+HOTPOT_DEBUG = undefined;
+
 /** Main program */
 (function () {
     "use strict";
@@ -35,33 +37,17 @@ const TAG = "Hotpot";
     if (typeof cliopt.config === "undefined")
         cliopt.config = "./hotpot.cfg";
 
-    if (typeof cliopt.debug !== "undefined")
+    if (typeof cliopt.debug !== "undefined") {
         // Development only
         require("promise/lib/rejection-tracking").enable(
             { allRejections: true });
-
-    // 0: initialisation
-    // 1: pin on/off
-    // 2: command tracing
-    // 3: test module tracing
-    // 4: pin setup details
-    console.TRACE = function() {
-        var level = arguments[0];
-        if (typeof cliopt.debug !== "undefined" &&
-            (cliopt.debug.indexOf("all") >= 0
-             || cliopt.debug.indexOf(level) >= 0)
-            && (cliopt.debug.indexOf("-" + level) < 0)) {
-            var mess = new Date().toISOString() + " " + level + ": ";
-            for (var i = 1; i < arguments.length; i++) {
-                if (typeof arguments[i] === "object"
-                    && arguments[i].toString === Object.prototype.toString)
-                    mess += Utils.dump(arguments[i]);
-                else
-                    mess += arguments[i];
-            }
-            console.log(mess);
-        }
-    };
+        var TestSupport = require("./TestSupport.js");
+        HOTPOT_DEBUG = new TestSupport(cliopt.debug);
+        console.TRACE = function() {
+            HOTPOT_DEBUG.TRACE.apply(HOTPOT_DEBUG, arguments);
+        };
+    } else
+        console.TRACE = function() {};
 
     var config = new Config(cliopt.config);
     Apis.configure(config.getConfig("apis"));
@@ -79,7 +65,7 @@ const TAG = "Hotpot";
             controller.on("config_change",
                     function() {
                         config.set("controller",
-                                   controller.getSerialisableConfig());
+                                   controller.getSerialisableConfig(false));
                         config.save();
                     });
         })

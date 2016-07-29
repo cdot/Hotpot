@@ -32,8 +32,11 @@ function Thermostat(name, config) {
                 ds18x20.loadDriver();
             } catch (err) {
                 console.error(err.message);
-                console.error("Temperature sensor driver not loaded - falling back to test sensor");
-                ds18x20 = require("./TestSupport.js");
+                console.error("Temperature sensor driver not loaded");
+                if (typeof HOTPOT_DEBUG !== "undefined")
+                    ds18x20 = HOTPOT_DEBUG;
+                else
+                    throw err;
             }
         }
     }
@@ -77,8 +80,8 @@ function Thermostat(name, config) {
     /** @private */
     this.id = config.get("id"); // DS18x20 device ID
 
-    if (typeof ds18x20.mapID !== "undefined")
-        ds18x20.mapID(config.get("id"), name);
+    if (typeof HOTPOT_DEBUG !== "undefined")
+        HOTPOT_DEBUG.mapThermostat(config.get("id"), name);
 
     this.pollTemperature();
     if (this.historian)
@@ -90,10 +93,11 @@ module.exports = Thermostat;
 /**
  * Generate and return a serialisable version of the configuration, suitable
  * for use in an AJAX response and for storing in a file.
+ * @param {boolean} ajax set true if this config is for AJAX
  * @return {object} a serialisable structure
  * @protected
  */
-Thermostat.prototype.getSerialisableConfig = function() {
+Thermostat.prototype.getSerialisableConfig = function(ajax) {
     "use strict";
 
     return {

@@ -3,7 +3,6 @@
 /*eslint-env node */
 const promise = require("promise");
 const fs = require("fs");
-const readFile = promise.denodeify(fs.readFile);
 const writeFile = promise.denodeify(fs.writeFile);
 const statFile = promise.denodeify(fs.stat);
 const appendFile = promise.denodeify(fs.appendFile);
@@ -172,6 +171,8 @@ Historian.prototype.start = function(quiet) {
  */
 Historian.prototype.record = function(t, callback) {
     "use strict";
+
+    var self = this;
 
     self.last_recorded = t;
 

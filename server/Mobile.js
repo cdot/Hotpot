@@ -90,10 +90,11 @@ module.exports = Mobile;
 
 /**
  * Get a serialisable version of the object
+ * @param {boolean} ajax set true if this config is for AJAX
  * @return {object} a serialisable structure
  * @protected
  */
-Mobile.prototype.getSerialisableConfig = function() {
+Mobile.prototype.getSerialisableConfig = function(ajax) {
     "use strict";
     return {
         id: this.id

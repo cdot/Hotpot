@@ -73,3 +73,15 @@ Utils.byteLength = function(str) {
     }
     return s;
 };
+
+Utils.safeEval = function(str) {
+    var safeEval_data;
+    try {
+        eval("safeEval_data=" + str);
+        return safeEval_data;
+    } catch (e) {
+        var mess = "Bad function in safeEval: " + e.message;
+        console.TRACE("Utils", mess, " ", e.stack);
+        throw mess;
+    }
+};

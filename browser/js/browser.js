@@ -86,10 +86,7 @@
         var val = parseInt($(this).val());
         $(this).parents(".templated[data-field]").each(function() {
             var pin = ($(this).data("field"));
-            if (val < 0)
-                delete requests[pin];
-            else
-                requests[pin] = val;
+            requests[pin] = val;
         });
         reportLocation();
         return false; // prevent repeated calls
