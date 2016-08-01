@@ -44,8 +44,8 @@ function Historian(options) {
     // @private
     this.history = [];
     console.TRACE(TAG, "Set up Historian for ", this.name,
-		  " with limit ", this.limit, " and interval ",
-		  this.interval, " in ", this.file);
+                  " with limit ", this.limit, " and interval ",
+                  this.interval, " in ", this.file);
     this.rewriteHistory();
 }
 module.exports = Historian;
@@ -66,8 +66,8 @@ Historian.prototype.rewriteHistory = function(callback) {
               function(err) {
                   console.error(TAG + " failed to write history file '"
                                 + self.file + "': " + err);
-		  if (typeof callback !== "undefined")
-		      callback();
+                  if (typeof callback !== "undefined")
+                      callback();
               });
 };
 
@@ -90,10 +90,10 @@ Historian.prototype.load = function(data) {
         if (csv[0] === "B") // basetime
             basetime = parseFloat(csv[1]);
         else {
-            point = {
-		time: basetime + parseFloat(csv[0]),
-		sample: parseFloat(csv[1])
-	    };
+            var point = {
+                time: basetime + parseFloat(csv[0]),
+                sample: parseFloat(csv[1])
+            };
             if (point.time < cutoff)
                 p0 = point;
             else {
@@ -102,7 +102,7 @@ Historian.prototype.load = function(data) {
                     report.push([
                         cutoff,
                         (point.time - cutoff) / (point.time - p0.time)
-			    * (point.sample - p0.sample) + p0.sample
+                            * (point.sample - p0.sample) + p0.sample
                     ]);
                     p0 = null;
                 }
@@ -157,12 +157,12 @@ Historian.prototype.start = function(quiet) {
     }
 
     if (!quiet)
-	console.TRACE(TAG, this.name, " started");
+        console.TRACE(TAG, this.name, " started");
 
     console.TRACE(TAG, "Log ", t, " to ", self.name, " history");
 
     self.record(t, repoll);
-}
+};
 
 /**
  * Record a datum in the log.

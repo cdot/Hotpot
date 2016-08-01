@@ -7,6 +7,7 @@ const Events = require("events").EventEmitter;
 const promise = require("promise");
 
 const Location = require("../common/Location.js");
+const Utils = require("../common/Utils.js");
 
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
@@ -73,7 +74,7 @@ Controller.prototype.createMobiles = function(mob_config) {
     "use strict";
     var self = this;
 
-    return new promise(function(fulfill, reject) {
+    return new promise(function(fulfill) {
         self.mobile = {};
         mob_config.each(function(id) {
             self.mobile[id] = new Mobile(
@@ -95,7 +96,7 @@ Controller.prototype.createPins = function(pin_config) {
 
     var pin_proms = [];
     pin_config.each(function(k) {
-        pin_proms.push(new promise(function(fulfil, reject) {
+        pin_proms.push(new promise(function(fulfil) {
             self.pin[k] = new Pin(k, pin_config.getConfig(k), fulfil);
         }));
     });
@@ -127,17 +128,14 @@ Controller.prototype.createThermostats = function(ts_config) {
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
     console.TRACE(TAG, "Resetting valve");
-    return 
-        self.pin.HW.set(1)
+    return self.pin.HW.set(1)
         .catch(function(e3) {
             console.TRACE(TAG, "Reset HW=1 failed: ", e3);
-            fail();
         })
         .then(function() {
             return self.pin.CH.set(0)
                 .catch(function(e2) {
                     console.TRACE(TAG, "Reset CH=0 failed: ", e2);
-                    fail();
                 })
                 .then(function() {
                     return self.pin.HW.set(0);
@@ -153,7 +151,7 @@ Controller.prototype.createRules = function(config) {
     "use strict";
     var self = this;
 
-    return new promise(function(fulfill, fail) {
+    return new promise(function(fulfill) {
         self.rule = [];
         config.each(function(k) {
             var r = config.getConfig(k);
@@ -354,23 +352,25 @@ Controller.prototype.setMobileState = function(info, respond) {
     var serv_loc = (typeof this.location !== "undefined")
         ? this.location : new Location();
 
-    mob.estimateTOA(function(interval) {
-        console.TRACE(TAG, mob.name, " interval is ", interval, "s");
-        // A request stays "live" until the next update is expected
-        var slist = info.requests.split(",");
-        for (var i in slist) {
-            var s = slist[i].split("=");
-            if (typeof self.pin[s[0]] !== "undefined")
-                self.pin[s[0]].addRequest({
-                    state: parseInt(s[1]),
-                    until: Time.now() + (interval + 10) * 1000,
-                    source: "Mobile " + mob.name
-                });
+    mob.estimateTOA(function(distance, due) {
+        if (typeof info.requests !== "undefined") {
+            // A request stays "live" until the due time
+            var slist = info.requests.split(",");
+            for (var i in slist) {
+                var s = slist[i].split("=");
+                if (typeof self.pin[s[0]] !== "undefined")
+                    self.pin[s[0]].addRequest({
+                        state: parseInt(s[1]),
+                        until: due,
+                        source: "Mobile " + mob.name
+                    });
+            }
         }
         respond({
             lat: serv_loc.lat,
             lng: serv_loc.lng,
-            interval: interval
+            distance: distance,
+            due: due
         });
     });
 };

@@ -4,11 +4,14 @@
 package uk.co.c_dot.hotpot;
 
 import android.Manifest;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.StrictMode;
+
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -20,53 +23,56 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-
-import java.net.MalformedURLException;
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Hotpot main application.
  * <p/>
  * The Hotpot application is divided into two parts; there's this activity, which provides
- * the UI, and a LocationService that does the actual work of finding the location and
+ * the UI, and a PlaceService that does the actual work of finding the location and
  * communicating it to the server.
  */
 public class MainActivity extends AppCompatActivity
-        implements OnMapReadyCallback, Messenger.MessageHandler,
-        SharedPreferences.OnSharedPreferenceChangeListener {
+        implements GoogleApiClient.ConnectionCallbacks,
+        OnMapReadyCallback, Messenger.MessageHandler {
 
     private static final String TAG = "HOTPOT/MainActivity";
 
     // Constants used in preferences and intents
     public static final String DOMAIN = "uk.co.c_dot.hotpot.";
 
-    // Preferences
-    public static final String PREF_URL = DOMAIN + "URL";
-    public static final String PREF_CERTS = DOMAIN + "CERTS";
+    private GoogleApiClient mApiClient;
 
-    private LatLng mHomePos = null, mLastPos = null;
+    // Map
+    private GoogleMap mMap = null;
+    private LocationRequest mLocationRequest;
+    private boolean mLocationListening = false;
+
+    // Indices into following arrays
+    private static int HOME = 0, CUR = 1, SENT = 2;
+    // Locations
+    private LatLng[] mPlace = new LatLng[]{null, null, null};
+    private LatLng[] mLastPlace = new LatLng[]{null, null, null};
+    // Map markers
+    private Marker[] mMarker = new Marker[]{null, null, null};
+    // Marker icons
+    private static final int[] mMarkerIcon = new int[]{R.drawable.home, R.drawable.cur, R.drawable.sent};
 
     // Messenger used to broadcast comms between this activity and the location service
     private Messenger mMessenger;
-
-    // API objects
-    private GoogleMap mMap = null;
-
-    // Current location marker
-    private Marker mMobileMarker, mHomeMarker;
 
     // Options menu
     private Menu mOptionsMenu = null;
@@ -80,14 +86,11 @@ public class MainActivity extends AppCompatActivity
      */
     private void startLocationService() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String url = prefs.getString(PREF_URL, null);
+        String url = prefs.getString(SettingsActivity.PREF_URL, null);
         if (url != null) {
-            Intent intent = new Intent(this, LocationService.class);
-            intent.setAction(LocationService.START);
+            Intent intent = new Intent(this, PlaceService.class);
+            intent.setAction(PlaceService.START);
             intent.putExtra("URL", url);
-            Set<String> sCerts = prefs.getStringSet(PREF_CERTS, null);
-            if (sCerts != null)
-                intent.putExtra("CERTS", new ArrayList<>(sCerts));
             Log.d(TAG, "Starting location service on " + intent.getStringExtra("URL"));
             startService(intent);
             mLocationServiceRunning = true;
@@ -104,8 +107,8 @@ public class MainActivity extends AppCompatActivity
      */
     private void stopLocationService() {
         Log.d(TAG, "Stopping location service");
-        Intent intent = new Intent(this, LocationService.class);
-        intent.setAction(LocationService.STOP);
+        Intent intent = new Intent(this, PlaceService.class);
+        intent.setAction(PlaceService.STOP);
         stopService(intent);
         mLocationServiceRunning = false;
     }
@@ -131,50 +134,35 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * Update the map with a new position
-     *
-     * @param curPos new position
+     * Update the map
      */
-    private void updateMap(LatLng curPos) {
+    private void updateMap() {
         if (mMap == null)
             return; // map not ready yet
 
-        if (mHomePos != null && mHomeMarker == null) {
-            mHomeMarker = mMap.addMarker(new MarkerOptions().position(mHomePos));
+        LatLngBounds bounds = null;
+        boolean adjust = false;
+        for (int i = HOME; i <= SENT; i++) {
+            Log.d(TAG, "Update " + i + " = " + mPlace[i]);
+            if (mPlace[i] != null) {
+                if (mMarker[i] == null) {
+                    mMarker[i] = mMap.addMarker(new MarkerOptions().position(mPlace[i])
+                            .icon(BitmapDescriptorFactory.fromResource(mMarkerIcon[i])));
+                    adjust = true;
+                } else if (mLastPlace[i] != null && !mPlace[i].equals(mLastPlace[i])) {
+                    mMarker[i].setPosition(mPlace[i]);
+                } else if (mLastPlace[i] == null)
+                    adjust = true;
+                bounds = (bounds == null) ? new LatLngBounds(mPlace[i], mPlace[i])
+                        : bounds.including(mPlace[i]);
+                mLastPlace[i] = mPlace[i];
+            }
         }
 
-        CameraUpdate cam;
-        if (mMobileMarker == null) {
-            mMobileMarker = mMap.addMarker(new MarkerOptions()
-                    //.draggable(false)
-                    .position(curPos)
-                    .flat(true));
-            cam = CameraUpdateFactory.newLatLngZoom(curPos, 12);
-        } else
-            cam = CameraUpdateFactory.newLatLng(curPos);
-
-        mMobileMarker.setPosition(curPos);
-        mMobileMarker.setTitle(DateFormat.getTimeInstance().format(new Date()));
-
-        if (mLastPos != null) {
-            double latDiff = curPos.latitude - mLastPos.latitude;
-            double longDiff = curPos.longitude - mLastPos.longitude;
-            double rotation;
-            if (latDiff == 0)
-                rotation = (longDiff == 0)
-                        ? 0
-                        : (longDiff > 0)
-                        ? 270
-                        : 90;
-            else if (longDiff == 0)
-                rotation = (latDiff > 0) ? 180 : 0;
-            else
-                rotation = 360 * Math.atan2(-longDiff, -latDiff) / (2 * Math.PI);
-            mMobileMarker.setRotation((float) rotation);
+        if (adjust) {
+            CameraUpdate cam = CameraUpdateFactory.newLatLngBounds(bounds, 10);
+            mMap.moveCamera(cam);
         }
-        mLastPos = curPos;
-
-        mMap.moveCamera(cam);
     }
 
     /**
@@ -202,16 +190,17 @@ public class MainActivity extends AppCompatActivity
                             mLocationServiceRunning ? R.drawable.ic_media_pause : R.drawable.ic_media_play);
 
                 return true;
-            case R.id.action_request_CH:
-                intent = new Intent(LocationService.REQUEST);
+            case R.id.action_boost_CH:
+                intent = new Intent(PlaceService.REQUEST);
                 intent.putExtra("WHAT", "CH");
-                intent.putExtra("ONOFF", !mOptionsMenu.findItem(R.id.action_request_CH).isChecked());
+                intent.putExtra("STATE", mOptionsMenu.findItem(R.id.action_boost_CH).isChecked() ? 0 : 2);
                 mMessenger.broadcast(intent);
                 return true;
-            case R.id.action_request_HW:
-                intent = new Intent(LocationService.REQUEST);
+            case R.id.action_boost_HW:
+                intent = new Intent(PlaceService.REQUEST);
                 intent.putExtra("WHAT", "HW");
-                intent.putExtra("ONOFF", !mOptionsMenu.findItem(R.id.action_request_HW).isChecked());
+                intent.putExtra("STATE", mOptionsMenu.findItem(R.id.action_boost_HW).isChecked() ? 0 : 2);
+                Log.d(TAG, "Sending " + intent.getIntExtra("STATE", 0) + " " + mOptionsMenu.findItem(R.id.action_boost_HW).isChecked());
                 mMessenger.broadcast(intent);
                 return true;
             case R.id.action_quit:
@@ -240,62 +229,35 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
-    public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-        Log.d(TAG, "onSharedPreferenceChanged " + key);
-        if (!key.equals(PREF_URL))
-            return;
-        stopLocationService();
-        // Pull certificates from the server and store them in an invisible preference
-        String sURL = prefs.getString(PREF_URL, null);
-        SharedPreferences.Editor ed = prefs.edit();
-        ed.remove(PREF_CERTS);
-        if (sURL != null) {
-            try {
-                ServerConnection serverConnection = new ServerConnection(sURL);
-                List<String> certs = serverConnection.getCertificates();
-                if (certs != null && certs.size() > 0) {
-                    Log.d(TAG, sURL + " provided " + certs.size() + " certificates");
-                    // It's a bit crap that preferences can't store an ordered list in extras,
-                    // but fortunately it doesn't matter.
-                    ed.putStringSet(PREF_CERTS, new HashSet<>(certs));
-                } else if (serverConnection.isSSL()) {
-                    String mess = "Protocol is https, but " + sURL + " did not provide any certificates";
-                    Log.d(TAG, mess);
-                    Toast.makeText(this, mess, Toast.LENGTH_SHORT).show();
-                }
-            } catch (MalformedURLException mue) {
-                Toast.makeText(this,
-                        sURL + " is not a valid URL: " + mue.getMessage(),
-                        Toast.LENGTH_LONG).show();
-            }
-        }
-        ed.apply();
-        startLocationService();
-    }
-
     /**
      * Handle a broadcast from the location Service
      *
      * @param intent the intent behind the broadcast
      */
     public void handleMessage(Intent intent) {
+        Log.d(TAG, "handle broadcast message " + intent.getAction());
         switch (intent.getAction()) {
-            case LocationService.HOME_CHANGED:
-                mHomePos = new LatLng(intent.getDoubleExtra("LAT", 0),
+            case PlaceService.HOME_CHANGED:
+                // The server has given a new home position
+                mPlace[HOME] = new LatLng(
+                        intent.getDoubleExtra("LAT", 0),
                         intent.getDoubleExtra("LONG", 0));
+                updateMap();
                 break;
-            case LocationService.LOCATION_CHANGED:
-                updateMap(new LatLng(intent.getDoubleExtra("LAT", 0),
-                        intent.getDoubleExtra("LONG", 0)));
+            case PlaceService.LOCATION_CHANGED:
+                // A new position has been sent to the server
+                mPlace[SENT] = new LatLng(intent.getDoubleExtra("LAT", 0),
+                        intent.getDoubleExtra("LONG", 0));
+                updateMap();
                 break;
-            case LocationService.REQUEST:
-                boolean onoff = intent.getBooleanExtra("ONOFF", false);
+            case PlaceService.REQUEST:
+                int state = intent.getIntExtra("STATE", 0);
                 switch (intent.getStringExtra("WHAT")) {
                     case "HW":
-                        mOptionsMenu.findItem(R.id.action_request_HW).setChecked(onoff);
+                        mOptionsMenu.findItem(R.id.action_boost_HW).setChecked(state == 2);
                         break;
                     case "CH":
-                        mOptionsMenu.findItem(R.id.action_request_CH).setChecked(onoff);
+                        mOptionsMenu.findItem(R.id.action_boost_CH).setChecked(state == 2);
                         break;
                 }
                 break;
@@ -314,12 +276,10 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "onCreate called");
 
         mMessenger = new Messenger(this, new String[]{
-                LocationService.HOME_CHANGED,
-                LocationService.LOCATION_CHANGED,
-                LocationService.REQUEST}, this);
-
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        prefs.registerOnSharedPreferenceChangeListener(this);
+                PlaceService.HOME_CHANGED,
+                PlaceService.LOCATION_CHANGED,
+                PlaceService.REQUEST,
+                PlaceService.POSITION}, this);
 
         // Check we have permission to get the location - may have to do this in the service?
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -334,7 +294,6 @@ public class MainActivity extends AppCompatActivity
         }
 
         mMap = null;
-        mMobileMarker = null;
 
         // SMELL: move networking activity to a thread
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
@@ -344,12 +303,11 @@ public class MainActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        // Obtain the SupportMapFragment and get notified when the map
-        // is ready to be used.
-        SupportMapFragment mapFragment =
-                (SupportMapFragment) getSupportFragmentManager()
-                        .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+        mApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addApi(LocationServices.API)
+                .build();
+        mApiClient.connect();
     }
 
     /**
@@ -369,6 +327,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onResume() {
         Log.d(TAG, "onResume");
+        startLocator();
         super.onResume();
     }
 
@@ -379,17 +338,86 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStop() {
         Log.d(TAG, "onStop");
-        // "stop" just means we navigated away. We want to keep sending updates
-        //if (mApiClient != null)
-        //    mApiClient.disconnect();
+        stopLocator();
         super.onStop();
     }
 
-    // Implements OnMapReadyCallback
+    /**
+     * Implements GoogleApiClient.ConnectionCallbacks
+     *
+     * @param connectionHint
+     * @throws SecurityException
+     */
+    @Override
+    public void onConnected(Bundle connectionHint) throws SecurityException {
+        Log.d(TAG, "connected to API");
+
+        // Obtain the SupportMapFragment and get notified when the map
+        // is ready to be used.
+        SupportMapFragment mapFragment =
+                (SupportMapFragment) getSupportFragmentManager()
+                        .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+    }
+
+    /**
+     * Callback for when a Google API connection is suspended
+     * Implements GoogleApiClient.ConnectionCallbacks
+     */
+    @Override
+    public void onConnectionSuspended(int cause) {
+        Log.d(TAG, "onConnectionSuspended - trying again");
+        // The connection to Google Play services was lost for some
+        // reason. We call connect() to attempt to reestablish the
+        // connection.
+        if (mApiClient != null)
+            mApiClient.connect();
+    }
+
+    private LocationListener mLocationListener = null;
+
+    private void stopLocator() {
+        if (mLocationListening) {
+            Log.d(TAG, "Locator stopped");
+            LocationServices.FusedLocationApi.removeLocationUpdates(mApiClient, mLocationListener);
+        }
+        mLocationListening = false;
+    }
+
+    private void startLocator() {
+        if (mLocationListening)
+            stopLocator();
+        if (mApiClient == null || mLocationListener == null)
+            return;
+
+        try {
+            LocationServices.FusedLocationApi.requestLocationUpdates(
+                    mApiClient, mLocationRequest, mLocationListener);
+            Log.d(TAG, "Locator started");
+            mLocationListening = true;
+        } catch (SecurityException se) {
+            // Should never happen
+        }
+    }
+
+    /**
+     * Implements OnMapReadyCallback
+     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady");
         mMap = googleMap;
+        mLocationRequest = LocationRequest.create();
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setSmallestDisplacement(100); // default 100 meters
+        mLocationRequest.setInterval(5); // default 100 meters
+        mLocationListener = new LocationListener() {
+            public void onLocationChanged(Location location) {
+                mPlace[CUR] = new LatLng(location.getLatitude(), location.getLongitude());
+                Log.d(TAG, "Got new location " + mPlace[CUR]);
+                updateMap();
+            }
+        };
+        startLocator();
     }
-
 }

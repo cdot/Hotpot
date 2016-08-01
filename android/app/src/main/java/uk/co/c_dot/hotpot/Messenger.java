@@ -46,7 +46,8 @@ public class Messenger extends BroadcastReceiver {
         for (String message : handles)
             intentFilter.addAction(message);
 
-        mBM.registerReceiver(this, intentFilter);
+ //       mBM.registerReceiver(this, intentFilter);
+        context.registerReceiver(this, intentFilter);
     }
 
     /**

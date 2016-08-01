@@ -65,16 +65,16 @@ function Thermostat(name, config) {
     var hc = config.get("history");
     var self = this;
     if (typeof hc !== "undefined") {
-	this.historian = new Historian({
-	    name: self.name,
-	    file: hc.file,
-	    interval: hc.interval,
-	    limit: hc.limit,
-	    datum: function() {
-		// Only log temperatures to one decimal place
-		return Math.round(self.temperature * 10) / 10;
-	    }
-	});
+        this.historian = new Historian({
+            name: self.name,
+            file: hc.file,
+            interval: hc.interval,
+            limit: hc.limit,
+            datum: function() {
+                // Only log temperatures to one decimal place
+                return Math.round(self.temperature * 10) / 10;
+            }
+        });
     }
 
     /** @private */
@@ -131,7 +131,7 @@ Thermostat.prototype.getSerialisableState = function() {
 Thermostat.prototype.getSerialisableLog = function() {
     "use strict";
     if (!this.historian)
-	return null;
+        return null;
     return this.historian.getSerialisableHistory();
 };
 

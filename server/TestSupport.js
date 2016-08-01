@@ -3,6 +3,7 @@
 // Test support
 
 const fs = require("fs");
+const Utils = require("../common/Utils.js");
 
 function TestSupport(opts) {
     console.log("****** Running with TestSupport ******");

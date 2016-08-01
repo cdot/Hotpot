@@ -9,16 +9,12 @@ const Location = require("../common/Location.js");
 
 const Apis = require("./Apis.js");
 
-const SHORT_INTERVAL = 5 * 60; // 5 minutes in seconds
-const MEDIUM_INTERVAL = 10 * 60; // 10 minutes in seconds
-const LONG_INTERVAL = 30 * 60; // half an hour in seconds
-
 const MPH = 0.44704; // metres per second -> mph
-const FAST_WALK = 4 * MPH; // in m/s
-const FAST_CYCLE = 20 * MPH; // in m/s
-const FAST_DRIVE = 60 * MPH; // in m/s
+const WALKING_SPEED = 4 * MPH; // in m/s
+const CYCLING_SPEED = 20 * MPH; // in m/s
+const DRIVING_SPEED = 60 * MPH; // in m/s
 
-const A_LONG_TIME = 10 * 24 * 60 * 60; // 10 days in s
+const A_LONG_WAY = 1000 * 1000; // 1000km in m
 
 const TAG = "Mobile";
 
@@ -82,7 +78,7 @@ function Mobile(name, config) {
      * @type {number}
      * @public
      */
-    this.time_of_arrival = this.last_time - SHORT_INTERVAL;
+    this.time_of_arrival = this.last_time - 1;
 
     console.TRACE(TAG, name, " constructed");
 }
@@ -156,11 +152,13 @@ Mobile.prototype.setLocation = function(info) {
  * based on average velocity and distance. The mode of transport is
  * guessed based on distance from home and velocity. The time of arrival
  * is stored in the time_of_arrival property.
- * @param {function} callback callback function, passed the interval in (int)
- * before we want another update, in seconds. If the
- * mobile is a long way from home, or moving slowly, we may want to
- * wait quite a while before asking for an update. This gives the mobile
- * device a chance to save power by not consuming a lot of battery.
+ * @param {function} callback callback(dist, toa) function, passed the distance
+ * to travel before we want another update, in metres, and the estimated
+ * time of arrival. If the mobile is a long way from home, or moving slowly,
+ * we may want to wait quite a while before an update. This gives
+ * the mobile device a chance to save power. -1 will be passed for both
+ * params if no estimate can be made. If the device is already home,
+ * then a distance of 0 and a time of arrival of 0 will be passed.
  * @public
  */
 Mobile.prototype.estimateTOA = function(callback) {
@@ -170,23 +168,6 @@ Mobile.prototype.estimateTOA = function(callback) {
     var crow_flies = this.home_location.haversine(this.location); // metres
     console.TRACE(TAG, this.name, " crow flies ", crow_flies, "m");
 
-    // Are they very close to home (within 100m)?
-    if (crow_flies < 100) {
-        this.time_of_arrival = Time.nowSeconds() - SHORT_INTERVAL;
-        console.TRACE(TAG, this.name, " too close to care");
-        callback(MEDIUM_INTERVAL); // less than 1km; as good as there
-        return;
-    }
-
-    // Are they a long way away, >1000km
-    if (crow_flies > 1000000) {
-        this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
-        console.TRACE(TAG, this.name, " too far away; TOA ",
-                      this.time_of_arrival);
-        callback(LONG_INTERVAL);
-        return;
-    }
-
     // What's their speed over the ground?
     var distance = this.last_location.haversine(this.location);
     var time = this.time - this.last_time; // seconds
@@ -194,7 +175,13 @@ Mobile.prototype.estimateTOA = function(callback) {
     if (time === 0) {
         // Shouldn't happen
         console.TRACE(TAG, this.name, " zero time");
-        callback(MEDIUM_INTERVAL);
+        callback(crow_flies, self.time_of_arrival);
+        return;
+    }
+
+    if (distance < 20) {
+        // Already at home
+        callback(0, 0);
         return;
     }
 
@@ -208,28 +195,24 @@ Mobile.prototype.estimateTOA = function(callback) {
     if (crow_flies > last_crow) {
         // no; skip re-routing until we know they are heading home
         console.TRACE(TAG, this.name, " is getting further away");
-        callback(SHORT_INTERVAL);
+        self.time_of_arrival
+        callback(last_crow, self.time_of_arrival);
         return;
     }
 
     // So they are getting closer.
 
-    // When far away, we want a wider interval. When closer, we want a
-    // smaller interval.
-    // time to arrival =~ crow_flies / speed
-    // divide that by 10 (finger in the air)
-    var interval = (crow_flies / speed) / 10;
-    console.TRACE(TAG, this.name,
-                  crow_flies, " / ", speed, " gives interval ", interval);
-
-
     // This is too crude, should take account of transitions from one
     // mode to another
     var mode = "driving";
-    if (speed < FAST_WALK)
+    if (speed < WALKING_SPEED) {
         mode = "walking";
-    else if (speed < FAST_CYCLE)
+        speed = WALKING_SPEED;
+    } else if (speed < CYCLING_SPEED) {
         mode = "bicycling";
+        speed = CYCLING_SPEED;
+    } else
+        speed = DRIVING_SPEED;
 
     // We don't really want to re-route everytime, but how do we know we
     // are on the planned route or not?
@@ -249,33 +232,33 @@ Mobile.prototype.estimateTOA = function(callback) {
     function analyseRoutes(route) {
         if (typeof result.error_message !== "undefined") {
             console.error("Error getting route: " + result.error_message);
-            callback(SHORT_INTERVAL);
+            callback(-1, -1);
             return;
         }
             
         console.TRACE(TAG, self.name, " got a route");
         // Get the time of the best route
-        var best_route = A_LONG_TIME;
+        var best_route = A_LONG_WAY;
         for (var r in route.routes) {
             var route_length = 0;
             var legs = route.routes[r].legs;
             for (var l in legs) {
-                var leg_length = legs[l].duration.value; // seconds
+                var leg_length = legs[l].distance.value; // metres
                 route_length += leg_length;
             }
             console.TRACE(TAG, self.name, " route of ",
-                          route_length, "s found");
+                          route_length / 1000, "km found");
             if (route_length < best_route)
                 best_route = route_length;
         }
-        if (best_route < A_LONG_TIME)
+        if (best_route < A_LONG_WAY)
             console.TRACE(TAG, self.name, " best route is ", best_route);
         else {
             console.TRACE(TAG, self.name, " no good route found, guessing");
-            best_route = crow_flies / FAST_DRIVE;
+            best_route = crow_flies;
         }
-        self.time_of_arrival = Time.nowSeconds() + best_route;
-        callback(best_route / 3);
+        self.time_of_arrival = Time.nowSeconds() + best_route / speed;
+        callback(best_route, self.time_of_arrival);
     }
 
     var result = "";
@@ -291,7 +274,7 @@ Mobile.prototype.estimateTOA = function(callback) {
         })
         .on("error", function(err) {
             console.error("Failed to GET from " + url.host + ": " + err);
-            callback(SHORT_INTERVAL);
+            callback(-1, -1);
         });
 };
 

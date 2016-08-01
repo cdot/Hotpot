@@ -11,13 +11,13 @@
         android:title="@string/action_settings"
         app:showAsAction="never" />
     <item
-        android:id="@+id/action_request_HW"
-        android:title="@string/action_request_HW"
+        android:id="@+id/action_boost_HW"
+        android:title="@string/action_boost_HW"
         android:checkable="true"
         app:showAsAction="never" />
-    <item
-        android:id="@+id/action_request_CH"
-        android:title="@string/action_request_CH"
+     <item
+        android:id="@+id/action_boost_CH"
+        android:title="@string/action_boost_CH"
         android:checkable="true"
         app:showAsAction="never" />
     <item

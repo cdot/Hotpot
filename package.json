@@ -44,7 +44,8 @@
             "blockBindings": true
         },
         "globals": {
-            "Time": true
+            "Time": true,
+            "HOTPOT_DEBUG": true
         },
         "rules": {
             "strict": [ "error", "global" ],

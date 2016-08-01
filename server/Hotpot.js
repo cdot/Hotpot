@@ -8,7 +8,6 @@ const DESCRIPTION =
 
 const getopt = require("node-getopt");
 
-const Utils = require("../common/Utils.js");
 const Location = require("../common/Location.js");
 
 const Config = require("./Config.js");
@@ -71,6 +70,6 @@ HOTPOT_DEBUG = undefined;
         })
         .catch(function(e) {
             console.TRACE(TAG, "Controller initialisation failed: ",
-			  e, " ", e.stack);
+                          e, " ", e.stack);
         });
 })();

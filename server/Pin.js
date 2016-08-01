@@ -17,6 +17,11 @@ var GPIO_PATH = "/sys/class/gpio/";
 const EXPORT_PATH = GPIO_PATH + "export";
 const UNEXPORT_PATH = GPIO_PATH + "unexport";
 
+// Request types
+const REQUEST_OFF = 0;
+const REQUEST_ON = 1;
+const REQUEST_BOOST = 2;
+
 /**
  * A Pin is the interface to a RPi GPIO pin.
  * @class
@@ -56,15 +61,15 @@ function Pin(name, config, done) {
     var exported = false;
     var hc = config.get("history");
     if (typeof hc !== "undefined") {
-	self.historian = new Historian({
-	    name: self.name + "_pin",
-	    file: hc.file,
-	    interval: hc.interval,
-	    limit: hc.limit,
-	    datum: function() {
-		return self.getState();
-	    }
-	});
+        self.historian = new Historian({
+            name: self.name + "_pin",
+            file: hc.file,
+            interval: hc.interval,
+            limit: hc.limit,
+            datum: function() {
+                return self.getState();
+            }
+        });
     }
 
     // First check if the pin can be read. If it can, it is already
@@ -137,8 +142,8 @@ function Pin(name, config, done) {
         writeFile(self.value_path, 0, "utf8")
             .then(function() {
                 console.TRACE(TAG, self.value_path, " writeCheck OK");
-		if (self.historian)
-		    self.historian.start();
+                if (self.historian)
+                    self.historian.start();
                 done();
             })
             .catch(function(e) {
@@ -241,7 +246,14 @@ Pin.prototype.purgeRequests = function(state, source) {
         var r = reqs[i];
         if ((typeof source !== "undefined" && r.source === source)
             || (typeof state !== "undefined" && r.state === state)
-            || (r.state !== 2 && Time.now() > r.until)) {
+            // If there's an error finding a route then r.until will be -1
+            // This means an ON request will only be active while the issuer
+            // is a measurable distance away from home.
+            || (r.state === REQUEST_ON && r.until <= Time.nowSeconds())
+            // OFF requests are only timed out if r.until is > 0
+            || (r.state === REQUEST_OFF
+                && r.until > 0 && r.until <= Time.nowSeconds())) {
+            // BOOST requests are explicitly expired by rules
             console.TRACE(TAG, "Purge request ", r);
             reqs.splice(i, 1);
         } else
@@ -257,7 +269,7 @@ Pin.prototype.purgeRequests = function(state, source) {
  * only thing the Pin does with a request is to expire those that have
  * passed their timeout (see #purgeRequests)
  * Active requests for state 0 override those for state 1 or 2.
- * @param {object} request { until: epoch ms, state: 2|1|0, source: string }
+ * @param {object} request { until: epoch s, state: 2|1|0, source: string }
  */ 
 Pin.prototype.addRequest = function(request) {
     console.TRACE(TAG, "Add request ", request);

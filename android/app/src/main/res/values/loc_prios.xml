@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="priorityNames">
+        <item>Balanced Power/Accuracy</item>
+        <item>High Accuracy</item>
+        <item>Low Power</item>
+        <item>No Power</item>
+    </string-array>
+
+    <string-array name="priorityValues">
+        <item>BALANCED</item>
+        <item>HIGH</item>
+        <item>LOW</item>
+        <item>NO</item>
+    </string-array>
+</resources>

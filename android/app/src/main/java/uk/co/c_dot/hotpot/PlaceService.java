@@ -8,30 +8,27 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.util.Log;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
 /**
  * Background service that tracks location and passes it to the server. The service starts
- * a LocationThread that actually does the hard work of tracking the location. This is a
+ * a PlaceThread that actually does the hard work of tracking the location. This is a
  * singleton - there should only ever be one copy of this service running.
  */
-public class LocationService extends Service {
+public class PlaceService extends Service {
 
-    private static final String TAG = "HOTPOT/LocationService";
+    private static final String TAG = "HOTPOT/PlaceService";
 
-    // Commands received by service
+    // Commands/broadcasts received by service
     public static final String START = MainActivity.DOMAIN + "START";
     public static final String STOP = MainActivity.DOMAIN + "STOP";
     public static final String REQUEST = MainActivity.DOMAIN + "REQUEST";
+    public static final String POSITION = MainActivity.DOMAIN + "POSITION";
 
     // Commands sent by service
     public static final String LOCATION_CHANGED = MainActivity.DOMAIN + "LOCATION_CHANGED";
     public static final String HOME_CHANGED = MainActivity.DOMAIN + "HOME_CHANGED";
 
     // Worker thread
-    private LocationThread mThread;
+    private PlaceThread mThread;
 
     /**
      * No bindings
@@ -54,12 +51,11 @@ public class LocationService extends Service {
         if (mThread != null)
             mThread.interrupt();
         String url = intent.getStringExtra("URL");
-        List<String> certs = intent.getStringArrayListExtra("CERTS");
 
         Log.d(TAG, intent.getAction() + " " + url);
 
         // Start the service thread, if necessary
-        mThread = new LocationThread(this, url, certs);
+        mThread = new PlaceThread(this, url);
         mThread.start();
 
         // If we get killed after returning from here, restart

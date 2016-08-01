@@ -513,7 +513,7 @@
                function(raw) {
                    var data;
                    eval("data=" + raw);
-                   setTimeout(reportLocation, data.interval * 1000);
+                   setTimeout(reportLocation, 5000);
                });
     }
 
