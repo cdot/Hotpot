@@ -4,8 +4,10 @@
 package uk.co.c_dot.hotpot;
 
 import android.Manifest;
-import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -47,7 +49,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
  */
 public class MainActivity extends AppCompatActivity
         implements GoogleApiClient.ConnectionCallbacks,
-        OnMapReadyCallback, Messenger.MessageHandler {
+        OnMapReadyCallback {
 
     private static final String TAG = "HOTPOT/MainActivity";
 
@@ -71,15 +73,44 @@ public class MainActivity extends AppCompatActivity
     // Marker icons
     private static final int[] mMarkerIcon = new int[]{R.drawable.home, R.drawable.cur, R.drawable.sent};
 
-    // Messenger used to broadcast comms between this activity and the location service
-    private Messenger mMessenger;
-
     // Options menu
     private Menu mOptionsMenu = null;
 
     private boolean mLocationServiceRunning = false;
     private boolean mRequestingCH = false;
     private boolean mRequestingHW = false;
+
+    private class BroadcastListener extends BroadcastReceiver {
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "handle broadcast message " + intent.getAction());
+            switch (intent.getAction()) {
+                case PlaceService.HOME_CHANGED:
+                    // The server has given a new home position
+                    mPlace[HOME] = new LatLng(
+                            intent.getDoubleExtra("LAT", 0),
+                            intent.getDoubleExtra("LONG", 0));
+                    updateMap();
+                    break;
+                case PlaceService.LOCATION_CHANGED:
+                    // A new position has been sent to the server
+                    mPlace[SENT] = new LatLng(intent.getDoubleExtra("LAT", 0),
+                            intent.getDoubleExtra("LONG", 0));
+                    updateMap();
+                    break;
+                case PlaceService.REQUEST:
+                    int state = intent.getIntExtra("STATE", 0);
+                    switch (intent.getStringExtra("WHAT")) {
+                        case "HW":
+                            mOptionsMenu.findItem(R.id.action_boost_HW).setChecked(state == 2);
+                            break;
+                        case "CH":
+                            mOptionsMenu.findItem(R.id.action_boost_CH).setChecked(state == 2);
+                            break;
+                    }
+                    break;
+            }
+        }
+    }
 
     /**
      * Call only when we are sure we have all requisite permissions
@@ -194,14 +225,14 @@ public class MainActivity extends AppCompatActivity
                 intent = new Intent(PlaceService.REQUEST);
                 intent.putExtra("WHAT", "CH");
                 intent.putExtra("STATE", mOptionsMenu.findItem(R.id.action_boost_CH).isChecked() ? 0 : 2);
-                mMessenger.broadcast(intent);
+                sendBroadcast(intent);
                 return true;
             case R.id.action_boost_HW:
                 intent = new Intent(PlaceService.REQUEST);
                 intent.putExtra("WHAT", "HW");
                 intent.putExtra("STATE", mOptionsMenu.findItem(R.id.action_boost_HW).isChecked() ? 0 : 2);
                 Log.d(TAG, "Sending " + intent.getIntExtra("STATE", 0) + " " + mOptionsMenu.findItem(R.id.action_boost_HW).isChecked());
-                mMessenger.broadcast(intent);
+                sendBroadcast(intent);
                 return true;
             case R.id.action_quit:
                 stopLocationService();
@@ -230,41 +261,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * Handle a broadcast from the location Service
-     *
-     * @param intent the intent behind the broadcast
-     */
-    public void handleMessage(Intent intent) {
-        Log.d(TAG, "handle broadcast message " + intent.getAction());
-        switch (intent.getAction()) {
-            case PlaceService.HOME_CHANGED:
-                // The server has given a new home position
-                mPlace[HOME] = new LatLng(
-                        intent.getDoubleExtra("LAT", 0),
-                        intent.getDoubleExtra("LONG", 0));
-                updateMap();
-                break;
-            case PlaceService.LOCATION_CHANGED:
-                // A new position has been sent to the server
-                mPlace[SENT] = new LatLng(intent.getDoubleExtra("LAT", 0),
-                        intent.getDoubleExtra("LONG", 0));
-                updateMap();
-                break;
-            case PlaceService.REQUEST:
-                int state = intent.getIntExtra("STATE", 0);
-                switch (intent.getStringExtra("WHAT")) {
-                    case "HW":
-                        mOptionsMenu.findItem(R.id.action_boost_HW).setChecked(state == 2);
-                        break;
-                    case "CH":
-                        mOptionsMenu.findItem(R.id.action_boost_CH).setChecked(state == 2);
-                        break;
-                }
-                break;
-        }
-    }
-
-    /**
      * See Android Activity lifecycle
      * Overrides FragmentActivity
      * Called when the fragment is created
@@ -275,11 +271,12 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         Log.d(TAG, "onCreate called");
 
-        mMessenger = new Messenger(this, new String[]{
-                PlaceService.HOME_CHANGED,
-                PlaceService.LOCATION_CHANGED,
-                PlaceService.REQUEST,
-                PlaceService.POSITION}, this);
+        IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction(PlaceService.HOME_CHANGED);
+        intentFilter.addAction(PlaceService.LOCATION_CHANGED);
+                intentFilter.addAction(PlaceService.REQUEST);
+                        intentFilter.addAction(PlaceService.POSITION);
+        registerReceiver(new BroadcastListener(), intentFilter);
 
         // Check we have permission to get the location - may have to do this in the service?
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)

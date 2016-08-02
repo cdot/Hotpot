@@ -4,8 +4,10 @@
 package uk.co.c_dot.hotpot;
 
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.Bundle;
@@ -14,7 +16,9 @@ import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.util.JsonToken;
 import android.util.Log;
+import android.util.JsonReader;
 import android.widget.Toast;
 import android.text.TextUtils;
 
@@ -41,7 +45,7 @@ import java.util.regex.Pattern;
  * Thread that tracks location and sends updates to a remote server.
  */
 class PlaceThread extends Thread
-        implements Messenger.MessageHandler, LocationListener,
+        implements LocationListener,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
         SharedPreferences.OnSharedPreferenceChangeListener {
 
@@ -81,21 +85,61 @@ class PlaceThread extends Thread
         return EARTH_RADIUS * c;
     }
 
+    /**
+     * Handler for incoming broadcasts
+     */
+    private class BroadcastListener extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //Log.d(TAG, "handle broadcast message " + intent.getAction());
+            switch (intent.getAction()) {
+                case PlaceService.STOP:
+                    mHandler.getLooper().quit();
+                    break;
+                case PlaceService.REQUEST:
+                    int i = intent.getIntExtra("STATE", 0);
+                    switch (intent.getStringExtra("WHAT")) {
+                        case "HW":
+                            mRequestHW = i;
+                            break;
+                        case "CH":
+                            mRequestCH = i;
+                            break;
+                    }
+                    // Send an update asynchronously from the location update queue
+                    sendUpdate();
+                    break;
+                case PlaceService.POSITION:
+                    if (LocationResult.hasResult(intent)) {
+                        LocationResult locationResult = LocationResult.extractResult(intent);
+                        Location location = locationResult.getLastLocation();
+                        if (location != null) {
+                            mCurPos = new LatLng(location.getLatitude(), location.getLongitude());
+                            Log.d(TAG, "locationChanged " + mCurPos);
+                            // Send an update to the server
+                            sendUpdate();
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+
     // ANDROID_ID of the device
     private String mAndroidId;
     // Server home location
     private LatLng mHomePos = null;
+    // Last recorded location
+    private LatLng mCurPos = new LatLng(0, 0);
 
     // Net interface
     private ServerConnection mServerConnection = null;
-    // Broadcast comms
-    private Messenger mMessenger;
+
     // Reference to the service that started us
     private Context mServiceContext;
     // Location request used for setting update parameters
     private LocationRequest mLocationRequest;
-    // Last recorded location
-    private LatLng mCurPos = new LatLng(0, 0);
+
     // Pending intent used with locations
     private PendingIntent mPendingIntent;
 
@@ -136,11 +180,18 @@ class PlaceThread extends Thread
 
         mAndroidId = Settings.Secure.getString(mServiceContext.getContentResolver(),
                 Settings.Secure.ANDROID_ID);
-        mMessenger = new Messenger(mServiceContext, new String[]{
-                PlaceService.STOP, PlaceService.REQUEST, PlaceService.POSITION}, this);
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(PlaceService.STOP);
+        intentFilter.addAction(PlaceService.REQUEST);
+        intentFilter.addAction(PlaceService.POSITION);
+        mServiceContext.registerReceiver(new BroadcastListener(), intentFilter);
+
+        // PendingIntent for LocationServices position reports
         mPendingIntent = PendingIntent.getBroadcast(mServiceContext, 0,
                 new Intent(PlaceService.POSITION), PendingIntent.FLAG_UPDATE_CURRENT);
+
         mServerConnection = null;
+
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mServiceContext);
         Set<String> certs = prefs.getStringSet(SettingsActivity.PREF_CERTS, null);
         if (mServerURL != null) {
@@ -171,7 +222,7 @@ class PlaceThread extends Thread
                 .addOnConnectionFailedListener(this)
                 .addApi(LocationServices.API)
                 .build();
-        // A thread has no onCreate so we have to explicitly connect
+        // A thread has no onCreate so we have to explicitly connect here
         mApiClient.connect();
 
         Looper.loop();
@@ -236,7 +287,6 @@ class PlaceThread extends Thread
         startLocator();
     }
 
-
     /**
      * Callback for when a Google API connection is suspended
      * Implements ConnectionCallbacks
@@ -265,48 +315,6 @@ class PlaceThread extends Thread
     }
 
     /**
-     * * Handle a broadcast message coming from the UI
-     *
-     * @param intent the message
-     */
-    @Override
-    public void handleMessage(Intent intent) {
-        int i;
-
-        //Log.d(TAG, "handle broadcast message " + intent.getAction());
-        switch (intent.getAction()) {
-            case PlaceService.STOP:
-                mHandler.getLooper().quit();
-                break;
-            case PlaceService.REQUEST:
-                i = intent.getIntExtra("STATE", 0);
-                switch (intent.getStringExtra("WHAT")) {
-                    case "HW":
-                        mRequestHW = i;
-                        break;
-                    case "CH":
-                        mRequestCH = i;
-                        break;
-                }
-                // Send an update asynchronously from the location update queue
-                sendUpdate();
-                break;
-            case PlaceService.POSITION:
-                if (LocationResult.hasResult(intent)) {
-                    LocationResult locationResult = LocationResult.extractResult(intent);
-                    Location location = locationResult.getLastLocation();
-                    if (location != null) {
-                        mCurPos = new LatLng(location.getLatitude(), location.getLongitude());
-                        Log.d(TAG, "locationChanged " + mCurPos);
-                        // Send an update to the server
-                        sendUpdate();
-                    }
-                }
-                break;
-        }
-    }
-
-    /**
      * Send a location update to the server. If the home location hasn't
      * been set already, use the server response to set it. Schedules the
      * next update.
@@ -322,7 +330,7 @@ class PlaceThread extends Thread
         Intent intent = new Intent(PlaceService.LOCATION_CHANGED);
         intent.putExtra("LAT", mCurPos.latitude);
         intent.putExtra("LONG", mCurPos.longitude);
-        mMessenger.broadcast(intent);
+        mServiceContext.sendBroadcast(intent);
 
         final Map<String, String> params = new HashMap<>();
         params.put("device", mAndroidId);
@@ -331,70 +339,49 @@ class PlaceThread extends Thread
         ArrayList<String> requests = new ArrayList<>();
         if (mRequestHW >= 0)
             requests.add("HW=" + mRequestHW);
-        if (mRequestCH > 0)
+        if (mRequestCH >= 0)
             requests.add("CH=" + mRequestCH);
         params.put("requests", TextUtils.join(",", requests));
 
-        // Handle the request in a new thread to avoid blocking the message queue
-        Thread ut = new Thread() {
-            public void run() {
-                String reply = null;
-                Looper.prepare(); // So we can Toast
-                try {
-                    reply = mServerConnection.POST("/set/mobile", params);
-                } catch (IOException ioe) {
-                    Toast.makeText(mServiceContext, "POST failed " + ioe, Toast.LENGTH_LONG).show();
-                }
-
-                if (reply == null)
-                    return;
-
-                // Reply includes:
-                // lat, lng (location of the server)
-                // distance (distance to travel before next update wanted, in metres)
-                // due (estimated time of arrival home, in epoch seconds)
-                Pattern re = Pattern.compile("\"(.*?)\":(.*?)[,}]");
-                Matcher m = re.matcher(reply);
-                double latitude = 0, longitude = 0;
-                while (m.find()) {
-                    String key = m.group(1);
-                    String value = m.group(2);
-                    switch (key) {
-                        case "lat":
-                            latitude = safeDouble(value);
-                            break;
-                        case "lng":
-                            longitude = safeDouble(value);
-                            break;
-                        case "distance":
-                            float distance = (float) safeDouble(value);
-                            if (distance < 100) // Don't update until we have wandered 100m from home
-                                distance = 100;
-                            Log.d(TAG, "Next update when distance travelled > " + distance + " metres");
-                            //stopLocator();
-                            mLocationRequest.setSmallestDisplacement(distance);
-                            //startLocator();
-                            break;
-                        case "due":
-                            // Not used by mobile
-                            break;
-                        default:
-                            Log.i(TAG, "Bad reply from server " + reply);
+        mServerConnection.postAsync("/set/mobile", params,
+                new ServerConnection.ResponseHandler() {
+                    public void done(JsonReader reader) throws IOException {
+                        double latitude = 0, longitude = 0;
+                        reader.beginObject();
+                        while (reader.hasNext()) {
+                            String name = reader.nextName();
+                            if (name.equals("lat")) {
+                                latitude = reader.nextDouble();
+                            } else if (name.equals("text")) {
+                                longitude = reader.nextDouble();
+                            } else if (name.equals("distance")) {
+                                float distance = (float) reader.nextDouble();
+                                if (distance < 100) // Don't update until we have wandered 100m from home
+                                    distance = 100;
+                                Log.d(TAG, "Next update when distance travelled > " + distance + " metres");
+                                //stopLocator();
+                                mLocationRequest.setSmallestDisplacement(distance);
+                            } else {
+                                reader.skipValue();
+                            }
+                        }
+                        reader.endObject();
+                        if (mHomePos == null) {
+                            // We've received a home location. Broadcast it to the UI.
+                            mHomePos = new LatLng(latitude, longitude);
+                            Log.d(TAG, "HOME is at " + mHomePos);
+                            Intent intent = new Intent(PlaceService.HOME_CHANGED);
+                            intent.putExtra("LAT", mHomePos.latitude);
+                            intent.putExtra("LONG", mHomePos.longitude);
+                            mServiceContext.sendBroadcast(intent);
+                        }
                     }
-                }
 
-                if (mHomePos == null) {
-                    // We've received a home location. Broadcast it to the UI.
-                    mHomePos = new LatLng(latitude, longitude);
-                    Log.d(TAG, "HOME is at " + mHomePos);
-                    Intent intent = new Intent(PlaceService.HOME_CHANGED);
-                    intent.putExtra("LAT", mHomePos.latitude);
-                    intent.putExtra("LONG", mHomePos.longitude);
-                    mMessenger.broadcast(intent);
-                }
-            }
-        };
-        ut.start();
+                    public void error(Exception e) {
+                        Looper.prepare();
+                        Toast.makeText(mServiceContext, e.toString(), Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     /**

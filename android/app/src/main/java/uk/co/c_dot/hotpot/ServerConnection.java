@@ -3,9 +3,12 @@
  */
 package uk.co.c_dot.hotpot;
 
+import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Base64;
+import android.util.JsonReader;
 import android.util.Log;
+import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -17,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -111,7 +115,7 @@ public class ServerConnection {
         return mURL.getProtocol().equals("https");
     }
 
-     /**
+    /**
      * Get the certificates trusted for use with the connection
      *
      * @return a set of base 64 encoded certificates
@@ -323,7 +327,7 @@ public class ServerConnection {
     public String POST(String path, Map<String, String> params) throws IOException {
 
         String sURL = mURL.toString()
-            + (path != null ? path : "");
+                + (path != null ? path : "");
         JSONObject json = new JSONObject();
         try {
             for (String key : params.keySet()) {
@@ -343,5 +347,37 @@ public class ServerConnection {
         out.write(b);
         out.close();
         return readReply(connection);
+    }
+
+    public interface ResponseHandler {
+        public void done(JsonReader jr) throws IOException;
+
+        public void error(Exception message);
+    }
+
+    /**
+     * POST an request asynchronously, calling a callback on receiving a response.
+     *
+     * @param path
+     * @param params
+     * @param rh
+     */
+    public void postAsync(final String path, final Map<String, String> params, final ResponseHandler rh) {
+        // Handle the request in a new thread to avoid blocking the message queue
+        Thread ut = new Thread() {
+            public void run() {
+                String reply = null;
+                try {
+                    reply = POST(path, params);
+                    if (reply == null)
+                        rh.done(null);
+                    else
+                        rh.done(new JsonReader(new StringReader(reply)));
+                } catch (IOException ioe) {
+                    rh.error(ioe);
+                }
+            }
+        };
+        ut.start();
     }
 }
