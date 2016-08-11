@@ -15,16 +15,25 @@ import android.util.Log;
  */
 public class PlaceService extends Service {
 
+    // User preferences
+    public static final String PREF_URL = MainActivity.DOMAIN + "URL";
+
+    // Hidden preferences
+    public static final String PREF_URL_WARNING = MainActivity.DOMAIN + "URL_WARNING";
+    public static final String PREF_CERTS = MainActivity.DOMAIN + "CERTS";
+
     private static final String TAG = "HOTPOT/PlaceService";
 
     // Commands/broadcasts received by service
     public static final String START = MainActivity.DOMAIN + "START";
     public static final String STOP = MainActivity.DOMAIN + "STOP";
-    public static final String REQUEST = MainActivity.DOMAIN + "REQUEST";
-    public static final String POSITION = MainActivity.DOMAIN + "POSITION";
+    public static final String BOOST_HW = MainActivity.DOMAIN + "BOOST_HW";
+    public static final String BOOST_CH = MainActivity.DOMAIN + "BOOST_CH";
 
-    // Commands sent by service
-    public static final String LOCATION_CHANGED = MainActivity.DOMAIN + "LOCATION_CHANGED";
+    // Data sent by service
+    public static final String STARTED = MainActivity.DOMAIN + "STARTED";
+    public static final String STOPPING = MainActivity.DOMAIN + "STOPPING";
+    public static final String FENCE_CROSSED = MainActivity.DOMAIN + "FENCE_CROSSED";
     public static final String HOME_CHANGED = MainActivity.DOMAIN + "HOME_CHANGED";
 
     // Worker thread
@@ -50,12 +59,11 @@ public class PlaceService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (mThread != null)
             mThread.interrupt();
-        String url = intent.getStringExtra("URL");
 
-        Log.d(TAG, intent.getAction() + " " + url);
+        Log.d(TAG, intent.getAction());
 
         // Start the service thread, if necessary
-        mThread = new PlaceThread(this, url);
+        mThread = new PlaceThread(this);
         mThread.start();
 
         // If we get killed after returning from here, restart

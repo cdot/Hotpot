@@ -36,9 +36,5 @@
             android:name=".PlaceService"
             android:exported="false" />
 
-        <activity
-            android:name=".SettingsActivity"
-            android:label="Settings"
-            android:theme="@android:style/Theme.Black.NoTitleBar"></activity>
     </application>
 </manifest>

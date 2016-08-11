@@ -2,24 +2,19 @@
     <string name="app_name">Hotpot</string>
     <string name="label">Hotpot</string>
     <string name="description">Hotpot Home Heating Controller</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_request_HW">Request Hot Water</string>
-    <string name="action_request_CH">Request Central Heating</string>
-    <string name="action_boost_CH">Boost Central Heating</string>
-    <string name="action_boost_HW">Boost Hot Water</string>
-    <string name="action_pause_resume">Pause/Resume location reporting</string>
-    <string name="action_quit">Quit</string>
+    <string name="boost">Boost</string>
+    <string name="boost_help">Turn on the given service until it reaches the target temperature programmed into the rules</string>
+    <string name="action_boost_CH">Central Heating</string>
+    <string name="action_boost_HW">Hot Water</string>
+    <string name="action_close">Close</string>
+    <string name="action_restart">Restart</string>
     <string name="server_title">Hotpot Server</string>
-    <string name="url_dlg_title">Set Server URL</string>
     <string name="url_title">Server URL</string>
-    <string name="server_url_desc">The URL for the hotpot server</string>
     <string name="location_accuracy">Location accuracy</string>string>
     <string name="location_accuracy_desc">The accuracy of device locations</string>
-    <string-array name="accuracy_names">
-        <item>BALANCED</item> <item>Balanced Accuracy/Power</item>
-        <item>HIGH</item>     <item>High Accuracy (High Power)</item>
-        <item>LOW</item>      <item>Low Power (Low Accuracy)</item>
-        <item>NO</item>       <item>No Power (Lowest Accuracy)</item>
-    </string-array>
+    <string name="last_fence_crossed">Last fence crossed</string>
+    <string name="home_location">Location</string>
+    <string name="unknown">Unknown</string>
+    <string name="running">Running</string>
 </resources>
 

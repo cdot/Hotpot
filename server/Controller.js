@@ -335,44 +335,58 @@ Controller.prototype.getMobile = function(id) {
 };
 
 /**
- * Handler for mobile state setting
+ * Handler for mobile command
  * @param info structure containing location in "lat", "lng",
  * device identifier in "device", and "requests" which maps a pin name to
  * a state (1 or 0). The request times out after the next request is due.
  * @private
  */
-Controller.prototype.setMobileState = function(info, respond) {
+Controller.prototype.handleMobileCommand = function(path, info, respond) {
     "use strict";
     var self = this;
+    var command = path.shift();
+
+    console.TRACE(TAG, "mobile ", command, " ", info);
+
     var mob = this.getMobile(info.device);
     if (mob === null)
         throw TAG + " setMobileState: " + info.device + " not known";
-    mob.setLocation(info);
-    console.TRACE(TAG, "Set location of ", mob.name, " @", mob.location);
-    var serv_loc = (typeof this.location !== "undefined")
-        ? this.location : new Location();
 
-    mob.estimateTOA(function(distance, due) {
-        if (typeof info.requests !== "undefined") {
-            // A request stays "live" until the due time
-            var slist = info.requests.split(",");
-            for (var i in slist) {
-                var s = slist[i].split("=");
-                if (typeof self.pin[s[0]] !== "undefined")
-                    self.pin[s[0]].addRequest({
-                        state: parseInt(s[1]),
-                        until: due,
-                        source: "Mobile " + mob.name
-                    });
-            }
-        }
+    if (typeof info.lat !== "undefined" && typeof info.lng !== "undefined") {
+        mob.setLocation(info);
+        console.TRACE(TAG, "Set location of ", mob.name, " @", mob.location);
+    }
+
+    switch (command) {
+    case "config":
+        var serv_loc = (typeof this.location !== "undefined")
+            ? this.location : new Location();
         respond({
             lat: serv_loc.lat,
             lng: serv_loc.lng,
-            distance: distance,
-            due: due
+            fences: mob.getSerialisableConfig().fences
         });
-    });
+        return;
+
+    case "request":
+        // Push a request onto a pin
+        var req = {
+            state: parseInt(info.state),
+            source: mob.name
+        };
+        if (typeof info.until !== "undefined")
+            info.until = parseInt(info.until);
+        console.TRACE(TAG, "Boost ", info.pin, " ", req);
+        self.pin[info.pin].addRequest(req);
+        break;
+
+    case "crossing":
+        // A fence was crossed
+        mob.recordCrossing(info);
+        break;
+    }
+
+    respond();
 };
 
 /**
@@ -447,16 +461,15 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
             self.emit("config_change");
             break;
         case "pin":
+            // setPin deals with the response
             self.setPin(path[1], data.value, respond);
             return;
-        case "mobile":
-            console.TRACE(TAG, "set/mobile ", data);
-            self.setMobileState(data, respond);
-            return;
-        // "rule":
-        // "weather":
         }
         break;
+    case "mobile":
+        // mobile has it's own commands, and deals with the response
+        self.handleMobileCommand(path, data, respond);
+        return;
     default:
         throw "Unrecognised command " + command;
     }

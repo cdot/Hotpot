@@ -19,94 +19,64 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.CameraUpdate;
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 
 /**
  * Hotpot main application.
- * <p/>
+ * <p>
  * The Hotpot application is divided into two parts; there's this activity, which provides
  * the UI, and a PlaceService that does the actual work of finding the location and
  * communicating it to the server.
  */
-public class MainActivity extends AppCompatActivity
-        implements GoogleApiClient.ConnectionCallbacks,
-        OnMapReadyCallback {
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "HOTPOT/MainActivity";
 
     // Constants used in preferences and intents
     public static final String DOMAIN = "uk.co.c_dot.hotpot.";
 
-    private GoogleApiClient mApiClient;
-
-    // Map
-    private GoogleMap mMap = null;
-    private LocationRequest mLocationRequest;
-    private boolean mLocationListening = false;
-
-    // Indices into following arrays
-    private static int HOME = 0, CUR = 1, SENT = 2;
-    // Locations
-    private LatLng[] mPlace = new LatLng[]{null, null, null};
-    private LatLng[] mLastPlace = new LatLng[]{null, null, null};
-    // Map markers
-    private Marker[] mMarker = new Marker[]{null, null, null};
-    // Marker icons
-    private static final int[] mMarkerIcon = new int[]{R.drawable.home, R.drawable.cur, R.drawable.sent};
-
-    // Options menu
-    private Menu mOptionsMenu = null;
-
-    private boolean mLocationServiceRunning = false;
-    private boolean mRequestingCH = false;
-    private boolean mRequestingHW = false;
+    private Context mContext;
 
     private class BroadcastListener extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
+            final TextView tv;
+            final Button butt;
             Log.d(TAG, "handle broadcast message " + intent.getAction());
             switch (intent.getAction()) {
+                case PlaceService.FENCE_CROSSED:
+                    Location pos = intent.getParcelableExtra("POS");
+                    String fence = intent.getStringExtra("FENCE");
+                    String trans = intent.getStringExtra("TRANSITION");
+                    String report = fence + " " + trans + " " + pos;
+                    tv = (TextView) findViewById(R.id.display_crossing);
+                    tv.setText(report);
+                    break;
                 case PlaceService.HOME_CHANGED:
-                    // The server has given a new home position
-                    mPlace[HOME] = new LatLng(
-                            intent.getDoubleExtra("LAT", 0),
-                            intent.getDoubleExtra("LONG", 0));
-                    updateMap();
+                    LatLng home = intent.getParcelableExtra("POS");
+                    tv = (TextView) findViewById(R.id.display_home);
+                    tv.setText(home.toString());
                     break;
-                case PlaceService.LOCATION_CHANGED:
-                    // A new position has been sent to the server
-                    mPlace[SENT] = new LatLng(intent.getDoubleExtra("LAT", 0),
-                            intent.getDoubleExtra("LONG", 0));
-                    updateMap();
+                case PlaceService.STARTED:
+                    Log.d(TAG, "Service has started");
+                    butt = ((Button) findViewById(R.id.action_restart));
+                    butt.setText(getResources().getString(R.string.running));
                     break;
-                case PlaceService.REQUEST:
-                    int state = intent.getIntExtra("STATE", 0);
-                    switch (intent.getStringExtra("WHAT")) {
-                        case "HW":
-                            mOptionsMenu.findItem(R.id.action_boost_HW).setChecked(state == 2);
-                            break;
-                        case "CH":
-                            mOptionsMenu.findItem(R.id.action_boost_CH).setChecked(state == 2);
-                            break;
-                    }
+                case PlaceService.STOPPING:
+                    // Something has caused the PlaceService to stop
+                    String why = intent.getStringExtra("REASON");
+                    Log.d(TAG, "Service has stopped: " + why);
+                    Toast.makeText(mContext, why, Toast.LENGTH_SHORT).show();
+                    butt = ((Button) findViewById(R.id.action_restart));
+                    butt.setText(getResources().getString(R.string.action_restart));
                     break;
             }
         }
@@ -117,19 +87,16 @@ public class MainActivity extends AppCompatActivity
      */
     private void startLocationService() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String url = prefs.getString(SettingsActivity.PREF_URL, null);
-        if (url != null) {
+        String url = prefs.getString(PlaceService.PREF_URL, null);
+        if (url != null || url.length() == 0) {
             Intent intent = new Intent(this, PlaceService.class);
             intent.setAction(PlaceService.START);
-            intent.putExtra("URL", url);
-            Log.d(TAG, "Starting location service on " + intent.getStringExtra("URL"));
+            Log.d(TAG, "Starting location service");
             startService(intent);
-            mLocationServiceRunning = true;
         } else {
             // TODO: start the settings activity?
-            Toast.makeText(this, "Cannot starting location service; URL not set",
+            Toast.makeText(this, "Cannot start location service; URL not set",
                     Toast.LENGTH_LONG).show();
-            mLocationServiceRunning = false;
         }
     }
 
@@ -141,7 +108,6 @@ public class MainActivity extends AppCompatActivity
         Intent intent = new Intent(this, PlaceService.class);
         intent.setAction(PlaceService.STOP);
         stopService(intent);
-        mLocationServiceRunning = false;
     }
 
     /**
@@ -164,100 +130,22 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    /**
-     * Update the map
-     */
-    private void updateMap() {
-        if (mMap == null)
-            return; // map not ready yet
-
-        LatLngBounds bounds = null;
-        boolean adjust = false;
-        for (int i = HOME; i <= SENT; i++) {
-            Log.d(TAG, "Update " + i + " = " + mPlace[i]);
-            if (mPlace[i] != null) {
-                if (mMarker[i] == null) {
-                    mMarker[i] = mMap.addMarker(new MarkerOptions().position(mPlace[i])
-                            .icon(BitmapDescriptorFactory.fromResource(mMarkerIcon[i])));
-                    adjust = true;
-                } else if (mLastPlace[i] != null && !mPlace[i].equals(mLastPlace[i])) {
-                    mMarker[i].setPosition(mPlace[i]);
-                } else if (mLastPlace[i] == null)
-                    adjust = true;
-                bounds = (bounds == null) ? new LatLngBounds(mPlace[i], mPlace[i])
-                        : bounds.including(mPlace[i]);
-                mLastPlace[i] = mPlace[i];
-            }
-        }
-
-        if (adjust) {
-            CameraUpdate cam = CameraUpdateFactory.newLatLngBounds(bounds, 10);
-            mMap.moveCamera(cam);
-        }
+    public void onClickBoostHW(View view) {
+        sendBroadcast(new Intent(PlaceService.BOOST_HW));
     }
 
-    /**
-     * Action on the options menu
-     *
-     * @param item the selected item
-     * @return true to consume the event
-     */
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        Intent intent;
-        switch (item.getItemId()) {
-            case R.id.action_settings:
-                // User chose the "Settings" item, show the app settings UI...
-                Intent i = new Intent(this, SettingsActivity.class);
-                startActivity(i);
-                return true;
-            case R.id.action_pause_resume:
-                if (mLocationServiceRunning)
-                    stopLocationService();
-                else
-                    startLocationService();
-                if (mOptionsMenu != null)
-                    mOptionsMenu.findItem(R.id.action_pause_resume).setIcon(
-                            mLocationServiceRunning ? R.drawable.ic_media_pause : R.drawable.ic_media_play);
-
-                return true;
-            case R.id.action_boost_CH:
-                intent = new Intent(PlaceService.REQUEST);
-                intent.putExtra("WHAT", "CH");
-                intent.putExtra("STATE", mOptionsMenu.findItem(R.id.action_boost_CH).isChecked() ? 0 : 2);
-                sendBroadcast(intent);
-                return true;
-            case R.id.action_boost_HW:
-                intent = new Intent(PlaceService.REQUEST);
-                intent.putExtra("WHAT", "HW");
-                intent.putExtra("STATE", mOptionsMenu.findItem(R.id.action_boost_HW).isChecked() ? 0 : 2);
-                Log.d(TAG, "Sending " + intent.getIntExtra("STATE", 0) + " " + mOptionsMenu.findItem(R.id.action_boost_HW).isChecked());
-                sendBroadcast(intent);
-                return true;
-            case R.id.action_quit:
-                stopLocationService();
-                finish();
-                return true;
-            default:
-                // If we got here, the user's action was not recognized.
-                // Invoke the superclass to handle it.
-                Log.e(TAG, "Unexpected options item selected " + item.getItemId());
-                return super.onOptionsItemSelected(item);
-        }
+    public void onClickBoostCH(View view) {
+        sendBroadcast(new Intent(PlaceService.BOOST_CH));
     }
 
-    /**
-     * Android developer tutorial for toolbar doesn't tell you about this, but without it the
-     * overflow menu doesn't show up.
-     *
-     * @param menu the menu to inflate (populate from XML)
-     * @return true to show the menu
-     */
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        mOptionsMenu = menu;
-        getMenuInflater().inflate(R.menu.toolbar_menu, menu);
-        return true;
+    public void onClickClose(View view) {
+        stopLocationService(); // broadcast STOP to all running services
+        finish();
+    }
+
+    public void onClickRestart(View view) {
+        stopLocationService();
+        startLocationService();
     }
 
     /**
@@ -269,13 +157,37 @@ public class MainActivity extends AppCompatActivity
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mContext = this;
         Log.d(TAG, "onCreate called");
 
+        EditText urlView = ((EditText) findViewById(R.id.server_url));
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+        String curl = prefs.getString(PlaceService.PREF_URL, null);
+        if (curl != null)
+            urlView.setText(curl);
+
+        urlView.addTextChangedListener(new TextWatcher() {
+
+                    public void afterTextChanged(Editable s) {
+                        Log.d(TAG, "FUCK OFF YOU STUPID CUNT");
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+                        SharedPreferences.Editor ed = prefs.edit();
+                        ed.putString(PlaceService.PREF_URL, s.toString());
+                        ed.apply();
+                    }
+
+                    public void beforeTextChanged(CharSequence s, int start,
+                                                  int count, int after) {
+                    }
+
+                    public void onTextChanged(CharSequence s, int start,
+                                              int before, int count) {
+                    }
+                });
+
         IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(PlaceService.HOME_CHANGED);
-        intentFilter.addAction(PlaceService.LOCATION_CHANGED);
-                intentFilter.addAction(PlaceService.REQUEST);
-                        intentFilter.addAction(PlaceService.POSITION);
+        intentFilter.addAction(PlaceService.FENCE_CROSSED);
+        intentFilter.addAction(PlaceService.HOME_CHANGED);
         registerReceiver(new BroadcastListener(), intentFilter);
 
         // Check we have permission to get the location - may have to do this in the service?
@@ -290,21 +202,8 @@ public class MainActivity extends AppCompatActivity
                     123);
         }
 
-        mMap = null;
-
-        // SMELL: move networking activity to a thread
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
-
-        // Add the Toolbar
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-
-        mApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addApi(LocationServices.API)
-                .build();
-        mApiClient.connect();
     }
 
     /**
@@ -324,7 +223,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onResume() {
         Log.d(TAG, "onResume");
-        startLocator();
         super.onResume();
     }
 
@@ -335,86 +233,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStop() {
         Log.d(TAG, "onStop");
-        stopLocator();
         super.onStop();
-    }
-
-    /**
-     * Implements GoogleApiClient.ConnectionCallbacks
-     *
-     * @param connectionHint
-     * @throws SecurityException
-     */
-    @Override
-    public void onConnected(Bundle connectionHint) throws SecurityException {
-        Log.d(TAG, "connected to API");
-
-        // Obtain the SupportMapFragment and get notified when the map
-        // is ready to be used.
-        SupportMapFragment mapFragment =
-                (SupportMapFragment) getSupportFragmentManager()
-                        .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-    }
-
-    /**
-     * Callback for when a Google API connection is suspended
-     * Implements GoogleApiClient.ConnectionCallbacks
-     */
-    @Override
-    public void onConnectionSuspended(int cause) {
-        Log.d(TAG, "onConnectionSuspended - trying again");
-        // The connection to Google Play services was lost for some
-        // reason. We call connect() to attempt to reestablish the
-        // connection.
-        if (mApiClient != null)
-            mApiClient.connect();
-    }
-
-    private LocationListener mLocationListener = null;
-
-    private void stopLocator() {
-        if (mLocationListening) {
-            Log.d(TAG, "Locator stopped");
-            LocationServices.FusedLocationApi.removeLocationUpdates(mApiClient, mLocationListener);
-        }
-        mLocationListening = false;
-    }
-
-    private void startLocator() {
-        if (mLocationListening)
-            stopLocator();
-        if (mApiClient == null || mLocationListener == null)
-            return;
-
-        try {
-            LocationServices.FusedLocationApi.requestLocationUpdates(
-                    mApiClient, mLocationRequest, mLocationListener);
-            Log.d(TAG, "Locator started");
-            mLocationListening = true;
-        } catch (SecurityException se) {
-            // Should never happen
-        }
-    }
-
-    /**
-     * Implements OnMapReadyCallback
-     */
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        Log.d(TAG, "onMapReady");
-        mMap = googleMap;
-        mLocationRequest = LocationRequest.create();
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setSmallestDisplacement(100); // default 100 meters
-        mLocationRequest.setInterval(5); // default 100 meters
-        mLocationListener = new LocationListener() {
-            public void onLocationChanged(Location location) {
-                mPlace[CUR] = new LatLng(location.getLatitude(), location.getLongitude());
-                Log.d(TAG, "Got new location " + mPlace[CUR]);
-                updateMap();
-            }
-        };
-        startLocator();
     }
 }

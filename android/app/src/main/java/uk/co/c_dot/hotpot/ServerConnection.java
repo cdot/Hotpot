@@ -3,13 +3,13 @@
  */
 package uk.co.c_dot.hotpot;
 
-import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.JsonReader;
+import android.util.JsonToken;
 import android.util.Log;
-import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -17,6 +17,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -38,7 +39,6 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -298,82 +298,100 @@ public class ServerConnection {
         return reply;
     }
 
-    /**
-     * Send a GET to the server
-     *
-     * @param path   additional path to add to the URL e.g. "/mobile"
-     * @param params map of parameter names to values
-     * @return the result of the GET
-     */
-    public String GET(String path, Map<String, String> params) throws IOException {
-
-        // Build a new URL with parameters encoded
-        String sURL = mURL.toString()
-                + (path != null ? path : "")
-                + "?" + makeParamString(params);
-
-        HttpURLConnection connection = connect(new URL(sURL));
-        return readReply(connection);
-    }
-
-
-    /**
-     * Send a POST to the server
-     *
-     * @param path   additional path to add to the URL e.g. "/mobile"
-     * @param params map of parameter names to values
-     * @return the result of the POST
-     */
-    public String POST(String path, Map<String, String> params) throws IOException {
-
-        String sURL = mURL.toString()
-                + (path != null ? path : "");
-        JSONObject json = new JSONObject();
-        try {
-            for (String key : params.keySet()) {
-                json.put(key, params.get(key));
-            }
-        } catch (JSONException jse) {
-            throw new IOException(jse.getMessage());
-        }
-
-        byte[] b = json.toString().getBytes(Charset.forName("UTF-8"));
-
-        HttpURLConnection connection = connect(new URL(sURL));
-
-        connection.setDoOutput(true);
-        connection.setFixedLengthStreamingMode(b.length);
-        OutputStream out = new BufferedOutputStream(connection.getOutputStream());
-        out.write(b);
-        out.close();
-        return readReply(connection);
-    }
-
     public interface ResponseHandler {
-        public void done(JsonReader jr) throws IOException;
+        void done(Object jr) throws IOException;
 
-        public void error(Exception message);
+        void error(Exception message);
+    }
+
+    /**
+     * Read a well-formed Json document, returning a recursive structure
+     *
+     * @param reader the source of the token stream
+     * @return any of JSONObject, JSONArray, Double, String, Boolean or null
+     * @throws IOException
+     */
+    private static Object readJson(JsonReader reader) throws IOException {
+        JsonToken jt = reader.peek();
+        try {
+            if (jt == JsonToken.BEGIN_ARRAY) {
+                JSONArray array = new JSONArray();
+                reader.beginArray();
+                while (reader.hasNext()) {
+                    if (reader.peek() == JsonToken.END_OBJECT)
+                        break;
+                    array.put(readJson(reader));
+                }
+                reader.endArray();
+                return array;
+            }
+            if (jt == JsonToken.BEGIN_OBJECT) {
+                JSONObject object = new JSONObject();
+                reader.beginObject();
+                while (reader.hasNext()) {
+                    if (reader.peek() == JsonToken.END_OBJECT)
+                        break;
+                    String name = reader.nextName();
+                    object.put(name, readJson(reader));
+                }
+                reader.endObject();
+                return object;
+            }
+            if (jt == JsonToken.NAME)
+                return reader.nextName();
+            if (jt == JsonToken.NUMBER)
+                return reader.nextDouble();
+            if (jt == JsonToken.STRING)
+                return reader.nextString();
+            if (jt == JsonToken.BOOLEAN)
+                return reader.nextBoolean();
+            if (jt == JsonToken.NULL) {
+                reader.skipValue();
+                return null;
+            }
+        } catch (JSONException je) {
+            throw new IOException("Bad JSON: " + je);
+        }
+        throw new IOException("Malformed JSON " + jt);
     }
 
     /**
      * POST an request asynchronously, calling a callback on receiving a response.
      *
-     * @param path
-     * @param params
-     * @param rh
+     * @param path   URL path
+     * @param params Request parameters
+     * @param rh     Response handler
      */
-    public void postAsync(final String path, final Map<String, String> params, final ResponseHandler rh) {
+    public void POST(final String path, final JSONObject params, final ResponseHandler rh) {
+        Log.d(TAG, "POST " + path + " " + params);
         // Handle the request in a new thread to avoid blocking the message queue
         Thread ut = new Thread() {
             public void run() {
-                String reply = null;
                 try {
-                    reply = POST(path, params);
-                    if (reply == null)
+                    String sURL = mURL.toString()
+                            + (path != null ? path : "");
+
+                    byte[] b = params.toString().getBytes(Charset.forName("UTF-8"));
+
+                    HttpURLConnection connection = connect(new URL(sURL));
+
+                    connection.setDoOutput(true);
+                    connection.setFixedLengthStreamingMode(b.length);
+                    OutputStream out = new BufferedOutputStream(connection.getOutputStream());
+                    out.write(b);
+                    out.close();
+                    Log.d(TAG, "Waiting for POST response");
+                    String reply = readReply(connection);
+                    if (reply == null || reply.equals("")) {
+                        Log.d(TAG, "POST response is null");
                         rh.done(null);
-                    else
-                        rh.done(new JsonReader(new StringReader(reply)));
+                    } else {
+                        Log.d(TAG, "Reading POST response " + reply);
+                        rh.done(readJson(new JsonReader(new StringReader(reply))));
+                    }
+
                 } catch (IOException ioe) {
+                    Log.d(TAG, "POST failed " + ioe);
                     rh.error(ioe);
                 }
             }

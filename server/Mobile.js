@@ -40,11 +40,41 @@ function Mobile(name, config) {
     this.id = config.get("id");
 
     /**
+     * The fences this device will report crossing
+     */
+    this.fences = config.get("fences");
+
+    /**
      * Last place this device was seen 
      * @type {Location}
      * @public
      */
     this.location = new Location();
+
+    /**
+     * Which way we are facing (degrees relative to North)
+     * @type {Location}
+     * @public
+     */
+    this.bearing = 0;
+
+    /**
+     * Last recorded speed over the ground (m/s)
+     * @public
+     */
+    this.speed = 0;
+
+    /**
+     * Last fence crossed
+     * @public
+     */
+    this.last_fence = undefined;
+
+    /**
+     * Last fence transition (ENTER or EXIT)
+     * @public
+     */
+    this.transition = undefined;
 
     /**
      * Home location (location of the server, cache)
@@ -93,7 +123,8 @@ module.exports = Mobile;
 Mobile.prototype.getSerialisableConfig = function(ajax) {
     "use strict";
     return {
-        id: this.id
+        id: this.id,
+        fences: this.fences
     };
 };
 
@@ -152,58 +183,21 @@ Mobile.prototype.setLocation = function(info) {
  * based on average velocity and distance. The mode of transport is
  * guessed based on distance from home and velocity. The time of arrival
  * is stored in the time_of_arrival property.
- * @param {function} callback callback(dist, toa) function, passed the distance
- * to travel before we want another update, in metres, and the estimated
- * time of arrival. If the mobile is a long way from home, or moving slowly,
+ * @param {function} callback callback(dist, toa) optional function, passed
+ * the distance to travel before we want another update, in metres, and the
+ * estimated time of arrival.
+ *
+ * If the mobile is a long way from home, or moving slowly,
  * we may want to wait quite a while before an update. This gives
  * the mobile device a chance to save power. -1 will be passed for both
  * params if no estimate can be made. If the device is already home,
  * then a distance of 0 and a time of arrival of 0 will be passed.
- * @public
+ * @private
  */
-Mobile.prototype.estimateTOA = function(callback) {
+Mobile.prototype.estimateTOA = function(speed) {
     "use strict";
     var self = this;
 
-    var crow_flies = this.home_location.haversine(this.location); // metres
-    console.TRACE(TAG, this.name, " crow flies ", crow_flies, "m");
-
-    // What's their speed over the ground?
-    var distance = this.last_location.haversine(this.location);
-    var time = this.time - this.last_time; // seconds
-
-    if (time === 0) {
-        // Shouldn't happen
-        console.TRACE(TAG, this.name, " zero time");
-        callback(crow_flies, self.time_of_arrival);
-        return;
-    }
-
-    if (distance < 20) {
-        // Already at home
-        callback(0, 0);
-        return;
-    }
-
-    var speed = distance / time; // metres per second
-    console.TRACE(TAG, this.name, " distance ", distance, "m, time ", time,
-                  "s, speed ", speed, "m/s (",
-                  speed / MPH, "mph)");
-
-    // Are they getting any closer?
-    var last_crow = this.home_location.haversine(this.last_location);
-    if (crow_flies > last_crow) {
-        // no; skip re-routing until we know they are heading home
-        console.TRACE(TAG, this.name, " is getting further away");
-        self.time_of_arrival
-        callback(last_crow, self.time_of_arrival);
-        return;
-    }
-
-    // So they are getting closer.
-
-    // This is too crude, should take account of transitions from one
-    // mode to another
     var mode = "driving";
     if (speed < WALKING_SPEED) {
         mode = "walking";
@@ -214,9 +208,7 @@ Mobile.prototype.estimateTOA = function(callback) {
     } else
         speed = DRIVING_SPEED;
 
-    // We don't really want to re-route everytime, but how do we know we
-    // are on the planned route or not?
-
+    // Use gmaps routing to estimate when we'll be home
     var gmaps = Apis.get("google_maps");
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
@@ -232,7 +224,6 @@ Mobile.prototype.estimateTOA = function(callback) {
     function analyseRoutes(route) {
         if (typeof result.error_message !== "undefined") {
             console.error("Error getting route: " + result.error_message);
-            callback(-1, -1);
             return;
         }
             
@@ -243,22 +234,15 @@ Mobile.prototype.estimateTOA = function(callback) {
             var route_length = 0;
             var legs = route.routes[r].legs;
             for (var l in legs) {
-                var leg_length = legs[l].distance.value; // metres
+                var leg_length = legs[l].duration.value; // seconds
                 route_length += leg_length;
             }
             console.TRACE(TAG, self.name, " route of ",
-                          route_length / 1000, "km found");
+                          route_length, "s found");
             if (route_length < best_route)
                 best_route = route_length;
         }
-        if (best_route < A_LONG_WAY)
-            console.TRACE(TAG, self.name, " best route is ", best_route);
-        else {
-            console.TRACE(TAG, self.name, " no good route found, guessing");
-            best_route = crow_flies;
-        }
-        self.time_of_arrival = Time.nowSeconds() + best_route / speed;
-        callback(best_route, self.time_of_arrival);
+        self.time_of_arrival = Time.nowSeconds() + best_route;
     }
 
     var result = "";
@@ -274,7 +258,6 @@ Mobile.prototype.estimateTOA = function(callback) {
         })
         .on("error", function(err) {
             console.error("Failed to GET from " + url.host + ": " + err);
-            callback(-1, -1);
         });
 };
 
@@ -286,4 +269,16 @@ Mobile.prototype.estimateTOA = function(callback) {
 Mobile.prototype.arrivesIn = function() {
     "use strict";
     return this.time_of_arrival - Time.nowSeconds();
+};
+
+Mobile.prototype.recordCrossing = function(info) {
+    this.bearing = parseInt(info.bearing);
+    this.last_fence = info.fence;
+    this.last_transition = info.transition;
+
+    if (info.transition === "ENTER") {
+        // Getting closer
+        this.estimateTOA(parseInt(info.speed));
+    } else
+        this.time_of_arrival = -1;
 };
