@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
                     String fence = intent.getStringExtra("FENCE");
                     String trans = intent.getStringExtra("TRANSITION");
                     String report = fence + " " + trans + " " + pos;
-                    tv = (TextView) findViewById(R.id.display_crossing);
+                    tv = (TextView) findViewById(R.id.display_status);
                     tv.setText(report);
                     break;
                 case PlaceService.HOME_CHANGED:
@@ -68,15 +68,17 @@ public class MainActivity extends AppCompatActivity {
                 case PlaceService.STARTED:
                     Log.d(TAG, "Service has started");
                     butt = ((Button) findViewById(R.id.action_restart));
-                    butt.setText(getResources().getString(R.string.running));
+                    butt.setText(getResources().getString(R.string.reconnect));
                     break;
                 case PlaceService.STOPPING:
                     // Something has caused the PlaceService to stop
                     String why = intent.getStringExtra("REASON");
                     Log.d(TAG, "Service has stopped: " + why);
-                    Toast.makeText(mContext, why, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(mContext, why, Toast.LENGTH_LONG).show();
+                    tv = (TextView) findViewById(R.id.display_status);
+                    tv.setText(why);
                     butt = ((Button) findViewById(R.id.action_restart));
-                    butt.setText(getResources().getString(R.string.action_restart));
+                    butt.setText(getResources().getString(R.string.connect));
                     break;
             }
         }

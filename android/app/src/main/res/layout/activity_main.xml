@@ -1,6 +1,4 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -9,8 +7,16 @@
         android:id="@+id/server_url"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/url_title"
+        android:hint="@string/url_default"
         android:inputType="textUri" />
+
+    <Button
+        android:id="@+id/action_restart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:onClick="onClickRestart"
+        android:text="@string/connect" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -29,25 +35,20 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/boost"
+        android:contentDescription="@string/boost_help"
         android:textStyle="bold" />
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/boost_help" />
 
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
+        android:layout_gravity="center_horizontal"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/action_boost_HW"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="10dp"
+            android:layout_marginEnd="10dp"
             android:onClick="onClickBoostHW"
             android:text="@string/action_boost_HW" />
 
@@ -55,7 +56,7 @@
             android:id="@+id/action_boost_CH"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
+            android:layout_marginStart="10dp"
             android:onClick="onClickBoostCH"
             android:text="@string/action_boost_CH" />
     </LinearLayout>
@@ -63,38 +64,13 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:labelFor="@+id/display_crossing"
-        android:text="@string/last_fence_crossed"
+        android:labelFor="@+id/display_status"
+        android:text="@string/status_title"
         android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/display_crossing"
+        android:id="@+id/display_status"
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="fill_parent"
         android:text="@string/unknown" />
-
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/action_restart"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginRight="20dp"
-            android:onClick="onClickRestart"
-            android:text="@string/action_restart" />
-
-        <Button
-            android:id="@+id/action_close"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="20dp"
-            android:onClick="onClickClose"
-            android:text="@string/action_close" />
-    </LinearLayout>
 </LinearLayout>

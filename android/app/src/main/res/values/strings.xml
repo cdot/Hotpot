@@ -2,19 +2,18 @@
     <string name="app_name">Hotpot</string>
     <string name="label">Hotpot</string>
     <string name="description">Hotpot Home Heating Controller</string>
+    <string name="url_default">Server URL</string>
+    <string name="connect">Connect to Server</string>
+    <string name="reconnect">Refresh Connection</string>
+    <string name="home_location">Server Location</string>
+
     <string name="boost">Boost</string>
     <string name="boost_help">Turn on the given service until it reaches the target temperature programmed into the rules</string>
     <string name="action_boost_CH">Central Heating</string>
     <string name="action_boost_HW">Hot Water</string>
     <string name="action_close">Close</string>
-    <string name="action_restart">Restart</string>
     <string name="server_title">Hotpot Server</string>
-    <string name="url_title">Server URL</string>
-    <string name="location_accuracy">Location accuracy</string>string>
-    <string name="location_accuracy_desc">The accuracy of device locations</string>
-    <string name="last_fence_crossed">Last fence crossed</string>
-    <string name="home_location">Location</string>
+    <string name="status_title">Connection Status</string>
     <string name="unknown">Unknown</string>
-    <string name="running">Running</string>
 </resources>
 
