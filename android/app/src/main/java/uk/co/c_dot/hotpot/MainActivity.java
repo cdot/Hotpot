@@ -188,6 +188,8 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(PlaceService.FENCE_CROSSED);
         intentFilter.addAction(PlaceService.HOME_CHANGED);
+        intentFilter.addAction(PlaceService.STARTED);
+        intentFilter.addAction(PlaceService.STOPPING);
         registerReceiver(new BroadcastListener(), intentFilter);
 
         // Check we have permission to get the location - may have to do this in the service?

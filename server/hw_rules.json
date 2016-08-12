@@ -25,9 +25,9 @@ function () {
     var at_home = 0, arrive_soon = 0;
     for (var moby in this.mobile) {
         var m = this.mobile[moby];
-        if (m.arrivesIn() < 60)
+        if (m.arrivesIn() < 5 * 60) // already at home
             at_home++;
-        else if (m.arrivesIn() < 20 * 60)
+        else if (m.arrivesIn() < 30 * 60) // 30 minutes away
             arrive_soon++;
     }
 
@@ -39,7 +39,7 @@ function () {
         return;
     }
     
-    if (arrive_soon === 0 // someone is at home
+    if (at_home > 0 // someone is at home
         && (Time.between('08:30', '18:00') // day
             || Time.between('20:00', '06:30')) // night
        ) {

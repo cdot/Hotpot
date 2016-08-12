@@ -36,9 +36,9 @@ function() {
     var at_home = 0, arrive_soon = 0;
     for (var moby in this.mobile) {
         var m = this.mobile[moby];
-        if (m.arrivesIn() < 60)
+        if (m.arrivesIn() < 5 * 60)
             at_home++;
-        else if (m.arrivesIn() < 20 * 60)
+        else if (m.arrivesIn() < 40 * 60)
             arrive_soon++;
     }
 
@@ -52,7 +52,7 @@ function() {
     
     // There is demand. If it's "unknown" or "at_home" only,
     // then consider the time
-    if (arrive_soon == 0
+    if (at_home > 0
         && !Time.between('08:00', '18:00') // day
         && Time.between('22:00', '06:30') // night
        ) {

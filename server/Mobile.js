@@ -14,7 +14,7 @@ const WALKING_SPEED = 4 * MPH; // in m/s
 const CYCLING_SPEED = 20 * MPH; // in m/s
 const DRIVING_SPEED = 60 * MPH; // in m/s
 
-const A_LONG_WAY = 1000 * 1000; // 1000km in m
+const A_LONG_TIME = 24 * 60 * 60; // 24h
 
 const TAG = "Mobile";
 
@@ -90,20 +90,6 @@ function Mobile(name, config) {
     this.time = Time.nowSeconds();
 
     /**
-     * Last place this device was seen
-     * @type {Location}
-     * @public
-     */
-    this.last_location = new Location();
-
-    /**
-     * Time at last_location, epoch secs 
-     * @type {number}
-     * @public
-     */
-    this.last_time = Time.nowSeconds();
-
-    /**
      * When we are expected home, epoch secs 
      * @type {number}
      * @public
@@ -140,9 +126,11 @@ Mobile.prototype.getSerialisableState = function() {
         location: this.location
     };
 
-    if (this.time_of_arrival > Time.nowSeconds())
+    if (this.time_of_arrival > Time.nowSeconds()) {
         state.time_of_arrival =
             new Date(Math.round(this.time_of_arrival * 1000)).toISOString();
+    } else
+        state.time_of_arrival = "Unknown";
 
     return state;
 };
@@ -168,14 +156,8 @@ Mobile.prototype.setHomeLocation = function(location) {
  */
 Mobile.prototype.setLocation = function(info) {
     "use strict";
-    this.last_location = this.location;
     this.location = new Location(info);
-    this.last_time = this.time;
     this.time = Time.nowSeconds();
-    if (this.last_location === null) {
-        this.last_location = this.location;
-        this.last_time = this.time;
-    }
 };
 
 /**
@@ -229,7 +211,7 @@ Mobile.prototype.estimateTOA = function(speed) {
             
         console.TRACE(TAG, self.name, " got a route");
         // Get the time of the best route
-        var best_route = A_LONG_WAY;
+        var best_time = A_LONG_TIME;
         for (var r in route.routes) {
             var route_length = 0;
             var legs = route.routes[r].legs;
@@ -239,10 +221,10 @@ Mobile.prototype.estimateTOA = function(speed) {
             }
             console.TRACE(TAG, self.name, " route of ",
                           route_length, "s found");
-            if (route_length < best_route)
-                best_route = route_length;
+            if (route_length < best_time)
+                best_time = route_length;
         }
-        self.time_of_arrival = Time.nowSeconds() + best_route;
+        self.time_of_arrival = self.time + best_time;
     }
 
     var result = "";
@@ -273,6 +255,7 @@ Mobile.prototype.arrivesIn = function() {
 
 Mobile.prototype.recordCrossing = function(info) {
     this.bearing = parseInt(info.bearing);
+    this.speed = parseInt(info.speed);
     this.last_fence = info.fence;
     this.last_transition = info.transition;
 
@@ -280,5 +263,5 @@ Mobile.prototype.recordCrossing = function(info) {
         // Getting closer
         this.estimateTOA(parseInt(info.speed));
     } else
-        this.time_of_arrival = -1;
+        this.time_of_arrival = Time.nowSeconds() + A_LONG_TIME;
 };

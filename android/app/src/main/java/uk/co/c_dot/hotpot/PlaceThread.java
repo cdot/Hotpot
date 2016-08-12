@@ -262,6 +262,7 @@ class PlaceThread extends Thread {
                                 // no point continuing
                                 abort("Geofencing failed" + r.getStatusMessage());
                             else {
+                                Log.d(TAG, "Geofences active");
                                 // Tell the UI we've started walking the fences
                                 Intent i = new Intent(PlaceService.STARTED);
                                 mServiceContext.sendBroadcast(i);
@@ -486,7 +487,7 @@ class PlaceThread extends Thread {
      * @param pos        where the transition occurred
      */
     private void sendTransition(String fence, String transition, Location pos) {
-        Log.d(TAG, "Sending transition to server");
+        Log.d(TAG, "Sending transition " + transition + " " + fence + " @ " + pos);
 
         // Broadcast the new position so the UI can update "last reported"
         Intent intent = new Intent(PlaceService.FENCE_CROSSED);
