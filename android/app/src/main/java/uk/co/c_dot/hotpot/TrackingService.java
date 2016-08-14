@@ -9,11 +9,11 @@ import android.os.IBinder;
 import android.util.Log;
 
 /**
- * Background service that tracks location and passes it to the server. The service starts
- * a PlaceThread that actually does the hard work of tracking the location. This is a
+ * Background service that tracks location and passes it to the server. The service simply starts
+ * a TrackingThread that actually does the hard work of tracking the location. This is a
  * singleton - there should only ever be one copy of this service running.
  */
-public class PlaceService extends Service {
+public class TrackingService extends Service {
 
     // User preferences
     public static final String PREF_URL = MainActivity.DOMAIN + "URL";
@@ -22,7 +22,7 @@ public class PlaceService extends Service {
     public static final String PREF_URL_WARNING = MainActivity.DOMAIN + "URL_WARNING";
     public static final String PREF_CERTS = MainActivity.DOMAIN + "CERTS";
 
-    private static final String TAG = "HOTPOT/PlaceService";
+    private static final String TAG = "HOTPOT/TrackingService";
 
     // Commands/broadcasts received by service
     public static final String START = MainActivity.DOMAIN + "START";
@@ -37,7 +37,7 @@ public class PlaceService extends Service {
     public static final String HOME_CHANGED = MainActivity.DOMAIN + "HOME_CHANGED";
 
     // Worker thread
-    private PlaceThread mThread;
+    private TrackingThread mThread;
 
     /**
      * No bindings
@@ -63,7 +63,7 @@ public class PlaceService extends Service {
         Log.d(TAG, intent.getAction());
 
         // Start the service thread, if necessary
-        mThread = new PlaceThread(this);
+        mThread = new TrackingThread(this);
         mThread.start();
 
         // If we get killed after returning from here, restart

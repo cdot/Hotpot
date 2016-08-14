@@ -30,11 +30,14 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 /**
  * Hotpot main application.
  * <p>
  * The Hotpot application is divided into two parts; there's this activity, which provides
- * the UI, and a PlaceService that does the actual work of finding the location and
+ * the UI, and a TrackingService that does the actual work of finding the location and
  * communicating it to the server.
  */
 public class MainActivity extends AppCompatActivity {
@@ -52,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
             final Button butt;
             Log.d(TAG, "handle broadcast message " + intent.getAction());
             switch (intent.getAction()) {
-                case PlaceService.FENCE_CROSSED:
+                case TrackingService.FENCE_CROSSED:
                     Location pos = intent.getParcelableExtra("POS");
                     String fence = intent.getStringExtra("FENCE");
                     String trans = intent.getStringExtra("TRANSITION");
@@ -60,18 +63,25 @@ public class MainActivity extends AppCompatActivity {
                     tv = (TextView) findViewById(R.id.display_status);
                     tv.setText(report);
                     break;
-                case PlaceService.HOME_CHANGED:
+                case TrackingService.HOME_CHANGED:
                     LatLng home = intent.getParcelableExtra("POS");
                     tv = (TextView) findViewById(R.id.display_home);
                     tv.setText(home.toString());
+                    try {
+                        JSONObject fences = new JSONObject(intent.getStringExtra("FENCES"));
+                        // TODO: display fences
+                    } catch (JSONException jse) {
+                        // Should never happen
+                        assert(false);
+                    }
                     break;
-                case PlaceService.STARTED:
+                case TrackingService.STARTED:
                     Log.d(TAG, "Service has started");
                     butt = ((Button) findViewById(R.id.action_restart));
                     butt.setText(getResources().getString(R.string.reconnect));
                     break;
-                case PlaceService.STOPPING:
-                    // Something has caused the PlaceService to stop
+                case TrackingService.STOPPING:
+                    // Something has caused the TrackingService to stop
                     String why = intent.getStringExtra("REASON");
                     Log.d(TAG, "Service has stopped: " + why);
                     Toast.makeText(mContext, why, Toast.LENGTH_LONG).show();
@@ -89,10 +99,10 @@ public class MainActivity extends AppCompatActivity {
      */
     private void startLocationService() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String url = prefs.getString(PlaceService.PREF_URL, null);
+        String url = prefs.getString(TrackingService.PREF_URL, null);
         if (url != null || url.length() == 0) {
-            Intent intent = new Intent(this, PlaceService.class);
-            intent.setAction(PlaceService.START);
+            Intent intent = new Intent(this, TrackingService.class);
+            intent.setAction(TrackingService.START);
             Log.d(TAG, "Starting location service");
             startService(intent);
         } else {
@@ -107,8 +117,8 @@ public class MainActivity extends AppCompatActivity {
      */
     private void stopLocationService() {
         Log.d(TAG, "Stopping location service");
-        Intent intent = new Intent(this, PlaceService.class);
-        intent.setAction(PlaceService.STOP);
+        Intent intent = new Intent(this, TrackingService.class);
+        intent.setAction(TrackingService.STOP);
         stopService(intent);
     }
 
@@ -133,11 +143,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onClickBoostHW(View view) {
-        sendBroadcast(new Intent(PlaceService.BOOST_HW));
+        sendBroadcast(new Intent(TrackingService.BOOST_HW));
     }
 
     public void onClickBoostCH(View view) {
-        sendBroadcast(new Intent(PlaceService.BOOST_CH));
+        sendBroadcast(new Intent(TrackingService.BOOST_CH));
     }
 
     public void onClickClose(View view) {
@@ -164,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
 
         EditText urlView = ((EditText) findViewById(R.id.server_url));
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        String curl = prefs.getString(PlaceService.PREF_URL, null);
+        String curl = prefs.getString(TrackingService.PREF_URL, null);
         if (curl != null)
             urlView.setText(curl);
 
@@ -174,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "FUCK OFF YOU STUPID CUNT");
                         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
                         SharedPreferences.Editor ed = prefs.edit();
-                        ed.putString(PlaceService.PREF_URL, s.toString());
+                        ed.putString(TrackingService.PREF_URL, s.toString());
                         ed.apply();
                     }
 
@@ -188,10 +198,10 @@ public class MainActivity extends AppCompatActivity {
                 });
 
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(PlaceService.FENCE_CROSSED);
-        intentFilter.addAction(PlaceService.HOME_CHANGED);
-        intentFilter.addAction(PlaceService.STARTED);
-        intentFilter.addAction(PlaceService.STOPPING);
+        intentFilter.addAction(TrackingService.FENCE_CROSSED);
+        intentFilter.addAction(TrackingService.HOME_CHANGED);
+        intentFilter.addAction(TrackingService.STARTED);
+        intentFilter.addAction(TrackingService.STOPPING);
         registerReceiver(new BroadcastListener(), intentFilter);
 
         // Check we have permission to get the location - may have to do this in the service?
