@@ -1,11 +1,11 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
-const promise = require("promise");
+const Q = require("q");
 const fs = require("fs");
-const writeFile = promise.denodeify(fs.writeFile);
-const statFile = promise.denodeify(fs.stat);
-const appendFile = promise.denodeify(fs.appendFile);
+const writeFile = Q.denodeify(fs.writeFile);
+const statFile = Q.denodeify(fs.stat);
+const appendFile = Q.denodeify(fs.appendFile);
 
 const Time = require("../common/Time.js");
 const Utils = require("../common/Utils.js");
@@ -43,7 +43,7 @@ function Historian(options) {
     this.basetime = Math.floor(Time.nowSeconds());
     // @private
     this.history = [];
-    console.TRACE(TAG, "Set up Historian for ", this.name,
+    console.TRACE(TAG, "Set up for ", this.name,
                   " with limit ", this.limit, " and interval ",
                   this.interval, " in ", this.file);
     this.rewriteHistory();
@@ -64,7 +64,7 @@ Historian.prototype.rewriteHistory = function(callback) {
     writeFile(this.file, s)
         .then(callback,
               function(err) {
-                  console.error(TAG + " failed to write history file '"
+                  console.error("Failed to write history file '"
                                 + self.file + "': " + err);
                   if (typeof callback !== "undefined")
                       callback();

@@ -23,6 +23,7 @@ Time = require("../common/Time.js"); // for executing rules
  */
 function Rule(name, fnction) {
     "use strict";
+
     this.index = -1;
     /**
      * Name of the rule
@@ -65,7 +66,17 @@ Rule.prototype.setTest = function(fn) {
     "use strict";
     if (typeof fn !== "function") {
         // Compile the function
-        fn = Utils.safeEval(fn);
+        try {
+            var rule_function;
+            fn = eval("rule_function=" + fn);
+        } catch (e) {
+            if (e instanceof SyntaxError)
+                console.error("Syntax error in rule '" + this.name
+                              + "': " + e.message);
+            else
+                console.error("Rule '" + this.name
+                              + "' compilation failed: " + e.message);
+        }
     }
     this.testfn = fn;
 };

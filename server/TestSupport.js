@@ -54,15 +54,8 @@ TestSupport.prototype.TRACE = function() {
         (this.opts.indexOf("all") >= 0
          || this.opts.indexOf(level) >= 0)
         && (this.opts.indexOf("-" + level) < 0)) {
-        var mess = new Date().toISOString() + " " + level + ": ";
-        for (var i = 1; i < arguments.length; i++) {
-            if (typeof arguments[i] === "object"
-                && (arguments[i].toString === Object.prototype.toString
-                    || arguments[i].toString === Array.prototype.toString))
-                mess += Utils.dump(arguments[i]);
-            else
-                mess += arguments[i];
-        }
+        var mess = new Date().toISOString() + " " + level + ": "
+        + Utils.joinArgs(arguments, 1);
         console.log(mess);
     }
 };

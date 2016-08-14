@@ -4,7 +4,7 @@
 
 const Util = require("util");
 const Events = require("events").EventEmitter;  
-const promise = require("promise");
+const Q = require("q");
 
 const Location = require("../common/Location.js");
 const Utils = require("../common/Utils.js");
@@ -47,20 +47,20 @@ Controller.prototype.initialise = function() {
 
     var prom = self.createMobiles(self.config.getConfig("mobile"));
 
-    prom = prom.then(function() {
+    prom.then(function(e) {
         return self.createPins(self.config.getConfig("pin"));
     });
 
-    prom = prom.then(function() {
+    prom.then(function(e) {
         return self.createThermostats(self.config.getConfig("thermostat"));
     });
 
-    prom = prom.then(function() {
+    prom.then(function() {
         return self.createRules(self.config.getConfig("rule"));
     });
 
-    prom = prom.then(function() {
-        self.pollRules();
+    prom.then(function() {
+       self.pollRules();
     });
 
     return prom;
@@ -74,7 +74,7 @@ Controller.prototype.createMobiles = function(mob_config) {
     "use strict";
     var self = this;
 
-    return new promise(function(fulfill) {
+    return new Q.Promise(function(fulfill) {
         self.mobile = {};
         mob_config.each(function(id) {
             self.mobile[id] = new Mobile(
@@ -94,14 +94,13 @@ Controller.prototype.createPins = function(pin_config) {
 
     self.pin = {};
 
-    var pin_proms = [];
+    var promises = [];
     pin_config.each(function(k) {
-        pin_proms.push(new promise(function(fulfil) {
-            self.pin[k] = new Pin(k, pin_config.getConfig(k), fulfil);
+        promises.push(new Q.Promise(function(fulfill) {
+            self.pin[k] = new Pin(k, pin_config.getConfig(k), fulfill);
         }));
     });
-
-    return promise.all(pin_proms);
+    return Q.all(promises);
 };
     
 /**
@@ -128,19 +127,30 @@ Controller.prototype.createThermostats = function(ts_config) {
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
     console.TRACE(TAG, "Resetting valve");
-    return self.pin.HW.set(1)
-        .catch(function(e3) {
-            console.TRACE(TAG, "Reset HW=1 failed: ", e3);
-        })
-        .then(function() {
-            return self.pin.CH.set(0)
-                .catch(function(e2) {
-                    console.TRACE(TAG, "Reset CH=0 failed: ", e2);
-                })
-                .then(function() {
-                    return self.pin.HW.set(0);
-                });
+    var promise = self.pin.HW.set(1)
+        .catch(function(e) {
+            console.TRACE(TAG, "Reset HW=1 failed: ", e);
         });
+
+    promise.delay(5000);
+
+    promise.then(
+        function() {
+            return self.pin.CH.set(0);
+        },
+        function(e) {
+            console.error("Reset CH=0 failed: ", e);
+        });
+
+    promise.then(
+        function() {
+            return self.pin.HW.set(0);
+        },
+        function(e) {
+            console.error("Reset CH=0 failed: ", e);
+        });
+
+    return promise;
 };
 
 /**
@@ -151,7 +161,7 @@ Controller.prototype.createRules = function(config) {
     "use strict";
     var self = this;
 
-    return new promise(function(fulfill) {
+    return new Q.Promise(function(fulfill) {
         self.rule = [];
         config.each(function(k) {
             var r = config.getConfig(k);
@@ -516,7 +526,7 @@ Controller.prototype.insert_rule = function(rule, i) {
     else
         this.rule.splice(i, 0, rule);
     this.renumberRules();
-    console.TRACE(TAG, "rule '", this.rule[i].name,
+    console.TRACE(TAG, "Rule '", this.rule[i].name,
                   "' inserted at ", rule.index);
     return i;
 };
@@ -593,11 +603,15 @@ Controller.prototype.pollRules = function() {
 
     for (var i = 0; i < self.rule.length; i++) {
         var rule = self.rule[i];
+        if (typeof rule.testfn !== "function") {
+            console.error("Rule '" + rule.name + "' cannot be evaluated");
+            continue;
+        }
         var result;
         try {
             result = rule.testfn.call(self);
         } catch (e) {
-            console.TRACE(TAG, "rule '", rule.name, "' failed: ", e.message);
+            console.error("Rule '" + rule.name + "' failed: " + e.message);
         }
         if (typeof result === "string") {
             if (result === "remove")

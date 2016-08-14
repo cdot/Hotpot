@@ -3,9 +3,9 @@
 /*eslint-env node */
 
 const Fs = require("fs");
-const promise = require("promise");
-const readFile = promise.denodeify(Fs.readFile);
-const writeFile = promise.denodeify(Fs.writeFile);
+const Q = require("q");
+const readFile = Q.denodeify(Fs.readFile);
+const writeFile = Q.denodeify(Fs.writeFile);
 const Historian = require("./Historian");
 
 const TAG = "Pin";

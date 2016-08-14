@@ -61,7 +61,7 @@ All DEBUG statements are tagged e.g
 2016-08-13T08:37:08.694Z Server: HTTP starting on port 13196
 ```
 You can choose just to monitor just particular modules e.g. `--debug=Server`,
-or you can enable `all` and then choose which modules to *ignore* by prepending a minus sign e.g. `--debug=all,-Server`
+or you can enable `all` and then choose which modules to *ignore* by prepending a minus sign e.g. `--debug=all,-Historian,-Server`
 
 The server is configured by Javascript read from a file (default `./hotpot.cfg`)After the initial setup, the HTTP interface can be used to query and modify
 the configuration. Every time the server configuration is changed, it will
@@ -91,7 +91,7 @@ as follows:
     `history` - (optional) sets up a history log recording the pin state. See `thermostat.history` above for details.
   `mobile` - sets up the mobiles, each name maps to:
     `id` - the unique ID of the mobile e.g. the Android device identifier. `debug` is used for browsers.
-    `fences` - named list of fences. See **Fences**, below.
+    `fences` - list of geofences. See **GeoFences**, below.
   `rule` - list of rules that are used to control state of the system. Rules can be specified inline in a function, or can be specified as a filename that is to be compiled. Rules are executed in the order they are specified. See **Rules**, below.
 
 See server/example.hotpot.cfg for a complete example.
@@ -116,9 +116,9 @@ that random IP address in requests)
 * Go to "Overview" and enable the Maps Directions API
 * Set the API key in your server's Hotpot configuration
 
-## Fences
+## GeoFences
 
-Fences are used to signal to the server when a mobile device has come within a specific distance of the home. The server uses these signals to estimate the likely return time of a mobile device. Each fence is given as a name, and a number of metres from the home server to set the fence.
+GeoFences are used by mobile devices to signal to the server when the device has come within a specific distance of the home. The server uses these signals to estimate the likely return time of a mobile device. Each fence is given as a name, and a number of metres from the home server to set the fence.
 
 Use of fences means that the minimum of power and network bandwidth is used by the mobile device to report its location.
 
@@ -135,12 +135,13 @@ the Controller.
 
 Rule functions can interrogate any part of the system using the internal APIs. A full list of APIs can be generated using the enclosed Makefile.
 
-Example rules are given for Hot Water `server/hw_rules.json` and Central Heating `server/ch_rules.json`.
+Annotated example rules are given for Hot Water `server/hw_rules.json` and Central Heating `server/ch_rules.json`.
 
 # Browser interface
 
 The browser interface is a low-level debugging tool that gives access to the
-functions of the controller using AJAX requests to the server.
+functions of the controller using AJAX requests to the server. It can also
+be used to review temperature logs and mobile status.
 
 # Mobiles
 
