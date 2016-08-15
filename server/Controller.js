@@ -45,22 +45,25 @@ Controller.prototype.initialise = function() {
     var self = this;
     //self.location = undefined;
 
-    var prom = self.createMobiles(self.config.getConfig("mobile"));
+    var prom = self.createMobiles(self.config.getConfig("mobile"))
 
-    prom.then(function(e) {
+    .then(function(e) {
+        console.TRACE(TAG, "Mobiles created");
         return self.createPins(self.config.getConfig("pin"));
-    });
+    })
 
-    prom.then(function(e) {
+    .then(function(e) {
+        console.TRACE(TAG, "Pins created");
         return self.createThermostats(self.config.getConfig("thermostat"));
-    });
+    })
 
-    prom.then(function() {
+    .then(function() {
         return self.createRules(self.config.getConfig("rule"));
-    });
+    })
 
-    prom.then(function() {
-       self.pollRules();
+    .then(function() {
+        console.TRACE(TAG, "Rules created, polling");
+        self.pollRules();
     });
 
     return prom;
@@ -94,13 +97,15 @@ Controller.prototype.createPins = function(pin_config) {
 
     self.pin = {};
 
-    var promises = [];
+    var promises = Q();
     pin_config.each(function(k) {
-        promises.push(new Q.Promise(function(fulfill) {
-            self.pin[k] = new Pin(k, pin_config.getConfig(k), fulfill);
-        }));
+        self.pin[k] = new Pin(k, pin_config.getConfig(k));
+        promises = promises.then(function() {
+            return self.pin[k].initialise();
+        });
     });
-    return Q.all(promises);
+
+    return promises;
 };
     
 /**
@@ -126,29 +131,32 @@ Controller.prototype.createThermostats = function(ts_config) {
     // Assume worst-case valve configuration i.e. grey wire live holding
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
-    console.TRACE(TAG, "Resetting valve");
+    console.TRACE(TAG, "Constructed thermostats");
     var promise = self.pin.HW.set(1)
-        .catch(function(e) {
-            console.TRACE(TAG, "Reset HW=1 failed: ", e);
-        });
 
-    promise.delay(5000);
+    .then(function() {
+        console.TRACE(TAG, "Reset: HW(1) done");
+    })
 
-    promise.then(
-        function() {
-            return self.pin.CH.set(0);
-        },
-        function(e) {
-            console.error("Reset CH=0 failed: ", e);
-        });
+    .delay(VALVE_RETURN)
 
-    promise.then(
-        function() {
-            return self.pin.HW.set(0);
-        },
-        function(e) {
-            console.error("Reset CH=0 failed: ", e);
-        });
+    .then(function() {
+        console.TRACE(TAG, "Reset: delay done");
+        return self.pin.CH.set(0);
+    })
+
+    .then(function() {
+        console.TRACE(TAG, "Reset: CH(0) done");
+        return self.pin.HW.set(0);
+    })
+
+    .then(function() {
+        console.TRACE(TAG, "Reset: HW(0) done");
+    })
+
+    .catch(function(fuck) {
+        console.error("Failed to reset valve: " + fuck);
+    });
 
     return promise;
 };
@@ -161,17 +169,24 @@ Controller.prototype.createRules = function(config) {
     "use strict";
     var self = this;
 
-    return new Q.Promise(function(fulfill) {
-        self.rule = [];
-        config.each(function(k) {
-            var r = config.getConfig(k);
-            var rule = r.has("from_file")
-                ? Rule.fromFile(r.get("name"), r.get("from_file"))
-                : new Rule(r.get("name"), r.get("test"));
+    var promise = Q();
+
+    self.rule = [];
+    config.each(function(k) {
+        var r = config.getConfig(k);
+        var rule = new Rule(r.get("name"));
+        promise = promise.then(function() {
+            if (r.has("from_file"))
+                return rule.fromFile(r.get("from_file"));
+            else
+                return r.setTest(r.get("test"));
+        })
+
+        .then(function() {
             self.insert_rule(rule);
         });
-        fulfill();
     });
+    return promise;
 };
 
 /**
@@ -216,28 +231,44 @@ Controller.prototype.getSerialisableConfig = function(ajax) {
 };
 
 /**
- * Generate and return a serialisable version of the structure, suitable
- * for use in an AJAX response.
- * @return {object} a serialisable structure
+ * Generate and return a promise for a serialisable version of the structure,
+ * suitable for use in an AJAX response.
+ * @return {Promise} a promise
  */
 Controller.prototype.getSerialisableState = function() {
     "use strict";
-    function sermap(m) {
-	var res = {};
-	for (var k in m)
-            res[k] = m[k].getSerialisableState();
-        return res;
-    }
 
     var state = {
 	time: Time.now(), // local time
         env_temp: this.weather("Temperature"),
-        thermostat: sermap(this.thermostat),
-        pin: sermap(this.pin),
-        mobile: sermap(this.mobile)
+        thermostat: {},
+        pin: {},
+        mobile: {}
     };
+    
+    var self = this;
+    var promises = [];
 
-    return state;
+    function makePromise(field, k) {
+        return self[field][k].getSerialisableState()
+            .then(function(value) {
+                state[field][k] = value;
+            })
+    }
+
+    function makePromises(field) {
+	for (var k in self[field]) {
+            promises.push(makePromise(field, k));
+        }
+    }
+
+    makePromises("thermostat");
+    makePromises("pin");
+    makePromises("mobile");
+ 
+    return Q.all(promises).then(function() {
+        return state;
+    });
 };
 
 /**
@@ -260,72 +291,72 @@ Controller.prototype.getSerialisableLog = function() {
 };
 
 /**
- * Set the on/off state of a pin. This is more sophisticated than a 
- * simple pin command, because there is a relationship between the state
- * of the pins in Y-plan systems that must be respected.
+ * Set the on/off state of a pin, and wait for it to complete.
  * @param {String} channel e.g. "HW" or "CH"
  * @param {number} state 1 (on) or 0 (off)
- * @param {function} respond function called when state is set, no parameters
  * @access public
  */
-Controller.prototype.setPin = function(channel, on, respond) {
+Controller.prototype.setPin = function(channel, on) {
+    this.setPromise(channel, on).done();
+}
+
+/**
+ * Get a promise to set the on/off state of a pin. This is more
+ * sophisticated than a simple pin command, because there is a
+ * relationship between the state of the pins in Y-plan systems
+ * that must be respected.
+ * @param {String} channel e.g. "HW" or "CH"
+ * @param {number} state 1 (on) or 0 (off)
+ * @access public
+ */
+Controller.prototype.setPromise = function(channel, on) {
     "use strict";
     var self = this;
+    console.TRACE(TAG, "setPromise ", channel, "=", on);
 
     // Duck race condition during initialisation
     if (self.pin[channel] === "undefined")
-        return;
+        return Q.promise(function() {});
 
     if (this.pending) {
-        setTimeout(function() {
-            self.setPin(channel, on, respond);
-        }, VALVE_RETURN);
-	return;
+        return Q.delay(VALVE_RETURN).then(function() {
+            return self.setPin(channel, on);
+        });
     }
 
-    var cur = self.pin[channel].getState();
-    if (on && cur === 1 || !on && cur === 0) {
-        if (typeof respond !== "undefined")
-            respond();
-        return;
-    }
+    return self.pin[channel].getState()
 
-    // Y-plan systems have a state where if the heating is on but the
-    // hot water is off, and the heating is turned off, then the grey
-    // wire to the valve (the "hot water off" signal) is held high,
-    // stalling the motor and consuming power pointlessly. We need some
-    // special processing to avoid this state.
-    // If heating only on, and it's going off, switch on HW
-    // to kill the grey wire. This allows the spring to fully
-    // return. Then after a timeout, set the desired state.
-    if (channel === "CH" && !on
-        && this.pin.HW.state === 1 && this.pin.HW.state === 0) {
-        this.pin.CH.set(0)
+    .then(function(cur) {
+        if (on && cur === 1 || !on && cur === 0)
+            return; // no more promises
+
+        // Y-plan systems have a state where if the heating is on but the
+        // hot water is off, and the heating is turned off, then the grey
+        // wire to the valve (the "hot water off" signal) is held high,
+        // stalling the motor and consuming power pointlessly. We need some
+        // special processing to avoid this state.
+        // If heating only on, and it's going off, switch on HW
+        // to kill the grey wire. This allows the spring to fully
+        // return. Then after a timeout, set the desired state.
+        if (channel === "CH" && !on
+            && this.pin.HW.state === 1 && this.pin.HW.state === 0) {
+            return this.pin.CH.set(0)
             .then(function() {
-                this.pin.HW.set(1)
-                    .then(function() {
-                        self.pending = true;
-                        setTimeout(function() {
-                            self.pending = false;
-                            self.setPin(channel, on, respond);
-                        }, VALVE_RETURN);
-                    });
+                return this.pin.HW.set(1);
+            })
+            .then(function() {
+                self.pending = true;
+                return Q.delay(VALVE_RETURN);
+            })
+            .then(function() {
+                self.pending = false;
+                return self.pin[channel].set(on);
             });
-    } else {
-        // Otherwise this is a simple state transition, just
-        // set the appropriate pin
-        this.pin[channel].set(on)
-            .then(
-                function() {
-                    if (typeof respond !== "undefined")
-                        respond();
-                },
-                function(e) {
-                    console.TRACE(
-                        TAG, "Failed to set pin ", channel, ": ", e);
-                    respond();
-                });
-    }
+        } else
+            // Otherwise this is a simple state transition, just
+            // set the appropriate pin
+            return self.pin[channel].set(on);
+    });
 };
 
 /**
@@ -349,9 +380,10 @@ Controller.prototype.getMobile = function(id) {
  * @param info structure containing location in "lat", "lng",
  * device identifier in "device", and "requests" which maps a pin name to
  * a state (1 or 0). The request times out after the next request is due.
+ * @return a promise that the command has been handled
  * @private
  */
-Controller.prototype.handleMobileCommand = function(path, info, respond) {
+Controller.prototype.handleMobileCommand = function(path, info) {
     "use strict";
     var self = this;
     var command = path.shift();
@@ -359,8 +391,11 @@ Controller.prototype.handleMobileCommand = function(path, info, respond) {
     console.TRACE(TAG, "mobile ", command, " ", info);
 
     var mob = this.getMobile(info.device);
-    if (mob === null)
-        throw TAG + " setMobileState: " + info.device + " not known";
+    if (mob === null) {
+        return Q.fcall(function() {
+            throw "Mobile device '" + info.device + "' not known";
+        });
+    }
 
     if (typeof info.lat !== "undefined" && typeof info.lng !== "undefined") {
         mob.setLocation(info);
@@ -371,12 +406,13 @@ Controller.prototype.handleMobileCommand = function(path, info, respond) {
     case "config":
         var serv_loc = (typeof this.location !== "undefined")
             ? this.location : new Location();
-        respond({
-            lat: serv_loc.lat,
-            lng: serv_loc.lng,
-            fences: mob.getSerialisableConfig().fences
+        return Q.Promise(function(f) {
+            f({
+                lat: serv_loc.lat,
+                lng: serv_loc.lng,
+                fences: mob.getSerialisableConfig().fences
+            });
         });
-        return;
 
     case "request":
         // Push a request onto a pin
@@ -396,7 +432,7 @@ Controller.prototype.handleMobileCommand = function(path, info, respond) {
         break;
     }
 
-    respond();
+    return Q.Promise(function(f) { f("OK") });
 };
 
 /**
@@ -422,25 +458,21 @@ Controller.prototype.weather = function(field) {
  * @params {String} command the command verb
  * @params {array} path the command noun
  * @param {Object} data structure containing parameters
- * @param {function} callback passed the response data for serialisation
+ * @return a promise passed the response data for serialisation
  */
-Controller.prototype.dispatch = function(command, path, data, respond) {
+Controller.prototype.dispatch = function(command, path, data) {
     "use strict";
     var self = this;
 
     switch (command) {
     case "state": // Return the current system state
-        respond(self.getSerialisableState());
-        return;
+        return self.getSerialisableState();
     case "log":
-        respond(self.getSerialisableLog());
-        return;
+        return Q.promise(function (f) { f(self.getSerialisableLog()); });
     case "config": // Return the controller config
-        respond(self.getSerialisableConfig(true));
-        return;
+        return Q.promise(function (f) { f(self.getSerialisableConfig()); });
     case "apis": // Return the apis config
-        respond(Apis.getSerialisableConfig(true));
-        return;
+        return Q.promise(function (f) { f(Apis.getSerialisableConfig()); });
     case "remove_rule": // remove a rule
         // /rule/{index}
         self.remove_rule(parseInt(path[1]));
@@ -462,30 +494,24 @@ Controller.prototype.dispatch = function(command, path, data, respond) {
         self.emit("config_change");
         break;
     case "set": // change the configuration of a system element
-        switch (path[0]) {
-        case "rule":
-            if (path[2] === "name")
-                self.rule[parseInt(path[1])].name = data.value;
-            else if (path[2] === "test")
-                self.rule[parseInt(path[1])].setTest(data.value);
-            self.emit("config_change");
-            break;
-        case "pin":
-            // setPin deals with the response
-            self.setPin(path[1], data.value, respond);
-            return;
-        }
+        if (path[0] === "pin")
+            // set/pin
+            return self.setPromise(path[1], data.value);
+
+        // set/rule
+        if (path[2] === "name")
+            self.rule[parseInt(path[1])].name = data.value;
+        else if (path[2] === "test")
+            self.rule[parseInt(path[1])].setTest(data.value);
+        self.emit("config_change");
         break;
     case "mobile":
         // mobile has it's own commands, and deals with the response
-        self.handleMobileCommand(path, data, respond);
-        return;
+        return self.handleMobileCommand(path, data);
     default:
         throw "Unrecognised command " + command;
     }
-    // Default response is no reply
-    respond();
-    return;
+    return Q.fcall(function() { return "OK"; });
 };
 
 /**
@@ -630,7 +656,7 @@ Controller.prototype.pollRules = function() {
         self.emit("config_change");
     }
 
-    setTimeout(function() {
+    Q.delay(RULE_INTERVAL).done(function() {
         self.pollRules();
-    }, RULE_INTERVAL);
+    });
 };

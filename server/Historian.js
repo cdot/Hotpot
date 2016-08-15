@@ -10,42 +10,36 @@ const appendFile = Q.denodeify(fs.appendFile);
 const Time = require("../common/Time.js");
 const Utils = require("../common/Utils.js");
 
-// Default history interval - once a minute
-const DEFAULT_INTERVAL = 60; // seconds
-// Default history limit - number of seconds to store history for
-const DEFAULT_LIMIT = 24 * 60 * 60;
-
 const TAG = "Historian";
 
 /**
- * interval: time
- * limit: time
- * datum: function
- * file: string
+ * Logger. Can either log according to a time interval, or only on demand.
+ * @param options { interval: time, max_samples: sample count,
+ * max_bytes: byte count, sample: function, file: string }
+ * If "sample" is given, will automatically sample by calling "sample" every
+ * "interval" (default: 300) seconds.
+ * Otherwise sampling is only by calling "record".
+ * If "max_samples" is given, then logging is limited to that number of samples.
+ * If "max_bytes" is given, log file is automatically limited to that number
+ * of bytes.
  */
 function Historian(options) {
     "use strict";
-    if (typeof options.interval !== "number")
-	options.interval = DEFAULT_INTERVAL;
-    if (typeof options.limit !== "number")
-        options.limit = DEFAULT_LIMIT;
-    if (typeof options.maxbytes !== "number")
-	options.maxbytes = 2 * (options.limit / options.interval) * 15;
 
     this.name = options.name;
-    this.datum = options.datum;
-    this.limit = options.limit;
+    this.sample = options.sample;
+    this.max_samples = options.max_samples;
+    this.max_bytes = options.max_bytes;
     this.interval = options.interval;
-    this.maxbytes = options.maxbytes;
     this.file = Utils.expandEnvVars(options.file);
 
     // @private
     this.basetime = Math.floor(Time.nowSeconds());
+
     // @private
     this.history = [];
-    console.TRACE(TAG, "Set up for ", this.name,
-                  " with limit ", this.limit, " and interval ",
-                  this.interval, " in ", this.file);
+
+    console.TRACE(TAG, "Set up for ", this.name, this.file);
     this.rewriteHistory();
 }
 module.exports = Historian;
@@ -62,13 +56,17 @@ Historian.prototype.rewriteHistory = function(callback) {
     for (var i in report)
         s += (report[i].time - self.basetime) + "," + report[i][1] + "\n";
     writeFile(this.file, s)
-        .then(callback,
-              function(err) {
-                  console.error("Failed to write history file '"
-                                + self.file + "': " + err);
-                  if (typeof callback !== "undefined")
-                      callback();
-              });
+        .then(
+            function () {
+                if (typeof callback !== "undefined")
+                    callback();
+            },
+            function(err) {
+                console.error("Failed to write history file '"
+                              + self.file + "': " + err);
+                if (typeof callback !== "undefined")
+                    callback();
+            });
 };
 
 /**
@@ -80,11 +78,15 @@ Historian.prototype.load = function(data) {
     "use strict";
     var lines = data.toString().split("\n");
     var basetime;
-    var cutoff = Time.nowSeconds() - this.limit;
     var report = [];
     var p0;
 
-    // Load report, discarding points that are before the cutoff
+    
+    if (typeof this.max_samples !== "undefined"
+        && lines.length > this.max_samples)
+        splice(0, lines.length - this.max_samples);
+
+    // Load report
     for (var i in lines) {
         var csv = lines[i].split(",", 2);
         if (csv[0] === "B") // basetime
@@ -120,7 +122,7 @@ Historian.prototype.load = function(data) {
  */
 Historian.prototype.getSerialisableHistory = function() {
     "use strict";
-    var report = this.history();
+    var report = this.history;
     var res = [ this.basetime ];
     for (var i in report) {
         res.push(report[i].time - this.basetime);
@@ -138,7 +140,13 @@ Historian.prototype.start = function(quiet) {
 
     var self = this;
 
-    var t = self.datum();
+    if (typeof self.sample !== "function")
+        throw "Cannot start Historian; sample() not defined";
+
+    if (typeof self.interval === "undefined")
+        throw "Cannot start Historian; interval not defined";
+
+    var t = self.sample();
 
     function repoll() {
         setTimeout(function() {
@@ -159,20 +167,21 @@ Historian.prototype.start = function(quiet) {
     if (!quiet)
         console.TRACE(TAG, this.name, " started");
 
-    console.TRACE(TAG, "Log ", t, " to ", self.name, " history");
-
     self.record(t, repoll);
 };
 
 /**
- * Record a datum in the log.
+ * Record a sample in the log.
  * @param {number} t the data to record
- * @param {function} callback callback when recording is done
+ * @param {function} callback (optional) callback when recording is done
+ * @public
  */
 Historian.prototype.record = function(t, callback) {
     "use strict";
 
     var self = this;
+
+    console.TRACE(TAG, "Record ", t, " to ", self.name, " history");
 
     self.last_recorded = t;
 
@@ -180,7 +189,7 @@ Historian.prototype.record = function(t, callback) {
         function(stats) {
             // If we hit 2 * the size limit, open the file and
             // reduce the size. Each sample is about 15 bytes.
-            if (stats.size > self.maxbytes) {
+            if (stats.size > self.max_bytes) {
                 console.TRACE(TAG, self.name, " history is full");
                 self.rewriteHistory(callback);
                 return;
@@ -191,15 +200,21 @@ Historian.prototype.record = function(t, callback) {
                 Math.round(Time.nowSeconds() - self.basetime)
                     + "," + t + "\n")
                 .then(
-                    callback,
+                    function() {
+                        if (typeof callback !== "undefined")
+                            callback();
+                    })
+                .fail(
                     function(ferr) {
                         console.error(
                             TAG + " failed to append to  history file '"
                                 + self.file + "': "
                                 + ferr);
-                        callback();
+                        if (typeof callback !== "undefined")
+                            callback();
                     });
-        },
+        })
+.fail(
         function(err) {
             console.TRACE(TAG, "Failed to stat history file '",
                           self.file, "': ", err);

@@ -3,7 +3,7 @@
 /*eslint-env node */
 
 const https = require("https");
-
+const Q = require("q");
 const Time = require("../common/Time.js");
 const Location = require("../common/Location.js");
 
@@ -115,8 +115,8 @@ Mobile.prototype.getSerialisableConfig = function(ajax) {
 };
 
 /**
- * Get a serialisable version of the object
- * @return {object} a serialisable structure
+ * Get a promise for a serialisable version of the object
+ * @return {Promise} a promise
  * @protected
  */
 Mobile.prototype.getSerialisableState = function() {
@@ -132,7 +132,9 @@ Mobile.prototype.getSerialisableState = function() {
     } else
         state.time_of_arrival = "Unknown";
 
-    return state;
+    return Q.fcall(function() {
+        return state;
+    });
 };
 
 /**

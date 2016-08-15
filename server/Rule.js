@@ -2,8 +2,13 @@
 
 /*eslint-env node */
 
-const fs = require("fs");
+const Fs = require("fs");
+const Q = require("q");
+const readFile = Q.denodeify(Fs.readFile);
+
 const Utils = require("../common/Utils.js");
+
+const TAG = "Rule";
 
 // We need this to be gloabl (outside the scope of the node module)
 // so the module can't be strict
@@ -15,13 +20,10 @@ Time = require("../common/Time.js"); // for executing rules
  * state of one or more thermostats.
  * @param {string} name name of the rule
  * @param {string} path pathname of a file that stores the test function
- * @param {function} fnction either a function or a string that will
- * compile to the test function.
- * The testfunction is called with 'this' set to the controller.
  * @protected
  * @class
  */
-function Rule(name, fnction) {
+function Rule(name) {
     "use strict";
 
     this.index = -1;
@@ -39,8 +41,6 @@ function Rule(name, fnction) {
     this.testfn = null;
 
     //this.from_file = undefined;
-
-    this.setTest(fnction);
 }
 module.exports = Rule;
 
@@ -48,13 +48,19 @@ module.exports = Rule;
  * Construct a new rule from a function read from a file
  * @param {string} name name of the rule
  * @param {string} file pathname of the file
- * @return {Rule} the rule
+ * @return {Promise} a promise
  */
-Rule.fromFile = function(name, file) {
-    var text = fs.readFileSync(Utils.expandEnvVars(file));
-    var r = new Rule(name, text);
-    r.from_file = file;
-    return r;
+Rule.prototype.fromFile = function(file) {
+    var self = this;
+
+    self.from_file = file;
+
+    return readFile(Utils.expandEnvVars(file), "UTF8")
+
+    .then(function(text) {
+        console.TRACE(TAG, "'", self.name, "' loaded from ", self.from_file);
+        return self.setTest(text);
+    });
 };
 
 /**
@@ -108,7 +114,9 @@ Rule.prototype.getSerialisableConfig = function(ajax) {
         name: this.name
     };
     if (typeof this.from_file !== "undefined") {
-        fs.writeFileSync(this.from_file, this.testfn.toString());
+        // TODO: this is a hack. It assumes we are going to serialise the
+        // config to file.
+        Fs.writeFile(this.from_file, this.testfn.toString());
         data.from_file = this.from_file;
     } else
         data.test = this.testfn;

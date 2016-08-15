@@ -2,6 +2,8 @@
 
 /*eslint-env node */
 
+const Q = require("q");
+
 const Historian = require("./Historian.js");
 
 const TAG = "Thermostat";
@@ -61,17 +63,20 @@ function Thermostat(name, config) {
     this.temperature = null;
 
     /**
-     * Temperature history
+     * Temperature history, sample on a time schedule
      */
     var hc = config.get("history");
     var self = this;
     if (typeof hc !== "undefined") {
+        if (typeof hc.interval == "undefined")
+            hc.interval = 300; // 5 minutes
         this.historian = new Historian({
             name: self.name,
             file: hc.file,
             interval: hc.interval,
-            limit: hc.limit,
-            datum: function() {
+            max_samples: hc.max_samples,
+            max_bytes: hc.max_bytes,
+            sample: function() {
                 // Only log temperatures to one decimal place
                 return Math.round(self.temperature * 10) / 10;
             }
@@ -108,16 +113,19 @@ Thermostat.prototype.getSerialisableConfig = function(ajax) {
 };
 
 /**
- * Generate and return a serialisable version of the state of the object,
- * suitable for use in an AJAX response.
- * @return {object} a serialisable structure
+ * Generate and return a promise for a serialisable version of the state
+ * of the object, suitable for use in an AJAX response.
+ * @return {Promise} a promise
  * @protected
  */
 Thermostat.prototype.getSerialisableState = function() {
     "use strict";
-    return {
+    var data = {
         temperature: this.temperature
     };
+    return Q.fcall(function() {
+        return data;
+    });
 };
 
 /**

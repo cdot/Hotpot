@@ -7,6 +7,7 @@ const DESCRIPTION =
 "See README.md for details\n\nOPTIONS\n";
 
 const getopt = require("node-getopt");
+const Q = require("q");
 
 const Location = require("../common/Location.js");
 const Utils = require("../common/Utils.js");
@@ -41,6 +42,7 @@ const Rule = require("./Rule.js");
 
     if (typeof cliopt.debug !== "undefined") {
         // Development only
+        Q.longStackSupport = true;
         var TestSupport = require("./TestSupport.js");
         HOTPOT_DEBUG = new TestSupport(cliopt.debug);
         console.TRACE = function() {
@@ -54,13 +56,24 @@ const Rule = require("./Rule.js");
     };
 
     var config = new Config(cliopt.config);
-    Apis.configure(config.getConfig("apis"));
-    var controller = new Controller(config.getConfig("controller"));
+    var controller;
 
-    var promise = controller.initialise();
-    promise.then(function() {
-        Server.configure(config.getConfig("server"), controller);
+    config.load()
 
+    .then(function() {
+        Apis.configure(config.getConfig("apis"));
+    })
+
+    .then(function() {
+        controller = new Controller(config.getConfig("controller"));
+        return controller.initialise();
+    })
+
+    .then(function() {
+        return Server.configure(config.getConfig("server"), controller);
+    })
+
+    .then(function() {
         controller.setLocation(new Location(
             Server.server.config.get("location")));
 
@@ -70,12 +83,12 @@ const Rule = require("./Rule.js");
                       function() {
                           config.set("controller",
                                      controller.getSerialisableConfig(false));
-                          config.save();
+                          config.save().done();
                       });
     })
+
     .catch(function(e) {
-        console.ERROR(TAG, "Controller initialisation failed: ", e);
-        console.TRACE(TAG, "Controller initialisation failed: ",
-                      e, " ", e.stack);
+        console.error("Controller initialisation failed: " + e.stack);
     });
+
 })();

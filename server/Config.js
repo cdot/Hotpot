@@ -2,7 +2,9 @@
 
 /*eslint-env node */
 
-const fs = require("fs");
+const Fs = require("fs");
+const Q = require("q");
+const readFile = Q.denodeify(Fs.readFile);
 const serialize = require("serialize-javascript");
 
 const Utils = require("../common/Utils");
@@ -17,34 +19,63 @@ const TAG = "Config";
  * @protected
  */
 function Config(file) {
-    if (typeof file === "string") {
+    switch (typeof file) {
+    case "string":
         this.file = file;
-        var data = fs.readFileSync(Utils.expandEnvVars(file), "utf8");
-        var config = Utils.safeEval(data);
-        console.TRACE(TAG, "Configured from ", file);
-        this.data = config;
-    } else if (typeof file === "object" )
+        break;
+    case "object":
         this.data = file;
-    else if (typeof file === "undefined")
+        break;
+    case "undefined":
         this.data = {};
-    else
-        throw "WTF " + new Error().stack;
+        break;
+    default:
+        throw "Invalid parameter " + (typeof file);
+    }
 }
 module.exports = Config;
+
+Config.prototype.load = function() {
+
+    if (typeof this.data !== "undefined")
+        return Q();
+
+    var self = this;
+
+    return readFile(Utils.expandEnvVars(this.file), "utf8")
+
+    .then(function(data) {
+        var config = Utils.safeEval(data);
+        console.TRACE(TAG, "Configured from ", self.file);
+        self.data = config;
+    });
+};
 
 /**
  * Save the configuration back
  * @param {String} file pathname of a file to write to. If undefined, will
  * use the file it was loaded from (if defined)
+* @return {Promise} a promise
  */
 Config.prototype.save = function(file) {
     "use strict";
     if (typeof file === "undefined")
         file = this.file;
+
     if (typeof file !== "string")
-        throw "Cannot save this level of config; no file";
-    fs.writeFileSync(Utils.expandEnvVars(file), this.toString(), "utf8");
-    console.TRACE(TAG, file, " updated");
+        throw "Cannot save this config; no file";
+
+    var self = this;
+
+    return writeFile(Utils.expandEnvVars(file), this.toString(), "utf8")
+
+    .then(function() {
+        console.TRACE(TAG, self.file, " updated");
+    })
+
+    .catch(function(e) {
+        console.error("Config save failed: " + e.stack);
+    });
 };
 
 Config.prototype.toString = function() {

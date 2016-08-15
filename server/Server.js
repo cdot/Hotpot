@@ -2,7 +2,9 @@
 
 /*eslint-env node */
 
-const fs = require("fs");
+const Fs = require("fs");
+const Q = require("q");
+const readFile = Q.denodeify(Fs.readFile);
 const serialize = require("serialize-javascript");
 const Url = require("url");
 
@@ -14,11 +16,13 @@ var setup = {
     /**
      * Initialise the singleton server from the given configuration
      * @param {Config} config the configuration data
+     * @return {Promise} a promise
      */
     configure: function(config, controller) {
         "use strict";
         setup.controller = controller;
-        setup.server = new Server(config);
+        setup.server = new Server(config, controller);
+        return setup.server.initialise(config);
     }
 };
 module.exports = setup;
@@ -34,6 +38,10 @@ function Server(config, controller) {
 
     var self = this;
     self.config = config;
+}
+
+Server.prototype.initialise = function() {
+    var self = this;
 
     var handler = function(request, response) {
         if (self[request.method]) {
@@ -44,22 +52,52 @@ function Server(config, controller) {
             response.end();
         }
     };
-    var httpot, https = config.get("ssl");
+
+    var promise = Q();
+
+    var https = self.config.get("ssl");
     if (typeof https !== "undefined") {
         var options = {};
-        options.key = fs.readFileSync(Utils.expandEnvVars(https.key));
-	console.TRACE(TAG, "Key ", https.key, " loaded");
-        options.cert = fs.readFileSync(Utils.expandEnvVars(https.cert));
-        console.TRACE(TAG, "Certificate ", https.cert, " loaded");
-        console.TRACE(TAG, "HTTPS starting on port ", config.get("port"),
-                      " with key ", https.key);
-    
-        httpot = require("https").createServer(options, handler);
+
+        promise = promise
+
+        .then(function() {
+            return readFile(Utils.expandEnvVars(https.key));
+        })
+
+        .then(function(k) {
+            options.key = k;
+	    console.TRACE(TAG, "Key ", https.key, " loaded");
+        })
+
+        .then(function() {
+            return readFile(Utils.expandEnvVars(https.cert));
+        })
+
+        .then(function(c) {
+            options.cert = c;
+            console.TRACE(TAG, "Certificate ", https.cert, " loaded");
+            console.TRACE(TAG, "HTTPS starting on port ",
+                          self.config.get("port"),
+                          " with key ", https.key);
+        })
+
+        .then(function() {
+            return require("https").createServer(options, handler);
+        });
     } else {
-        console.TRACE(TAG, "HTTP starting on port ", config.get("port"));
-        httpot = require("http").createServer(handler);
+        console.TRACE(TAG, "HTTP starting on port ", self.config.get("port"));
+        promise = promise
+        .then(function() {
+            return require("http").createServer(handler);
+        });
     }
-    httpot.listen(config.get("port"));
+
+    return promise
+
+    .then(function(httpot) {
+        httpot.listen(self.config.get("port"));
+    });
 }
 
 /**
@@ -80,9 +118,8 @@ Server.prototype.handle = function(path, params, response) {
         response.end();
         return;
     }
-    setup.controller.dispatch(
-        command, path, params,
-        function(reply) {
+    setup.controller.dispatch(command, path, params)
+        .done(function(reply) {
             var s = (typeof reply !== "undefined" && reply !== null)
                 ? serialize(reply) : "";
             response.writeHead(
