@@ -1,11 +1,10 @@
 function() {
     var state = this.pin.CH.getState();
-    var TAG = "CH";
 
     if (this.thermostat.CH.temperature > 18) {
         // Warm enough inside, so switch off regardless of other rules
         if (state === 1) {
-            console.TRACE(TAG, "Room is ", this.thermostat.CH.temperature,
+            console.TRACE("CH", "Room is ", this.thermostat.CH.temperature,
                           " so off");
             this.setPin("CH", 0);
             // Cancel any boost requests
@@ -24,7 +23,7 @@ function() {
     // See if it's warm enough outside not to bother with heating
     if (this.weather("Feels Like Temperature") > 14) {
         if (state === 1) {
-            console.TRACE(TAG, "Weather is ",
+            console.TRACE("CH", "Weather is ",
                           this.weather("Feels Like Temperature"),
                           " so off");
             this.setPin("CH", 0);
@@ -44,7 +43,7 @@ function() {
 
     if (at_home + arrive_soon === 0) {
         if (state === 1) {
-            console.TRACE(TAG, "No demand so off");
+            console.TRACE("CH", "No demand so off");
             this.setPin("CH", 0);
         }
         return;
@@ -57,7 +56,7 @@ function() {
         && Time.between('22:00', '06:30') // night
        ) {
         if (state === 1)
-            console.TRACE(TAG,
+            console.TRACE("CH",
                           "Demand is at home, and out of time band, so off");
         this.setPin("CH", 0);
         return;
@@ -65,7 +64,7 @@ function() {
 
     // Demand is away from home, or we are in time band
     if (state === 0 && this.thermostat.CH.temperature < 16) {
-        console.TRACE(TAG,"on");
+        console.TRACE("CH","on");
         this.setPin("CH", 1);
         return;
     }
