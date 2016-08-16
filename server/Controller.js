@@ -283,16 +283,19 @@ Controller.prototype.getSerialisableLog = function() {
     var logs = { thermostat: {} };
     var self = this;
 
+    var promise = Q();
+
     function makePromise(k) {
-        return self.thermostat[k].getSerialisableLog()
-            .then(function(value) {
-                logs.thermostat[k] = value;
-            });
+        promise = promise.then(function() {
+            return self.thermostat[k].getSerialisableLog()
+                .then(function(value) {
+                    logs.thermostat[k] = value;
+                });
+        });
     }
 
-    var promise = Q();
     for (var k in self.thermostat)
-        promise = promise.then(makePromise(k));
+        makePromise(k);
 
     return promise.then(function() {
         return logs;
