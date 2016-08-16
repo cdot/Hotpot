@@ -62,7 +62,7 @@ Rule.prototype.fromFile = function(file) {
 
     self.from_file = file;
 
-    return readFile(Utils.expandEnvVars(file), "UTF8")
+    return readFile(Utils.expandEnvVars(file), "utf8")
 
     .then(function(text) {
         console.TRACE(TAG, "'", self.name, "' loaded from ", self.from_file);
@@ -156,11 +156,10 @@ Rule.prototype.getSerialisableConfig = function(ajax) {
         };
 
     var data = {
-        name: this.name
+        name: this.name,
+        from_file: this.from_file
     };
-    if (typeof this.from_file !== "undefined") {
-        data.from_file = this.from_file;
-    } else
+    if (ajax)
         data.test = this.testfn;
 
     return data;

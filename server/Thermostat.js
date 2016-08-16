@@ -140,7 +140,7 @@ Thermostat.prototype.getSerialisableState = function() {
 Thermostat.prototype.getSerialisableLog = function() {
     "use strict";
     if (!this.historian)
-        return null;
+        return Q();
     return this.historian.getSerialisableHistory();
 };
 

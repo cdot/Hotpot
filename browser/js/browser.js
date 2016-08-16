@@ -86,10 +86,20 @@
         var val = parseInt($(this).val());
         $(this).parents(".templated[data-field]").each(function() {
             var pin = ($(this).data("field"));
-            requests[pin] = val;
+
+            var params = {
+                device: "debug",
+                pin: pin,
+                state: val
+            };
+         
+            // Away from home, set up to report after interval
+            $.post(server + "/mobile/request",
+                   JSON.stringify(params),
+                   function(raw) {
+                   });
+            return false; // prevent repeated calls
         });
-        reportLocation();
-        return false; // prevent repeated calls
     }
 
     /**
@@ -500,15 +510,9 @@
             lng: location.lng,
             device: "debug"
         };
-        var req = [];
-        for (var k in requests) {
-            req.push(k + "=" + requests[k]);
-        }
-        if (req.length > 0)
-            params.requests = req.join(",");
-        
+         
         // Away from home, set up to report after interval
-        $.post(server + "/set/mobile",
+        $.post(server + "/mobile/crossing",
                JSON.stringify(params),
                function(raw) {
                    var data;

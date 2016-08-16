@@ -202,16 +202,28 @@ Pin.prototype.set = function(state) {
 };
 
 /**
- * Get the pin state
+ * Get the pin state, synchronously. Intended for use in rules.
  * @return pin state {integer}
  * @public
  */
 Pin.prototype.getState = function() {
     "use strict";
+    var state = Fs.readFileSync(this.value_path, "utf8");
+    return parseInt(state);
+};
+
+/**
+ * Get a promise to get the pin state
+ * @return a promise, passed the pin state
+ * @public
+ */
+Pin.prototype.getStatePromise = function() {
+    "use strict";
     return readFile(this.value_path, "utf8")
-        .then(function(data) {
-            return parseInt(data);
-        });
+
+    .then(function(data) {
+        return parseInt(data);
+    });
 };
 
 /**
@@ -231,21 +243,23 @@ Pin.prototype.getSerialisableConfig = function(ajax) {
 /**
  * Generate and return a promise for a serialisable version of the
  * structure, suitable for use in an AJAX response.
- * @return {Promise} a promise
+ * @return {Promise} a promise that is passed the state
  * @protected
  */
 Pin.prototype.getSerialisableState = function() {
     "use strict";
-    this.purgeRequests();
-    var state = {};
-    var ar = this.getActiveRequest();
-    if (typeof ar !== "undefined")
-        state.request = ar;
-    return this.getState()
-        .then(function(value) {
-            state.state = value;
-            return state;
-        });
+    var self = this;
+
+    return this.getStatePromise()
+    .then(function(value) {
+        self.purgeRequests();
+        var state = {};
+        var ar = self.getActiveRequest();
+        if (typeof ar !== "undefined")
+            state.request = ar;
+        state.state = value;
+        return state;
+    });
 };
 
 /**

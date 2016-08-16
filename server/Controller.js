@@ -246,26 +246,28 @@ Controller.prototype.getSerialisableState = function() {
     };
     
     var self = this;
-    var promises = [];
+    var promise = Q();
 
     function makePromise(field, k) {
-        return self[field][k].getSerialisableState()
-            .then(function(value) {
-                state[field][k] = value;
-            })
+        promise = promise.then(function() {
+            return self[field][k].getSerialisableState();
+        })
+
+        .then(function(value) {
+            state[field][k] = value;
+        });
     }
 
     function makePromises(field) {
-	for (var k in self[field]) {
-            promises.push(makePromise(field, k));
-        }
+	for (var k in self[field])
+            makePromise(field, k);
     }
 
     makePromises("thermostat");
     makePromises("pin");
     makePromises("mobile");
  
-    return Q.all(promises).then(function() {
+    return promise.then(function() {
         return state;
     });
 };
@@ -277,16 +279,24 @@ Controller.prototype.getSerialisableState = function() {
  */
 Controller.prototype.getSerialisableLog = function() {
     "use strict";
-    function sermap(m) {
-	var res = {};
-	for (var k in m)
-            res[k] = m[k].getSerialisableLog();
-        return res;
+
+    var logs = { thermostat: {} };
+    var self = this;
+
+    function makePromise(k) {
+        return self.thermostat[k].getSerialisableLog()
+            .then(function(value) {
+                logs.thermostat[k] = value;
+            });
     }
 
-    return {
-        thermostat: sermap(this.thermostat)
-    };
+    var promise = Q();
+    for (var k in self.thermostat)
+        promise = promise.then(makePromise(k));
+
+    return promise.then(function() {
+        return logs;
+    });
 };
 
 /**
@@ -323,7 +333,7 @@ Controller.prototype.setPromise = function(channel, on) {
         });
     }
 
-    return self.pin[channel].getState()
+    return self.pin[channel].getStatePromise()
 
     .then(function(cur) {
         if (on && cur === 1 || !on && cur === 0)
@@ -405,12 +415,12 @@ Controller.prototype.handleMobileCommand = function(path, info) {
     case "config":
         var serv_loc = (typeof this.location !== "undefined")
             ? this.location : new Location();
-        return Q.Promise(function(f) {
-            f({
+        return Q.fcall(function() {
+            return {
                 lat: serv_loc.lat,
                 lng: serv_loc.lng,
                 fences: mob.getSerialisableConfig().fences
-            });
+            };
         });
 
     case "request":
@@ -469,9 +479,9 @@ Controller.prototype.dispatch = function(command, path, data) {
     case "log":
         return Q.promise(function (f) { f(self.getSerialisableLog()); });
     case "config": // Return the controller config
-        return Q.promise(function (f) { f(self.getSerialisableConfig()); });
+        return Q.promise(function (f) { f(self.getSerialisableConfig(true)); });
     case "apis": // Return the apis config
-        return Q.promise(function (f) { f(Apis.getSerialisableConfig()); });
+        return Q.promise(function (f) { f(Apis.getSerialisableConfig(true)); });
     case "remove_rule": // remove a rule
         // /rule/{index}
         self.remove_rule(parseInt(path[1]));
@@ -498,11 +508,15 @@ Controller.prototype.dispatch = function(command, path, data) {
             return self.setPromise(path[1], data.value);
 
         // set/rule
-        if (path[2] === "name")
-            self.rule[parseInt(path[1])].name = data.value;
-        else if (path[2] === "test")
-            self.rule[parseInt(path[1])].setTest(data.value);
-        self.emit("config_change");
+        else if (path[0] === "rule") {
+            if (path[1] === "name")
+                self.rule[parseInt(path[1])].name = data.value;
+            else if (path[1] === "test")
+                self.rule[parseInt(path[1])].setTest(data.value);
+            self.emit("config_change");
+        }
+        else
+            throw new Error("Unrecognised command");
         break;
     case "mobile":
         // mobile has it's own commands, and deals with the response
