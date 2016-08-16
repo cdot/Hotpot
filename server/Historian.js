@@ -62,7 +62,7 @@ Historian.prototype.rewriteHistory = function(callback) {
                     callback();
             },
             function(err) {
-                console.error("Failed to write history file '"
+                console.ERROR(TAG, "Failed to write '"
                               + self.file + "': " + err);
                 if (typeof callback !== "undefined")
                     callback();
@@ -206,8 +206,8 @@ Historian.prototype.record = function(t, callback) {
                     })
                 .fail(
                     function(ferr) {
-                        console.error(
-                            TAG + " failed to append to  history file '"
+                        console.ERROR(
+                            TAG, " failed to append to  history file '"
                                 + self.file + "': "
                                 + ferr);
                         if (typeof callback !== "undefined")

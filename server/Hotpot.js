@@ -52,7 +52,8 @@ const Rule = require("./Rule.js");
         console.TRACE = function() {};
 
     console.ERROR = function() {
-        console.error(Utils.joinArgs(arguments));
+        var tag = arguments[0];
+        console.error("*** " + tag + "***", Utils.joinArgs(arguments, 1));
     };
 
     var config = new Config(cliopt.config);
@@ -88,7 +89,8 @@ const Rule = require("./Rule.js");
     })
 
     .catch(function(e) {
-        console.error("Controller initialisation failed: " + e.stack);
+        console.ERROR(TAG, "Controller initialisation failed: ",
+                      typeof e.stack !== "undefined" ? e.stack : e);
     });
 
 })();

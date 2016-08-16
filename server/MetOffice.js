@@ -123,7 +123,7 @@ MetOffice.prototype.findNearestLocation = function(loc, chain) {
             });
         })
         .on("error", function(err) {
-            console.error("Failed to GET from " + url + ": " + err);
+            console.ERROR(TAG, "Failed to GET from " + url + ": " + err);
         });
 };
 
@@ -199,7 +199,7 @@ MetOffice.prototype.getWeather = function(id, callback) {
             });
         })
         .on("error", function(err) {
-            console.error("Failed to GET from " + url + ": " + err);
+            console.ERROR(TAG, "Failed to GET from " + url + ": " + err);
         });
 };
 

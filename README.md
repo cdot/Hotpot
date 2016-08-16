@@ -56,7 +56,7 @@ The server supports command-line options as follows:
   -c, --config=ARG  Configuration file (default ./hotpot.cfg)
   -d, --debug=ARG   Run in debug mode e.g. --debug all
 ```
-All DEBUG statements are tagged e.g 
+All debug statements are tagged with the time and the module e.g 
 ```
 2016-08-13T08:37:08.694Z Server: HTTP starting on port 13196
 ```
@@ -70,29 +70,31 @@ automatically save the configuration file.
 An example configuration file is given in `example.hotpot.cfg`. The
 configuration file contains a structured Javascript object with fields
 as follows:
-`server` - sets up the HTTP(S) server
-  `ssl` (optional) HTTPS key server private key `key` and certificate `cert`.
+* `server` - sets up the HTTP(S) server
+  * `ssl` (optional) HTTPS key server private key `key` and certificate `cert`.
    If no private key and certificate are given, an HTTP server will be used.
-  `port` - the network port to use (default is 13196)
-  `location` - sets the latitude and longitude of the home location
-`apis` - access keys etc. for public API keys
-  `weather` - sets up access to the weather server (see **Weather** below).
-  `google_maps` - sets up access to Google maps (see **Routing** below).
-`controller`
-  `thermostat` - sets up the DS18X20 thermostats available to the system. This object is indexed by the (user-assigned) name of the thermostat. Each thermostat has:
-    `id` - used to communicate with the sensor
-    `poll_interval` - (optional) gap between polls, in ms (default 1000)
-    `history` (optional)
-      `file` - (required) pathname to file to store history for this thermostat
-      `interval` - gap between history snapshots, in seconds (default 60 i.e. once every minute)
-      `limit` (optional, if not given then maxbytes is required) number of snapshots to keep in history file. At least this many, and on occasion up to 2X as many, snapshots will be stored (24 * 60)
-      `maxbytes` (optional, if not specified then `limit` and `interval` are required) can be specified to limit the size of the history file to a certain number of bytes.
-  `pin` - sets up the GPIO pins, mapping the pin name to the GPIO pin number. The pin names `HW` and `CH` have special support to take account of a subtle dependency in Y-plan systems, but otherwise pin names are up to the user.
-    `history` - (optional) sets up a history log recording the pin state. See `thermostat.history` above for details.
-  `mobile` - sets up the mobiles, each name maps to:
-    `id` - the unique ID of the mobile e.g. the Android device identifier. `debug` is used for browsers.
-    `fences` - list of geofences. See **GeoFences**, below.
-  `rule` - list of rules that are used to control state of the system. Rules can be specified inline in a function, or can be specified as a filename that is to be compiled. Rules are executed in the order they are specified. See **Rules**, below.
+  * `port` - the network port to use (default is 13196)
+  * `location` - sets the latitude and longitude of the home location
+* `apis` - access keys etc. for public API keys
+  * `weather` - sets up access to the weather server (see **Weather** below).
+  * `google_maps` - sets up access to Google maps (see **Routing** below).
+* `controller`
+  * `thermostat` - sets up the DS18X20 thermostats available to the system. This object is indexed by the (user-assigned) name of the thermostat. Each thermostat has:
+    * `id` - used to communicate with the sensor
+    * `poll_interval` - (optional) gap between polls, in ms (default 1000)
+    * `history` (optional)
+      * `file` - (required) pathname to file to store history for this thermostat
+      * `interval` - gap between history snapshots, in seconds (default 60 i.e. once every minute)
+      * `limit` (optional, if not given then maxbytes is required) number of snapshots to keep in history file. At least this many, and on occasion up to 2X as many, snapshots will be stored (24 * 60)
+      * `maxbytes` (optional, if not specified then `limit` and `interval` are required) can be specified to limit the size of the history file to a certain number of bytes.
+  * `pin` - sets up the GPIO pins, mapping the pin name to the GPIO pin number. The pin names `HW` and `CH` have special support to take account of a subtle dependency in Y-plan systems, but otherwise pin names are up to the user.
+    * `history` - (optional) sets up a history log recording the pin state. See `thermostat.history` above for details.
+  * `mobile` - sets up the mobiles, each name maps to:
+    * `id` - the unique ID of the mobile e.g. the Android device identifier. `debug` is used for browsers.
+    * `fences` - list of geofences. See **GeoFences**, below.
+  * `calendar` - sets up calendars
+    * `id` - work this out
+  * `rule` - list of rules that are used to control state of the system. Rules can be specified inline in a function, or can be specified as a filename that is to be compiled. Rules are executed in the order they are specified. See **Rules**, below.
 
 See server/example.hotpot.cfg for a complete example.
 
@@ -133,7 +135,7 @@ Each function is called in in a polling loop, and it it returns true,
 the evaluation will stop. Rule functions are called with 'this' set to
 the Controller.
 
-Rule functions can interrogate any part of the system using the internal APIs. A full list of APIs can be generated using the enclosed Makefile.
+Rule functions can interrogate any part of the system using the internal APIs. A full list of APIs can be generated using `make doc`.
 
 Annotated example rules are given for Hot Water `server/hw_rules.json` and Central Heating `server/ch_rules.json`.
 
@@ -154,4 +156,6 @@ the location, speed and direction of the device.
 The Hotpot server rules can use the estimated return time to decide whether
 to enable services or not. Mobiles can also demand an override, if the rules
 allow it.
+
+# Calendars
 

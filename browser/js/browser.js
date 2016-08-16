@@ -608,8 +608,7 @@
             if (urp[0] === "ip")
                 hotpot_ip = urp[1];
         }
-
-        server = "http://" + hotpot_ip + ":" + hotpot_port;
+        server = hotpot_protocol + "://" + hotpot_ip + ":" + hotpot_port;
 
         $("#server_url").text(server);
 

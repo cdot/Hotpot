@@ -5,6 +5,7 @@
 const Fs = require("fs");
 const Q = require("q");
 const readFile = Q.denodeify(Fs.readFile);
+const writeFile = Q.denodeify(Fs.writeFile);
 
 const Utils = require("../common/Utils.js");
 
@@ -34,13 +35,19 @@ function Rule(name) {
      */
     this.name = name;
     /**
-     * Tets function
+     * Test function
      * @type {function}
      * @public
      */
-    this.testfn = null;
+    this.testfn = undefined;
 
-    //this.from_file = undefined;
+    /**
+     * Source of the rule
+     */
+    this.from_file = undefined;
+
+    // private
+    this.write_block = 0;
 }
 module.exports = Rule;
 
@@ -59,17 +66,26 @@ Rule.prototype.fromFile = function(file) {
 
     .then(function(text) {
         console.TRACE(TAG, "'", self.name, "' loaded from ", self.from_file);
-        return self.setTest(text);
+        self.write_block++; // prevent race
+        return self.setTest(text)
+
+        .finally(function() {
+            self.write_block--;
+        });
     });
 };
 
 /**
  * Set the test function for this rule
  * @param {function} fn the function (may be a string)
+ * @return {Promise} a promise
  * @protected
  */
 Rule.prototype.setTest = function(fn) {
     "use strict";
+
+    var promise = Q();
+
     if (typeof fn !== "function") {
         // Compile the function
         try {
@@ -77,14 +93,43 @@ Rule.prototype.setTest = function(fn) {
             fn = eval("rule_function=" + fn);
         } catch (e) {
             if (e instanceof SyntaxError)
-                console.error("Syntax error in rule '" + this.name
-                              + "': " + e.message);
+                console.ERROR(TAG, "Syntax error in '" + this.name
+                              + "': " + e);
             else
-                console.error("Rule '" + this.name
-                              + "' compilation failed: " + e.message);
+                console.ERROR(TAG, "'" + this.name
+                              + "' compilation failed: " + e);
+            if (typeof e.stack !== "undefined")
+                console.TRACE(TAG, e.stack);
+        }
+        if (typeof this.testfn !== "undefined"
+            && this.testfn.toString() === fn.toString()) {
+            console.TRACE(TAG, this.name, " unchanged");
+            return promise; // Unchanged, nothing to be done
         }
     }
     this.testfn = fn;
+
+    if (typeof this.from_file === "undefined"
+        || this.write_block > 0)
+        return promise;
+
+    var self = this;
+
+    self.write_block++;
+    return writeFile(Utils.expandEnvVars(this.from_file),
+                     this.testfn.toString())
+
+    .then(function() {
+        console.TRACE(TAG, "Wrote '", this.from_file, "'");
+    })
+
+    .catch(function(e) {
+        console.ERROR(TAG, "Write ", this.from_file, " failed: " + e);
+    })
+
+    .finally(function() {
+        self.write_block--;
+    });
 };
 
 /**
@@ -114,9 +159,6 @@ Rule.prototype.getSerialisableConfig = function(ajax) {
         name: this.name
     };
     if (typeof this.from_file !== "undefined") {
-        // TODO: this is a hack. It assumes we are going to serialise the
-        // config to file.
-        Fs.writeFile(this.from_file, this.testfn.toString());
         data.from_file = this.from_file;
     } else
         data.test = this.testfn;

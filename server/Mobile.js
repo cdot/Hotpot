@@ -207,7 +207,7 @@ Mobile.prototype.estimateTOA = function(speed) {
     console.TRACE(TAG, this.name, " routing by ", mode);
     function analyseRoutes(route) {
         if (typeof result.error_message !== "undefined") {
-            console.error("Error getting route: " + result.error_message);
+            console.ERROR(TAG, "Error getting route: " + result.error_message);
             return;
         }
             
@@ -241,7 +241,7 @@ Mobile.prototype.estimateTOA = function(speed) {
             });
         })
         .on("error", function(err) {
-            console.error("Failed to GET from " + url.host + ": " + err);
+            console.ERROR(TAG, "Failed to GET from " + url.host + ": " + err);
         });
 };
 

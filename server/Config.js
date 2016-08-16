@@ -74,7 +74,7 @@ Config.prototype.save = function(file) {
     })
 
     .catch(function(e) {
-        console.error("Config save failed: " + e.stack);
+        console.ERROR(TAG, "Config save failed: " + e.stack);
     });
 };
 

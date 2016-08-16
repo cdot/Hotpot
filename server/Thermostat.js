@@ -33,7 +33,7 @@ function Thermostat(name, config) {
             try {
                 ds18x20.loadDriver();
             } catch (err) {
-                console.error("Temperature sensor '"
+                console.ERROR(TAG, "Temperature sensor '"
                               + name + "' driver not loaded: "
                               + err.message);
                 if (typeof HOTPOT_DEBUG !== "undefined")
@@ -157,7 +157,7 @@ Thermostat.prototype.pollTemperature = function() {
 
     ds18x20.get(this.id, function(err, temp) {
         if (err !== null) {
-            console.error("d218x20 error: " + err);
+            console.ERROR(TAG, "d218x20 error: " + err);
         } else {
             if (typeof temp === "number")
                 // At least once this has been "boolean"!

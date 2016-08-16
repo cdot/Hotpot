@@ -45,28 +45,27 @@ Controller.prototype.initialise = function() {
     var self = this;
     //self.location = undefined;
 
-    var prom = self.createMobiles(self.config.getConfig("mobile"))
-
-    .then(function(e) {
-        console.TRACE(TAG, "Mobiles created");
-        return self.createPins(self.config.getConfig("pin"));
-    })
-
-    .then(function(e) {
-        console.TRACE(TAG, "Pins created");
-        return self.createThermostats(self.config.getConfig("thermostat"));
-    })
+    return Q()
 
     .then(function() {
         return self.createRules(self.config.getConfig("rule"));
     })
 
     .then(function() {
-        console.TRACE(TAG, "Rules created, polling");
+        return self.createMobiles(self.config.getConfig("mobile"));
+    })
+
+    .then(function(e) {
+        return self.createPins(self.config.getConfig("pin"));
+    })
+
+    .then(function() {
+        return self.createThermostats(self.config.getConfig("thermostat"));
+    })
+
+    .then(function() {
         self.pollRules();
     });
-
-    return prom;
 };
 
 /**
@@ -154,8 +153,8 @@ Controller.prototype.createThermostats = function(ts_config) {
         console.TRACE(TAG, "Reset: HW(0) done");
     })
 
-    .catch(function(fuck) {
-        console.error("Failed to reset valve: " + fuck);
+    .catch(function(e) {
+        console.ERROR(TAG, "Failed to reset valve: ", e);
     });
 
     return promise;
@@ -630,14 +629,16 @@ Controller.prototype.pollRules = function() {
     for (var i = 0; i < self.rule.length; i++) {
         var rule = self.rule[i];
         if (typeof rule.testfn !== "function") {
-            console.error("Rule '" + rule.name + "' cannot be evaluated");
+            console.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
             continue;
         }
         var result;
         try {
             result = rule.testfn.call(self);
         } catch (e) {
-            console.error("Rule '" + rule.name + "' failed: " + e.message);
+            if (typeof e.stack !== "undefined")
+                console.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
+            console.ERROR(TAG, "'", rule.name, "' failed: " + e);
         }
         if (typeof result === "string") {
             if (result === "remove")
