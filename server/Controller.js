@@ -324,7 +324,6 @@ Controller.prototype.setPin = function(channel, on) {
 Controller.prototype.setPromise = function(channel, on) {
     "use strict";
     var self = this;
-    console.TRACE(TAG, "setPromise ", channel, "=", on);
 
     // Duck race condition during initialisation
     if (self.pin[channel] === "undefined")

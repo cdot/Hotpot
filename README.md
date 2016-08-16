@@ -1,7 +1,7 @@
 # Hotpot
 
 Central heating controller for a Y-plan central heating system, using
-nodejs on Raspberry Pi. Piggybacks on the existing system so that the existing
+node.js on Raspberry Pi. Piggybacks on the existing system so that the existing
 controller can still be used (though not at the same time).
 
 The controller collates data from a number of sources to support rules that
@@ -43,12 +43,19 @@ system. It runs a HTTP(S) server that supports querying and changing the
 configuration of the system via AJAX requests from a browser or mobile
 device.
 
+The server is implemented using node.js. RPi will require an upgrade to the latest version, thus
+```
+sudo npm cache clean -f
+sudo npm install -g n
+sudo n stable
+```
+
 ## Configuring the Server
 
 The server is run as follows:
 ```
 $ cd server
-$ nodejs Hotpot.js
+$ node Hotpot.js
 ```
 The server supports command-line options as follows:
 ```

@@ -25,14 +25,16 @@
         "events": "1.1.0",
         "follow-redirects": "0.2.0",
         "fs": "0.0.2",
-        "googlemaps": "1.6.0",
         "http": "0.0.0",
         "https": "1.0.0",
         "node-getopt": "0.2.3",
-        "promise": "1.4.21",
         "serialize-javascript": "1.2.0",
         "url": "0.11.0",
-        "util": "0.10.3"
+        "util": "0.10.3",
+        "googlemaps": "1.6.0",
+        "googleapis": "12.2.0",
+        "google-auth-library": "0.9.8",
+        "q": "1.4.1"
     },
     "analyze": true,
     "eslintConfig": {
