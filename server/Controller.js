@@ -13,6 +13,7 @@ const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
 const Rule = require("./Rule.js");
 const Mobile = require("./Mobile.js");
+const Scheduled = require("./Scheduled");
 const Apis = require("./Apis.js");
 
 const TAG = "Controller";
@@ -40,7 +41,7 @@ module.exports = Controller;
 
 Controller.prototype.initialise = function() {
     "use strict";
-    console.TRACE(TAG, "Initialising Controller");
+    Utils.TRACE(TAG, "Initialising Controller");
 
     var self = this;
     //self.location = undefined;
@@ -53,6 +54,10 @@ Controller.prototype.initialise = function() {
 
     .then(function() {
         return self.createMobiles(self.config.getConfig("mobile"));
+    })
+
+    .then(function() {
+        return self.createCalendars(self.config.getConfig("calendar"));
     })
 
     .then(function(e) {
@@ -81,6 +86,21 @@ Controller.prototype.createMobiles = function(mob_config) {
         mob_config.each(function(id) {
             self.mobile[id] = new Mobile(
                 id, mob_config.getConfig(id));
+        });
+        fulfill();
+    });
+};
+
+Controller.prototype.createCalendars = function(cal_config) {
+    "use strict";
+    var self = this;
+
+     return new Q.Promise(function(fulfill) {
+        self.calendar = {};
+        cal_config.each(function(id) {
+            self.calendar[id] = new Scheduled(
+                id, cal_config.getConfig(id));
+            self.calendar[id].update(1000);
         });
         fulfill();
     });
@@ -130,27 +150,27 @@ Controller.prototype.createThermostats = function(ts_config) {
     // Assume worst-case valve configuration i.e. grey wire live holding
     // valve. Reset to no-power state by turning HW on to turn off the
     // grey wire and waiting for the valve spring to relax.
-    console.TRACE(TAG, "Constructed thermostats");
+    Utils.TRACE(TAG, "Constructed thermostats");
     var promise = self.pin.HW.set(1)
 
     .then(function() {
-        console.TRACE(TAG, "Reset: HW(1) done");
+        Utils.TRACE(TAG, "Reset: HW(1) done");
     })
 
     .delay(VALVE_RETURN)
 
     .then(function() {
-        console.TRACE(TAG, "Reset: delay done");
+        Utils.TRACE(TAG, "Reset: delay done");
         return self.pin.CH.set(0);
     })
 
     .then(function() {
-        console.TRACE(TAG, "Reset: CH(0) done");
+        Utils.TRACE(TAG, "Reset: CH(0) done");
         return self.pin.HW.set(0);
     })
 
     .then(function() {
-        console.TRACE(TAG, "Reset: HW(0) done");
+        Utils.TRACE(TAG, "Reset: HW(0) done");
     })
 
     .catch(function(e) {
@@ -225,6 +245,7 @@ Controller.prototype.getSerialisableConfig = function(ajax) {
         thermostat: sermap(this.thermostat),
         pin: sermap(this.pin),
         mobile: sermap(this.mobile),
+        calendar: sermap(this.calendar),
         rule: sermap(this.rule)
     };
 };
@@ -242,6 +263,7 @@ Controller.prototype.getSerialisableState = function() {
         env_temp: this.weather("Temperature"),
         thermostat: {},
         pin: {},
+        calendar: {},
         mobile: {}
     };
     
@@ -265,6 +287,7 @@ Controller.prototype.getSerialisableState = function() {
 
     makePromises("thermostat");
     makePromises("pin");
+    makePromises("calendar");
     makePromises("mobile");
  
     return promise.then(function() {
@@ -294,8 +317,8 @@ Controller.prototype.getSerialisableLog = function() {
         });
     }
 
-    for (var k in self.thermostat)
-        makePromise(k);
+    for (var t in self.thermostat)
+        makePromise(t);
 
     return promise.then(function() {
         return logs;
@@ -310,7 +333,7 @@ Controller.prototype.getSerialisableLog = function() {
  */
 Controller.prototype.setPin = function(channel, on) {
     this.setPromise(channel, on).done();
-}
+};
 
 /**
  * Get a promise to set the on/off state of a pin. This is more
@@ -339,7 +362,7 @@ Controller.prototype.setPromise = function(channel, on) {
 
     .then(function(cur) {
         if (on && cur === 1 || !on && cur === 0)
-            return; // no more promises
+            return Q(); // no more promises
 
         // Y-plan systems have a state where if the heating is on but the
         // hot water is off, and the heating is turned off, then the grey
@@ -363,10 +386,10 @@ Controller.prototype.setPromise = function(channel, on) {
                 self.pending = false;
                 return self.pin[channel].set(on);
             });
-        } else
-            // Otherwise this is a simple state transition, just
-            // set the appropriate pin
-            return self.pin[channel].set(on);
+        }
+        // Otherwise this is a simple state transition, just
+        // promise to set the appropriate pin
+        return self.pin[channel].set(on);
     });
 };
 
@@ -399,7 +422,7 @@ Controller.prototype.handleMobileCommand = function(path, info) {
     var self = this;
     var command = path.shift();
 
-    console.TRACE(TAG, "mobile ", command, " ", info);
+    Utils.TRACE(TAG, "mobile ", command, " ", info);
 
     var mob = this.getMobile(info.device);
     if (mob === null) {
@@ -410,7 +433,7 @@ Controller.prototype.handleMobileCommand = function(path, info) {
 
     if (typeof info.lat !== "undefined" && typeof info.lng !== "undefined") {
         mob.setLocation(info);
-        console.TRACE(TAG, "Set location of ", mob.name, " @", mob.location);
+        Utils.TRACE(TAG, "Set location of ", mob.name, " @", mob.location);
     }
 
     switch (command) {
@@ -433,7 +456,7 @@ Controller.prototype.handleMobileCommand = function(path, info) {
         };
         if (typeof info.until !== "undefined")
             info.until = parseInt(info.until);
-        console.TRACE(TAG, "Boost ", info.pin, " ", req);
+        Utils.TRACE(TAG, "Boost ", info.pin, " ", req);
         self.pin[info.pin].addRequest(req);
         break;
 
@@ -443,7 +466,7 @@ Controller.prototype.handleMobileCommand = function(path, info) {
         break;
     }
 
-    return Q.Promise(function(f) { f("OK") });
+    return Q.Promise(function(f) { f("OK"); });
 };
 
 /**
@@ -523,6 +546,11 @@ Controller.prototype.dispatch = function(command, path, data) {
     case "mobile":
         // mobile has it's own commands, and deals with the response
         return self.handleMobileCommand(path, data);
+    case "calendar":
+        // Calendars need an update. Do them asynchronously.
+        for (var cal in this.calendar)
+            this.calendar[cal].update(1000);
+        break;
     default:
         throw "Unrecognised command " + command;
     }
@@ -567,7 +595,7 @@ Controller.prototype.insert_rule = function(rule, i) {
     else
         this.rule.splice(i, 0, rule);
     this.renumberRules();
-    console.TRACE(TAG, "Rule '", this.rule[i].name,
+    Utils.TRACE(TAG, "Rule '", this.rule[i].name,
                   "' inserted at ", rule.index);
     return i;
 };
@@ -592,7 +620,7 @@ Controller.prototype.move_rule = function(i, move) {
     var removed = this.rule.splice(i, 1);
     this.rule.splice(dest, 0, removed[0]);
     this.renumberRules();
-    console.TRACE(TAG, this.name, " rule ", i, " moved to ", dest);
+    Utils.TRACE(TAG, this.name, " rule ", i, " moved to ", dest);
 };
 
 /**
@@ -605,7 +633,7 @@ Controller.prototype.remove_rule = function(i) {
     i = this.getRuleIndex(i);
     var del = this.rule.splice(i, 1);
     this.renumberRules();
-    console.TRACE(TAG, this.name, " rule ", del[0].name,
+    Utils.TRACE(TAG, this.name, " rule ", del[0].name,
                   "(", i, ") removed");
     return del[0];
 };
@@ -615,7 +643,7 @@ Controller.prototype.remove_rule = function(i) {
  */
 Controller.prototype.clear_rules = function() {
     "use strict";
-    console.TRACE(TAG, this.name, " rules cleared");
+    Utils.TRACE(TAG, this.name, " rules cleared");
     this.rule = [];
 };
 
@@ -667,7 +695,7 @@ Controller.prototype.pollRules = function() {
     // Remove rules flagged for removal
     while (remove.length > 0) {
         i = remove.pop();
-        console.TRACE(TAG, "Remove rule ", i);
+        Utils.TRACE(TAG, "Remove rule ", i);
         self.rule.splice(i, 1);
         self.renumberRules();
         self.emit("config_change");

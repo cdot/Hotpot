@@ -11,6 +11,7 @@ const http = require("follow-redirects").http;
 const Location = require("../common/Location.js");
 
 const Apis = require("./Apis.js");
+const Utils = require("../common/Utils");
 
 /** @private */
 const URL_ROOT = "http://datapoint.metoffice.gov.uk/public/data/val/wxfcs/";
@@ -46,7 +47,7 @@ const IS_NUMBER = [
  */
 var MetOffice = function() {
     "use strict";
-    console.TRACE(TAG, "starting");
+    Utils.TRACE(TAG, "starting");
     // this.before = undefined
     // this.after = undefined
     // this.location_id = undefined;
@@ -92,7 +93,7 @@ MetOffice.prototype.findClosest = function(data, loc, chain) {
             best = list[i];
         }
     }
-    console.TRACE(TAG, "Nearest location is ", best.name, " at ",
+    Utils.TRACE(TAG, "Nearest location is ", best.name, " at ",
                   new Location(best));
     this.location_id = best.id;
     if (typeof chain === "function")
@@ -161,7 +162,7 @@ MetOffice.prototype.bracketWeather = function(data) {
                 this.before = report;
             else {
                 this.after = report;
-                //console.TRACE(TAG, "Before ", this.before, " after ", this.after));
+                //Utils.TRACE(TAG, "Before ", this.before, " after ", this.after));
                 return;
             }
         }
@@ -211,10 +212,10 @@ MetOffice.prototype.getWeather = function(id, callback) {
 MetOffice.prototype.update = function() {
     "use strict";
     var self = this;
-    console.TRACE(TAG, "Updating from MetOffice website");
+    Utils.TRACE(TAG, "Updating from MetOffice website");
     this.getWeather(this.location_id, function() {
         var wait = self.after.$ - Time.now();
-        console.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
+        Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
         setTimeout(function() {
             self.update();
         }, wait);

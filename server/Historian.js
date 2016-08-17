@@ -39,7 +39,7 @@ function Historian(options) {
     // @private
     this.history = [];
 
-    console.TRACE(TAG, "Set up for ", this.name, this.file);
+    Utils.TRACE(TAG, "Set up for ", this.name, this.file);
     this.rewriteHistory();
 }
 module.exports = Historian;
@@ -84,7 +84,7 @@ Historian.prototype.load = function(data) {
     
     if (typeof this.max_samples !== "undefined"
         && lines.length > this.max_samples)
-        splice(0, lines.length - this.max_samples);
+        lines.splice(0, lines.length - this.max_samples);
 
     // Load report
     for (var i in lines) {
@@ -96,7 +96,7 @@ Historian.prototype.load = function(data) {
                 time: basetime + parseFloat(csv[0]),
                 sample: parseFloat(csv[1])
             };
-            if (point.time < cutoff)
+/*            if (point.time < cutoff)
                 p0 = point;
             else {
                 if (p0 && p0.time < point.time) {
@@ -110,6 +110,8 @@ Historian.prototype.load = function(data) {
                 }
                 report.push(point);
             }
+*/
+            report.push(point);
         }
     }
     return report;
@@ -165,7 +167,7 @@ Historian.prototype.start = function(quiet) {
     }
 
     if (!quiet)
-        console.TRACE(TAG, this.name, " started");
+        Utils.TRACE(TAG, this.name, " started");
 
     self.record(t, repoll);
 };
@@ -181,7 +183,7 @@ Historian.prototype.record = function(t, callback) {
 
     var self = this;
 
-    console.TRACE(TAG, "Record ", t, " to ", self.name, " history");
+    Utils.TRACE(TAG, "Record ", t, " to ", self.name, " history");
 
     self.last_recorded = t;
 
@@ -190,7 +192,7 @@ Historian.prototype.record = function(t, callback) {
             // If we hit 2 * the size limit, open the file and
             // reduce the size. Each sample is about 15 bytes.
             if (stats.size > self.max_bytes) {
-                console.TRACE(TAG, self.name, " history is full");
+                Utils.TRACE(TAG, self.name, " history is full");
                 self.rewriteHistory(callback);
                 return;
             }
@@ -216,7 +218,7 @@ Historian.prototype.record = function(t, callback) {
         })
 .fail(
         function(err) {
-            console.TRACE(TAG, "Failed to stat history file '",
+            Utils.TRACE(TAG, "Failed to stat history file '",
                           self.file, "': ", err);
             // Probably the first time; write the whole history file
             self.rewriteHistory(callback);

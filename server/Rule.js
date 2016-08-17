@@ -65,7 +65,7 @@ Rule.prototype.fromFile = function(file) {
     return readFile(Utils.expandEnvVars(file), "utf8")
 
     .then(function(text) {
-        console.TRACE(TAG, "'", self.name, "' loaded from ", self.from_file);
+        Utils.TRACE(TAG, "'", self.name, "' loaded from ", self.from_file);
         self.write_block++; // prevent race
         return self.setTest(text)
 
@@ -99,11 +99,11 @@ Rule.prototype.setTest = function(fn) {
                 console.ERROR(TAG, "'" + this.name
                               + "' compilation failed: " + e);
             if (typeof e.stack !== "undefined")
-                console.TRACE(TAG, e.stack);
+                Utils.TRACE(TAG, e.stack);
         }
         if (typeof this.testfn !== "undefined"
             && this.testfn.toString() === fn.toString()) {
-            console.TRACE(TAG, this.name, " unchanged");
+            Utils.TRACE(TAG, this.name, " unchanged");
             return promise; // Unchanged, nothing to be done
         }
     }
@@ -120,7 +120,7 @@ Rule.prototype.setTest = function(fn) {
                      this.testfn.toString())
 
     .then(function() {
-        console.TRACE(TAG, "Wrote '", this.from_file, "'");
+        Utils.TRACE(TAG, "Wrote '", this.from_file, "'");
     })
 
     .catch(function(e) {

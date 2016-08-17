@@ -8,12 +8,13 @@ const readFile = Q.denodeify(Fs.readFile);
 const writeFile = Q.denodeify(Fs.writeFile);
 const serialize = require("serialize-javascript");
 
-const Utils = require("../common/Utils");
+const Utils = require("./Utils");
 
 const TAG = "Config";
 
 /**
- * Hierarchical configuration object
+ * Hierarchical configuration object, reqd from/written to JSON. Well,
+ * not actually JSON, more like super-JSON, as functions are handled.
  * @param file_or_data either a string filename to load the config from, or
  * a structure to turn into a config block.
  * @class
@@ -36,6 +37,10 @@ function Config(file) {
 }
 module.exports = Config;
 
+/**
+ * Return a promise to load the configuration
+ * @return {Promise} promise
+ */
 Config.prototype.load = function() {
 
     if (typeof this.data !== "undefined")
@@ -47,8 +52,9 @@ Config.prototype.load = function() {
 
     .then(function(data) {
         var config = Utils.safeEval(data);
-        console.TRACE(TAG, "Configured from ", self.file);
+        Utils.TRACE(TAG, "Configured from ", self.file);
         self.data = config;
+        return self;
     });
 };
 
@@ -71,11 +77,11 @@ Config.prototype.save = function(file) {
     return writeFile(Utils.expandEnvVars(file), this.toString(), "utf8")
 
     .then(function() {
-        console.TRACE(TAG, self.file, " updated");
+        Utils.TRACE(TAG, self.file, " updated");
     })
 
     .catch(function(e) {
-        console.ERROR(TAG, "Config save failed: " + e.stack);
+        Utils.ERROR(TAG, "Config save failed: " + e.stack);
     });
 };
 

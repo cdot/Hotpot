@@ -6,6 +6,7 @@ const Fs = require("fs");
 const Q = require("q");
 const readFile = Q.denodeify(Fs.readFile);
 const writeFile = Q.denodeify(Fs.writeFile);
+const Utils = require("../common/Utils");
 const Historian = require("./Historian");
 
 const TAG = "Pin";
@@ -55,7 +56,7 @@ function Pin(name, config, done) {
      * (see #addRequest) */
     self.requests = [];
 
-    console.TRACE(TAG, "'", self.name,
+    Utils.TRACE(TAG, "'", self.name,
                   "' constructed on gpio ", self.gpio);
     
     var hc = config.get("history");
@@ -67,7 +68,7 @@ function Pin(name, config, done) {
             max_samples: hc.max_samples
         });
     } else
-        console.TRACE(TAG, self.name, " has no historian");
+        Utils.TRACE(TAG, self.name, " has no historian");
 }
 
 /**
@@ -86,7 +87,7 @@ Pin.prototype.initialise = function() {
             .then(function() {
                 // Check passed, so we know it's exported
                 exported = true;
-                console.TRACE(TAG, m, " OK for ", self.name);
+                Utils.TRACE(TAG, m, " OK for ", self.name);
                 return setDirection();
             })
             .catch(function(e) {
@@ -95,7 +96,7 @@ Pin.prototype.initialise = function() {
                     // Already exported, no point trying again
                     return fallBackToDebug(m);
                 else {
-                    console.TRACE(TAG, m);
+                    Utils.TRACE(TAG, m);
                     return exportPin();
                 }
             });
@@ -106,7 +107,7 @@ Pin.prototype.initialise = function() {
         var m = EXPORT_PATH + "=" + self.gpio;
         return writeFile(EXPORT_PATH, self.gpio, "utf8")
             .then(function() {
-                console.TRACE(TAG, m, " OK for ", self.name);
+                Utils.TRACE(TAG, m, " OK for ", self.name);
                 // Use a timeout to give it time to get set up
                 return Q.delay(1000).then(readCheck);
             })
@@ -120,7 +121,7 @@ Pin.prototype.initialise = function() {
         var path = GPIO_PATH + "gpio" + self.gpio + "/direction";
         return writeFile(path, "out")
             .then(function() {
-                console.TRACE(TAG, path, "=out OK for ", self.name);
+                Utils.TRACE(TAG, path, "=out OK for ", self.name);
                 return setActive();
             })
             .catch(function(e) {
@@ -144,7 +145,7 @@ Pin.prototype.initialise = function() {
     function writeCheck() {
         return writeFile(self.value_path, 0, "utf8")
             .then(function() {
-                console.TRACE(TAG, self.value_path, " writeCheck OK for ",
+                Utils.TRACE(TAG, self.value_path, " writeCheck OK for ",
                               self.name);
                 if (self.historian)
                     self.historian.record(0);
@@ -157,16 +158,16 @@ Pin.prototype.initialise = function() {
 
     // Something went wrong, but still use a file
     function fallBackToDebug(err) {
-        console.TRACE(TAG, self.name, ":", self.gpio, " setup failed: ", err);
+        Utils.TRACE(TAG, self.name, ":", self.gpio, " setup failed: ", err);
         if (typeof HOTPOT_DEBUG !== "undefined") {
-            console.TRACE(TAG, "Falling back to debug for ", self.name);
+            Utils.TRACE(TAG, "Falling back to debug for ", self.name);
             self.value_path = HOTPOT_DEBUG.pin_path + self.gpio;
         }
         return writeCheck();
     }
 
     return readCheck();
-}
+};
 module.exports = Pin;
 
 /**
@@ -176,7 +177,7 @@ module.exports = Pin;
 Pin.prototype.DESTROY = function() {
     "use strict";
 
-    console.TRACE(TAG, "Unexport gpio ", this.gpio);
+    Utils.TRACE(TAG, "Unexport gpio ", this.gpio);
     writeFile(UNEXPORT_PATH, this.gpio, "utf8");
 };
 
@@ -191,7 +192,7 @@ Pin.prototype.set = function(state) {
     "use strict";
     var self = this;
 
-    console.TRACE(TAG, self.value_path, " = ", (state === 1 ? "ON" : "OFF"));
+    Utils.TRACE(TAG, self.value_path, " = ", (state === 1 ? "ON" : "OFF"));
 
     var promise = writeFile(self.value_path, state, "UTF8");
     if (self.historian)
@@ -283,7 +284,7 @@ Pin.prototype.purgeRequests = function(state, source) {
             || (r.state === REQUEST_OFF
                 && r.until > 0 && r.until <= Time.nowSeconds())) {
             // BOOST requests are explicitly expired by rules
-            console.TRACE(TAG, "Purge request ", r);
+            Utils.TRACE(TAG, "Purge request ", r);
             reqs.splice(i, 1);
         } else
             i++;
@@ -301,7 +302,7 @@ Pin.prototype.purgeRequests = function(state, source) {
  * @param {object} request { until: epoch s, state: 2|1|0, source: string }
  */ 
 Pin.prototype.addRequest = function(request) {
-    console.TRACE(TAG, "Add request ", request);
+    Utils.TRACE(TAG, "Add request ", request);
     this.purgeRequests(undefined, request.source);
     if (request.state >= 0)
         this.requests.push(request);

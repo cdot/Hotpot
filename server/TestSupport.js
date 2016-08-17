@@ -5,9 +5,8 @@
 const fs = require("fs");
 const Utils = require("../common/Utils.js");
 
-function TestSupport(opts) {
+function TestSupport() {
     console.log("****** Running with TestSupport ******");
-    this.opts = opts;
     this.temperature = { CH: 20, HW: 40 };
     this.thermoMap = {};
     this.pinMap = {};
@@ -48,14 +47,3 @@ TestSupport.prototype.getPin = function(name) {
     return parseInt(fs.readFileSync(this.pin_path + this.pinMap[name]));
 }
 
-TestSupport.prototype.TRACE = function() {
-    var level = arguments[0];
-    if (typeof this.opts !== "undefined" &&
-        (this.opts.indexOf("all") >= 0
-         || this.opts.indexOf(level) >= 0)
-        && (this.opts.indexOf("-" + level) < 0)) {
-        var mess = new Date().toISOString() + " " + level + ": "
-        + Utils.joinArgs(arguments, 1);
-        console.log(mess);
-    }
-};

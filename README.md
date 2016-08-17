@@ -166,3 +166,16 @@ allow it.
 
 # Calendars
 
+Follow the instructions in https://developers.google.com/google-apps/calendar/quickstart/nodejs for configuring the API.
+
+Copy the `"installed"` field of `client_secret.json` into `hotpot.cfg`, in the `apis->google_calendar` section, renaming it `"secrets"` (see `example.hotpot.cfg` for an example) 
+
+Run the command-line program `node authorise_calendar.js` and follow the instructions.
+
+Calendars are cached and updated every 24 hours. An update can be forced by sending `/calendar` to the server.
+
+Calendar events are of the form { start: end: pin: state: }
+
+ALL is a valid pin. States are 0 (off) 1 (on) and 2 (boost). A pin in state 1 can still be turned off if the temperature is higher than the rules allow.
+
+Keep them as requests?

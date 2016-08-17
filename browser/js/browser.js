@@ -1,7 +1,7 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env browser */
-/* global Location, google */
+/* global Location, google, hotpot_protocol */
 
 /**
  * Main module for managing the browser interface to a hotpot server.
@@ -26,7 +26,6 @@
     }
 
     var location;
-    var requests = {};
     var reporter;
     function stopReporting() {
         if (reporter) {

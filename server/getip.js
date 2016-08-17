@@ -27,6 +27,7 @@ const http = require("follow-redirects").http;
 const https = require("follow-redirects").https;
 const JSFtp = require("jsftp");
 const Fs = require("fs");
+const Utils = require("../common/Utils");
 
 var config;
 eval("config=" + Fs.readFileSync("./getip.config"));
@@ -41,19 +42,19 @@ function updateAddress(addr) {
 
     if (config.ftp.debugEnable) {
         Ftp.on("jsftp_debug", function(eventType, data) {
-            console.TRACE("DEBUG: ", eventType);
-            console.TRACE(JSON.stringify(data, null, 2));
+            Utils.TRACE("DEBUG: ", eventType);
+            Utils.TRACE(JSON.stringify(data, null, 2));
         });
     }
 
-    console.TRACE("Push up new IP address "+ addr);
+    Utils.TRACE("Push up new IP address "+ addr);
 
     Ftp.put(new Buffer(addr), config.ftp.path,
             function(hadErr) {
                 if (hadErr)
-                    console.TRACE("Had an error" + hadErr);
+                    Utils.TRACE("Had an error" + hadErr);
                 else
-                    console.TRACE(config.ftp.path + " updated");
+                    Utils.TRACE(config.ftp.path + " updated");
                 Ftp.raw.quit();
             });
 }    
@@ -78,7 +79,7 @@ function httpGET(url, ok, fail) {
             if (fail)
 		fail(err);
 	    else
-		console.TRACE("GET " + url + "failed: " + err);
+		Utils.TRACE("GET " + url + "failed: " + err);
         });
     req.on("response", function(mess) {
         statusCode = mess.statusCode;
@@ -86,14 +87,11 @@ function httpGET(url, ok, fail) {
 }
 
 if (config.debug)
-    console.TRACE = console.log;
-else {
-    console.TRACE = function() { "use strict"; };
-}
+    Utils.setTRACE("all");
 
 function newAddress(addr, old_addr, id) {
     "use strict";
-    console.TRACE("Determined current IP address to be " + addr);
+    Utils.TRACE("Determined current IP address to be " + addr);
     if (addr !== existing_addr) {
 	// Convert to JSON
 	addr = "hotpot_ip=\"" + addr + "\"; /*" + id + "*/";
@@ -118,7 +116,7 @@ function nextInChain(after, old_addr) {
 
 function chainGET(after, old_addr) {
     var self = this;
-    console.TRACE("ask " + self.url);
+    Utils.TRACE("ask " + self.url);
     httpGET(self.url,
 	    function(status, res, url) {
                 if (status === 200) {
@@ -127,16 +125,16 @@ function chainGET(after, old_addr) {
                         after(new_addr.trim(), old_addr, self.id);
                         return;
 		    }
-		    console.TRACE(self.url + " bad data " + res);
+		    Utils.TRACE(self.url + " bad data " + res);
                 } else {
-		    console.TRACE(self.url + " bad status " + status);
+		    Utils.TRACE(self.url + " bad status " + status);
                 }
                 if (self.logout_url)
                     httpGET(self.logout_url, function() { } );
 		nextInChain(after, old_addr);
 	    },
 	    function(err) {
-		console.TRACE("Error: " + err);
+		Utils.TRACE("Error: " + err);
 	    });
 }
 
@@ -154,24 +152,24 @@ function chainTelnet(after, old_addr) {
 		    .exec('ip iplist')
 		    .then(
 			function(resp) {
-			    //console.TRACE(resp);
+			    //Utils.TRACE(resp);
 			    var m = tn.extract.exec(resp);
-			    console.TRACE(self.id + " says IP address is "
+			    Utils.TRACE(self.id + " says IP address is "
 					  + m[1]);
 			    after(m[1], old_addr, self.id);
 			    connection.end();
 			},
 			function(err) {
-			    console.TRACE("Telnet error " + err);
+			    Utils.TRACE("Telnet error " + err);
 			    nextInChain(after, old_addr);
 			})
 	    },
 	    function (err) {
-		console.TRACE("Telnet error " + err);
+		Utils.TRACE("Telnet error " + err);
 		nextInChain(after, old_addr);
 	    });
     connection.on("error", function(e) {
-	console.TRACE("Telnet " + e);
+	Utils.TRACE("Telnet " + e);
 	nextInChain(after, old_addr);
     });
 }
@@ -264,15 +262,15 @@ httpGET(
 	    var hotpot_ip;
 	    try {
 		eval(old_addr);
-		console.TRACE("IP address from web " + hotpot_ip);
+		Utils.TRACE("IP address from web " + hotpot_ip);
 /*		httpGET(
 		    "http://" + hotpot_ip + ":" + config.target.port +
 		      config.target.path,
 		    function(status, data) {
 			if (status === 200) {
-			    console.TRACE("Validated recorded IP address");
+			    Utils.TRACE("Validated recorded IP address");
 			} else {
-			    console.TRACE("Recorded IP address responded "
+			    Utils.TRACE("Recorded IP address responded "
 					  + status);
 			    refreshAddr(old_addr);
 			}
@@ -280,7 +278,7 @@ httpGET(
 */
 		refreshAddr(old_addr); // test
 	    } catch (e) {
-		console.TRACE("Recorded IP address " + old_addr
+		Utils.TRACE("Recorded IP address " + old_addr
 			      + " is corrupt: " + e);
 		refreshAddr(old_addr);
 	    }

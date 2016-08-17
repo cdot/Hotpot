@@ -10,7 +10,9 @@
  * Useful utilities
  * @ignore
  */
-var Utils = {};
+var Utils = {
+    trace: ""
+};
 
 if (typeof module !== "undefined")
     module.exports = Utils;
@@ -81,7 +83,7 @@ Utils.safeEval = function(str) {
         return safeEval_data;
     } catch (e) {
         var mess = "Bad function in safeEval: " + e.message;
-        console.TRACE("Utils", mess, " ", e.stack);
+        Utils.TRACE("Utils", mess, " ", e.stack);
         throw mess;
     }
 };
@@ -101,3 +103,18 @@ Utils.joinArgs = function(args, start) {
     return mess;
 };
 
+Utils.setTRACE = function(t) {
+    Utils.trace = t;
+};
+
+Utils.TRACE = function() {
+    var level = arguments[0];
+    if (typeof Utils.trace !== "undefined" &&
+        (Utils.trace.indexOf("all") >= 0
+         || Utils.trace.indexOf(level) >= 0)
+        && (Utils.trace.indexOf("-" + level) < 0)) {
+        var mess = new Date().toISOString() + " " + level + ": "
+            + Utils.joinArgs(arguments, 1);
+        console.log(mess);
+    }
+};

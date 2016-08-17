@@ -4,6 +4,7 @@
 
 const https = require("https");
 const Q = require("q");
+const Utils = require("../common/Utils.js");
 const Time = require("../common/Time.js");
 const Location = require("../common/Location.js");
 
@@ -96,7 +97,7 @@ function Mobile(name, config) {
      */
     this.time_of_arrival = this.last_time - 1;
 
-    console.TRACE(TAG, name, " constructed");
+    Utils.TRACE(TAG, name, " constructed");
 }
 module.exports = Mobile;
 
@@ -204,14 +205,14 @@ Mobile.prototype.estimateTOA = function(speed) {
         + "&departure_time=" + Math.round(Time.nowSeconds())
         + "&mode=" + mode;
 
-    console.TRACE(TAG, this.name, " routing by ", mode);
+    Utils.TRACE(TAG, this.name, " routing by ", mode);
     function analyseRoutes(route) {
         if (typeof result.error_message !== "undefined") {
             console.ERROR(TAG, "Error getting route: " + result.error_message);
             return;
         }
             
-        console.TRACE(TAG, self.name, " got a route");
+        Utils.TRACE(TAG, self.name, " got a route");
         // Get the time of the best route
         var best_time = A_LONG_TIME;
         for (var r in route.routes) {
@@ -221,7 +222,7 @@ Mobile.prototype.estimateTOA = function(speed) {
                 var leg_length = legs[l].duration.value; // seconds
                 route_length += leg_length;
             }
-            console.TRACE(TAG, self.name, " route of ",
+            Utils.TRACE(TAG, self.name, " route of ",
                           route_length, "s found");
             if (route_length < best_time)
                 best_time = route_length;
@@ -236,7 +237,7 @@ Mobile.prototype.estimateTOA = function(speed) {
                 result += chunk;
             });
             res.on("end", function() {
-                //console.TRACE(TAG, result);
+                //Utils.TRACE(TAG, result);
                 analyseRoutes(JSON.parse(result));
             });
         })

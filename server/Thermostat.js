@@ -4,6 +4,7 @@
 
 const Q = require("q");
 
+const Utils = require("../common/Utils");
 const Historian = require("./Historian.js");
 
 const TAG = "Thermostat";
@@ -68,7 +69,7 @@ function Thermostat(name, config) {
     var hc = config.get("history");
     var self = this;
     if (typeof hc !== "undefined") {
-        if (typeof hc.interval == "undefined")
+        if (typeof hc.interval === "undefined")
             hc.interval = 300; // 5 minutes
         this.historian = new Historian({
             name: self.name,
@@ -92,7 +93,7 @@ function Thermostat(name, config) {
     this.pollTemperature();
     if (this.historian)
         this.historian.start();
-    console.TRACE(TAG, "'", this.name, "' constructed");
+    Utils.TRACE(TAG, "'", this.name, "' constructed");
 }
 module.exports = Thermostat;
 

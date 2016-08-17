@@ -11,8 +11,8 @@ const Q = require("q");
 
 const Location = require("../common/Location.js");
 const Utils = require("../common/Utils.js");
+const Config = require("../common/Config.js");
 
-const Config = require("./Config.js");
 const Apis = require("./Apis.js");
 const Server = require("./Server.js");
 const Controller = require("./Controller.js");
@@ -44,12 +44,10 @@ const Rule = require("./Rule.js");
         // Development only
         Q.longStackSupport = true;
         var TestSupport = require("./TestSupport.js");
-        HOTPOT_DEBUG = new TestSupport(cliopt.debug);
-        console.TRACE = function() {
-            HOTPOT_DEBUG.TRACE.apply(HOTPOT_DEBUG, arguments);
-        };
+        HOTPOT_DEBUG = new TestSupport();
+        Utils.setTRACE(cliopt.debug);
     } else
-        console.TRACE = function() {};
+        Utils.TRACE = function() {};
 
     console.ERROR = function() {
         var tag = arguments[0];
@@ -57,26 +55,30 @@ const Rule = require("./Rule.js");
     };
 
     var config = new Config(cliopt.config);
-    var controller;
+    var controller, server;
 
     config.load()
 
     .then(function() {
         Apis.configure(config.getConfig("apis"));
     })
-
+    
     .then(function() {
         controller = new Controller(config.getConfig("controller"));
+        server = new Server(config.getConfig("server"), controller);
+    })
+
+    .then(function() {
         return controller.initialise();
     })
 
     .then(function() {
-        return Server.configure(config.getConfig("server"), controller);
+        return server.start();
     })
 
     .then(function() {
         controller.setLocation(new Location(
-            Server.server.config.get("location")));
+            config.getConfig("server").get("location")));
 
         // Save config when it changes, so we restart to the
         // same state

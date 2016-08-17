@@ -12,24 +12,17 @@ const Utils = require("../common/Utils.js");
 
 const TAG = "Server";
 
-var setup = {
-    /**
-     * Initialise the singleton server from the given configuration
-     * @param {Config} config the configuration data
-     * @return {Promise} a promise
-     */
-    configure: function(config, controller) {
-        "use strict";
-        setup.controller = controller;
-        setup.server = new Server(config, controller);
-        return setup.server.initialise(config);
-    }
-};
-module.exports = setup;
-
 /**
- * HTTP(S) server object (singleton).
+ * Super-lightweight HTTP(S) server object (singleton) with very few
+ * dependencies. Only supports POST and GET, does not support auth.
+ * Yes, I could have used express, but I wrote this before I knew about
+ * it, and it "just works".
  * @param {Config} config configuration object
+ *   ssl: optional SSL configuration. Will create an HTTP server if not
+ *           present
+ *      key: name of a file containing the SSL key
+ *      cert: name of a file containing the SSL certificate
+ *   port: port to serve on
  * @protected
  * @class
  */
@@ -38,9 +31,16 @@ function Server(config, controller) {
 
     var self = this;
     self.config = config;
+    self.controller = controller;
+    self.ready = false;
 }
+module.exports = Server;
 
-Server.prototype.initialise = function() {
+/**
+ * Get a promise to start the server.
+ * @return {Promise} a promise
+ */
+Server.prototype.start = function() {
     var self = this;
 
     var handler = function(request, response) {
@@ -67,7 +67,7 @@ Server.prototype.initialise = function() {
 
         .then(function(k) {
             options.key = k;
-	    console.TRACE(TAG, "Key ", https.key, " loaded");
+            Utils.TRACE(TAG, "Key ", https.key, " loaded");
         })
 
         .then(function() {
@@ -76,8 +76,8 @@ Server.prototype.initialise = function() {
 
         .then(function(c) {
             options.cert = c;
-            console.TRACE(TAG, "Certificate ", https.cert, " loaded");
-            console.TRACE(TAG, "HTTPS starting on port ",
+            Utils.TRACE(TAG, "Certificate ", https.cert, " loaded");
+            Utils.TRACE(TAG, "HTTPS starting on port ",
                           self.config.get("port"),
                           " with key ", https.key);
         })
@@ -86,7 +86,7 @@ Server.prototype.initialise = function() {
             return require("https").createServer(options, handler);
         });
     } else {
-        console.TRACE(TAG, "HTTP starting on port ", self.config.get("port"));
+        Utils.TRACE(TAG, "HTTP starting on port ", self.config.get("port"));
         promise = promise
         .then(function() {
             return require("http").createServer(handler);
@@ -96,9 +96,10 @@ Server.prototype.initialise = function() {
     return promise
 
     .then(function(httpot) {
+        self.ready = true;
         httpot.listen(self.config.get("port"));
     });
-}
+};
 
 /**
  * Common handling for requests, POST or GET
@@ -111,14 +112,14 @@ Server.prototype.handle = function(path, params, response) {
     path = path.substring(1).split("/");
     var command = path.shift();
 
-    console.TRACE(TAG, "Handling ", command);
-    if (typeof setup.controller === "undefined") {
+    Utils.TRACE(TAG, "Handling ", command);
+    if (!this.ready) {
         // Not ready
         response.statusCode = 500;
         response.end();
         return;
     }
-    setup.controller.dispatch(command, path, params)
+    this.controller.dispatch(command, path, params)
         .done(function(reply) {
             var s = (typeof reply !== "undefined" && reply !== null)
                 ? serialize(reply) : "";
@@ -135,7 +136,7 @@ Server.prototype.handle = function(path, params, response) {
             response.statusCode = 200;
             response.write(s);
             response.end();
-            console.TRACE(TAG, "Handled ", command);
+            Utils.TRACE(TAG, "Handled ", command);
         });
 };
 
@@ -151,7 +152,7 @@ Server.prototype.GET = function(request, response) {
         var req = Url.parse("" + request.url, true);
         this.handle(req.pathname, req.query, response);
     } catch (e) {
-        console.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
+        Utils.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
         response.write(e + " in " + request.url + "\n");
         response.statusCode = 400;
     }
@@ -173,12 +174,12 @@ Server.prototype.POST = function(request, response) {
             var object;
             if (body.length > 0) {
                 var sbody = Buffer.concat(body).toString();
-                //console.TRACE(TAG, "Parsing message ", sbody);
+                //Utils.TRACE(TAG, "Parsing message ", sbody);
                 object = JSON.parse(sbody);
             }
             self.handle(request.url, object, response);
         } catch (e) {
-            console.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
+            Utils.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
             response.write(e + " in " + request.url + "\n");
             response.statusCode = 400;
         }

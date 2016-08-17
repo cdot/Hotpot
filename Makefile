@@ -2,6 +2,7 @@
 
 SOURCES := \
 	server/Apis.js \
+	server/authorise_calendar.js \
 	server/Config.js \
 	server/Controller.js \
 	server/Historian.js \
@@ -10,6 +11,7 @@ SOURCES := \
 	server/Mobile.js \
 	server/Pin.js \
 	server/Rule.js \
+	server/Scheduled.js \
 	server/Server.js \
 	server/Thermostat.js \
 	common/BrowserStubs.js \
