@@ -124,11 +124,12 @@ Historian.prototype.load = function(data) {
  */
 Historian.prototype.getSerialisableHistory = function() {
     "use strict";
+    var self = this;
     return Q.fcall(function() {
-        var report = this.history;
-        var res = [ this.basetime ];
+        var report = self.history;
+        var res = [ self.basetime ];
         for (var i in report) {
-            res.push(report[i].time - this.basetime);
+            res.push(report[i].time - self.basetime);
             res.push(report[i].sample);
         }
         return res;
