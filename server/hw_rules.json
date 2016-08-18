@@ -6,7 +6,7 @@ function () {
     if (this.thermostat.HW.temperature > 40) {
         // Hot enough, so switch off regardless of other rules
         if (state === 1) {
-            console.TRACE("HW", " is ", this.thermostat.HW.temperature,
+            Utils.TRACE("HW", " is ", this.thermostat.HW.temperature,
                           "°C so off");
             this.setPin("HW", 0);
             // Purge boost requests (state 2)
@@ -19,7 +19,7 @@ function () {
     // such as boost requests
     var req = this.pin.HW.getActiveRequest();
     if (req) {
-        console.TRACE("HW", "has active request for ", req.state,
+        Utils.TRACE("HW", "has active request for ", req.state,
                       " from ", req.source);
         // Use setPin rather than this.pin.set() because setPin handles
         // the interaction between HW and CH in Y-plan systems
@@ -33,18 +33,18 @@ function () {
         var m = this.mobile[moby];
         if (m.arrivesIn() < 5 * 60) {
             // already at home
-            console.TRACE("HW", "HW ", m.name, " is at home");
+            Utils.TRACE("HW", "HW ", m.name, " is at home");
             at_home++;
         } else if (m.arrivesIn() < 30 * 60) {
             // 30 minutes away
-            console.TRACE("HW", m.name, " will arrive in ", m.arrivesIn());
+            Utils.TRACE("HW", m.name, " will arrive in ", m.arrivesIn());
             arrive_soon++;
         }
     }
 
     if (at_home + arrive_soon === 0) {
         if (state === 1) {
-            console.TRACE("HW", "no demand, so off");
+            Utils.TRACE("HW", "no demand, so off");
             this.setPin("HW", 0);
         }
         return;
@@ -55,14 +55,14 @@ function () {
             || Time.between('20:00', '06:30')) // night
        ) {
         if (state === 1)
-            console.TRACE("HW", "demand is at home, and out of time band, so off");
+            Utils.TRACE("HW", "demand is at home, and out of time band, so off");
         this.setPin("HW", 0);
         return;
     }
 
     // Demand is away from home, or we are in time band
     if (state === 0 && this.thermostat.HW.temperature < 34) {
-        console.TRACE("HW", "on");
+        Utils.TRACE("HW", "on");
         this.setPin("HW", 1);
         return;
     }
