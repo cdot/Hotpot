@@ -134,8 +134,9 @@ Thermostat.prototype.getSerialisableState = function() {
  * serialisable structure. Note that the history is sampled at intervals,
  * but not every sample time will have a event. The history is only
  * updated if the temperature changes.
- * @return {object} array of alternating times and temps. Times are all
- * relative to a base time, which is in the first array element.
+ * @return {Promise} promise to get an array of alternating times and
+ * temps. Times are all relative to a base time, which is in the first
+ * array element.
  * @protected
  */
 Thermostat.prototype.getSerialisableLog = function() {
