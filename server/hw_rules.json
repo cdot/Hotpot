@@ -36,11 +36,11 @@ function () {
         var m = this.mobile[moby];
         if (m.arrivesIn() < 5 * 60) {
             // already at home
-            Utils.TRACE("Rules", "HW ", m.name, " is at home");
+            //Utils.TRACE("Rules", "HW ", m.name, " is at home");
             at_home++;
         } else if (m.arrivesIn() < 30 * 60) {
             // 30 minutes away
-            Utils.TRACE("Rules", "HW ", m.name, " will arrive in ", m.arrivesIn());
+            //Utils.TRACE("Rules", "HW ", m.name, " will arrive in ", m.arrivesIn());
             arrive_soon++;
         }
     }
