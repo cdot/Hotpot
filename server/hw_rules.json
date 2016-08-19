@@ -13,8 +13,6 @@ function () {
             // Purge boost requests (state 2)
             this.pin.HW.purgeRequests(2);
         }
-        Utils.TRACE("Rules", "HW is ", this.thermostat.HW.temperature,
-                    "°C so leaving off");
         return;
     }
 
