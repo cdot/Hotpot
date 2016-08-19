@@ -13,8 +13,8 @@ const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
 const Rule = require("./Rule.js");
 const Mobile = require("./Mobile.js");
-const Scheduled = require("./Scheduled");
-const Apis = require("./Apis.js");
+const Calendar = require("./Calendar");
+const Hotpot = require("./Hotpot.js");
 
 const TAG = "Controller";
 
@@ -33,8 +33,9 @@ const RULE_INTERVAL = 5000;
  * @protected
  * @class
  */
-function Controller(config) {
+function Controller(config, apis) {
     this.config = config;
+    this.apis = apis;
 }
 Util.inherits(Controller, Events);
 module.exports = Controller;
@@ -49,23 +50,27 @@ Controller.prototype.initialise = function() {
     return Q()
 
     .then(function() {
-        return self.createRules(self.config.getConfig("rule"));
+        return self.createRules(self.config.rule);
     })
 
     .then(function() {
-        return self.createMobiles(self.config.getConfig("mobile"));
+        return self.createMobiles(self.config.mobile);
     })
 
     .then(function() {
-        return self.createCalendars(self.config.getConfig("calendar"));
+        return self.createCalendars(self.config.calendar);
     })
 
     .then(function(e) {
-        return self.createPins(self.config.getConfig("pin"));
+        return self.createPins(self.config.pin);
+    })
+
+    .then(function(e) {
+        return self.resetValve();
     })
 
     .then(function() {
-        return self.createThermostats(self.config.getConfig("thermostat"));
+        return self.createThermostats(self.config.thermostat);
     })
 
     .then(function() {
@@ -74,84 +79,75 @@ Controller.prototype.initialise = function() {
 };
 
 /**
- * Create mobiles specified by config
+ * Return a promise to create mobiles
+ * @param {Array} configs array of mobile configurations
+ * @return {Promise} a promise to create all the mobiles
  * @private
  */
-Controller.prototype.createMobiles = function(mob_config) {
+Controller.prototype.createMobiles = function(configs) {
     "use strict";
     var self = this;
 
-    return new Q.Promise(function(fulfill) {
-        self.mobile = {};
-        mob_config.each(function(id) {
-            self.mobile[id] = new Mobile(
-                id, mob_config.getConfig(id));
+    var promise = Q();
+    self.mobile = {};
+    Utils.forEach(configs, function(config, id) {
+        promise = promise.then(function() {
+            self.mobile[id] = new Mobile(id, config);
         });
-        fulfill();
     });
-};
-
-Controller.prototype.createCalendars = function(cal_config) {
-    "use strict";
-    var self = this;
-
-     return new Q.Promise(function(fulfill) {
-        self.calendar = {};
-        cal_config.each(function(id) {
-            self.calendar[id] = new Scheduled(
-                id, cal_config.getConfig(id));
-            self.calendar[id].update(1000);
-        });
-        fulfill();
-    });
+    return promise;
 };
 
 /**
- * Create pins as specified by config
+ * Create calendars
+ * @param {Array} configs array of calendar configurations
+ * @return {Promise} a promise. Calendar creation doesn't depend on this
+ * promise, it will resolve immediately.
  * @private
  */
-Controller.prototype.createPins = function(pin_config) {
+Controller.prototype.createCalendars = function(configs) {
+    "use strict";
+    var self = this;
+
+    self.calendar = {};
+    Utils.forEach(configs, function(config, name) {
+        self.calendar[name] = new Calendar(name, config);
+        // Queue a calendar update
+        self.calendar[name].update(1000);
+    });
+    return Q();
+};
+
+/**
+ * Create pins as specified by configs
+ * @param {Map} configs map of pin configurations
+ * @return {Promise} a promise. Pins are ready for use when this promise
+ * is resolved.
+ * @private
+ */
+Controller.prototype.createPins = function(configs) {
     "use strict";
     var self = this;
 
     self.pin = {};
 
     var promises = Q();
-    pin_config.each(function(k) {
-        self.pin[k] = new Pin(k, pin_config.getConfig(k));
+    Utils.forEach(configs, function(config, id) {
+        self.pin[id] = new Pin(id, config);
         promises = promises.then(function() {
-            return self.pin[k].initialise();
+            return self.pin[id].initialise();
         });
     });
 
     return promises;
 };
-    
+
 /**
- * Create thermostats as specified by config
- * @private
+ * Reset pins to a known state on startup
  */
-Controller.prototype.createThermostats = function(ts_config) {
-    "use strict";
+Controller.prototype.resetValve = function() {
     var self = this;
-
-    self.thermostat = {};
-    ts_config.each(function(k) {
-        // Pass 'self' as the event listener
-        var th = new Thermostat(k, ts_config.getConfig(k));
-        self.thermostat[k] = th;
-    });
-
-    // When we start, turn heating OFF and hot water ON to ensure
-    // the valve returns to the A state. Once the valve has settled,
-    // turn off hot water. The grey wire will be high but the valve
-    // won"t be listening to it.
-
-    // Assume worst-case valve configuration i.e. grey wire live holding
-    // valve. Reset to no-power state by turning HW on to turn off the
-    // grey wire and waiting for the valve spring to relax.
-    Utils.TRACE(TAG, "Constructed thermostats");
-    var promise = self.pin.HW.set(1)
+    var promise = this.pin.HW.set(1)
 
     .then(function() {
         Utils.TRACE(TAG, "Reset: HW(1) done");
@@ -170,39 +166,64 @@ Controller.prototype.createThermostats = function(ts_config) {
     })
 
     .then(function() {
-        Utils.TRACE(TAG, "Reset: HW(0) done");
+        Utils.TRACE(TAG, "Valve reset");
     })
 
     .catch(function(e) {
-        console.ERROR(TAG, "Failed to reset valve: ", e);
+        Utils.ERROR(TAG, "Failed to reset valve: ", e);
     });
 
     return promise;
 };
 
 /**
- * Create the rules defined in the configuration
+ * Create thermostats as specified by config
  * @private
  */
-Controller.prototype.createRules = function(config) {
+Controller.prototype.createThermostats = function(configs) {
+    "use strict";
+
+    var self = this;
+    this.thermostat = {};
+    Utils.forEach(configs, function(config, id) {
+        self.thermostat[id] = new Thermostat(id, config);
+    }, this);
+
+    // When we start, turn heating OFF and hot water ON to ensure
+    // the valve returns to the A state. Once the valve has settled,
+    // turn off hot water. The grey wire will be high but the valve
+    // won"t be listening to it.
+
+    // Assume worst-case valve configuration i.e. grey wire live holding
+    // valve. Reset to no-power state by turning HW on to turn off the
+    // grey wire and waiting for the valve spring to relax.
+    Utils.TRACE(TAG, "Constructed thermostats");
+
+    return Q();
+};
+
+/**
+ * Create the rules defined in the configuration
+ * @param {Array} configs array of rule configurations
+ * @return {Promise} a promise.
+ * @private
+ */
+Controller.prototype.createRules = function(configs) {
     "use strict";
     var self = this;
 
     var promise = Q();
 
     self.rule = [];
-    config.each(function(k) {
-        var r = config.getConfig(k);
-        var rule = new Rule(r.get("name"));
+    Utils.forEach(configs, function(config, idx) {
+        var rule = new Rule(config.name);
+        self.addRule(rule, false);
+        // Pull the initial test function in
         promise = promise.then(function() {
-            if (r.has("from_file"))
-                return rule.fromFile(r.get("from_file"));
-            else
-                return r.setTest(r.get("test"));
-        })
-
-        .then(function() {
-            self.insert_rule(rule);
+            return Config.fileableConfig(config, "test")
+                .then(function(fn) {
+                    rule.setTest(fn, false);
+                });
         });
     });
     return promise;
@@ -217,37 +238,11 @@ Controller.prototype.setLocation = function(location) {
     for (var id in this.mobile) {
         this.mobile[id].setHomeLocation(location);
     }
-
-    var weather_config = Apis.get("weather");
+    var weather_config = this.apis.weather;
     if (typeof weather_config !== "undefined") {
-        this.weather_agent = require("./" + weather_config.class + ".js");
-        this.weather_agent.setLocation(location);
+        var WeatherAgent = require("./" + weather_config.class + ".js");
+        this.weather_agent = new WeatherAgent(weather_config, location);
     }
-};
-
-/**
- * Generate and return a serialisable version of the structure, suitable
- * for use in an AJAX response.
- * @param {boolean} ajax set true if this config is for AJAX
- * @return {object} a serialisable structure
- */
-Controller.prototype.getSerialisableConfig = function(ajax) {
-    "use strict";
-    function sermap(m) {
-	var res = {};
-	for (var k in m)
-            res[k] = m[k].getSerialisableConfig(ajax);
-        return res;
-    }
-
-    return {
-        location: this.location,
-        thermostat: sermap(this.thermostat),
-        pin: sermap(this.pin),
-        mobile: sermap(this.mobile),
-        calendar: sermap(this.calendar),
-        rule: sermap(this.rule)
-    };
 };
 
 /**
@@ -260,35 +255,26 @@ Controller.prototype.getSerialisableState = function() {
 
     var state = {
 	time: Time.now(), // local time
-        env_temp: this.weather("Temperature"),
-        thermostat: {},
-        pin: {},
-        calendar: {},
-        mobile: {}
+        env_temp: this.weather("Temperature")
     };
     
     var self = this;
     var promise = Q();
 
-    function makePromise(field, k) {
-        promise = promise.then(function() {
-            return self[field][k].getSerialisableState();
-        })
-
-        .then(function(value) {
-            state[field][k] = value;
+   Utils.forEach(this, function(block, field) {
+       Utils.forEach(block, function(item, key) {
+            if (typeof item.getSerialisableState === "function") {
+                if (typeof state[field] === "undefined")
+                    state[field] = {};
+                promise = promise.then(function() {
+                    return item.getSerialisableState();
+                })
+                .then(function(value) {
+                    state[field][key] = value;
+                });
+            }
         });
-    }
-
-    function makePromises(field) {
-	for (var k in self[field])
-            makePromise(field, k);
-    }
-
-    makePromises("thermostat");
-    makePromises("pin");
-    makePromises("calendar");
-    makePromises("mobile");
+    });
  
     return promise.then(function() {
         return state;
@@ -296,9 +282,9 @@ Controller.prototype.getSerialisableState = function() {
 };
 
 /**
- * Generate and return a serialisable version of the structure, suitable
- * for use in an AJAX response.
- * @return {object} a serialisable structure
+ * Generate and promise to return a serialisable version of the
+ * thermostat logs, suitable for use in an AJAX response.
+ * @return {object} a promise to create serialisable structure
  */
 Controller.prototype.getSerialisableLog = function() {
     "use strict";
@@ -396,7 +382,7 @@ Controller.prototype.setPromise = function(channel, on) {
 /**
  * Look up a mobile by ID
  * @param {string} id id of mobile to look up
- * @return {Mobile} mobile found, or null
+ * @return {Mobile} mobile found, or undefined
  * @access public
  */
 Controller.prototype.getMobile = function(id) {
@@ -406,7 +392,7 @@ Controller.prototype.getMobile = function(id) {
         if (mobile.id === id)
             return mobile;
     }
-    return null;
+    return undefined;
 };
 
 /**
@@ -425,10 +411,8 @@ Controller.prototype.handleMobileCommand = function(path, info) {
     Utils.TRACE(TAG, "mobile ", command, " ", info);
 
     var mob = this.getMobile(info.device);
-    if (mob === null) {
-        return Q.fcall(function() {
-            throw "Mobile device '" + info.device + "' not known";
-        });
+    if (typeof mob === "undefined") {
+        throw "Mobile device '" + info.device + "' not known";
     }
 
     if (typeof info.lat !== "undefined" && typeof info.lng !== "undefined") {
@@ -444,12 +428,13 @@ Controller.prototype.handleMobileCommand = function(path, info) {
             return {
                 lat: serv_loc.lat,
                 lng: serv_loc.lng,
-                fences: mob.getSerialisableConfig().fences
+                fences: mob.config.fences
             };
         });
 
     case "request":
         // Push a request onto a pin
+        Utils.TRACE(TAG, "SMEG");
         var req = {
             state: parseInt(info.state),
             source: mob.name
@@ -466,7 +451,7 @@ Controller.prototype.handleMobileCommand = function(path, info) {
         break;
     }
 
-    return Q.Promise(function(f) { f("OK"); });
+    return Q.fncall(function(f) { return "OK" });
 };
 
 /**
@@ -502,30 +487,27 @@ Controller.prototype.dispatch = function(command, path, data) {
     case "state": // Return the current system state
         return self.getSerialisableState();
     case "log":
-        return Q.promise(function (f) { f(self.getSerialisableLog()); });
-    case "config": // Return the controller config
-        return Q.promise(function (f) { f(self.getSerialisableConfig(true)); });
+        return self.getSerialisableLog();
+    case "config": // Return the config with all _file expanded
+        return Config.getSerialisable(this.config);
     case "apis": // Return the apis config
-        return Q.promise(function (f) { f(Apis.getSerialisableConfig(true)); });
+        return Q.fcall(function () { return self.apis; });
     case "remove_rule": // remove a rule
         // /rule/{index}
         self.remove_rule(parseInt(path[1]));
-        self.emit("config_change");
         break;
-    case "insert_rule": // insert a new rule
-        self.insert_rule(
-            new Rule(data.name, Utils.safeEval(data.test)));
-        self.emit("config_change");
+    case "insert_rule": // insert a new rule at the end
+        var r = new Rule(data.name);
+        r.setTest(data.test);
+        self.addRule(r, true);
         break;
     case "move_up": // promote a rule in the evaluation order
         // /rule/{index}
         self.move_rule(parseInt(path[1]), -1);
-        self.emit("config_change");
         break;
     case "move_down": // demote a rule
         // /rule/{index}
         self.move_rule(parseInt(path[1]), 1);
-        self.emit("config_change");
         break;
     case "set": // change the configuration of a system element
         if (path[0] === "pin")
@@ -534,10 +516,16 @@ Controller.prototype.dispatch = function(command, path, data) {
 
         // set/rule
         else if (path[0] === "rule") {
-            if (path[1] === "name")
-                self.rule[parseInt(path[1])].name = data.value;
-            else if (path[1] === "test")
-                self.rule[parseInt(path[1])].setTest(data.value);
+            var i = parseInt(path[1]);
+            if (i < 0 || i >= self.rule.length)
+                throw "No rule " + i;
+            if (path[2] === "name")
+                self.rule[i].name = data.value;
+            else if (path[2] === "test")
+                self.rule[i].setTest(data.value);
+            else
+                throw "Unrecognised set/rule command " + path[2];
+            self.rule[i].updateConfiguration(self.config.rule[i]);
             self.emit("config_change");
         }
         else
@@ -558,7 +546,7 @@ Controller.prototype.dispatch = function(command, path, data) {
 };
 
 /**
- * Get the index of a rule specified by name, object or index
+ * Get the index of a rule specified by name, object or index.
  * @private
  */
 Controller.prototype.getRuleIndex = function(i) {
@@ -576,32 +564,27 @@ Controller.prototype.getRuleIndex = function(i) {
 };
 
 /**
- * Insert a rule at a given position in the order. Positions are
- * numbered from 0 (highest priority). To add a rule at the lowest
- * priority position, pass i=-1 (or i > max rule position)
- * @param rule {Rule} the rule, a hash with name: , test:
- * @param i {integer} the position to insert the rule at, or -1
- * (or undef) for the end
- * @return {integer} the position the rules was added at
+ * Add a new rule to the end of the rule list.
+ * @param rule {Rule} the rule
+ * @param update_config true to update the configuration too (and cause it
+ * to be saved)
  */
-Controller.prototype.insert_rule = function(rule, i) {
+Controller.prototype.addRule = function(rule, update_config) {
     "use strict";
-    if (typeof i === "undefined" || i < 0 || i > this.rule.length)
-        i = this.rule.length;
-    if (i === this.rule.length) {
-        this.rule.push(rule);
-    } else if (i === 0)
-        this.rule.unshift(rule);
-    else
-        this.rule.splice(i, 0, rule);
+    rule.index = this.rule.length;
+    this.rule.push(rule);
     this.renumberRules();
-    Utils.TRACE(TAG, "Rule '", this.rule[i].name,
-                  "' inserted at ", rule.index);
-    return i;
+
+    if (update_config) {
+        this.config.rule.push(r.getConfiguration());
+        self.emit("config_change");
+    }
+
+    Utils.TRACE(TAG, "Rule '", rule.name, "' inserted at ", rule.index);
 };
 
 /**
- * Move a rule a specified number of places in the order
+ * Move a rule a specified number of places in the order.
  * @param i the number (or name, or rule object) of the rule to delete
  * @param move {integer} number of places to move the rule, negative to move up,
  * positive to move down
@@ -619,12 +602,15 @@ Controller.prototype.move_rule = function(i, move) {
 
     var removed = this.rule.splice(i, 1);
     this.rule.splice(dest, 0, removed[0]);
+    removed = this.config.rule.splice(i, 1);
+    this.config.rule.splice(dest, 0, removed[0]);
     this.renumberRules();
+    self.emit("config_change");
     Utils.TRACE(TAG, this.name, " rule ", i, " moved to ", dest);
 };
 
 /**
- * Remove a rule
+ * Remove a rule.
  * @param i the number (or name, or rule object) of the rule to delete
  * @return the removed rule function
  */
@@ -632,23 +618,16 @@ Controller.prototype.remove_rule = function(i) {
     "use strict";
     i = this.getRuleIndex(i);
     var del = this.rule.splice(i, 1);
+    this.config.rule.splice(i, 1);
     this.renumberRules();
     Utils.TRACE(TAG, this.name, " rule ", del[0].name,
                   "(", i, ") removed");
+    self.emit("config_change");
     return del[0];
 };
 
 /**
- * Remove all rules
- */
-Controller.prototype.clear_rules = function() {
-    "use strict";
-    Utils.TRACE(TAG, this.name, " rules cleared");
-    this.rule = [];
-};
-
-/**
- * Reset the index of rules
+ * Reset the index of rules.
  * @private
  */
 Controller.prototype.renumberRules = function() {
@@ -658,8 +637,7 @@ Controller.prototype.renumberRules = function() {
 };
 
 /**
- * Evaluate rules at regular intervals. The evaluation of rules sets a
- * probability for a service - central heating or water - to be enabled.
+ * Evaluate rules at regular intervals.
  */
 Controller.prototype.pollRules = function() {
     "use strict";
@@ -673,7 +651,7 @@ Controller.prototype.pollRules = function() {
     for (var i = 0; i < self.rule.length; i++) {
         var rule = self.rule[i];
         if (typeof rule.testfn !== "function") {
-            console.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
+            Utils.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
             continue;
         }
         var result;
@@ -681,9 +659,11 @@ Controller.prototype.pollRules = function() {
             result = rule.testfn.call(self);
         } catch (e) {
             if (typeof e.stack !== "undefined")
-                console.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
-            console.ERROR(TAG, "'", rule.name, "' failed: " + e);
+                Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
+            Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.toString());
         }
+        // If a rule returns the string "remove", it will be
+        // removed from the rules list
         if (typeof result === "string") {
             if (result === "remove")
                 remove.push(i);

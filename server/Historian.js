@@ -62,8 +62,8 @@ Historian.prototype.rewriteHistory = function(callback) {
                     callback();
             },
             function(err) {
-                console.ERROR(TAG, "Failed to write '"
-                              + self.file + "': " + err);
+                Utils.ERROR(TAG, "Failed to write '",
+                              self.file, "': ", err.toString());
                 if (typeof callback !== "undefined")
                     callback();
             });
@@ -211,16 +211,14 @@ Historian.prototype.record = function(t, callback) {
                     })
                 .fail(
                     function(ferr) {
-                        console.ERROR(
-                            TAG, " failed to append to  history file '"
-                                + self.file + "': "
-                                + ferr);
+                        Utils.ERROR(TAG, "failed to append to '",
+                                self.file, "': ",
+                                ferr.toString());
                         if (typeof callback !== "undefined")
                             callback();
                     });
         })
-.fail(
-        function(err) {
+        .fail(function(err) {
             Utils.TRACE(TAG, "Failed to stat history file '",
                           self.file, "': ", err);
             // Probably the first time; write the whole history file

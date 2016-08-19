@@ -9,6 +9,7 @@ const serialize = require("serialize-javascript");
 const Url = require("url");
 
 const Utils = require("../common/Utils.js");
+const Config = require("./Config.js");
 
 const TAG = "Server";
 
@@ -20,8 +21,10 @@ const TAG = "Server";
  * @param {Config} config configuration object
  *   ssl: optional SSL configuration. Will create an HTTP server if not
  *           present
- *      key: name of a file containing the SSL key
- *      cert: name of a file containing the SSL certificate
+ *      key: text of the SSL key OR
+ *      key_file: name of a file containing the SSL key
+ *      cert: text of the certificate OR
+ *      cert_file: name of a file containing the SSL certificate
  *   port: port to serve on
  * @protected
  * @class
@@ -55,30 +58,30 @@ Server.prototype.start = function() {
 
     var promise = Q();
 
-    var https = self.config.get("ssl");
+    var https = self.config.ssl;
     if (typeof https !== "undefined") {
         var options = {};
 
         promise = promise
 
         .then(function() {
-            return readFile(Utils.expandEnvVars(https.key));
+            return Config.fileableConfig(https, "key");
         })
 
         .then(function(k) {
             options.key = k;
-            Utils.TRACE(TAG, "Key ", https.key, " loaded");
+            Utils.TRACE(TAG, "SSL key loaded");
         })
 
         .then(function() {
-            return readFile(Utils.expandEnvVars(https.cert));
+            return Config.fileableConfig(https, "cert");
         })
 
         .then(function(c) {
             options.cert = c;
-            Utils.TRACE(TAG, "Certificate ", https.cert, " loaded");
+            Utils.TRACE(TAG, "SSL certificate loaded");
             Utils.TRACE(TAG, "HTTPS starting on port ",
-                          self.config.get("port"),
+                          self.config.port,
                           " with key ", https.key);
         })
 
@@ -86,7 +89,7 @@ Server.prototype.start = function() {
             return require("https").createServer(options, handler);
         });
     } else {
-        Utils.TRACE(TAG, "HTTP starting on port ", self.config.get("port"));
+        Utils.TRACE(TAG, "HTTP starting on port ", self.config.port);
         promise = promise
         .then(function() {
             return require("http").createServer(handler);
@@ -97,7 +100,7 @@ Server.prototype.start = function() {
 
     .then(function(httpot) {
         self.ready = true;
-        httpot.listen(self.config.get("port"));
+        httpot.listen(self.config.port);
     });
 };
 
@@ -120,6 +123,7 @@ Server.prototype.handle = function(path, params, response) {
         return;
     }
     this.controller.dispatch(command, path, params)
+
         .done(function(reply) {
             var s = (typeof reply !== "undefined" && reply !== null)
                 ? serialize(reply) : "";
@@ -137,7 +141,21 @@ Server.prototype.handle = function(path, params, response) {
             response.write(s);
             response.end();
             Utils.TRACE(TAG, "Handled ", command);
-        });
+        })
+/*
+        .catch(function(error) {
+            // Send the error message in the payload
+            Utils.TRACE(TAG, "Error in ", command, ": ", error.stack);           
+            response.writeHead(
+                500, "ERROR",
+                {
+                    "Content-Type": "text/plain",
+                    "Content-Length": Utils.byteLength(error),
+                });
+            response.statusCode = 500;
+            response.write(error.toString());
+            response.end();
+        })*/;
 };
 
 /**

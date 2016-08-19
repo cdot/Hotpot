@@ -28,8 +28,9 @@ function Location(lat, lng) {
         } else if (typeof lat.longitude !== "undefined") {
             lng = lat.longitude;
             lat = lat.latitude;
-        } else
+        } else {
             throw "Cannot initialise a Location from this object";
+        }
     }
     this.lat = lat;
     this.lng = lng;

@@ -23,8 +23,9 @@ if (typeof module !== "undefined")
  * @return {String} data string with env vars expanded
  */
 Utils.expandEnvVars = function(data) {
-    if (typeof data !== "string")
-        throw "Cannot expand " + data;
+    if (typeof data !== "string") {
+        throw "Cannot expand " + (typeof data);
+    }
     return data.replace(
             /(\$[A-Z]+)/g, function(match) {
                 var v = match.substring(1);
@@ -116,5 +117,16 @@ Utils.TRACE = function() {
         var mess = new Date().toISOString() + " " + level + ": "
             + Utils.joinArgs(arguments, 1);
         console.log(mess);
+    }
+};
+
+Utils.ERROR = function() {
+    var tag = arguments[0];
+    console.error("*** " + tag + "***", Utils.joinArgs(arguments, 1));
+};
+
+Utils.forEach = function(that, callback) {
+    for (var i in that) {
+        callback(that[i], i, that);
     }
 };

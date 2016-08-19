@@ -34,9 +34,8 @@ function Thermostat(name, config) {
             try {
                 ds18x20.loadDriver();
             } catch (err) {
-                console.ERROR(TAG, "Temperature sensor '"
-                              + name + "' driver not loaded: "
-                              + err.message);
+                Utils.ERROR(TAG, "Temperature sensor '",
+                            name, "' driver not loaded: ", err.message);
                 if (typeof HOTPOT_DEBUG !== "undefined")
                     ds18x20 = HOTPOT_DEBUG;
                 else
@@ -45,9 +44,7 @@ function Thermostat(name, config) {
         }
     }
 
-    this.poll_interval = config.get("poll_interval");
-    if (typeof this.poll_interval === "undefined")
-        this.poll_interval = DEFAULT_POLL_INTERVAL;
+    this.config = config;
    
     /**
      * Name of the thermostat e.g. "HW"
@@ -66,7 +63,7 @@ function Thermostat(name, config) {
     /**
      * Temperature history, sample on a time schedule
      */
-    var hc = config.get("history");
+    var hc = config.history;
     var self = this;
     if (typeof hc !== "undefined") {
         if (typeof hc.interval === "undefined")
@@ -84,11 +81,8 @@ function Thermostat(name, config) {
         });
     }
 
-    /** @private */
-    this.id = config.get("id"); // DS18x20 device ID
-
     if (typeof HOTPOT_DEBUG !== "undefined")
-        HOTPOT_DEBUG.mapThermostat(config.get("id"), name);
+        HOTPOT_DEBUG.mapThermostat(config.id, name);
 
     this.pollTemperature();
     if (this.historian)
@@ -96,22 +90,6 @@ function Thermostat(name, config) {
     Utils.TRACE(TAG, "'", this.name, "' constructed");
 }
 module.exports = Thermostat;
-
-/**
- * Generate and return a serialisable version of the configuration, suitable
- * for use in an AJAX response and for storing in a file.
- * @param {boolean} ajax set true if this config is for AJAX
- * @return {object} a serialisable structure
- * @protected
- */
-Thermostat.prototype.getSerialisableConfig = function(ajax) {
-    "use strict";
-
-    return {
-        id: this.id,
-        history: this.history_config
-    };
-};
 
 /**
  * Generate and return a promise for a serialisable version of the state
@@ -157,16 +135,18 @@ Thermostat.prototype.pollTemperature = function() {
 
     var self = this;
 
-    ds18x20.get(this.id, function(err, temp) {
+    ds18x20.get(this.config.id, function(err, temp) {
         if (err !== null) {
-            console.ERROR(TAG, "d218x20 error: " + err);
+            Utils.ERROR(TAG, "d218x20 error: ", err);
         } else {
             if (typeof temp === "number")
                 // At least once this has been "boolean"!
                 self.temperature = temp;
             setTimeout(function() {
                 self.pollTemperature();
-            }, self.poll_interval);
+            }, typeof self.config.poll_interval === "undefined"
+                       ? DEFAULT_POLL_INTERVAL
+                       : self.config.poll_interval);
         }
     });
 };

@@ -45,8 +45,10 @@ const IS_NUMBER = [
  * @class
  * @protected
  */
-var MetOffice = function() {
+var MetOffice = function(config, location) {
     "use strict";
+    this.config = config;
+    this.setLocation(location);
     Utils.TRACE(TAG, "starting");
     // this.before = undefined
     // this.after = undefined
@@ -59,7 +61,7 @@ var MetOffice = function() {
  */
 MetOffice.prototype.api_key = function() {
     "use strict";
-    return "?key=" + Apis.get("weather").api_key;
+    return "?key=" + this.config.api_key;
 };
 
 /**
@@ -124,7 +126,7 @@ MetOffice.prototype.findNearestLocation = function(loc, chain) {
             });
         })
         .on("error", function(err) {
-            console.ERROR(TAG, "Failed to GET from " + url + ": " + err);
+            Utils.ERROR(TAG, "Failed to GET from ", url, ": ", err.toString());
         });
 };
 
@@ -200,7 +202,7 @@ MetOffice.prototype.getWeather = function(id, callback) {
             });
         })
         .on("error", function(err) {
-            console.ERROR(TAG, "Failed to GET from " + url + ": " + err);
+            Utils.ERROR(TAG, "Failed to GET from ", url, ": ", err.toString());
         });
 };
 
@@ -244,4 +246,4 @@ MetOffice.prototype.get = function(what) {
     return est;
 };
 
-module.exports = new MetOffice();
+module.exports = MetOffice;

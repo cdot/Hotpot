@@ -29,11 +29,12 @@ const REQUEST_BOOST = 2;
  * @param {string} name name of the pin e.g. HW
  * @param {Config} config configuration block for the pin. Only one field is used,
  * gpio (the number of the gpio pin)
- * @param {function} done callback invoked when pin is created
  * @protected
  */
-function Pin(name, config, done) {
+function Pin(name, config) {
     "use strict";
+
+    this.config = config;
 
     var self = this;
 
@@ -44,22 +45,19 @@ function Pin(name, config, done) {
      */
     self.name = name;
 
-    /** @property {integer} gpio gpio port */
-    self.gpio = config.get("gpio");
-
     if (typeof HOTPOT_DEBUG !== "undefined")
-        HOTPOT_DEBUG.mapPin(self.gpio, self.name);
+        HOTPOT_DEBUG.mapPin(self.config.gpio, self.name);
 
-    self.value_path = GPIO_PATH + "gpio" + self.gpio + "/value";
+    self.value_path = GPIO_PATH + "gpio" + self.config.gpio + "/value";
 
     /** @property {object} requests List of requests for this pin
      * (see #addRequest) */
     self.requests = [];
 
     Utils.TRACE(TAG, "'", self.name,
-                  "' constructed on gpio ", self.gpio);
+                  "' constructed on gpio ", self.config.gpio);
     
-    var hc = config.get("history");
+    var hc = config.history;
     if (typeof hc !== "undefined") {
         self.historian = new Historian({
             name: self.name + "_pin",
@@ -104,8 +102,8 @@ Pin.prototype.initialise = function() {
 
     // Try and export the pin
     function exportPin() {
-        var m = EXPORT_PATH + "=" + self.gpio;
-        return writeFile(EXPORT_PATH, self.gpio, "utf8")
+        var m = EXPORT_PATH + "=" + self.config.gpio;
+        return writeFile(EXPORT_PATH, self.config.gpio, "utf8")
             .then(function() {
                 Utils.TRACE(TAG, m, " OK for ", self.name);
                 // Use a timeout to give it time to get set up
@@ -118,7 +116,7 @@ Pin.prototype.initialise = function() {
 
     // The pin is known to be exported, set the direction
     function setDirection() {
-        var path = GPIO_PATH + "gpio" + self.gpio + "/direction";
+        var path = GPIO_PATH + "gpio" + self.config.gpio + "/direction";
         return writeFile(path, "out")
             .then(function() {
                 Utils.TRACE(TAG, path, "=out OK for ", self.name);
@@ -133,7 +131,7 @@ Pin.prototype.initialise = function() {
     // If we don't set the pin active_low, then writing a 1 to value
     // sets the pin low, and vice-versa. Ho hum.
     function setActive() {
-        var path = GPIO_PATH + "gpio" + self.gpio + "/active_low";
+        var path = GPIO_PATH + "gpio" + self.config.gpio + "/active_low";
         return writeFile(path, 1)
             .then(writeCheck)
             .catch(function(e) {
@@ -158,10 +156,10 @@ Pin.prototype.initialise = function() {
 
     // Something went wrong, but still use a file
     function fallBackToDebug(err) {
-        Utils.TRACE(TAG, self.name, ":", self.gpio, " setup failed: ", err);
+        Utils.TRACE(TAG, self.name, ":", self.config.gpio, " setup failed: ", err);
         if (typeof HOTPOT_DEBUG !== "undefined") {
             Utils.TRACE(TAG, "Falling back to debug for ", self.name);
-            self.value_path = HOTPOT_DEBUG.pin_path + self.gpio;
+            self.value_path = HOTPOT_DEBUG.pin_path + self.config.gpio;
         }
         return writeCheck();
     }
@@ -225,20 +223,6 @@ Pin.prototype.getStatePromise = function() {
     .then(function(data) {
         return parseInt(data);
     });
-};
-
-/**
- * Generate and return a serialisable version of the structure, suitable
- * for use in an AJAX response.
- * @param {boolean} ajax set true if this config is for AJAX
- * @return {object} a serialisable structure
- * @protected
- */
-Pin.prototype.getSerialisableConfig = function(ajax) {
-    "use strict";
-    return {
-        gpio: this.gpio
-    };
 };
 
 /**

@@ -10,41 +10,41 @@ var google = require("googleapis");
 var googleAuth = require("google-auth-library");
 
 const Utils = require("../common/Utils.js");
+const Time = require("../common/Time.js");
 
 const CACHE_LENGTH = 24 * 60 * 60 * 1000; // cache size in ms
 
-const TAG = "Scheduled";
+const TAG = "Calendar";
 
 /**
  * Get active events from a Google calendar
 */
-function Scheduled(id, config) {
+function Calendar(name, config) {
     "use strict";
-    this.name = id;
-    this.secrets = config.get("secrets");
-    this.cache_file = config.get("cache");
+    this.name = name;
+    this.config = config;
     this.oauth2Client = undefined;
     this.schedule = [];
 }
-module.exports = Scheduled;
+module.exports = Calendar;
 
 /**
  * Return a promise to start the calendar
  * @private
  */
-Scheduled.prototype.authorise = function() {
+Calendar.prototype.authorise = function() {
     "use strict";
     if (typeof this.oauth2Client !== "undefined")
         return Q(); // already started
 
     var self = this;
 
-    return readFile(Utils.expandEnvVars(self.cache_file))
+    return readFile(Utils.expandEnvVars(self.config.auth_cache))
 
     .then(function(token) {
-        var clientSecret = self.secrets.client_secret;
-        var clientId = self.secrets.client_id;
-        var redirectUrl = self.secrets.redirect_uris[0];
+        var clientSecret = self.config.secrets.client_secret;
+        var clientId = self.config.secrets.client_id;
+        var redirectUrl = self.config.secrets.redirect_uris[0];
         var auth = new googleAuth();
         self.oauth2Client = new auth.OAuth2(
             clientId, clientSecret, redirectUrl);
@@ -52,16 +52,18 @@ Scheduled.prototype.authorise = function() {
     });
 };
 
+Calendar.prototype.getSerialisableState = function() {
+    return this.getCurrent();
+};
+
 /**
  * Return a promise that will update the list of the events
  * stored for the next 24 hours.
  * @public
  */
-Scheduled.prototype.fillCache = function() {
+Calendar.prototype.fillCache = function() {
     "use strict";
     var self = this;
-
-    Utils.TRACE(TAG, "Updating calendar '", this.name, "'");
 
     return this.authorise()
 
@@ -88,6 +90,7 @@ Scheduled.prototype.fillCache = function() {
                 },
                 function(err, response) {
                     if (err) {
+                        Utils.TRACE(TAG, self.name, " update failed ", err);
                         fail(err);
                     } else {
                         ok(response);
@@ -115,6 +118,7 @@ Scheduled.prototype.fillCache = function() {
                     pin: match[1], state: match[2] });
             }
         }
+        Utils.TRACE(TAG, self.name, " updated");
     })
 
     .catch(function(e) {
@@ -127,7 +131,7 @@ Scheduled.prototype.fillCache = function() {
  * performed asynchrnously.
  * @param {Number} after delay before updating the calendar asynchronously
  */
-Scheduled.prototype.update = function(after) {
+Calendar.prototype.update = function(after) {
     "use strict";
     var self = this;
 
@@ -135,6 +139,7 @@ Scheduled.prototype.update = function(after) {
     if (this.timeout)
         clearTimeout(this.timeout);
     this.timeout = setTimeout(function() {
+        Utils.TRACE(TAG, "Updating calendar '", self.name, "'");
         self.fillCache().done(function() {
             self.timeout = undefined;
             self.update(CACHE_LENGTH);
@@ -146,14 +151,14 @@ Scheduled.prototype.update = function(after) {
  * Get the current event (if there is one).
  * @return {object} the most recent event that overlaps the current time
  */
-Scheduled.prototype.getCurrent = function() {
+Calendar.prototype.getCurrent = function() {
     "use strict";
     var now = Time.now();
     // Could prune the event list, but there are unlikely to be
     // enough events to make it worthwhile
     var best;
-    for (var i = 0; i < self.schedule.length; i++) {
-        var evt = self.schedule[i];
+    for (var i = 0; i < this.schedule.length; i++) {
+        var evt = this.schedule[i];
         if (evt.start <= now && evt.end >= now
             && (!best || best.start < evt.start))
             best = evt;

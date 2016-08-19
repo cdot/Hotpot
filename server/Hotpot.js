@@ -11,9 +11,7 @@ const Q = require("q");
 
 const Location = require("../common/Location.js");
 const Utils = require("../common/Utils.js");
-const Config = require("../common/Config.js");
 
-const Apis = require("./Apis.js");
 const Server = require("./Server.js");
 const Controller = require("./Controller.js");
 
@@ -23,10 +21,7 @@ HOTPOT_DEBUG = undefined;
 
 const Rule = require("./Rule.js");
 
-/** Main program */
-(function () {
-    "use strict";
-
+(function() {
     var cliopt = getopt.create([
         [ "h", "help", "Show this help" ],
         [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ],
@@ -49,23 +44,16 @@ const Rule = require("./Rule.js");
     } else
         Utils.TRACE = function() {};
 
-    console.ERROR = function() {
-        var tag = arguments[0];
-        console.error("*** " + tag + "***", Utils.joinArgs(arguments, 1));
-    };
+    var config, controller, server;
 
-    var config = new Config(cliopt.config);
-    var controller, server;
+    Config.load(cliopt.config)
 
-    config.load()
-
-    .then(function() {
-        Apis.configure(config.getConfig("apis"));
-    })
-    
-    .then(function() {
-        controller = new Controller(config.getConfig("controller"));
-        server = new Server(config.getConfig("server"), controller);
+    .then(function(cfg) {
+        config = cfg;
+        controller = new Controller(config.controller, config.apis);
+        var loc = new Location(config.server.location);
+        controller.setLocation(loc);
+        server = new Server(config.server, controller);
     })
 
     .then(function() {
@@ -77,22 +65,18 @@ const Rule = require("./Rule.js");
     })
 
     .then(function() {
-        controller.setLocation(new Location(
-            config.getConfig("server").get("location")));
-
         // Save config when it changes, so we restart to the
         // same state
-        controller.on("config_change",
-                      function() {
-                          config.set("controller",
-                                     controller.getSerialisableConfig(false));
-                          config.save().done();
-                      });
+        controller.on(
+            "config_change",
+            function() {
+                Config.save(config, cliopt.config);
+            });
     })
 
     .catch(function(e) {
-        console.ERROR(TAG, "Controller initialisation failed: ",
+        Utils.ERROR(TAG, "Controller initialisation failed: ",
                       typeof e.stack !== "undefined" ? e.stack : e);
     });
-
 })();
+

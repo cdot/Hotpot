@@ -38,12 +38,7 @@ function Mobile(name, config) {
      * Unique ID for this device 
      * @type {string}
      */
-    this.id = config.get("id");
-
-    /**
-     * The fences this device will report crossing
-     */
-    this.fences = config.get("fences");
+    this.id = config.id;
 
     /**
      * Last place this device was seen 
@@ -100,20 +95,6 @@ function Mobile(name, config) {
     Utils.TRACE(TAG, name, " constructed");
 }
 module.exports = Mobile;
-
-/**
- * Get a serialisable version of the object
- * @param {boolean} ajax set true if this config is for AJAX
- * @return {object} a serialisable structure
- * @protected
- */
-Mobile.prototype.getSerialisableConfig = function(ajax) {
-    "use strict";
-    return {
-        id: this.id,
-        fences: this.fences
-    };
-};
 
 /**
  * Get a promise for a serialisable version of the object
@@ -194,7 +175,7 @@ Mobile.prototype.estimateTOA = function(speed) {
         speed = DRIVING_SPEED;
 
     // Use gmaps routing to estimate when we'll be home
-    var gmaps = Apis.get("google_maps");
+    var gmaps = Hotpot.config.apis.google_maps;
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
         + "&key=" + gmaps.server_key;
@@ -208,7 +189,7 @@ Mobile.prototype.estimateTOA = function(speed) {
     Utils.TRACE(TAG, this.name, " routing by ", mode);
     function analyseRoutes(route) {
         if (typeof result.error_message !== "undefined") {
-            console.ERROR(TAG, "Error getting route: " + result.error_message);
+            Utils.ERROR(TAG, "Error getting route: ", result.error_message);
             return;
         }
             
@@ -242,7 +223,7 @@ Mobile.prototype.estimateTOA = function(speed) {
             });
         })
         .on("error", function(err) {
-            console.ERROR(TAG, "Failed to GET from " + url.host + ": " + err);
+            Utils.ERROR(TAG, "Failed to GET from ", url.host,": ", err);
         });
 };
 
