@@ -90,7 +90,7 @@ function Mobile(name, config) {
      * @type {number}
      * @public
      */
-    this.time_of_arrival = this.last_time - 1;
+    this.time_of_arrival = Time.nowSeconds();
 
     Utils.TRACE(TAG, name, " constructed");
 }

@@ -647,12 +647,10 @@ Controller.prototype.pollRules = function() {
     // then stop testing. This allows us to inject rules
     // before the standard set and override them completely.
     var remove = [];
-
-    for (var i = 0; i < self.rule.length; i++) {
-        var rule = self.rule[i];
+    Utils.forEach(self.rule, function(rule, i) {
         if (typeof rule.testfn !== "function") {
             Utils.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
-            continue;
+            return true;
         }
         var result;
         try {
@@ -668,9 +666,10 @@ Controller.prototype.pollRules = function() {
             if (result === "remove")
                 remove.push(i);
         } else if (typeof result === "boolean" && result) {
-            break;
+            return false;
         }
-    }
+        return true;
+    });
 
     // Remove rules flagged for removal
     while (remove.length > 0) {

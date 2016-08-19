@@ -1,4 +1,5 @@
 function () {
+
     // Get the current state of the HW pin
     var state = this.pin.HW.getState();
 
@@ -7,11 +8,13 @@ function () {
         // Hot enough, so switch off regardless of other rules
         if (state === 1) {
             Utils.TRACE("HW", " is ", this.thermostat.HW.temperature,
-                          "°C so off");
+                          "°C so turning off");
             this.setPin("HW", 0);
             // Purge boost requests (state 2)
             this.pin.HW.purgeRequests(2);
         }
+        Utils.TRACE("HW", " is ", this.thermostat.HW.temperature,
+                    "°C so leaving off");
         return;
     }
 
@@ -31,6 +34,7 @@ function () {
     var at_home = 0, arrive_soon = 0;
     for (var moby in this.mobile) {
         var m = this.mobile[moby];
+        Utils.TRACE("HW", "Mobile ", m.name, " arrives in ", m.arrivesIn());
         if (m.arrivesIn() < 5 * 60) {
             // already at home
             Utils.TRACE("HW", "HW ", m.name, " is at home");
