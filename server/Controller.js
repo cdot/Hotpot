@@ -358,11 +358,12 @@ Controller.prototype.setPromise = function(channel, on) {
         // If heating only on, and it's going off, switch on HW
         // to kill the grey wire. This allows the spring to fully
         // return. Then after a timeout, set the desired state.
+        var hw_state = self.pin.HW.getState();
         if (channel === "CH" && !on
-            && this.pin.HW.state === 1 && this.pin.HW.state === 0) {
-            return this.pin.CH.set(0)
+            && hw_state === 1 && hw_state === 0) {
+            return self.pin.CH.set(0)
             .then(function() {
-                return this.pin.HW.set(1);
+                return self.pin.HW.set(1);
             })
             .then(function() {
                 self.pending = true;

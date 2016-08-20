@@ -54,6 +54,7 @@
             "no-underscore-dangle": 0,
             "curly": 0,
             "camelcase": 0,
+            "eol-last": 0,
             "no-unused-vars": 1,
             "no-console": 0,
             "no-debugger": 0,
