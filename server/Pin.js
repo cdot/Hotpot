@@ -94,7 +94,7 @@ Pin.prototype.initialise = function() {
                     // Already exported, no point trying again
                     return fallBackToDebug(m);
                 else {
-                    Utils.TRACE(TAG, m);
+                    Utils.ERROR(TAG, m);
                     return exportPin();
                 }
             });
@@ -156,11 +156,12 @@ Pin.prototype.initialise = function() {
 
     // Something went wrong, but still use a file
     function fallBackToDebug(err) {
-        Utils.TRACE(TAG, self.name, ":", self.config.gpio, " setup failed: ", err);
-        if (typeof HOTPOT_DEBUG !== "undefined") {
-            Utils.TRACE(TAG, "Falling back to debug for ", self.name);
-            self.value_path = HOTPOT_DEBUG.pin_path + self.config.gpio;
-        }
+        Utils.ERROR(TAG, self.name, ":", self.config.gpio,
+                    " setup failed: ", err);
+        if (typeof HOTPOT_DEBUG === "undefined")
+            throw "Pin setup failed";
+        Utils.ERROR(TAG, "Falling back to debug for ", self.name);
+        self.value_path = HOTPOT_DEBUG.pin_path + self.config.gpio;
         return writeCheck();
     }
 

@@ -12,7 +12,7 @@ const Utils = require("../common/Utils.js");
 
 const TAG = "Config";
 
-Config = {
+var Config = {
     /**
      * Return a promise to load the configuration
      * @return {Promise} promise that returns the loaded configuration
@@ -43,7 +43,7 @@ Config = {
 
                 .done(function() {
                     Utils.TRACE(TAG, file, " updated");
-                })
+                });
     },
 
     /**
@@ -64,7 +64,7 @@ Config = {
      * Given a config block and a key name, update the stored data with
      * the value passed.
      */
-    updateFileableConfig: function(config, key, data) {
+    updateFileableConfig: function(config, key, value) {
         if (typeof config[key + "_file"] !== "undefined")
             writeFile(Utils.expandEnvVars(config[key + "_file"]),
                       value, "utf8")
@@ -106,21 +106,23 @@ Config = {
         }
 
         Utils.forEach(config, function(field, key) {
-            var match;
             if (typeof field === "object")
                 addSerialPromise(field, key);
-            else if (match = /(.*)_file$/.exec(key))
-                // If the name of the field in the config ends in "_file"
-                // then read the associated file and create the field
-                // (string) value
-                addFilePromise(config, match[1]);
-            else
-                res[key] = field;
+            else {
+                var match = /(.*)_file$/.exec(key);
+                if (match)
+                    // If the name of the field in the config ends in "_file"
+                    // then read the associated file and create the field
+                    // (string) value
+                    addFilePromise(config, match[1]);
+                else
+                    res[key] = field;
+            }
         });
 
         return promises.then(function() {
             return res;
-        })
+        });
     }
 };
 module.exports = Config;

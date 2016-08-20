@@ -8,8 +8,6 @@ const Utils = require("../common/Utils.js");
 const Time = require("../common/Time.js");
 const Location = require("../common/Location.js");
 
-const Apis = require("./Apis.js");
-
 const MPH = 0.44704; // metres per second -> mph
 const WALKING_SPEED = 4 * MPH; // in m/s
 const CYCLING_SPEED = 20 * MPH; // in m/s
@@ -23,16 +21,19 @@ const TAG = "Mobile";
  * Record keeper for a mobile device that is reporting its position
  * @class
  * @param {String} id unique identifier for the mobile device, as sent by it
- * @param {Config} config configuration (which includes the name)
+ * @param {Config} config configuration
+ * @param {Config} apis APIs config
  * @protected
  */
-function Mobile(name, config) {
+function Mobile(name, config, apis) {
     "use strict";
     /**
      * Name of this device 
      * @public
      */
     this.name = name;
+
+    this.apis = apis;
 
     /**
      * Unique ID for this device 
@@ -175,7 +176,7 @@ Mobile.prototype.estimateTOA = function(speed) {
         speed = DRIVING_SPEED;
 
     // Use gmaps routing to estimate when we'll be home
-    var gmaps = Hotpot.config.apis.google_maps;
+    var gmaps = this.apis.google_maps;
     var url = "https://maps.googleapis.com/maps/api/directions/json"
         + "?units=metric"
         + "&key=" + gmaps.server_key;
@@ -223,7 +224,7 @@ Mobile.prototype.estimateTOA = function(speed) {
             });
         })
         .on("error", function(err) {
-            Utils.ERROR(TAG, "Failed to GET from ", url.host,": ", err);
+            Utils.ERROR(TAG, "Failed to GET from ", url.host, ": ", err);
         });
 };
 

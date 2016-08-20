@@ -2,9 +2,7 @@
 
 /*eslint-env node */
 
-const Fs = require("fs");
 const Q = require("q");
-const readFile = Q.denodeify(Fs.readFile);
 const serialize = require("serialize-javascript");
 const Url = require("url");
 

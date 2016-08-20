@@ -2,6 +2,9 @@
 
 /*eslint-env node */
 
+/**
+ * Stand-alone program to authorise calendars declared in hotpot.cfg
+ */
 const Getopt = require("node-getopt");
 const Fs = require("fs");
 const Q = require("q");
@@ -29,11 +32,6 @@ var cliopt = new Getopt([
 
 if (typeof cliopt.config === "undefined")
     cliopt.config = "./hotpot.cfg";
-
-var rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
 
 function configureCalendar(credentials) {
     var cfn = Utils.expandEnvVars(credentials.auth_cache);

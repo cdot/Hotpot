@@ -14,12 +14,11 @@ const Utils = require("../common/Utils.js");
 
 const Server = require("./Server.js");
 const Controller = require("./Controller.js");
+const Config = require("./Config.js");
 
 const TAG = "Hotpot";
 
 HOTPOT_DEBUG = undefined;
-
-const Rule = require("./Rule.js");
 
 (function() {
     var cliopt = getopt.create([
@@ -77,6 +76,7 @@ const Rule = require("./Rule.js");
     .catch(function(e) {
         Utils.ERROR(TAG, "Controller initialisation failed: ",
                       typeof e.stack !== "undefined" ? e.stack : e);
+        process.exit(1);
     });
 })();
 

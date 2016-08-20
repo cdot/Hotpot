@@ -122,7 +122,7 @@ Utils.TRACE = function() {
 
 Utils.ERROR = function() {
     var tag = arguments[0];
-    console.error("*** " + tag + "***", Utils.joinArgs(arguments, 1));
+    console.error("*" + tag + "*", Utils.joinArgs(arguments, 1));
 };
 
 Utils.forEach = function(that, callback) {

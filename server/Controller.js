@@ -12,9 +12,7 @@ const Utils = require("../common/Utils.js");
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
 const Rule = require("./Rule.js");
-const Mobile = require("./Mobile.js");
-const Calendar = require("./Calendar");
-const Hotpot = require("./Hotpot.js");
+const Config = require("./Config");
 
 const TAG = "Controller";
 
@@ -61,11 +59,11 @@ Controller.prototype.initialise = function() {
         return self.createCalendars(self.config.calendar);
     })
 
-    .then(function(e) {
+    .then(function() {
         return self.createPins(self.config.pin);
     })
 
-    .then(function(e) {
+    .then(function() {
         return self.resetValve();
     })
 
@@ -86,15 +84,21 @@ Controller.prototype.initialise = function() {
  */
 Controller.prototype.createMobiles = function(configs) {
     "use strict";
-    var self = this;
+
+    this.mobile = {};
 
     var promise = Q();
-    self.mobile = {};
-    Utils.forEach(configs, function(config, id) {
-        promise = promise.then(function() {
-            self.mobile[id] = new Mobile(id, config);
+    var self = this;
+    if (Object.keys(configs).length > 0) {
+        var self = this;
+        var Mobile = require("./Mobile.js");
+
+        Utils.forEach(configs, function(config, id) {
+            promise = promise.then(function() {
+                self.mobile[id] = new Mobile(id, config, self.apis);
+            });
         });
-    });
+    }
     return promise;
 };
 
@@ -107,14 +111,20 @@ Controller.prototype.createMobiles = function(configs) {
  */
 Controller.prototype.createCalendars = function(configs) {
     "use strict";
-    var self = this;
 
-    self.calendar = {};
-    Utils.forEach(configs, function(config, name) {
-        self.calendar[name] = new Calendar(name, config);
-        // Queue a calendar update
-        self.calendar[name].update(1000);
-    });
+    this.calendar = {};
+
+    if (Object.keys(configs).length > 0) {
+
+        var self = this;
+        Utils.forEach(configs, function(config, name) {
+            var Calendar = require("./Calendar");
+            self.calendar[name] = new Calendar(name, config);
+            // Queue a calendar update
+            self.calendar[name].update(1000);
+        });
+    }
+
     return Q();
 };
 
@@ -215,7 +225,7 @@ Controller.prototype.createRules = function(configs) {
     var promise = Q();
 
     self.rule = [];
-    Utils.forEach(configs, function(config, idx) {
+    Utils.forEach(configs, function(config) {
         var rule = new Rule(config.name);
         self.addRule(rule, false);
         // Pull the initial test function in
@@ -258,7 +268,6 @@ Controller.prototype.getSerialisableState = function() {
         env_temp: this.weather("Temperature")
     };
     
-    var self = this;
     var promise = Q();
 
    Utils.forEach(this, function(block, field) {
@@ -452,7 +461,7 @@ Controller.prototype.handleMobileCommand = function(path, info) {
         break;
     }
 
-    return Q.fncall(function(f) { return "OK" });
+    return Q.fncall(function() { return "OK"; });
 };
 
 /**
@@ -577,7 +586,7 @@ Controller.prototype.addRule = function(rule, update_config) {
     this.renumberRules();
 
     if (update_config) {
-        this.config.rule.push(r.getConfiguration());
+        this.config.rule.push(rule.getConfiguration());
         self.emit("config_change");
     }
 
@@ -674,9 +683,9 @@ Controller.prototype.pollRules = function() {
 
     // Remove rules flagged for removal
     while (remove.length > 0) {
-        i = remove.pop();
-        Utils.TRACE(TAG, "Remove rule ", i);
-        self.rule.splice(i, 1);
+        var ri = remove.pop();
+        Utils.TRACE(TAG, "Remove rule ", ri);
+        self.rule.splice(ri, 1);
         self.renumberRules();
         self.emit("config_change");
     }

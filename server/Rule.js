@@ -2,14 +2,7 @@
 
 /*eslint-env node */
 
-const Fs = require("fs");
-const Q = require("q");
-const readFile = Q.denodeify(Fs.readFile);
-const writeFile = Q.denodeify(Fs.writeFile);
-
 const Utils = require("../common/Utils.js");
-
-const Config = require("./Config.js");
 
 const TAG = "Rule";
 
@@ -51,8 +44,6 @@ module.exports = Rule;
  */
 Rule.prototype.setTest = function(fn) {
     "use strict";
-
-    var promise = Q();
 
     if (typeof fn !== "function") {
         // Compile the function

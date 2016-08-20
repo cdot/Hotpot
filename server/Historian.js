@@ -79,8 +79,6 @@ Historian.prototype.load = function(data) {
     var lines = data.toString().split("\n");
     var basetime;
     var report = [];
-    var p0;
-
     
     if (typeof this.max_samples !== "undefined"
         && lines.length > this.max_samples)
@@ -96,21 +94,6 @@ Historian.prototype.load = function(data) {
                 time: basetime + parseFloat(csv[0]),
                 sample: parseFloat(csv[1])
             };
-/*            if (point.time < cutoff)
-                p0 = point;
-            else {
-                if (p0 && p0.time < point.time) {
-                    // Interpolate a point at the cutoff
-                    report.push([
-                        cutoff,
-                        (point.time - cutoff) / (point.time - p0.time)
-                            * (point.sample - p0.sample) + p0.sample
-                    ]);
-                    p0 = null;
-                }
-                report.push(point);
-            }
-*/
             report.push(point);
         }
     }

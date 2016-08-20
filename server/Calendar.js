@@ -69,7 +69,6 @@ Calendar.prototype.fillCache = function() {
 
     .then(function() {
         var calendar = google.calendar("v3");
-        var list = Q.denodeify(calendar.events.list);
         var now = Date.now();
 
         // Q.denodeify doesn't work for this, so have to promisify it
@@ -111,8 +110,6 @@ Calendar.prototype.fillCache = function() {
             var fullText = event.summary + " " + event.description;
             var match = /Hotpot:([A-Za-z]+)=([A-Za-z]+)/.exec(fullText);
             if (match !== null) {
-                var channel = match[1];
-                var state = match[2];
                 self.schedule.push({
                     start: start, end: end,
                     pin: match[1], state: match[2] });

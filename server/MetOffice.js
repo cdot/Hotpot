@@ -10,7 +10,6 @@ const http = require("follow-redirects").http;
 //const Utils = require("../common/Utils.js");
 const Location = require("../common/Location.js");
 
-const Apis = require("./Apis.js");
 const Utils = require("../common/Utils");
 
 /** @private */
