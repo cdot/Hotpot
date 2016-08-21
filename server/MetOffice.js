@@ -5,9 +5,9 @@
 
 /*eslint-env node */
 
+const Q = require("q");
 const http = require("follow-redirects").http;
 
-//const Utils = require("../common/Utils.js");
 const Location = require("../common/Location.js");
 
 const Utils = require("../common/Utils");
@@ -46,21 +46,21 @@ const IS_NUMBER = [
  */
 var MetOffice = function(config, location) {
     "use strict";
+    this.name = "MetOffice";
     this.config = config;
-    this.setLocation(location);
-    Utils.TRACE(TAG, "starting");
-    // this.before = undefined
-    // this.after = undefined
-    // this.location_id = undefined;
-};
-
-/**
- * Get the API key from the server config
- * @private
- */
-MetOffice.prototype.api_key = function() {
-    "use strict";
-    return "?key=" + this.config.api_key;
+    this.api_key = "?key=" + config.api_key;
+    if (typeof location !== "undefined")
+        this.setLocation(location);
+    var hc = config.history;
+    if (typeof hc !== "undefined") {
+        var Historian = require("./Historian");
+        this.historian = new Historian({
+            name: this.name,
+            file: hc.file,
+            max_bytes: hc.max_bytes,
+            max_samples: hc.max_samples
+        });
+    }
 };
 
 /**
@@ -70,7 +70,33 @@ MetOffice.prototype.api_key = function() {
 MetOffice.prototype.setLocation = function(loc) {
     "use strict";
     var self = this;
-    this.findNearestLocation(loc, function() { self.update(); });
+    Utils.TRACE(TAG, "starting at ", loc);
+    this.findNearestLocation(loc)
+    .then(function() {
+        self.update();
+    });
+};
+
+/**
+ * Get a promise for the current state of the weather forecast. This
+ * is just the estimated outside temperature.
+ */
+MetOffice.prototype.getSerialisableState = function() {
+    var self = this;
+    return Q.fcall(function() {
+        return { temperature: self.get("Temperature") };
+    });
+};
+
+/**
+ * Get a promise for the current log of the weather forecast. This
+ * records the estimated outside temperature.
+ */
+MetOffice.prototype.getSerialisableLog = function() {
+    "use strict";
+    if (!this.historian)
+        return Q();
+    return this.historian.getSerialisableHistory();
 };
 
 /**
@@ -78,10 +104,9 @@ MetOffice.prototype.setLocation = function(loc) {
  * to find the ID of the closest.
  * @param {Location} loc where is "here"
  * @param data data returned from the metoffice server
- * @param {function} chain a function to call when we've got a result
  * @private
  */
-MetOffice.prototype.findClosest = function(data, loc, chain) {
+MetOffice.prototype.findClosest = function(data, loc) {
     "use strict";
 
     var list = data.Locations.Location;
@@ -97,45 +122,54 @@ MetOffice.prototype.findClosest = function(data, loc, chain) {
     Utils.TRACE(TAG, "Nearest location is ", best.name, " at ",
                   new Location(best));
     this.location_id = best.id;
-    if (typeof chain === "function")
-        chain();
 };
 
 /**
- * Find the ID of the nearest location to the given lat,long.
+ * Returna  promise to find the ID of the nearest location to the
+ * given lat,long.
  * @param {Location} loc where is "here"
- * @param {function} chain a function to call when we've got a result
  * @private
  */
-MetOffice.prototype.findNearestLocation = function(loc, chain) {
+MetOffice.prototype.findNearestLocation = function(loc) {
     "use strict";
 
     var self = this;
 
-    var url = URL_ROOT + "all/json/sitelist" + this.api_key();
-    http.get(
-        url,
-        function(res) {
-            var result = "";
-            res.on("data", function(chunk) {
-                result += chunk;
-            });
-            res.on("end", function() {
-                self.findClosest(JSON.parse(result), loc, chain);
-            });
-        })
+    var url = URL_ROOT + "all/json/sitelist" + this.api_key;
+    return Q.Promise(function(resolve, reject) {
+        http.get(
+            url,
+            function(res) {
+                var result = "";
+                if (res.statusCode < 200 || res.statusCode > 299) {
+                    reject(new Error(
+                        TAG + " failed to load sitelist, status: "
+                            + res.statusCode));
+                    return;
+                }
+                res.on("data", function(chunk) {
+                    result += chunk;
+                });
+                res.on("end", function() {
+                    self.findClosest(JSON.parse(result), loc);
+                    resolve();
+                });
+            })
         .on("error", function(err) {
             Utils.ERROR(TAG, "Failed to GET from ", url, ": ", err.toString());
+            reject(err);
         });
+    });
 };
 
 /**
  * Bracket the weather information returned, pulling out the information
  * for the time previous to now and the next predicted time and storing
- * them in "before" and "after" fields.
+ * them in "before" and "after" fields, and storing the temperature history
+ * in the historian.
  * @private
  */
-MetOffice.prototype.bracketWeather = function(data) {
+MetOffice.prototype.analyseWeather = function(data) {
     "use strict";
 
     var lu = data.SiteRep.Wx.Param;
@@ -146,7 +180,11 @@ MetOffice.prototype.bracketWeather = function(data) {
     var periods = data.SiteRep.DV.Location.Period;
     for (i in periods) {
         var period = periods[i];
-        var baseline = Date.parse(period.value).valueOf();
+        var baseline = Date.parse(period.value);
+Utils.TRACE(TAG, "Baseline is ", Date, baseline);
+        if (typeof this.historian !== "undefined")
+            this.historian.reset(baseline);
+
         var dvs = period.Rep;
         for (j in dvs) {
             var report = {};
@@ -157,11 +195,13 @@ MetOffice.prototype.bracketWeather = function(data) {
                 else
                     report[key] = dvs[j][k];
             }
-            var time = new Date(baseline + report.$ * 60 * 1000);
-            report.$ = time.valueOf();
-            if (time.valueOf() < Time.now())
+            // Convert baseline from minutes into epoch ms
+            report.$ = baseline + report.$ * 60 * 1000;
+            if (report.$ <= Time.now()) {
+                if (this.historian)
+                    this.historian.record(report.Temperature, report.$ / 1000);
                 this.before = report;
-            else {
+            } else {
                 this.after = report;
                 //Utils.TRACE(TAG, "Before ", this.before, " after ", this.after));
                 return;
@@ -171,38 +211,39 @@ MetOffice.prototype.bracketWeather = function(data) {
 };
 
 /**
- * Get the forecast (before and after) for the current time for the
- * given location.
- * @param {string} id uid of the location
- * @param {function} callback function to call on this when complete
- * (no parameters)
+ * Returna promise to get the forecast for the current time
  * @private
  */
-MetOffice.prototype.getWeather = function(id, callback) {
+MetOffice.prototype.getWeather = function() {
     "use strict";
 
     if (typeof this.after !== "undefined"
         && Time.now() < this.after.$) {
-        callback.call(self);
+        return Q();
     }
 
     var self = this;
-    var url = URL_ROOT + "all/json/" + id + this.api_key() + "&res=3hourly";
-    http.get(
-        url,
-        function(res) {
-            var result = "";
-            res.on("data", function(chunk) {
-                result += chunk;
+    var url = URL_ROOT + "all/json/" + this.location_id
+        + this.api_key + "&res=3hourly";
+    return Q.Promise(function(fulfill, fail) {
+        http.get(
+            url,
+            function(res) {
+                var result = "";
+                res.on("data", function(chunk) {
+                    result += chunk;
+                });
+                res.on("end", function() {
+                    self.analyseWeather(JSON.parse(result));
+                    fulfill();
+                });
+            })
+            .on("error", function(err) {
+                Utils.ERROR(TAG, "Failed to GET from ",
+                            url, ": ", err.toString());
+                fail(err);
             });
-            res.on("end", function() {
-                self.bracketWeather(JSON.parse(result));
-                callback.call(self);
-            });
-        })
-        .on("error", function(err) {
-            Utils.ERROR(TAG, "Failed to GET from ", url, ": ", err.toString());
-        });
+    });
 };
 
 /**
@@ -214,7 +255,8 @@ MetOffice.prototype.update = function() {
     "use strict";
     var self = this;
     Utils.TRACE(TAG, "Updating from MetOffice website");
-    this.getWeather(this.location_id, function() {
+    this.getWeather()
+    .done(function() {
         var wait = self.after.$ - Time.now();
         Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
         setTimeout(function() {

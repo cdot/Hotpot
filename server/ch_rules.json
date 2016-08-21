@@ -1,7 +1,7 @@
 function() {
     var state = this.pin.CH.getState();
 
-    if (this.thermostat.CH.temperature > 18) {
+    if (this.thermostat.CH.temperature > 20) {
         // Warm enough inside, so switch off regardless of other rules
         if (state === 1) {
             this.setPin("CH", 0);
@@ -11,15 +11,8 @@ function() {
         return;
     }
 
-    // See if there's and demand from requests
-    var req = this.pin.CH.getActiveRequest();
-    if (req) {
-        this.setPin("CH", req.state);
-        return;
-    }
-
     // See if it's warm enough outside not to bother with heating
-    if (this.weather("Feels Like Temperature") > 14) {
+    if (this.weather.MetOffice.get("Feels Like Temperature") > 14) {
         if (state === 1) {
             Utils.TRACE("CH", "Weather is ",
                           this.weather("Feels Like Temperature"),
@@ -29,38 +22,33 @@ function() {
         return;
     }
 
-    // Now see if there's any demand from mobile devices
-    var at_home = 0, arrive_soon = 0;
-    for (var moby in this.mobile) {
-        var m = this.mobile[moby];
-        if (m.arrivesIn() < 5 * 60)
-            at_home++;
-        else if (m.arrivesIn() < 40 * 60)
-            arrive_soon++;
-    }
-
-    if (at_home + arrive_soon === 0) {
-        if (state === 1) {
-            this.setPin("CH", 0);
-        }
+    // See if there's any demand from requests
+    var req = this.pin.CH.getActiveRequest();
+    if (req) {
+        Utils.TRACE("Rules", "active request for CH, ", req.state,
+                      " from ", req.source);
+        this.setPin("CH", req.state === 0 ? 0 : 1);
         return;
     }
-    
-    // There is demand. If it's "unknown" or "at_home" only,
-    // then consider the time
-    if (at_home > 0
-        && !Time.between('08:00', '18:00') // day
-        && Time.between('22:00', '06:30') // night
+
+    // Consider the time
+    if (Time.between('08:00', '18:00') // day
+        || Time.between('22:00', '06:40') // night
        ) {
         if (state === 1) {
-            this.setPin("CH", 0);
+             Utils.TRACE("Rules", "out of time band, so CH off");
+           this.setPin("CH", 0);
         }
         return;
     }
 
     // Demand is away from home, or we are in time band
     if (state === 0 && this.thermostat.CH.temperature < 16) {
+        Utils.TRACE("Rules", "CH only ", this.thermostat.CH.temperature,
+                    "°C, so on");
         this.setPin("CH", 1);
-        return;
+    } else if (state === 1) {
+        Utils.TRACE("Rules", "no demand, so CH off");
+        this.setPin("CH", 0);
     }
 }

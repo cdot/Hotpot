@@ -18,14 +18,10 @@ var Config = {
      * @return {Promise} promise that returns the loaded configuration
      */
     load: function(file) {
-
-        return readFile(Utils.expandEnvVars(file), "utf8")
-
-            .then(function(data) {
-                var config = Utils.safeEval(data);
-                Utils.TRACE(TAG, "loaded from ", file);
-                return config;
-            });
+        return readFile(file)
+        .then(function(code) {
+            return Utils.eval(code, file);
+        });
     },
 
     /**

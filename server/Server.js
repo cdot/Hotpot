@@ -78,9 +78,7 @@ Server.prototype.start = function() {
         .then(function(c) {
             options.cert = c;
             Utils.TRACE(TAG, "SSL certificate loaded");
-            Utils.TRACE(TAG, "HTTPS starting on port ",
-                          self.config.port,
-                          " with key ", https.key);
+            Utils.TRACE(TAG, "HTTPS starting on port ", self.config.port);
         })
 
         .then(function() {
@@ -122,38 +120,37 @@ Server.prototype.handle = function(path, params, response) {
     }
     this.controller.dispatch(command, path, params)
 
-        .done(function(reply) {
-            var s = (typeof reply !== "undefined" && reply !== null)
-                ? serialize(reply) : "";
-            response.writeHead(
-                200, "OK",
-                {
-                    // Don't send as application/json; we
-                    // don't want the receiver to parse it
-                    "Content-Type": "text/plain",
-                    "Content-Length": Utils.byteLength(s),
-                    "Access-Control-Allow-Origin": null,
-                    "Access-Control-Allow-Methods": "POST,GET"
-                });
-            response.statusCode = 200;
-            response.write(s);
-            response.end();
-            Utils.TRACE(TAG, "Handled ", command);
-        })
-/*
-        .catch(function(error) {
-            // Send the error message in the payload
-            Utils.TRACE(TAG, "Error in ", command, ": ", error.stack);           
-            response.writeHead(
-                500, "ERROR",
-                {
-                    "Content-Type": "text/plain",
-                    "Content-Length": Utils.byteLength(error),
-                });
-            response.statusCode = 500;
-            response.write(error.toString());
-            response.end();
-        })*/;
+    .then(function(reply) {
+        var s = (typeof reply !== "undefined" && reply !== null)
+            ? serialize(reply) : "";
+        response.writeHead(
+            200, "OK",
+            {
+                // Don't send as application/json; we
+                // don't want the receiver to parse it
+                "Content-Type": "text/plain",
+                "Content-Length": Utils.byteLength(s),
+                "Access-Control-Allow-Origin": null,
+                "Access-Control-Allow-Methods": "POST,GET"
+            });
+        response.statusCode = 200;
+        response.write(s);
+        response.end();
+        Utils.TRACE(TAG, "Handled ", command);
+    },
+    function(error) {
+        // Send the error message in the payload
+        Utils.TRACE(TAG, "Error in ", command, ": ", error.stack);           
+        response.writeHead(
+            500, "ERROR",
+            {
+                "Content-Type": "text/plain",
+                "Content-Length": Utils.byteLength(error),
+            });
+        response.statusCode = 500;
+        response.write(error.toString());
+        response.end();
+    });
 };
 
 /**
@@ -168,9 +165,11 @@ Server.prototype.GET = function(request, response) {
         var req = Url.parse("" + request.url, true);
         this.handle(req.pathname, req.query, response);
     } catch (e) {
-        Utils.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
+        Utils.TRACE(TAG, e, " in ", request.url, "\n",
+                    typeof e.stack !== "undefined" ? e.stack : e);
         response.write(e + " in " + request.url + "\n");
         response.statusCode = 400;
+        response.end();
     }
 };
 

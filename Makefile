@@ -9,7 +9,6 @@ SOURCES := \
 	server/Historian.js \
 	server/Hotpot.js \
 	server/MetOffice.js \
-	server/Mobile.js \
 	server/Pin.js \
 	server/Rule.js \
 	server/Server.js \

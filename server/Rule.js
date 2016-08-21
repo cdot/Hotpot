@@ -2,14 +2,13 @@
 
 /*eslint-env node */
 
-const Utils = require("../common/Utils.js");
-
 const TAG = "Rule";
 
 // We need this to be gloabl (outside the scope of the node module)
 // so the module can't be strict
 /** @ignore */
 Time = require("../common/Time.js"); // for executing rules
+Utils = require("../common/Utils.js");
 
 /**
  * A rule governing when/if a function is to be turned on/off based on the
@@ -42,23 +41,20 @@ module.exports = Rule;
  * @param {function} fn the function (may be a string)
  * @protected
  */
-Rule.prototype.setTest = function(fn) {
+Rule.prototype.setTest = function(fn, source) {
     "use strict";
 
     if (typeof fn !== "function") {
         // Compile the function
         try {
-            var rule_function;
-            fn = eval("rule_function=" + fn);
+            fn = Utils.eval(fn, source);
         } catch (e) {
             if (e instanceof SyntaxError)
                 Utils.ERROR(TAG, "Syntax error in '" + this.name
-                              + "': " + e);
+                              + "': " + e.stack);
             else
                 Utils.ERROR(TAG, "'" + this.name
-                              + "' compilation failed: " + e);
-            if (typeof e.stack !== "undefined")
-                Utils.TRACE(TAG, e.stack);
+                              + "' compilation failed: " + e.stack);
         }
         if (typeof this.testfn !== "undefined"
             && this.testfn.toString() === fn.toString()) {

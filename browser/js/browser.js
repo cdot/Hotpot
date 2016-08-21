@@ -87,13 +87,14 @@
             var pin = ($(this).data("field"));
 
             var params = {
-                device: "debug",
+                // until: , - no timeout
+                source: "debug",
                 pin: pin,
                 state: val
             };
          
             // Away from home, set up to report after interval
-            $.post(server + "/mobile/request",
+            $.post(server + "/request",
                    JSON.stringify(params),
                    function(raw) {
                    });

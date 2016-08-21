@@ -6,7 +6,6 @@ const Util = require("util");
 const Events = require("events").EventEmitter;  
 const Q = require("q");
 
-const Location = require("../common/Location.js");
 const Utils = require("../common/Utils.js");
 
 const Thermostat = require("./Thermostat.js");
@@ -18,7 +17,7 @@ const TAG = "Controller";
 
 // Time to wait for the multiposition valve to return to the discharged
 // state, in ms
-const VALVE_RETURN = 10000;
+const VALVE_RETURN = 8000;
 
 // Frequency at which rules are re-evaluated
 const RULE_INTERVAL = 5000;
@@ -48,18 +47,6 @@ Controller.prototype.initialise = function() {
     return Q()
 
     .then(function() {
-        return self.createRules(self.config.rule);
-    })
-
-    .then(function() {
-        return self.createMobiles(self.config.mobile);
-    })
-
-    .then(function() {
-        return self.createCalendars(self.config.calendar);
-    })
-
-    .then(function() {
         return self.createPins(self.config.pin);
     })
 
@@ -72,34 +59,40 @@ Controller.prototype.initialise = function() {
     })
 
     .then(function() {
+        return self.createRules(self.config.rule);
+    })
+
+    .then(function() {
+        return self.createCalendars(self.config.calendar);
+    })
+
+    .then(function() {
+        return self.createWeatherAgents(self.config.weather);
+    })
+
+    .then(function() {
         self.pollRules();
     });
 };
 
 /**
- * Return a promise to create mobiles
- * @param {Array} configs array of mobile configurations
- * @return {Promise} a promise to create all the mobiles
+ * Create weather agents
+ * @param {Array} configs array of weather agent configurations
+ * @return {Promise} a promise. Agent creation doesn't depend on this
+ * promise, it will resolve immediately.
  * @private
  */
-Controller.prototype.createMobiles = function(configs) {
-    "use strict";
+Controller.prototype.createWeatherAgents = function(configs) {
+    this.weather = {};
 
-    this.mobile = {};
-
-    var promise = Q();
-    var self = this;
     if (Object.keys(configs).length > 0) {
         var self = this;
-        var Mobile = require("./Mobile.js");
-
-        Utils.forEach(configs, function(config, id) {
-            promise = promise.then(function() {
-                self.mobile[id] = new Mobile(id, config, self.apis);
-            });
+        Utils.forEach(configs, function(config, name) {
+            var WeatherAgent = require("./" + config.class + ".js");
+            self.weather[name] = new WeatherAgent(config, self.location);
         });
     }
-    return promise;
+    return Q();
 };
 
 /**
@@ -119,7 +112,14 @@ Controller.prototype.createCalendars = function(configs) {
         var self = this;
         Utils.forEach(configs, function(config, name) {
             var Calendar = require("./Calendar");
-            self.calendar[name] = new Calendar(name, config);
+            self.calendar[name] = new Calendar(
+                name, config,
+                function(id, pin, state, until) {
+                    self.addRequest(id, pin, state, until);
+                },
+                function(id, pin) {
+                    self.removeRequests(id, pin);
+                });
             // Queue a calendar update
             self.calendar[name].update(1000);
         });
@@ -232,7 +232,7 @@ Controller.prototype.createRules = function(configs) {
         promise = promise.then(function() {
             return Config.fileableConfig(config, "test")
                 .then(function(fn) {
-                    rule.setTest(fn, false);
+                    rule.setTest(fn, config.test_file);
                 });
         });
     });
@@ -245,14 +245,9 @@ Controller.prototype.createRules = function(configs) {
 Controller.prototype.setLocation = function(location) {
     "use strict";
     this.location = location;
-    for (var id in this.mobile) {
-        this.mobile[id].setHomeLocation(location);
-    }
-    var weather_config = this.apis.weather;
-    if (typeof weather_config !== "undefined") {
-        var WeatherAgent = require("./" + weather_config.class + ".js");
-        this.weather_agent = new WeatherAgent(weather_config, location);
-    }
+    Utils.forEach(this.weather, function(wa) {
+        wa.setLocation(location);
+    });
 };
 
 /**
@@ -264,8 +259,7 @@ Controller.prototype.getSerialisableState = function() {
     "use strict";
 
     var state = {
-	time: Time.now(), // local time
-        env_temp: this.weather("Temperature")
+	time: Time.now() // local time
     };
     
     var promise = Q();
@@ -291,29 +285,50 @@ Controller.prototype.getSerialisableState = function() {
 };
 
 /**
+ * Get the logs for a type e.g. pin, thermostat, weather
+ * @private
+ */
+Controller.prototype.getSetLogs = function(set) {
+    var promise = Q();
+    var self = this;
+    var logset = {};
+
+    Utils.forEach(set, function(item, key) {
+        if (typeof item.getSerialisableLog === "function") {
+            promise = promise.then(function() {
+                return item.getSerialisableLog();
+            })
+            .then(function(value) {
+                logset[key] = value;
+            });
+        }
+    });
+
+    return promise.then(function() {
+        return logset;
+    });
+};
+
+/**
  * Generate and promise to return a serialisable version of the
- * thermostat logs, suitable for use in an AJAX response.
+ * logs, suitable for use in an AJAX response.
  * @return {object} a promise to create serialisable structure
  */
 Controller.prototype.getSerialisableLog = function() {
     "use strict";
 
-    var logs = { thermostat: {} };
-    var self = this;
+    var logs = {};
 
     var promise = Q();
 
-    function makePromise(k) {
+    Utils.forEach(this, function(block, field) {
         promise = promise.then(function() {
-            return self.thermostat[k].getSerialisableLog()
-                .then(function(value) {
-                    logs.thermostat[k] = value;
-                });
+            self.getSetLogs(self[field])
+            .then(function(logset) {
+                logs[field] = logset;
+            });
         });
-    }
-
-    for (var t in self.thermostat)
-        makePromise(t);
+    });
 
     return promise.then(function() {
         return logs;
@@ -390,88 +405,40 @@ Controller.prototype.setPromise = function(channel, on) {
 };
 
 /**
- * Look up a mobile by ID
- * @param {string} id id of mobile to look up
- * @return {Mobile} mobile found, or undefined
- * @access public
+ * Add a request to a pin.
+ * @param {String} source source of the request
+ * @param {String} pin pin name (or "ALL" for all pins)
+ * @param {int} state state to set (see Pin.addRequest)
+ * @param {int} until epoch ms
  */
-Controller.prototype.getMobile = function(id) {
-    "use strict";
-    for (var name in this.mobile) {
-        var mobile = this.mobile[name];
-        if (mobile.id === id)
-            return mobile;
-    }
-    return undefined;
-};
-
-/**
- * Handler for mobile command
- * @param info structure containing location in "lat", "lng",
- * device identifier in "device", and "requests" which maps a pin name to
- * a state (1 or 0). The request times out after the next request is due.
- * @return a promise that the command has been handled
- * @private
- */
-Controller.prototype.handleMobileCommand = function(path, info) {
-    "use strict";
-    var self = this;
-    var command = path.shift();
-
-    Utils.TRACE(TAG, "mobile ", command, " ", info);
-
-    var mob = this.getMobile(info.device);
-    if (typeof mob === "undefined") {
-        throw "Mobile device '" + info.device + "' not known";
-    }
-
-    if (typeof info.lat !== "undefined" && typeof info.lng !== "undefined") {
-        mob.setLocation(info);
-        Utils.TRACE(TAG, "Set location of ", mob.name, " @", mob.location);
-    }
-
-    switch (command) {
-    case "config":
-        var serv_loc = (typeof this.location !== "undefined")
-            ? this.location : new Location();
-        return Q.fcall(function() {
-            return {
-                lat: serv_loc.lat,
-                lng: serv_loc.lng,
-                fences: mob.config.fences
-            };
+Controller.prototype.addRequest = function(source, pin, state, until) {
+    var req = {
+        state: state,
+        source: source,
+        until: until
+    };
+    Utils.TRACE(TAG, "Add request ", pin, " ", req);
+    if (pin === "ALL") {
+        Utils.forEach(this.pin, function(p) {
+            p.addRequest(req);
         });
-
-    case "request":
-        // Push a request onto a pin
-        Utils.TRACE(TAG, "SMEG");
-        var req = {
-            state: parseInt(info.state),
-            source: mob.name
-        };
-        if (typeof info.until !== "undefined")
-            info.until = parseInt(info.until);
-        Utils.TRACE(TAG, "Boost ", info.pin, " ", req);
-        self.pin[info.pin].addRequest(req);
-        break;
-
-    case "crossing":
-        // A fence was crossed
-        mob.recordCrossing(info);
-        break;
-    }
-
-    return Q.fncall(function() { return "OK"; });
+    } else
+        this.pin[pin].addRequest(req);
 };
 
 /**
- * Get the current state of the weather for use in a rule
+ * Remove a request from a pin.
+ * @param {String} source source of the request
+ * @param {String} pin pin name (or "ALL" for all pins)
  */
-Controller.prototype.weather = function(field) {
-    "use strict";
-    if (typeof this.weather_agent === "undefined")
-        return 20; // random pick, if the agent isn't ready yet
-    return this.weather_agent.get(field);
+Controller.prototype.removeRequests = function(source, pin) {
+    Utils.TRACE(TAG, "Remove request ", pin, " ", source);
+    if (pin === "ALL") {
+        Utils.forEach(this.pin, function(p) {
+            p.purgeRequests(undefined, source);
+        });
+    } else
+        this.pin[pin].purgeRequests(undefined, source);
 };
 
 /**
@@ -495,36 +462,47 @@ Controller.prototype.dispatch = function(command, path, data) {
 
     switch (command) {
     case "state": // Return the current system state
+        // /state
         return self.getSerialisableState();
     case "log":
-        return self.getSerialisableLog();
+        // /log[/{type}[/{name}]]
+        if (typeof path[0] === "undefined")
+            return self.getSerialisableLog();
+        if (typeof path[1] === "undefined")
+            return self.getSetLogs(self[path[0]]);
+        return self[path[0]][path[1]].getSerialisableLog();
     case "config": // Return the config with all _file expanded
+        // /config
         return Config.getSerialisable(this.config);
     case "apis": // Return the apis config
+        // /apis
         return Q.fcall(function () { return self.apis; });
     case "remove_rule": // remove a rule
-        // /rule/{index}
-        self.remove_rule(parseInt(path[1]));
+        // /remove_rule/{index}
+        self.remove_rule(parseInt(path[0]));
         break;
     case "insert_rule": // insert a new rule at the end
+        // /insert_rule?name=;test=;
         var r = new Rule(data.name);
         r.setTest(data.test);
         self.addRule(r, true);
         break;
     case "move_up": // promote a rule in the evaluation order
-        // /rule/{index}
-        self.move_rule(parseInt(path[1]), -1);
+        // /move_up/{index}
+        self.move_rule(parseInt(path[0]), -1);
         break;
     case "move_down": // demote a rule
-        // /rule/{index}
-        self.move_rule(parseInt(path[1]), 1);
+        // /move_down/{index}
+        self.move_rule(parseInt(path[0]), 1);
         break;
     case "set": // change the configuration of a system element
+        // /set/pin/{name}?value=
+        // Pretty useless! Rules will override it before you can blink.
         if (path[0] === "pin")
-            // set/pin
             return self.setPromise(path[1], data.value);
 
-        // set/rule
+        // /set/rule/{index}/name?value=
+        // /set/rule/{index}/test?value=
         else if (path[0] === "rule") {
             var i = parseInt(path[1]);
             if (i < 0 || i >= self.rule.length)
@@ -541,13 +519,23 @@ Controller.prototype.dispatch = function(command, path, data) {
         else
             throw new Error("Unrecognised command");
         break;
-    case "mobile":
-        // mobile has it's own commands, and deals with the response
-        return self.handleMobileCommand(path, data);
-    case "calendar":
-        // Calendars need an update. Do them asynchronously.
+    case "request":
+        // Push a request onto a pin (or all pins). Requests may come
+        // from external sources such as mobiles or browsers.
+        // /request?source=;pin=;state=;until=
+        var until = data.until;
+        if (typeof until === "string")
+            until = Date.parse(until);
+        this.addRequest("Mobile " + data.source, data.pin,
+                        parseInt(data.state), until);
+        break;
+    case "refresh_calendars":
+        // Force the refresh of all calendars (sent manually when one changes)
+        // SMELL: could use push notification to do this, but that requires
+        // a server host with a DNS entry so not bothered.
+        // /refresh_calendars
         for (var cal in this.calendar)
-            this.calendar[cal].update(1000);
+            this.calendar[cal].update(100);
         break;
     default:
         throw "Unrecognised command " + command;

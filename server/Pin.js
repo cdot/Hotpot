@@ -7,7 +7,6 @@ const Q = require("q");
 const readFile = Q.denodeify(Fs.readFile);
 const writeFile = Q.denodeify(Fs.writeFile);
 const Utils = require("../common/Utils");
-const Historian = require("./Historian");
 
 const TAG = "Pin";
 
@@ -59,6 +58,7 @@ function Pin(name, config) {
     
     var hc = config.history;
     if (typeof hc !== "undefined") {
+        var Historian = require("./Historian");
         self.historian = new Historian({
             name: self.name + "_pin",
             file: hc.file,
@@ -196,7 +196,7 @@ Pin.prototype.set = function(state) {
     var promise = writeFile(self.value_path, state, "UTF8");
     if (self.historian)
         promise = promise.then(function() {
-            self.historian.record(state);
+            return self.historian.record(state);
         });
     return promise;
 };
@@ -249,6 +249,16 @@ Pin.prototype.getSerialisableState = function() {
 };
 
 /**
+ * Get a promise for the current log of the pin state.
+ */
+Pin.prototype.getSerialisableLog = function() {
+    "use strict";
+    if (!this.historian)
+        return Q();
+    return this.historian.getSerialisableHistory();
+};
+
+/**
  * Purge requests that have timed out, or are force-purged by matching
  * the parameters.
  * @param {number} state state of requests to force-purge, or undefined
@@ -260,14 +270,12 @@ Pin.prototype.purgeRequests = function(state, source) {
     for (var i = 0; i < reqs.length;) {
         var r = reqs[i];
         if ((typeof source !== "undefined" && r.source === source)
+            // state === REQUEST_BOOST requests will be purged by rules
             || (typeof state !== "undefined" && r.state === state)
-            // If there's an error finding a route then r.until will be -1
-            // This means an ON request will only be active while the issuer
-            // is a measurable distance away from home.
             || (r.state === REQUEST_ON && r.until <= Time.nowSeconds())
             // OFF requests are only timed out if r.until is > 0
             || (r.state === REQUEST_OFF
-                && r.until > 0 && r.until <= Time.nowSeconds())) {
+                && r.until > 0 && r.until <= Time.now())) {
             // BOOST requests are explicitly expired by rules
             Utils.TRACE(TAG, "Purge request ", r);
             reqs.splice(i, 1);
@@ -284,7 +292,7 @@ Pin.prototype.purgeRequests = function(state, source) {
  * only thing the Pin does with a request is to expire those that have
  * passed their timeout (see #purgeRequests)
  * Active requests for state 0 override those for state 1 or 2.
- * @param {object} request { until: epoch s, state: 2|1|0, source: string }
+ * @param {object} request { until: epoch ms, state: 2|1|0, source: string }
  */ 
 Pin.prototype.addRequest = function(request) {
     Utils.TRACE(TAG, "Add request ", request);

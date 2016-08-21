@@ -6,6 +6,8 @@
  * @module Utils
  */
 
+const Module = require("module");
+
 /**
  * Useful utilities
  * @ignore
@@ -77,18 +79,9 @@ Utils.byteLength = function(str) {
     return s;
 };
 
-Utils.safeEval = function(str) {
-    var safeEval_data;
-    try {
-        eval("safeEval_data=" + str);
-        return safeEval_data;
-    } catch (e) {
-        var mess = "Bad function in safeEval: " + e.message;
-        Utils.TRACE("Utils", mess, " ", e.stack);
-        throw mess;
-    }
-};
-
+/**
+ * Join arguments with no spaces
+ */
 Utils.joinArgs = function(args, start) {
     var mess = "";
     if (typeof start === "undefined")
@@ -98,16 +91,26 @@ Utils.joinArgs = function(args, start) {
             && (args[i].toString === Object.prototype.toString
                 || args[i].toString === Array.prototype.toString))
             mess += Utils.dump(args[i]);
-        else
+        else if (typeof args[i] === "function") {
+            mess += new args[i](args[i + 1]);
+            i += 1;
+        } else
             mess += args[i];
     }
     return mess;
 };
 
+/**
+ * Set the string that defines what tags are traced
+ */
 Utils.setTRACE = function(t) {
     Utils.trace = t;
 };
 
+/**
+ * Produce a tagged log message, if the tag is included in the string
+ * passed to Utils.setTRACE
+ */
 Utils.TRACE = function() {
     var level = arguments[0];
     if (typeof Utils.trace !== "undefined" &&
@@ -120,13 +123,33 @@ Utils.TRACE = function() {
     }
 };
 
+/**
+ * Produce a tagged error message.
+ */
 Utils.ERROR = function() {
     var tag = arguments[0];
     console.error("*" + tag + "*", Utils.joinArgs(arguments, 1));
 };
 
+/**
+ * Simulate ES6 forEach
+ */
 Utils.forEach = function(that, callback) {
     for (var i in that) {
         callback(that[i], i, that);
     }
 };
+
+/**
+ * eval() the code, generating meaningful syntax errors (with line numbers)
+ * @param {String} code the code to eval
+ * @param {String} context the context of the code e.g. a file name
+ */
+Utils.eval = function(code, context) {
+    var m = new Module();
+    if (typeof context === "undefined")
+        context = "eval";
+    m._compile("module.exports=\n" + code + "\n;", context);
+    return m.exports;
+};
+

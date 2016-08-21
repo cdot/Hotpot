@@ -5,7 +5,6 @@
 const Q = require("q");
 
 const Utils = require("../common/Utils");
-const Historian = require("./Historian.js");
 
 const TAG = "Thermostat";
 
@@ -66,6 +65,7 @@ function Thermostat(name, config) {
     var hc = config.history;
     var self = this;
     if (typeof hc !== "undefined") {
+        var Historian = require("./Historian.js");
         if (typeof hc.interval === "undefined")
             hc.interval = 300; // 5 minutes
         this.historian = new Historian({

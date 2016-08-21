@@ -6,9 +6,6 @@ const Q = require("q");
 const Fs = require("fs");
 const readFile = Q.denodeify(Fs.readFile);
 
-var google = require("googleapis");
-var googleAuth = require("google-auth-library");
-
 const Utils = require("../common/Utils.js");
 const Time = require("../common/Time.js");
 
@@ -17,14 +14,70 @@ const CACHE_LENGTH = 24 * 60 * 60 * 1000; // cache size in ms
 const TAG = "Calendar";
 
 /**
- * Get active events from a Google calendar
+ * Calendar event cache entry. Events stored here are filtered; only central
+ * heating events are cached. The cache size is limited by CACHE_LENGTH.
+ * Longer means less frequent automatic updates, and larger memory
+ * footprint for the server, but less network traffic
+ */
+function ScheduledEvent(cal, id, start, end, pin, state) {
+    var now = Time.now();
+    this.calendar = cal;
+    this.id = id;
+    this.pin = pin;
+    this.state = state;
+    this.startms = start;
+    this.endms = end;
+
+    var self = this;
+    if (start > now) {
+        Utils.TRACE(TAG, "Event will start at ", Date, start,
+                   " now is ", Date, now);
+        this.event = setTimeout(function() {
+            self.start();
+        }, start - now);
+    } else if (start <= now && end > now) {
+        Utils.TRACE(TAG, "Event has already started");
+        this.start();
+    } else {
+        Utils.TRACE(TAG, "Event is already finished");
+    }
+}
+
+ScheduledEvent.prototype.cancel = function() {
+    Utils.TRACE(TAG, this.id, " cancelled");
+    if (typeof this.event !== "undefined")
+        clearTimeout(this.event);
+    if (typeof this.calendar.remove === "function")
+        this.calendar.remove(this.id, this.pin);
+    this.event = undefined;
+};
+
+ScheduledEvent.prototype.start = function() {
+    Utils.TRACE(TAG, this.id, " starting");
+    if (typeof this.calendar.trigger === "function")
+        this.calendar.trigger(this.id, this.pin, this.state, this.endms);
+    var self = this;
+    this.event = setTimeout(function() {
+        self.calendar.remove(self.id, self.pin);
+    }, this.endms - Time.now());
+};
+
+/**
+ * Get active events from a Google calendar.
+ * @param {function} trigger callback triggered when an event starts
+ * (or after an update and the event has already started).
+ * trigger(String id, String pin, int state, int until (ms))
+ * @param {function} remove callback invoked when a scheduled event is removed.
+ * remove(String id, String pin)
 */
-function Calendar(name, config) {
+function Calendar(name, config, trigger, remove) {
     "use strict";
     this.name = name;
     this.config = config;
     this.oauth2Client = undefined;
     this.schedule = [];
+    this.trigger = trigger;
+    this.remove = remove;
 }
 module.exports = Calendar;
 
@@ -45,15 +98,12 @@ Calendar.prototype.authorise = function() {
         var clientSecret = self.config.secrets.client_secret;
         var clientId = self.config.secrets.client_id;
         var redirectUrl = self.config.secrets.redirect_uris[0];
+        var googleAuth = require("google-auth-library");
         var auth = new googleAuth();
         self.oauth2Client = new auth.OAuth2(
             clientId, clientSecret, redirectUrl);
         self.oauth2Client.credentials = JSON.parse(token);
     });
-};
-
-Calendar.prototype.getSerialisableState = function() {
-    return this.getCurrent();
 };
 
 /**
@@ -68,6 +118,7 @@ Calendar.prototype.fillCache = function() {
     return this.authorise()
 
     .then(function() {
+        var google = require("googleapis");
         var calendar = google.calendar("v3");
         var now = Date.now();
 
@@ -77,7 +128,7 @@ Calendar.prototype.fillCache = function() {
             calendar.events.list(
                 {
                     auth: self.oauth2Client,
-                    calendarId: "primary",
+                    calendarId: "primary",//self.config.id,
                     // For reasons undocumented by google, if timeMin and
                     // timeMax are the same time it returns no events. So
                     // we need to offset them by a second.
@@ -99,7 +150,7 @@ Calendar.prototype.fillCache = function() {
     })
 
     .then(function(response) {
-        self.schedule = [];
+        self.clearSchedule();
         var events = response.items;
         for (var i = 0; i < events.length; i++) {
             var event = events[i];
@@ -108,19 +159,41 @@ Calendar.prototype.fillCache = function() {
             // Can have orders in the event summary or the description
             // Only the first found is obeyed.
             var fullText = event.summary + " " + event.description;
-            var match = /Hotpot:([A-Za-z]+)=([A-Za-z]+)/.exec(fullText);
+            var match = /Hotpot:([A-Za-z]+)=([A-Za-z0-9]+)/.exec(fullText);
             if (match !== null) {
-                self.schedule.push({
-                    start: start, end: end,
-                    pin: match[1], state: match[2] });
+                var state = match[2];
+                if (/^[0-9]+$/i.test(state))
+                    state = parseInt(state);
+                else if (/^off$/i.test(state))
+                    state = 0;
+                else if (/^on$/i.test(state))
+                    state = 1;
+                else if (/^boost$/i.test(state))
+                    state = 2;
+                Utils.TRACE(TAG, "Got entry ", Date, start, "..",
+                            Date, end, " ",
+                            match[1], "=", state);
+                self.schedule.push(new ScheduledEvent(
+                    self,
+                    "Calendar:" + self.name + ":" + self.schedule.length,
+                    start, end, match[1], state));
             }
         }
-        Utils.TRACE(TAG, self.name, " updated");
+        Utils.TRACE(TAG, self.name, " ready");
     })
 
     .catch(function(e) {
         throw "Calendar had an error: " + e.stack;
     });
+};
+
+/**
+ * Clear the existing schedule
+ */
+Calendar.prototype.clearSchedule = function() {
+    for (var i in this.schedule)
+        this.schedule[i].cancel();
+    this.schedule = [];
 };
 
 /**
@@ -133,32 +206,13 @@ Calendar.prototype.update = function(after) {
     var self = this;
 
     // Kill the old timer
-    if (this.timeout)
-        clearTimeout(this.timeout);
-    this.timeout = setTimeout(function() {
-        Utils.TRACE(TAG, "Updating calendar '", self.name, "'");
+    if (this.update_timeout)
+        clearTimeout(this.update_timeout);
+    this.update_timeout = setTimeout(function() {
+        Utils.TRACE(TAG, "Updating '", self.name, "'");
         self.fillCache().done(function() {
-            self.timeout = undefined;
+            self.update_timeout = undefined;
             self.update(CACHE_LENGTH);
         });
     }, after);
-};
-
-/**
- * Get the current event (if there is one).
- * @return {object} the most recent event that overlaps the current time
- */
-Calendar.prototype.getCurrent = function() {
-    "use strict";
-    var now = Time.now();
-    // Could prune the event list, but there are unlikely to be
-    // enough events to make it worthwhile
-    var best;
-    for (var i = 0; i < this.schedule.length; i++) {
-        var evt = this.schedule[i];
-        if (evt.start <= now && evt.end >= now
-            && (!best || best.start < evt.start))
-            best = evt;
-    }
-    return best;
 };

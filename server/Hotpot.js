@@ -24,7 +24,7 @@ HOTPOT_DEBUG = undefined;
     var cliopt = getopt.create([
         [ "h", "help", "Show this help" ],
         [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ],
-        [ "d", "debug=ARG", "Run in debug mode e.g. --debug all" ]
+        [ "", "debug[=ARG]", "Run in debug mode e.g. --debug all" ]
     ])
         .bindHelp()
         .setHelp(DESCRIPTION + "[[OPTIONS]]")
@@ -76,7 +76,7 @@ HOTPOT_DEBUG = undefined;
     .catch(function(e) {
         Utils.ERROR(TAG, "Controller initialisation failed: ",
                       typeof e.stack !== "undefined" ? e.stack : e);
-        process.exit(1);
+        eval("process.exit(1)");
     });
 })();
 

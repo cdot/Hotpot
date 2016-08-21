@@ -45,9 +45,22 @@ function Historian(options) {
 module.exports = Historian;
 
 /**
+ * Reset the historian to the given start time
+ * @param {int} time base time for the historian, in seconds
+ */
+Historian.prototype.reset = function(time) {
+    Utils.TRACE(TAG, this.name, " reset baseline to ", Date, time);
+    this.basetime = time;
+    this.history = [];
+    this.rewriteHistory();
+};
+
+/**
+ * Get a promise to rewrite the history file from the history
+ * cached in this object.
  * @private
  */
-Historian.prototype.rewriteHistory = function(callback) {
+Historian.prototype.rewriteHistory = function() {
     "use strict";
     var self = this;
 
@@ -55,18 +68,11 @@ Historian.prototype.rewriteHistory = function(callback) {
     var s = "B," + self.basetime + "\n";
     for (var i in report)
         s += (report[i].time - self.basetime) + "," + report[i][1] + "\n";
-    writeFile(this.file, s)
-        .then(
-            function () {
-                if (typeof callback !== "undefined")
-                    callback();
-            },
-            function(err) {
-                Utils.ERROR(TAG, "Failed to write '",
-                              self.file, "': ", err.toString());
-                if (typeof callback !== "undefined")
-                    callback();
-            });
+    return writeFile(this.file, s)
+    .catch(function(err) {
+        Utils.ERROR(TAG, "Failed to write '",
+                    self.file, "': ", err.toString());
+    });
 };
 
 /**
@@ -134,7 +140,7 @@ Historian.prototype.start = function(quiet) {
     if (typeof self.interval === "undefined")
         throw "Cannot start Historian; interval not defined";
 
-    var t = self.sample();
+    var sample = self.sample();
 
     function repoll() {
         setTimeout(function() {
@@ -142,12 +148,13 @@ Historian.prototype.start = function(quiet) {
         }, self.interval * 1000);
     }
 
-    if (typeof t !== "number") {
+    if (typeof sample !== "number") {
         repoll();
         return;
     }
 
-    if (t === self.last_recorded) {
+    // Don't record if this sample has the same value as the last
+    if (sample === self.last_recorded) {
         repoll();
         return;
     }
@@ -155,56 +162,52 @@ Historian.prototype.start = function(quiet) {
     if (!quiet)
         Utils.TRACE(TAG, this.name, " started");
 
-    self.record(t, repoll);
+    self.record(sample)
+    .then(repoll);
 };
 
 /**
- * Record a sample in the log.
- * @param {number} t the data to record
- * @param {function} callback (optional) callback when recording is done
+ * Get a promise to record a sample in the log.
+ * @param {number} sample the data to record
+ * @param {int} time (optional) time in s to force into the record
  * @public
  */
-Historian.prototype.record = function(t, callback) {
+Historian.prototype.record = function(sample, time) {
     "use strict";
 
     var self = this;
 
-    Utils.TRACE(TAG, "Record ", t, " to ", self.name, " history");
+    if (typeof time === "undefined")
+        time = Time.nowSeconds();
 
-    self.last_recorded = t;
+    Utils.TRACE(TAG, self.name, " record ", sample, " ", Date, time * 1000);
 
-    statFile(self.file).then(
+    self.last_recorded = sample;
+    self.history.push({time: time, sample: sample });
+
+    return statFile(self.file).then(
         function(stats) {
             // If we hit 2 * the size limit, open the file and
             // reduce the size. Each sample is about 15 bytes.
             if (stats.size > self.max_bytes) {
                 Utils.TRACE(TAG, self.name, " history is full");
-                self.rewriteHistory(callback);
-                return;
+                return self.rewriteHistory();
             }
             // otherwise simply append
-            appendFile(
+            return appendFile(
                 self.file,
                 Math.round(Time.nowSeconds() - self.basetime)
-                    + "," + t + "\n")
-                .then(
-                    function() {
-                        if (typeof callback !== "undefined")
-                            callback();
-                    })
-                .fail(
-                    function(ferr) {
-                        Utils.ERROR(TAG, "failed to append to '",
-                                self.file, "': ",
-                                ferr.toString());
-                        if (typeof callback !== "undefined")
-                            callback();
-                    });
+                    + "," + sample + "\n")
+            .catch(function(ferr) {
+                Utils.ERROR(TAG, "failed to append to '",
+                            self.file, "': ",
+                            ferr.toString());
+            });
         })
-        .fail(function(err) {
+        .catch(function(err) {
             Utils.TRACE(TAG, "Failed to stat history file '",
                           self.file, "': ", err);
             // Probably the first time; write the whole history file
-            self.rewriteHistory(callback);
+            return self.rewriteHistory();
         });
 };
