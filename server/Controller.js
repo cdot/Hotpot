@@ -320,6 +320,7 @@ Controller.prototype.getSerialisableLog = function() {
     var logs = {};
 
     var promise = Q();
+    var self = this;
 
     Utils.forEach(this, function(block, field) {
         promise = promise.then(function() {
