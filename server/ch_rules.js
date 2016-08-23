@@ -33,8 +33,7 @@ function() {
 
     // Consider the time
     if (Time.between('08:00', '18:00') // day
-        || Time.between('22:00', '06:40') // night
-       ) {
+        || Time.between('22:00', '06:40')) { // night
         if (state === 1) {
              Utils.TRACE("Rules", "out of time band, so CH off");
            this.setPin("CH", 0);
@@ -47,8 +46,5 @@ function() {
         Utils.TRACE("Rules", "CH only ", this.thermostat.CH.temperature,
                     "°C, so on");
         this.setPin("CH", 1);
-    } else if (state === 1) {
-        Utils.TRACE("Rules", "no demand, so CH off");
-        this.setPin("CH", 0);
     }
 }

@@ -28,8 +28,7 @@ function() {
     }
 
     if (Time.between("08:30", "18:00") // day
-        || Time.between("20:00", "06:30") // night
-       ) {
+        || Time.between("20:00", "06:30")) { // night
         if (state === 1) {
             Utils.TRACE("Rules", "out of time band, so HW off");
             this.setPin("HW", 0);
@@ -37,13 +36,10 @@ function() {
         return;
     }
 
-    // Demand is away from home, or we are in time band
+    // we are in time band
     if (state === 0 && this.thermostat.HW.temperature < 38) {
         Utils.TRACE("Rules", "HW only ", this.thermostat.HW.temperature,
                     "°C, so on");
         this.setPin("HW", 1);
-    } else if (state === 1) {
-        Utils.TRACE("Rules", "no demand, so HW off");
-        this.setPin("HW", 0);
     }
 }

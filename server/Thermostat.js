@@ -51,7 +51,7 @@ function Thermostat(name, config) {
     this.name = name;
 
     // Last recorded temperature {float}
-    this.temperature = null;
+    this.temperature = 20;
 
     // Temperature history, sample on a time schedule
     var hc = config.history;
