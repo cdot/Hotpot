@@ -95,7 +95,6 @@ function httpGET(url, nofollow) {
         getter = require("follow-redirects").https;
     else
         getter = require("follow-redirects").http;
-    console.log("GET ", url);
     return Q.Promise(function(resolve, reject) {
         getter.get(
             url,

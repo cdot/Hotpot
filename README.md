@@ -124,7 +124,7 @@ Each function is called in in a polling loop, and it it returns true,
 the evaluation will stop. Rule functions are called with 'this' set to
 the Controller.
 
-Rule functions can interrogate any part of the system using the internal APIs. Annotated example rules are given for Hot Water `server/hw_rules.json` and Central Heating `server/ch_rules.json`.
+Rule functions can interrogate any part of the system using the internal APIs. Annotated example rules are given for Hot Water `server/hw_rules.js` and Central Heating `server/ch_rules.js`.
 
 # Browser interface
 
@@ -178,7 +178,7 @@ Run the command-line program `node authorise_calendar.js` and follow the instruc
 Calendars are cached and updated every 24 hours. An update can be forced by visiting `/refresh_calendars` to the server.
 
 ## Controlling Hotpot from the Calendar
-Hotpot is controlled by events in the calendar which contain special commands in the event summary or description. For example, `Hotpot:HW=on` will raise a request for Hotpot to turn the hot water on for the duration of the event. Requests are handled in the rules - see `hw_rules.json` for an example.
+Hotpot is controlled by events in the calendar which contain special commands in the event summary or description. For example, `Hotpot:HW=on` will raise a request for Hotpot to turn the hot water on for the duration of the event. Requests are handled in the rules - see `hw_rules.js` for an example.
 
 The format of commands is `Hotpot:PIN=STATE` where `PIN` can be the name of a pin in `hotpot.cfg` (e.g. `HW` or `CH`) and `STATE` can be a number (0=off, 1=on, 2=boost) or one of the commands `on`, `off` or `boost`. `ALL` is special pin that will apply the command to all pins.
 

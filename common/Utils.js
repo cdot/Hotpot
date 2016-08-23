@@ -61,6 +61,7 @@ Utils.joinArgs = function(args, start) {
         start = 0;
     for (var i = start; i < args.length; i++) {
         if (typeof args[i] === "object"
+            && args[i] !== null
             && (args[i].toString === Object.prototype.toString
                 || args[i].toString === Array.prototype.toString))
             mess += Utils.dump(args[i]);
