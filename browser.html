@@ -10,27 +10,11 @@
     <script type="text/javascript" src="common/Utils.js"></script>
     <script type="text/javascript" src="common/Time.js"></script>
     <script type="text/javascript" src="common/Location.js"></script>
-
-    <!-- Configuration: set global variables as follows:
-         hotpot_ip to the IP address of the hotpot server
-         hotpot_port to the port used by the hotpot server -->
-    <script type="text/javascript" src="http://c-dot.co.uk/hotpot_ip.js">
-    </script>
-    <!-- Debug configuration, pointing at a development server -->
-    <script type="text/javascript">
-      hotpot_port = 13196;
-      hotpot_protocol = "https";
-      if (location.search.indexOf("DEBUG") > 0) {
-          console.debug("Using DEBUG server");
-          hotpot_ip = "127.0.0.1";
-      }
-    </script>
-
     <script type="text/javascript" src="browser/js/browser.js"></script>
     <link rel="stylesheet" href="browser/css/browser.css">
   </head>
   <body>
-    <h1>Hotpot Monitor for <span id="server_url"></span></h1>
+    <h1>Hotpot Monitor</h1>
     <div id="comms_error"></div>
 
     <div><b>System Time:</b> <span data-field="time" data-type="date" class="monospace"></span></div>
@@ -46,11 +30,6 @@
     <h2>Pins</h2>
     <table id="pin" data-field="pin">
     </table>
-
-    <h2>Mobiles</h2>
-    <div id="map"></div>
-    <div id="mobile" data-field="mobile">
-    </div>
 
     <h2>Rules</h2>
     <table data-field="rule">
@@ -122,17 +101,5 @@
         </td>
       </tr>
     </table>
-
-    <!-- Mobile template -->
-    <div class="template" data-template="mobile">
-      <div>
-        <span class="marker" data-type="location" data-field="location"></span>
-        <b data-field="name"></b>
-        <span class="showif time_of_arrival">
-          is expected home at
-          <span data-field="time_of_arrival"></span>
-        </span>
-      </div>
-    </div>
   </body>
 </html>

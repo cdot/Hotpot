@@ -23,11 +23,19 @@ const VALVE_RETURN = 8000;
 const RULE_INTERVAL = 5000;
 
 /**
- * Singleton controller for a number of pins, thermostats, mobile devices,
- * and the rules that manage the system state based on inputs from these
+ * Controller for a number of pins, thermostats, calendars, weather agents,
+ * and the rules that manage the system state based on inputs from all these
  * elements.
  * @param {Config} config Config object
- * @protected
+ * * `pin`: object mapping pin names to Pin configurations
+ * * `thermostat`: object mapping thermostat names to Thermostat configurations
+ * * `rule`: array of Rule configurations
+ * * `calendar`: object mapping calendar names to Calendar configurations
+ * * `weather`: object mapping weather agent names to their configurations
+ * @param {Config} apis Config object recording API information that will
+ * be sent in response to an `/ajax/apis` request. The controller doesn't
+ * care what is in this object, it simply passes it back in response to
+ * `/ajax/apis`.
  * @class
  */
 function Controller(config, apis) {
@@ -42,7 +50,6 @@ Controller.prototype.initialise = function() {
     Utils.TRACE(TAG, "Initialising Controller");
 
     var self = this;
-    //self.location = undefined;
 
     return Q()
 
@@ -115,10 +122,10 @@ Controller.prototype.createCalendars = function(configs) {
             self.calendar[name] = new Calendar(
                 name, config,
                 function(id, pin, state, until) {
-                    self.addRequest(id, pin, state, until);
+                    self.addRequest(pin, id, state, until);
                 },
                 function(id, pin) {
-                    self.removeRequests(id, pin);
+                    self.removeRequests(pin, id);
                 });
             // Queue a calendar update
             self.calendar[name].update(1000);
@@ -153,7 +160,8 @@ Controller.prototype.createPins = function(configs) {
 };
 
 /**
- * Reset pins to a known state on startup
+ * Promise to reset pins to a known state on startup.
+ * @private
  */
 Controller.prototype.resetValve = function() {
     var self = this;
@@ -290,14 +298,17 @@ Controller.prototype.getSerialisableState = function() {
  */
 Controller.prototype.getSetLogs = function(set) {
     var promise = Q();
-    var self = this;
-    var logset = {};
+    var logset;
 
     Utils.forEach(set, function(item, key) {
         if (typeof item.getSerialisableLog === "function") {
+            if (typeof logset === "undefined")
+                logset = {};
+
             promise = promise.then(function() {
                 return item.getSerialisableLog();
             })
+
             .then(function(value) {
                 logset[key] = value;
             });
@@ -326,7 +337,8 @@ Controller.prototype.getSerialisableLog = function() {
         promise = promise.then(function() {
             self.getSetLogs(self[field])
             .then(function(logset) {
-                logs[field] = logset;
+                if (typeof logset !== "undefined")
+                    logs[field] = logset;
             });
         });
     });
@@ -337,23 +349,23 @@ Controller.prototype.getSerialisableLog = function() {
 };
 
 /**
- * Set the on/off state of a pin, and wait for it to complete.
+ * Set the on/off state of a pin, suitable for calling from Rules.
+ * This is more
+ * sophisticated than a simple `Pin.set()` call, because there is a
+ * relationship between the state of the pins in Y-plan systems
+ * that must be respected.
  * @param {String} channel e.g. "HW" or "CH"
  * @param {number} state 1 (on) or 0 (off)
- * @access public
  */
 Controller.prototype.setPin = function(channel, on) {
     this.setPromise(channel, on).done();
 };
 
 /**
- * Get a promise to set the on/off state of a pin. This is more
- * sophisticated than a simple pin command, because there is a
- * relationship between the state of the pins in Y-plan systems
- * that must be respected.
+ * Get a promise to call `setPin()`.
  * @param {String} channel e.g. "HW" or "CH"
  * @param {number} state 1 (on) or 0 (off)
- * @access public
+ * @private
  */
 Controller.prototype.setPromise = function(channel, on) {
     "use strict";
@@ -406,13 +418,14 @@ Controller.prototype.setPromise = function(channel, on) {
 };
 
 /**
- * Add a request to a pin.
- * @param {String} source source of the request
+ * Add a Pin.Request to a pin (or all pins).
  * @param {String} pin pin name (or "ALL" for all pins)
+ * @param {String} source source of the request
  * @param {int} state state to set (see Pin.addRequest)
- * @param {int} until epoch ms
+ * @param {int} until (optional) epoch ms
+ * @private
  */
-Controller.prototype.addRequest = function(source, pin, state, until) {
+Controller.prototype.addRequest = function(pin, source, state, until) {
     var req = {
         state: state,
         source: source,
@@ -428,11 +441,12 @@ Controller.prototype.addRequest = function(source, pin, state, until) {
 };
 
 /**
- * Remove a request from a pin.
- * @param {String} source source of the request
+ * Remove matching Pin.Requests from a pin.
  * @param {String} pin pin name (or "ALL" for all pins)
+ * @param {String} source source of the request
+ * @private
  */
-Controller.prototype.removeRequests = function(source, pin) {
+Controller.prototype.removeRequests = function(pin, source) {
     Utils.TRACE(TAG, "Remove request ", pin, " ", source);
     if (pin === "ALL") {
         Utils.forEach(this.pin, function(p) {
@@ -443,23 +457,16 @@ Controller.prototype.removeRequests = function(source, pin) {
 };
 
 /**
- * Command handler for a command that modifies the configuration
- * of the controller. Commands may be received from the server.
- *
- * The command set is very simple. Each command is delivered as a path
- * that contains a command-verb, such as "set" or "move_rule_up". The rest
- * of the path mirrors the structure of the controller configuration e.g.
- * "thermostat/HW/target" refers to the target setting on thermostat "HW".
- * Extra data, such as values, are passed in a structure that contains
- * command-specific fields.
- * @params {String} command the command verb
- * @params {array} path the command noun
- * @param {Object} data structure containing parameters
- * @return a promise passed the response data for serialisation
+ * Command handler for ajax commands, suitable for calling by a Server.
+ * @params {array} path the url path components
+ * @param {object} data structure containing parameters. These vary according
+ * to the command (commands are documented in README.md)
+ * @return a promise, passed an object for serialisation in the response
  */
-Controller.prototype.dispatch = function(command, path, data) {
+Controller.prototype.dispatch = function(path, data) {
     "use strict";
     var self = this;
+    var command = path.shift();
 
     switch (command) {
     case "state": // Return the current system state
@@ -527,7 +534,7 @@ Controller.prototype.dispatch = function(command, path, data) {
         var until = data.until;
         if (typeof until === "string")
             until = Date.parse(until);
-        this.addRequest("Mobile " + data.source, data.pin,
+        this.addRequest(data.pin, "Mobile " + data.source,
                         parseInt(data.state), until);
         break;
     case "refresh_calendars":
@@ -567,6 +574,7 @@ Controller.prototype.getRuleIndex = function(i) {
  * @param rule {Rule} the rule
  * @param update_config true to update the configuration too (and cause it
  * to be saved)
+ * @private
  */
 Controller.prototype.addRule = function(rule, update_config) {
     "use strict";
@@ -587,6 +595,7 @@ Controller.prototype.addRule = function(rule, update_config) {
  * @param i the number (or name, or rule object) of the rule to delete
  * @param move {integer} number of places to move the rule, negative to move up,
  * positive to move down
+ * @private
  */
 Controller.prototype.move_rule = function(i, move) {
     "use strict";
@@ -612,6 +621,7 @@ Controller.prototype.move_rule = function(i, move) {
  * Remove a rule.
  * @param i the number (or name, or rule object) of the rule to delete
  * @return the removed rule function
+ * @private
  */
 Controller.prototype.remove_rule = function(i) {
     "use strict";
@@ -637,6 +647,7 @@ Controller.prototype.renumberRules = function() {
 
 /**
  * Evaluate rules at regular intervals.
+ * @private
  */
 Controller.prototype.pollRules = function() {
     "use strict";
@@ -653,8 +664,10 @@ Controller.prototype.pollRules = function() {
         }
         var result;
         try {
+console.log("Calling ", rule.name);
             result = rule.testfn.call(self);
         } catch (e) {
+console.log("Error in  ", rule.name);
             if (typeof e.stack !== "undefined")
                 Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
             Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.toString());

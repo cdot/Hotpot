@@ -15,6 +15,7 @@ const MIN_DEG = 0.00005; // 5 metres in degrees at 55N
  * @param lat latitude, or another Location object to copy, or undefined
  * for default location (55N0W)
  * @param lng longitude, or undefined if lat is an object
+ * @class
  */
 function Location(lat, lng) {
     "use strict";
@@ -39,16 +40,6 @@ if (typeof module !== "undefined")
     module.exports = Location;
 
 /**
- * Convert a number in degrees to radians
- * @param {float} x number of degrees
- * @return {float} x in radians
- */
-function toRadians(x) {
-    "use strict";
-    return x * Math.PI / 180;
-}
-
-/**
  * Return the crow-flies distance between two locations,
  * each specified by lat and long.
  * @param {Location} p2 second point
@@ -56,6 +47,14 @@ function toRadians(x) {
  */
 Location.prototype.haversine = function(p2) {
     "use strict";
+    /**
+     * Convert a number in degrees to radians
+     * @param {float} x number of degrees
+     * @return {float} x in radians
+     */
+    function toRadians(x) {
+        return x * Math.PI / 180;
+    }
     var lat1 = toRadians(this.lat);
     var lat2 = toRadians(p2.lat);
     var dLat = toRadians(p2.lat - this.lat);

@@ -2,6 +2,10 @@
 
 /*eslint-env node */
 
+/**
+ * Main program for heating control server
+ * @module Hotpot
+ */
 const DESCRIPTION =
 "DESCRIPTION\nA Raspberry PI central heating control server.\n" +
 "See README.md for details\n\nOPTIONS\n";

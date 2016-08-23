@@ -4,12 +4,12 @@
 
 /**
  * Stand-alone program to authorise calendars declared in hotpot.cfg
+ * @module AuthoriseCalendars
  */
 const Getopt = require("node-getopt");
 const Fs = require("fs");
 const Q = require("q");
 const writeFile = Q.denodeify(Fs.writeFile);
-const google = require("googleapis");
 const googleAuth = require("google-auth-library");
 const readline = require("readline");
 

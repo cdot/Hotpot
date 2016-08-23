@@ -17,7 +17,8 @@ const TAG = "Calendar";
  * Calendar event cache entry. Events stored here are filtered; only central
  * heating events are cached. The cache size is limited by CACHE_LENGTH.
  * Longer means less frequent automatic updates, and larger memory
- * footprint for the server, but less network traffic
+ * footprint for the server, but less network traffic.
+ * @ignore
  */
 function ScheduledEvent(cal, id, start, end, pin, state) {
     var now = Time.now();
@@ -64,12 +65,31 @@ ScheduledEvent.prototype.start = function() {
 
 /**
  * Get active events from a Google calendar.
+ * @param {string} name name of the calendar
+ * @param {Config} config configuration
+ * * `id`: calendar id, as used by Google
+ * * `auth_cache`: file to cache authorisation in
+ * * `secrets`: secrets used by google OAuth
+ *   * `client_id`
+ *   * `client_secret`
+ *   * `redirect_uris`
  * @param {function} trigger callback triggered when an event starts
  * (or after an update and the event has already started).
- * trigger(String id, String pin, int state, int until (ms))
+ * ```
+ * trigger(String id, String pin, int state, int until)
+ * ```
+ * * `id` id of the event
+ * * `pin` in the even is for (or `ALL` for all pins)
+ * * `state` required state 0|1|2
+ * * `until` when the event ends (epoch ms)
  * @param {function} remove callback invoked when a scheduled event is removed.
+ * ```
  * remove(String id, String pin)
-*/
+ * ```
+ * * `id` id of the event being removed
+ * * `pin` pin the event appies to
+ * @class
+ */
 function Calendar(name, config, trigger, remove) {
     "use strict";
     this.name = name;
@@ -109,7 +129,7 @@ Calendar.prototype.authorise = function() {
 /**
  * Return a promise that will update the list of the events
  * stored for the next 24 hours.
- * @public
+ * @private
  */
 Calendar.prototype.fillCache = function() {
     "use strict";
@@ -189,6 +209,7 @@ Calendar.prototype.fillCache = function() {
 
 /**
  * Clear the existing schedule
+ * @private
  */
 Calendar.prototype.clearSchedule = function() {
     for (var i in this.schedule)
@@ -198,8 +219,9 @@ Calendar.prototype.clearSchedule = function() {
 
 /**
  * Schedule a calendar update in 'after' milliseconds. The update is
- * performed asynchrnously.
+ * performed asynchronously.
  * @param {Number} after delay before updating the calendar asynchronously
+ * @private
  */
 Calendar.prototype.update = function(after) {
     "use strict";

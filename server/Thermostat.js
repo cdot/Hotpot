@@ -20,8 +20,10 @@ var ds18x20;
  * object.
  * @class
  * @param name {String} name by which the caller identifies the thermostat
- * @param config configuration for the pin, a Config object
- * @protected
+ * @param config configuration for the thermostat
+ * * `id`: unique ID used to communicate with this thermostat
+ * * `history`: (optional) Historian configuration for recording the
+ *   temperature measured by the thermostat.
  */
 function Thermostat(name, config) {
     "use strict";
@@ -45,23 +47,13 @@ function Thermostat(name, config) {
 
     this.config = config;
    
-    /**
-     * Name of the thermostat e.g. "HW"
-     * @type {string}
-     * @public
-     */
+    // Name of the thermostat e.g. "HW"
     this.name = name;
 
-    /**
-     * Last recorded temperature
-     * @type {float}
-     * @public
-     */
+    // Last recorded temperature {float}
     this.temperature = null;
 
-    /**
-     * Temperature history, sample on a time schedule
-     */
+    // Temperature history, sample on a time schedule
     var hc = config.history;
     var self = this;
     if (typeof hc !== "undefined") {

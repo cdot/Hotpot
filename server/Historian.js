@@ -13,15 +13,19 @@ const Utils = require("../common/Utils.js");
 const TAG = "Historian";
 
 /**
- * Logger. Can either log according to a time interval, or only on demand.
- * @param options { interval: time, max_samples: sample count,
- * max_bytes: byte count, sample: function, file: string }
- * If "sample" is given, will automatically sample by calling "sample" every
- * "interval" (default: 300) seconds.
- * Otherwise sampling is only by calling "record".
- * If "max_samples" is given, then logging is limited to that number of samples.
- * If "max_bytes" is given, log file is automatically limited to that number
- * of bytes.
+ * Logger. Can either log according to a time interval using a sampling
+ * callback, or only on demand.
+ * @param options {object}
+ * * `sample`: function returning a sample. Called every `interval`
+ *    when `start()` is called.
+ * * `interval`: time, sample frequency in seconds, required if `start()`
+ *    is called.
+ * * `max_samples`: maximum number of samples to record
+ * * `max_bytes`: maximum number of bytes to store in `file`
+ * * `file`: string required file to store log data in
+ * If `sample` is not given, or `start()` is not called, sampling is only by
+ * calling `record()`
+ * @class
  */
 function Historian(options) {
     "use strict";
@@ -108,8 +112,9 @@ Historian.prototype.load = function(data) {
 
 /**
  * Get a serialisable 1D array for the history.
- * @return {object} array of alternating times and temps. Times are all
- * relative to basetime, which is in the first array element.
+ * @return {array} First element is the base time in epoch seconds,
+ * subsequent elements are alternating times and samples. Times are
+ * in seconds and are all relative to basetime.
  */
 Historian.prototype.getSerialisableHistory = function() {
     "use strict";
@@ -127,7 +132,8 @@ Historian.prototype.getSerialisableHistory = function() {
 
 /**
  * Start the history polling loop.
- * Records are written every minute or so (set in config)
+ * Records are written according to the interval set in the config.
+ * Requires the `sample` and `interval` options to be given.
  */
 Historian.prototype.start = function(quiet) {
     "use strict";
@@ -180,6 +186,8 @@ Historian.prototype.record = function(sample, time) {
     if (typeof time === "undefined")
         time = Time.nowSeconds();
 
+    time = Math.round(time);
+
     Utils.TRACE(TAG, self.name, " record ", sample, " ", Date, time * 1000);
 
     self.last_recorded = sample;
@@ -188,7 +196,7 @@ Historian.prototype.record = function(sample, time) {
     return statFile(self.file).then(
         function(stats) {
             // If we hit 2 * the size limit, open the file and
-            // reduce the size. Each sample is about 15 bytes.
+            // reduce the size.
             if (stats.size > self.max_bytes) {
                 Utils.TRACE(TAG, self.name, " history is full");
                 return self.rewriteHistory();
@@ -196,7 +204,7 @@ Historian.prototype.record = function(sample, time) {
             // otherwise simply append
             return appendFile(
                 self.file,
-                Math.round(Time.nowSeconds() - self.basetime)
+                Math.round(time - self.basetime)
                     + "," + sample + "\n")
             .catch(function(ferr) {
                 Utils.ERROR(TAG, "failed to append to '",

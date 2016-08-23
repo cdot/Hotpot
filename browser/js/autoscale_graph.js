@@ -76,17 +76,34 @@ function clipLine(a, b, min, max) {
     return false;
 }
 
-var trace_cols = [ "yellow", "red", "orange", "magenta" ];
+var trace_cols = [
+    "red",
+    "orange",
+    "yellow",
+    "magenta",
+    "cyan",
+    "green",
+    "white"
+];
 
 /**
  * Construct a new trace line
  * @param {string} name name of the trace
+ * @param {string} type option trace type, may be "binary"
+ * @class
+ * @ignore
  */
-function Trace(name) {
+function Trace(graph, name, type) {
     "use strict";
     this.name = name;
+    this.graph = graph;
+    this.type = "continuous";
+    if (typeof type === "string")
+        this.type = type;
     this.points = [];
     this.colour = trace_cols.shift();
+    if (this.type === "binary")
+        this.slot = graph.slot++;
 }
 
 /**
@@ -152,26 +169,54 @@ Trace.prototype.getExtents = function() {
     return e;
 };
 
+Trace.prototype.binaryOffset = function(sample) {
+    var full_height = this.$canvas.height();
+    var slots = this.graph.slot;
+    var slot_height = full_height / (slots + 1);
+    var slot_centre = this.slot * slot_height;
+    var zero_line = slot_centre - slot_height / 4;
+    var one_line = slot_centre + slot_height / 4;
+    return sample.y < 0.5 ? zero_line : one_line;
+};
+
 /**
  * Render the trace in the given graph
  * @param {Graph} g the graph we are rendering within
  */
-Trace.prototype.render = function(g) {
+Trace.prototype.render = function() {
     "use strict";
 
     if (this.points.length < 2)
         return;
 
+    var g = this.graph;
+
     g.ctx.strokeStyle = this.colour;
 
     // Current
     g.ctx.beginPath();
- 
-    var p = g.l2v(this.points[0]);
-    g.ctx.moveTo(p.x, p.y);
-    for (var j = 1; j < this.points.length; j++) {
-        p = g.l2v(this.points[j]);
+    var p, j;
+    if (this.type === "binary") {
+        p = {
+            x: g.x2v(this.points[0].x),
+            y: this.binaryOffset(this.points[0].x)
+        };
+        g.ctx.moveTo(p.x, p.y);
+        for (j = 1; j < this.points.length; j++) {
+            p.x = g.x2v(this.points[j].x);
+            g.ctx.lineTo(p.x, p.y);
+            p.y = this.binaryOffset(this.points[j].y);
+            g.ctx.lineTo(p.x, p.y);
+        }
+        p.x = this.$canvas.width();
         g.ctx.lineTo(p.x, p.y);
+    } else {
+        p = g.l2v(this.points[0]);
+        g.ctx.moveTo(p.x, p.y);
+        for (j = 1; j < this.points.length; j++) {
+            p = g.l2v(this.points[j]);
+            g.ctx.lineTo(p.x, p.y);
+        }
     }
 
     g.ctx.stroke();
@@ -195,6 +240,8 @@ Trace.prototype.renderLabel = function(g, x, y) {
  * Construct a new graph
  * @param {object} options options for the graph
  * @param {jquery} $canvas jQuery object around canvas element
+ * @class
+ * @ignore
  */
 function Graph(options, $canvas) {
     "use strict";
@@ -297,8 +344,30 @@ function Graph(options, $canvas) {
             $("#tip_canvas").hide();
         });
 
-    self.traces = [];
+    self.slot = 0;
+    self.traces = {};
+    self.trace_type = {};
 }
+
+Graph.prototype.x2v = function(x) {
+    "use strict";
+    var full_width = this.$canvas.width();
+
+    return Math.floor((x - this.options.min.x) * full_width
+                      / (this.options.max.x - this.options.min.x));
+};
+
+Graph.prototype.y2v = function(y) {
+    "use strict";
+    // Allow font_height above and below the drawing area for legend
+    var full_height = this.$canvas.height();
+    var font_height = this.options.font_height;
+    return Math.floor(full_height -
+            (font_height
+             + ((y - this.options.min.y)
+                * (full_height - 2 * font_height)
+                / (this.options.max.y - this.options.min.y))));
+};
 
 /**
  * Convert logical point on a trace to a physical point
@@ -307,19 +376,10 @@ function Graph(options, $canvas) {
  */
 Graph.prototype.l2v = function(p) {
     "use strict";
-    var full_width = this.$canvas.width();
-    var full_height = this.$canvas.height();
 
-    // Allow font_height above and below the drawing area for legend
-    var font_height = this.options.font_height;
     return {
-        x: Math.floor((p.x - this.options.min.x) * full_width
-            / (this.options.max.x - this.options.min.x)),
-        y: Math.floor(full_height -
-            (font_height
-             + ((p.y - this.options.min.y)
-                * (full_height - 2 * font_height)
-                / (this.options.max.y - this.options.min.y))))
+        x: this.x2v(p.x),
+        y: this.y2v(p.y)
     };
 };
 
@@ -350,7 +410,10 @@ Graph.prototype.v2l = function(p) {
 Graph.prototype.addPoint = function(tracename, x, y) {
     "use strict";
     if (typeof this.traces[tracename] === "undefined") {
-        this.traces[tracename] = new Trace(tracename);
+        this.traces[tracename] = new Trace(
+            this,
+            tracename,
+            this.trace_type[tracename]);
     }
     this.traces[tracename].addPoint(x, y);
 };
@@ -427,7 +490,7 @@ Graph.prototype.update = function() {
     for (i in this.traces) {
        if (typeof options.sort_axis[i] !== "undefined")
            this.traces[i].sortPoints(options.sort_axis[i]);
-        this.traces[i].render(this);
+        this.traces[i].render();
     }
 
     // Legends

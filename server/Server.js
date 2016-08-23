@@ -2,6 +2,9 @@
 
 /*eslint-env node */
 
+// Yes, I could have used express, but I wrote this before I knew about
+// it, and it "just works".
+
 const Q = require("q");
 const serialize = require("serialize-javascript");
 const Url = require("url");
@@ -14,17 +17,17 @@ const TAG = "Server";
 /**
  * Super-lightweight HTTP(S) server object (singleton) with very few
  * dependencies. Only supports POST and GET, does not support auth.
- * Yes, I could have used express, but I wrote this before I knew about
- * it, and it "just works".
+ * The server sits on the selected report and processes GET and POST
+ * requests. The predefined root path `/ajax` is used to decide when to
+ * route requests to the controller object. Otherwise requests are
+ * handled as files.
  * @param {Config} config configuration object
- *   ssl: optional SSL configuration. Will create an HTTP server if not
- *           present
- *      key: text of the SSL key OR
- *      key_file: name of a file containing the SSL key
- *      cert: text of the certificate OR
- *      cert_file: name of a file containing the SSL certificate
- *   port: port to serve on
- * @protected
+ * * `ssl` optional SSL configuration. Will create an HTTP server otherwise.
+ *   * `key`: text of the SSL key OR
+ *   * `key_file`: name of a file containing the SSL key
+ *   * `cert`: text of the certificate OR
+ *   * `cert_file`: name of a file containing the SSL certificate
+ * * `port`: port to serve on (required)
  * @class
  */
 function Server(config, controller) {
@@ -39,7 +42,7 @@ module.exports = Server;
 
 /**
  * Get a promise to start the server.
- * @return {Promise} a promise
+ * @return {Promise} a promise to start the server
  */
 Server.prototype.start = function() {
     var self = this;
@@ -101,61 +104,80 @@ Server.prototype.start = function() {
 };
 
 /**
- * Common handling for requests, POST or GET
+ * Common handling for POST or GET
  * @private
  */
-Server.prototype.handle = function(path, params, response) {
+Server.prototype.handle = function(path, params, request, response) {
     "use strict";
+
     if (path.indexOf("/") !== 0 || path.length === 0)
         throw "Bad command";
     path = path.substring(1).split("/");
-    var command = path.shift();
 
-    Utils.TRACE(TAG, "Handling ", command);
+    if (path.length < 1)
+        throw "Bad command";
+
+    Utils.TRACE(TAG, "Handling ", path[0]);
     if (!this.ready) {
         // Not ready
         response.statusCode = 500;
         response.end();
         return;
     }
-    this.controller.dispatch(command, path, params)
+    var contentType = "text/plain";
+    var promise;
 
-    .then(function(reply) {
-        var s = (typeof reply !== "undefined" && reply !== null)
-            ? serialize(reply) : "";
-        response.writeHead(
-            200, "OK",
-            {
-                // Don't send as application/json; we
-                // don't want the receiver to parse it
-                "Content-Type": "text/plain",
-                "Content-Length": Utils.byteLength(s),
-                "Access-Control-Allow-Origin": null,
-                "Access-Control-Allow-Methods": "POST,GET"
-            });
+    response.setHeader("Access-Control-Allow-Origin", "*");
+    response.setHeader("Access-Control-Allow-Methods", "POST,GET");
+
+    if (path[0] === "ajax") {
+        // AJAX command, destined for the controller
+        path.shift();
+
+        promise = this.controller.dispatch(path, params)
+
+        .then(function(reply) {
+            var s = (typeof reply !== "undefined" && reply !== null)
+                ? serialize(reply) : "";
+            Utils.TRACE(TAG, "Handled ", path[0]);
+            return s;
+        });
+    } else {
+        // Handle file lookup
+        var filepath = "../" + path.join("/");
+        var m = /\.([A-Z0-9]+)$/i.exec(filepath);
+        if (m) {
+            var Mime = require("mime-types");
+            contentType = Mime.lookup(m[1]);
+        }
+        var Fs = require("fs");
+        var readFile = Q.denodeify(Fs.readFile);
+        promise = readFile(filepath);
+    }
+
+    promise
+    .then(function(responseBody) {
+        response.setHeader("Content-Type", contentType);
+        response.setHeader("Content-Length", Buffer.byteLength(responseBody));
         response.statusCode = 200;
-        response.write(s);
+        response.write(responseBody);
         response.end();
-        Utils.TRACE(TAG, "Handled ", command);
     },
     function(error) {
         // Send the error message in the payload
-        Utils.TRACE(TAG, "Error in ", command, ": ", error.stack);           
-        response.writeHead(
-            500, "ERROR",
-            {
-                "Content-Type": "text/plain",
-                "Content-Length": Utils.byteLength(error),
-            });
+        console.error("ERROR" + error);
+        Utils.TRACE(TAG, error.stack);
+        var e = error.toString();
+        response.setHeader("Content-Type", "text/plain");
+        response.setHeader("Content-Length", Buffer.byteLength(e));
         response.statusCode = 500;
-        response.write(error.toString());
-        response.end();
+        response.write(e);
+        response.end(e);
     });
 };
 
 /**
- * AJAX request to get the status of the server, and set the position
- * of a device.
+ * handler for incoming GET request
  * @private
  */
 Server.prototype.GET = function(request, response) {
@@ -163,7 +185,7 @@ Server.prototype.GET = function(request, response) {
     try {
         // Parse URL parameters and pass them as the data
         var req = Url.parse("" + request.url, true);
-        this.handle(req.pathname, req.query, response);
+        this.handle(req.pathname, req.query, request, response);
     } catch (e) {
         Utils.TRACE(TAG, e, " in ", request.url, "\n",
                     typeof e.stack !== "undefined" ? e.stack : e);
@@ -174,7 +196,7 @@ Server.prototype.GET = function(request, response) {
 };
 
 /**
- * AJAX request to set the status of the server.
+ * Handler for incoming POST request
  * @private
  */
 Server.prototype.POST = function(request, response) {
@@ -192,7 +214,7 @@ Server.prototype.POST = function(request, response) {
                 //Utils.TRACE(TAG, "Parsing message ", sbody);
                 object = JSON.parse(sbody);
             }
-            self.handle(request.url, object, response);
+            self.handle(request.url, object, request, response);
         } catch (e) {
             Utils.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
             response.write(e + " in " + request.url + "\n");

@@ -2,15 +2,12 @@
 
 /*eslint-env node */
 
-/**
- * @module Time
- */
 const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
 /**
  * Functions for comparing times around the current time. All computations are
  * in Local time.
- * @ignore
+ * @namespace
  */
 var Time = {
     now: Date.now

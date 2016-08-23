@@ -3,14 +3,8 @@
 /*eslint-env node */
 
 /**
- * @module Utils
- */
-
-const Module = require("module");
-
-/**
  * Useful utilities
- * @ignore
+ * @namespace
  */
 var Utils = {
     trace: ""
@@ -56,27 +50,6 @@ Utils.dump = function(data) {
         }
         return value;
     }, 2);
-};
-
-/**
- * Return the length of a string encoded as UTF8 in bytes. Useful for
- * canculating content-length.
- * @param {string} str string to measure
- */
-Utils.byteLength = function(str) {
-    "use strict";
-    // returns the byte length of an utf8 string
-    var s = str.length;
-    for (var i = str.length - 1; i >= 0; i--) {
-        var code = str.charCodeAt(i);
-        if (code > 0x7f && code <= 0x7ff)
-            s++;
-        else if (code > 0x7ff && code <= 0xffff)
-            s += 2;
-        if (code >= 0xDC00 && code <= 0xDFFF)
-            i--; // trail surrogate
-    }
-    return s;
 };
 
 /**
@@ -146,10 +119,18 @@ Utils.forEach = function(that, callback) {
  * @param {String} context the context of the code e.g. a file name
  */
 Utils.eval = function(code, context) {
-    var m = new Module();
     if (typeof context === "undefined")
         context = "eval";
-    m._compile("module.exports=\n" + code + "\n;", context);
-    return m.exports;
+    if (context === "browser") {
+        var compiled;
+        eval("compiled=" + code);
+        return compiled;
+    } else {
+        var Module = require("module");
+        var m = new Module();
+        if (typeof context === "undefined")
+            context = "eval";
+        m._compile("module.exports=\n" + code + "\n;", context);
+        return m.exports;
+    }
 };
-

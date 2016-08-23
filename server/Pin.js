@@ -23,12 +23,27 @@ const REQUEST_ON = 1;
 const REQUEST_BOOST = 2;
 
 /**
- * A Pin is the interface to a RPi GPIO pin.
+ * A Pin is the interface to a RPi GPIO pin. A pin maintains a state,
+ *  history, and one or more Pin.Requests. These are used to record a
+ * requirement for a specific state for the pin:
+ * ```
+ * Pin.Request {
+ *   until: epoch ms,
+ *   state: 2|1|0,
+ *   source: string
+ * }
+ * ```
+ * Requests that turn off the pin (state 0) override those that turn it on
+ * (state 1, pin on, and state 2, pin boost). "Boost" is a special pin state
+ * that is used in rules to bring a thermostat up to a target temperature
+ * and then turn the pin off. Requests have an optional `until` field that
+ * can be used to expire the request at a given time.
  * @class
  * @param {string} name name of the pin e.g. HW
- * @param {Config} config configuration block for the pin. Only one field is used,
- * gpio (the number of the gpio pin)
- * @protected
+ * @param {Config} config configuration block for the pin.
+ * * `gpio`: the number of the gpio pin
+ * * `history`: (optional) Historian configuration for recording the
+ *   state of the pin.
  */
 function Pin(name, config) {
     "use strict";
@@ -292,7 +307,8 @@ Pin.prototype.purgeRequests = function(state, source) {
  * only thing the Pin does with a request is to expire those that have
  * passed their timeout (see #purgeRequests)
  * Active requests for state 0 override those for state 1 or 2.
- * @param {object} request { until: epoch ms, state: 2|1|0, source: string }
+ * @param {Pin.Request} request the request, see Pin.Request in the class
+ * description
  */ 
 Pin.prototype.addRequest = function(request) {
     Utils.TRACE(TAG, "Add request ", request);
@@ -302,10 +318,8 @@ Pin.prototype.addRequest = function(request) {
 };
 
 /**
- * Test what state is requested for the pin.
- * @return {object} request, if the service is requested. Requests that
- * turn off the pin (state 0) override those that turn it on. Format of a
- * request is documented in #addRequest.
+ * Test what state is currently requested for the pin.
+ * @return {Pin.Request} request
  */
 Pin.prototype.getActiveRequest = function() {
     "use strict";

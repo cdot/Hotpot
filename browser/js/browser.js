@@ -1,7 +1,6 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env browser */
-/* global Location, google, hotpot_protocol */
 
 /**
  * Main module for managing the browser interface to a hotpot server.
@@ -9,28 +8,19 @@
 (function($) {
     "use strict";
 
-    var server;
-    var setup_backoff = 5; // seconds
-    var update_backoff = 5; // seconds
-    var update_rate = 5; // seconds
+    var ajax;
+    var setup_backoff = 10; // seconds
+    var update_backoff = 10; // seconds
+    var update_rate = 10; // seconds
 
-    var apis;
     var config;
+    var apis;
 
     var poller;
     function stopPolling() {
         if (poller) {
             clearTimeout(poller);
             poller = null;
-        }
-    }
-
-    var location;
-    var reporter;
-    function stopReporting() {
-        if (reporter) {
-            clearTimeout(reporter);
-            reporter = null;
         }
     }
 
@@ -61,7 +51,7 @@
                 var params = {
                     value: s
                 };
-                $.post(server + "/set/" + getPath($self),
+                $.post(ajax + "/set/" + getPath($self),
                        JSON.stringify(params))
                     .success(function() {
                         $self.text(s);
@@ -94,9 +84,9 @@
             };
          
             // Away from home, set up to report after interval
-            $.post(server + "/request",
+            $.post(ajax + "/request",
                    JSON.stringify(params),
-                   function(raw) {
+                   function(/*raw*/) {
                    });
             return false; // prevent repeated calls
         });
@@ -126,7 +116,7 @@
             name: "new rule",
             test: "function() { }"
         };
-        $.post(server + "/insert_rule/" + getPath($self),
+        $.post(ajax + "/insert_rule/" + getPath($self),
                JSON.stringify(data))
             .done(function() {
                 // Add it to the DOM
@@ -152,7 +142,7 @@
         var $rules = $self.closest("[data-field='rule']");
         var $rule = $self.closest(".rule");
         stopPolling();
-        $.post(server + "/removeRule/" + getPath($self))
+        $.post(ajax + "/removeRule/" + getPath($self))
             .done(function() {
                 // Remove it from the DOM
                 $rule.remove();
@@ -177,7 +167,7 @@
         if ($rel.length === 0)
             return false;
         stopPolling();
-        $.post(server + "/move_" + dir + "/" + getPath($self))
+        $.post(ajax + "/move_" + dir + "/" + getPath($self))
             .done(function() {
                 if (dir === "down")
                     $rel.after($rule.remove());
@@ -207,31 +197,6 @@
         return moveRule.call(this, "up");
     }
 
-    function recomputeMapBounds() {
-        var $map = $("#map");
-        var gmap = $map.data("map");
-        var $markers = $(".marker");
-        if ($markers.length > 1) {
-            var bounds = gmap.getBounds();
-            var extended = false;
-            bounds.extend($map.data("home").getPosition());
-            $markers.each(function() {
-                var m = $(this).data("marker");
-                if (m && !bounds.contains(m.getPosition())) {
-                    bounds.extend(m.getPosition());
-                    extended = true;
-                }
-            });
-            var span = bounds.toSpan();
-            if (span.lat() < 0.01 && span.lng() < 0.01)
-                // Keep home in the middle
-                $map.data("map").setCenter($map.data("home").getPosition());
-            else if (extended)
-                // Make sure we can see all the markers
-                gmap.fitBounds(bounds);
-        }
-    }
-
     /**
      * Set the value of a typed field from a data value
      * Only used for non-object data
@@ -259,7 +224,6 @@
                     lat: parseFloat(value.lat),
                     lng: parseFloat(value.lng)
                 });
-                recomputeMapBounds();
             }
             v = value.lat + "," + value.lng;
         } else {
@@ -307,7 +271,7 @@
      */
     $(document).on("poll", function() {
         $.get(
-            server + "/state",
+            ajax + "/state",
             function(raw) {
                 var data;
                 eval("data=" + raw);
@@ -320,33 +284,13 @@
             })
             .error(function(jqXHR, status, err) {
                 $("#comms_error").html(
-                    "<div class='error'>Could not contact server "
-                        + server + " for update: " + err + "</div>");
+                    "<div class='error'>Could not contact server for update: "
+                        + err + "</div>");
                 poller = setTimeout(function() {
                     $(document).trigger("poll");
                 }, update_backoff * 1000);
             });
     });
-
-    /**
-     * Add a trace to the temperature graph canvas
-     * @param $df the field that carries the temperature
-     */
-    function addTrace(name, $df) {
-        var $tc = $("#temperature_canvas");
-
-        $df.on("data_change", function() {
-            // addpoint(trace, x, y)
-            $tc.trigger("addpoint",
-                        {
-                            trace: name,
-                            point: {
-                                x: Time.nowSeconds(),
-                                y: parseFloat($df.text())
-                            }
-                        });
-        });
-    }
 
     $(document).on("initialise_temperature_graph", function() {
         var $tc = $("#temperature_canvas");
@@ -367,39 +311,47 @@
             sort_axis: {
                 HW: "x",
                 CH: "x"
+            },
+            trace_types: {
+                "pin:HW": "binary",
+                "pin:CH": "binary"
             }
         });
         $.get(
-            server + "/log",
+            ajax + "/log",
             function(raw) {
                 var g = $tc.data("graph");
                 var data;
                 eval("data=" + raw);
-                for (var tname in data.thermostat) {
-                    var th = data.thermostat[tname];
-                    var basetime = th[0];
-                    for (var j = 1; j < th.length; j += 2) {
+                function pull_data(da, na) {
+                    var basetime = da[0];
+                    for (var j = 1; j < da.length; j += 2) {
                         g.addPoint(
-                            tname,
+                            na,
                             {
-                                x: basetime + th[j],
-                                y: th[j + 1]
+                                x: basetime + da[j],
+                                y: da[j + 1]
                             });
                     }
                     // Closing point at same level as last measurement,
                     // just in case it was a long time ago
-                    g.addPoint(
-                        tname,
-                        {
-                            x: Time.nowSeconds(),
-                            y: th[th.length - 1]
-                        });
+                    if (da.length > 1)
+                        g.addPoint(
+                            na,
+                            {
+                                x: Time.nowSeconds(),
+                                y: da[da.length - 1]
+                            });
                 }
+                for (var type in data)
+                    for (var name in data[type])
+                        pull_data(data[type][name], type + ":" + name);
+                
                 $tc.trigger("update");
             })
             .error(function(jqXHR, textStatus, errorThrown) {
-                console.log("Could not contact server "
-                        + server + " for logs: " + errorThrown);
+                console.log("Could not contact server  for logs: "
+                            + errorThrown);
             });
 
     });
@@ -472,18 +424,6 @@
     function attachHandlers($root) {
         $(".editable", $root).on("click", editField);
 
-        $("[data-field='temperature']").each(
-            function() {
-                var $div = $(this).closest(".templated");
-                if ($div.length === 0)
-                    return; // in a template
-                addTrace($div.attr("data-field"), $(this));
-            });
-        $("[data-field='env_temp']").each(
-            function() {
-                addTrace("Outside", $(this));
-            });
-
         // Rule handlers
         $(".removeRule", $root).on("click", removeRule);
         $(".move_rule.up", $root).on("click", moveUp);
@@ -498,82 +438,15 @@
         $(".pin_radio").on("change", changeRequest);
     }
 
-    function reportLocation(loc) {
-        // Send emulated position info to server
-        stopReporting();
-
-        if (loc)
-            location = loc;
-
-        var params = {
-            lat: location.lat,
-            lng: location.lng,
-            device: "debug"
-        };
-         
-        // Away from home, set up to report after interval
-        $.post(server + "/mobile/crossing",
-               JSON.stringify(params),
-               function(raw) {
-                   var data;
-                   eval("data=" + raw);
-                   setTimeout(reportLocation, 5000);
-               });
-    }
-
-    $(document).on("initialise_map", function() {
-        $.getScript(
-            "https://maps.googleapis.com/maps/api/js"
-                + "?key=" + apis.google_maps.browser_key)
-            .done(function() {
-                var here = new Location(config.location);
-                location = here;
-                $("#map").each(function() {
-                    var map = new google.maps.Map(
-                        this,
-                        {
-                            center: here,
-                            zoom: 12
-                        });
-                    google.maps.event.addListener(
-                        map, "click", function(event) {
-                            reportLocation(new Location(
-                                event.latLng.lat(),
-                                event.latLng.lng()));
-                        });
-                    $(this).data("map", map);
-                    $(this).data("home", new google.maps.Marker({
-                        position: here,
-                        map: map,
-                        title: "Home"
-                    }));
-
-                    $(".marker").each(function() {
-                        var $div = $(this).closest(".templated");
-                        if ($div.length === 0)
-                            return; // in a template
-                        var marker = new google.maps.Marker({
-                            position: here,
-                            map: map,
-                            title: $div.attr("data-field")
-                            });
-                        $(this).data("marker", marker);
-                   });
-                });
-            });
-    });
-    
     /**
      * Populate the document by getting the configuration from
      * the server.
      */
     $(document).on("configure", function() {
 
-        $("#server_url").text(server);
-
         // Can't use getJSON because of the rule functions
         $.get(
-            server + "/config",
+            ajax + "/config",
             function(raw) {
                 eval("config=" + raw);
                 $("#comms_error").html("");
@@ -590,13 +463,11 @@
                 $(document).trigger("poll");
 
                 $(document).trigger("initialise_temperature_graph");
-
-                $(document).trigger("initialise_map");
             })
             .error(function(jqXHR, textStatus, errorThrown) {
                 $("#comms_error").html(
                     "<div class='error'>Could not contact server "
-                        + server + " for setup: " + errorThrown
+                        + " for setup: " + errorThrown
                         + " Will try again in " + setup_backoff
                         + " seconds</div>");
                 setTimeout(function() {
@@ -612,20 +483,18 @@
             if (urp[0] === "ip")
                 hotpot_ip = urp[1];
         }
-        server = hotpot_protocol + "://" + hotpot_ip + ":" + hotpot_port;
-
-        $("#server_url").text(server);
+        ajax = "/ajax";
 
         $.get(
-            server + "/apis",
+            ajax + "/apis",
             function(raw) {
-                eval("apis=" + raw);
+                apis = Utils.eval(raw, "browser");
                 $(document).trigger("configure");
             })
             .error(function(jqXHR, textStatus, errorThrown) {
                 $("#comms_error").html(
                     "<div class='error'>Could not contact server "
-                        + server + " for setup: " + errorThrown
+                        + " for setup: " + errorThrown
                         + " Will try again in " + setup_backoff
                         + " seconds</div>");
                 setTimeout(get_apis, setup_backoff * 1000);

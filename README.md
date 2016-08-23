@@ -156,9 +156,9 @@ Follow the instructions in https://developers.google.com/google-apps/calendar/qu
 
 Open the downloaded `client_secret` file and copy the following fields:
 ```
-     clientid: "738956347299-catel312312sdfafj546754ajfghph3n.apps.googleusercontent.com",
-     clientsecret: "XAfsu6askjhqweo391d6s6ZD",
-     redirecturis: [ "urn:ietf:wg:oauth:2.0:oob", "http://localhost" ]
+     client_id: "738956347299-catel312312sdfafj546754ajfghph3n.apps.googleusercontent.com",
+     client_secret: "XAfsu6askjhqweo391d6s6ZD",
+     redirect_uris: [ "urn:ietf:wg:oauth:2.0:oob", "http://localhost" ]
 ```
 Create a calendar in `hotpot.cfg` e.g.
 ```

@@ -2,6 +2,7 @@
 
 /**
  * Global stubs that allow node.js modules to be used in the browser
+ * @ignore
  */
 function require(m) {
     "use strict";

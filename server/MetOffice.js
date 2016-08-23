@@ -41,8 +41,12 @@ const IS_NUMBER = [
  * weather information from the UK Met Office 3 hourly forecast updates.
  * It then performs a simple interpolation to guess the current weather at
  * the server location.
+ * @param {Config} config configuration
+ * * `class`: name of this class
+ * * `api_key`: API key for requests to the Met Office website
+ * * `history`: Historian configuration for recording outside temperature
+ * @param {Location} location (optional) location (can be set later)
  * @class
- * @protected
  */
 var MetOffice = function(config, location) {
     "use strict";
@@ -65,7 +69,7 @@ var MetOffice = function(config, location) {
 
 /**
  * Set the lat/long of the place we are getting weather data for
- *@param {Location} loc where
+ * @param {Location} loc where
  */
 MetOffice.prototype.setLocation = function(loc) {
     "use strict";
@@ -80,6 +84,8 @@ MetOffice.prototype.setLocation = function(loc) {
 /**
  * Get a promise for the current state of the weather forecast. This
  * is just the estimated outside temperature.
+ * @return {Promise} a promise, passed a structure containing the
+ * current outside temperature
  */
 MetOffice.prototype.getSerialisableState = function() {
     var self = this;
@@ -90,7 +96,7 @@ MetOffice.prototype.getSerialisableState = function() {
 
 /**
  * Get a promise for the current log of the weather forecast. This
- * records the estimated outside temperature.
+ * simply records the estimated outside temperature.
  */
 MetOffice.prototype.getSerialisableLog = function() {
     "use strict";
@@ -211,7 +217,7 @@ Utils.TRACE(TAG, "Baseline is ", Date, baseline);
 };
 
 /**
- * Returna promise to get the forecast for the current time
+ * Return a promise to get the forecast for the current time
  * @private
  */
 MetOffice.prototype.getWeather = function() {
