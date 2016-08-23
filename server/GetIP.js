@@ -51,7 +51,7 @@ const TEMPLATE = '<!DOCTYPE html\n' +
   '<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">\n' +
   '<head>\n' +
   '<title>Untitled Document</title>\n' +
-  '<meta http-equiv="REFRESH" content="0; #protocol:#ipaddr#port/" />\n' +
+  '<meta http-equiv="REFRESH" content="0; #protocol://#ipaddr#port#path" />\n' +
   '<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />\n' +
   '</head>\n' +
   '<body>\n' +
@@ -128,6 +128,7 @@ var current = {};
 function finish(ip) {
     if (current.ipaddr && ip === current.ipaddr
         && current.protocol && current.protocol === config.target.protocol
+        && current.path && current.path === config.target.path
         && current.port && current.port === config.target.port) {
         console.log("Existing address is correct");
         return;
@@ -135,6 +136,7 @@ function finish(ip) {
     current.ipaddr = ip;
     current.port = config.target.port;
     current.protocol = config.target.protocol;
+    current.path = config.target.path;
 
     console.log("Update " + ip);
     var html = TEMPLATE;
@@ -152,13 +154,15 @@ function finish(ip) {
 function step1() {
     httpGET(config.http, true) // dodge redirects
     .then(function(data) {
-        var m = /"REFRESH" content=\"0: ([^:]+):\/\/([0-9.]+|\[[0-9:]+\])(:[0-9]+)?"/.exec(data);
+        var m = /"REFRESH" content=\"0: ([^:]+):\/\/([0-9.]+|\[[0-9:]+\])(:[0-9]+)?([^"]+)?"/.exec(data);
         if (m) {
             Utils.TRACE("Existing redirect target");
             current.protocol = m[1];
             current.ipaddr = m[2];
             if (m[3])
                 current.port = m[3];
+            if (m[4])
+                current.path = m[4];
         }
         step2();
     })
