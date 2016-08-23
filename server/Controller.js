@@ -664,10 +664,8 @@ Controller.prototype.pollRules = function() {
         }
         var result;
         try {
-console.log("Calling ", rule.name);
             result = rule.testfn.call(self);
         } catch (e) {
-console.log("Error in  ", rule.name);
             if (typeof e.stack !== "undefined")
                 Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
             Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.toString());
