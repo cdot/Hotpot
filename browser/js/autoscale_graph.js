@@ -22,7 +22,7 @@ function Trace(graph, name, type) {
     this.colour = trace_cols.shift();
     if (this.type === "binary")
         this.slot = graph.next_slot++;
-};
+}
 
 Trace.prototype.outCode = function(p, min, max) {
     "use strict";
@@ -78,7 +78,7 @@ Trace.prototype.clipLine = function(a, b, min, max) {
         }
     }
     return false;
-}
+};
 
 var trace_cols = [
     "red",
@@ -98,7 +98,7 @@ Trace.prototype.addPoint = function(x, y) {
     "use strict";
     var p;
     if (typeof y !== "undefined")
-        p = { x: x, y : y };
+        p = { x: x, y: y };
     else
         p = x;
     this.points.push(p);

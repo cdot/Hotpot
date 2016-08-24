@@ -323,10 +323,10 @@
                 var data;
                 eval("data=" + raw);
                 $tc.autoscale_graph({
-                    render_label: function(axis, data) {
+                    render_label: function(axis, trd) {
                         if (axis === "x")
-                            return new Date(data * 1000).toISOString();
-                        return (Math.round(data * 10) / 10).toString();
+                            return new Date(trd * 1000).toISOString();
+                        return (Math.round(trd * 10) / 10).toString();
                     },
                     min: {
                         x: Date.now() / 1000 - 24 * 60 * 60, // 24 hours ago
