@@ -51,7 +51,7 @@ function Thermostat(name, config) {
     this.name = name;
 
     // Last recorded temperature {float}
-    this.temperature = 20;
+    this.temperature = 0;
 
     // Temperature history, sample on a time schedule
     var hc = config.history;
@@ -75,12 +75,36 @@ function Thermostat(name, config) {
 
     if (typeof HOTPOT_DEBUG !== "undefined")
         HOTPOT_DEBUG.mapThermostat(config.id, name);
-
-    this.pollTemperature();
-    if (this.historian)
-        this.historian.start();
-    Utils.TRACE(TAG, "'", this.name, "' constructed");
 }
+
+/**
+ * Return a promise to intiialise the thermostat with a valid value read
+ * from the probe
+ */
+Thermostat.prototype.initialise = function() {
+    var self = this;
+
+    return Q.Promise(function(resolve, reject) {
+        ds18x20.get(self.config.id, function(err, temp) {
+            if (err !== null) {
+                Utils.ERROR(TAG, "d218x20 error: ", err);
+                reject(err);
+            } else {
+                if (typeof temp !== "number")
+                    // At least once this has been "boolean"!
+                    reject("Unexpected result from ds18x20.get");
+                self.temperature = temp;
+                // Start the polling loop
+                self.pollTemperature();
+                // Start the historian
+                if (self.historian)
+                    self.historian.start();
+                Utils.TRACE(TAG, "'", self.name, "' intialised");
+                resolve();
+            }
+        });
+    });
+};
 module.exports = Thermostat;
 
 /**

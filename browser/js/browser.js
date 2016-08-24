@@ -257,7 +257,7 @@
                 var d = (typeof o.temperature !== "undefined")
                     ? o.temperature : o.state;
                 if (typeof d !== "undefined")
-                    g.addPoint(type + ":" + name, Time.nowSeconds(), d, false);
+                    g.addPoint(type + ":" + name, Time.nowSeconds(), d);
             }
         }
         g.update();
@@ -317,27 +317,27 @@
 
     $(document).on("initialise_graph", function() {
         var $tc = $("#graph_canvas");
-        $tc.autoscale_graph({
-            render_label: function(axis, data) {
-                if (axis === "x")
-                    return new Date(data * 1000).toISOString();
-                return (Math.round(data * 10) / 10).toString();
-            },
-            min: {
-                x: Date.now() / 1000 - 24 * 60 * 60, // 24 hours ago
-                y: 5
-            },
-            max: {
-                x: Date.now() / 1000,
-                y: 40
-            }
-        });
         $.get(
             ajax + "/log",
             function(raw) {
-                var g = $tc.data("graph");
                 var data;
                 eval("data=" + raw);
+                $tc.autoscale_graph({
+                    render_label: function(axis, data) {
+                        if (axis === "x")
+                            return new Date(data * 1000).toISOString();
+                        return (Math.round(data * 10) / 10).toString();
+                    },
+                    min: {
+                        x: Date.now() / 1000 - 24 * 60 * 60, // 24 hours ago
+                        y: 5
+                    },
+                    max: {
+                        x: Date.now() / 1000,
+                        y: 40
+                    }
+                });
+                var g = $tc.data("graph");
                 function createTrace(da, na) {
                     var basetime = da[0];
                     var trace = g.addTrace(na, trace_types[na]);

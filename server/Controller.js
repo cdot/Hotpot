@@ -202,22 +202,19 @@ Controller.prototype.createThermostats = function(configs) {
     "use strict";
 
     var self = this;
+    var promise = Q();
+
     this.thermostat = {};
     Utils.forEach(configs, function(config, id) {
         self.thermostat[id] = new Thermostat(id, config);
+        promise = promise.then(function() {
+            return self.thermostat[id].initialise();
+        });
     }, this);
 
-    // When we start, turn heating OFF and hot water ON to ensure
-    // the valve returns to the A state. Once the valve has settled,
-    // turn off hot water. The grey wire will be high but the valve
-    // won"t be listening to it.
-
-    // Assume worst-case valve configuration i.e. grey wire live holding
-    // valve. Reset to no-power state by turning HW on to turn off the
-    // grey wire and waiting for the valve spring to relax.
-    Utils.TRACE(TAG, "Constructed thermostats");
-
-    return Q();
+    return promise.then(function() {
+        Utils.TRACE(TAG, "Initialised thermostats");
+    });
 };
 
 /**
