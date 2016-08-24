@@ -10,7 +10,6 @@ const RIGHT = LEFT << 1;
  * @param {string} name name of the trace
  * @param {string} type option trace type, may be "binary"
  * @class
- * @private
  */
 function Trace(graph, name, type) {
     "use strict";
@@ -93,10 +92,15 @@ var trace_cols = [
 
 /**
  * Add a point to the trace
- * @param {point} p {x,y}
+ * @param {point} OR p = object `{ x:, y: }`
  */
-Trace.prototype.addPoint = function(p) {
+Trace.prototype.addPoint = function(x, y) {
     "use strict";
+    var p;
+    if (typeof y !== "undefined")
+        p = { x: x, y : y };
+    else
+        p = x;
     this.points.push(p);
     this.extents = null; // clear cache
 };
@@ -340,7 +344,6 @@ function Graph(options, $canvas) {
 
     self.slot = 0;
     self.traces = {};
-    self.trace_type = {};
 }
 /**
  * Convert a logical X to a canvas coordinate
@@ -411,24 +414,22 @@ Graph.prototype.v2l = function(p) {
 
 /**
  * Add a point to the given trace on the graph.
- * Also: event `addpoint { trace: point: { x: y: } }` - however the event cannot
- * be used to create the trace, only add a point to an existing trace.
  * @param {string} tracename name of the trace
  * @param x {number} x ordinate
  * @param y {number} y ordinate
- * @param {boolean} create Create the trace if it doesn't exist
  */
-Graph.prototype.addPoint = function(tracename, x, y, create) {
+Graph.prototype.addPoint = function(tracename, x, y) {
     "use strict";
-    if (typeof this.traces[tracename] === "undefined") {
-        if (!create)
-            return;
-        this.traces[tracename] = new Trace(
-            this,
-            tracename,
-            this.trace_type[tracename]);
-    }
     this.traces[tracename].addPoint(x, y);
+};
+
+/**
+ * Add a trace to the graph, of the given type ("binary" or anything else for a line)
+ * @return {Trace} the trace
+ */
+Graph.prototype.addTrace = function(tracename, type) {
+    this.traces[tracename] = new Trace(this, tracename, type);
+    return this.traces[tracename];
 };
 
 /**
@@ -444,7 +445,6 @@ Graph.prototype.sortPoints = function(tracename, axis) {
 
 /**
  * Update (draw) the graph.
- * Also: event `update`
  */
 Graph.prototype.update = function() {
     "use strict";
@@ -546,14 +546,5 @@ Graph.prototype.update = function() {
         var $canvas = $(this);
 
         $(this).data("graph", new Graph(options, $canvas));
-    
-        $canvas.on("addpoint", function(e, data) {
-            $canvas.data("graph").addPoint(data.trace, data.point, false);
-            $canvas.trigger("update");
-        });
-
-        $canvas.on("update", function() {
-            $canvas.data("graph").update();
-        });
     };
 })(jQuery);

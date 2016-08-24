@@ -16,6 +16,11 @@
     var config;
     var apis;
 
+    var trace_types = {
+        "pin:HW": "binary",
+        "pin:CH": "binary"
+    };
+
     var poller;
     function stopPolling() {
         if (poller) {
@@ -327,11 +332,7 @@
 //            sort_axis: {
 //                "thermostat:HW": "x",
 //                "thermostat:CH": "x"
-//            },
-            trace_types: {
-                "pin:HW": "binary",
-                "pin:CH": "binary"
-            }
+//            }
         });
         $.get(
             ajax + "/log",
@@ -339,30 +340,20 @@
                 var g = $tc.data("graph");
                 var data;
                 eval("data=" + raw);
-                function pull_data(da, na) {
+                function createTrace(da, na) {
                     var basetime = da[0];
+                    var trace = g.addTrace(na, trace_types[na]);
                     for (var j = 1; j < da.length; j += 2) {
-                        g.addPoint(
-                            na,
-                            {
-                                x: basetime + da[j],
-                                y: da[j + 1]
-                            },
-                            true);
+                        trace.addPoint(basetime + da[j], da[j + 1]);
                     }
                     // Closing point at same level as last measurement,
                     // just in case it was a long time ago
                     if (da.length > 1)
-                        g.addPoint(
-                            na,
-                            {
-                                x: Time.nowSeconds(),
-                                y: da[da.length - 1]
-                            });
+                        trace.addPoint(Time.nowSeconds(), da[da.length - 1]);
                 }
                 for (var type in data)
                     for (var name in data[type])
-                        pull_data(data[type][name], type + ":" + name);
+                        createTrace(data[type][name], type + ":" + name);
                 
                 g.update();
             })
