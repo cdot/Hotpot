@@ -242,14 +242,15 @@
         $ui.trigger("data_change");
     }
 
-    function updateGraph($tc, data) {
+    function updateGraph(data) {
         var g = $("#graph_canvas").data("graph");
         for (var type in data) {
             for (var name in data[type]) {
-                g.addPoint(type + ":" + name,
-                           Time.nowSeconds(),
-                           parseFloat($df.text()),
-                           false);
+                var o = data[type][name];
+                var d = (typeof o.temperature !== "undefined")
+                    ? o.temperature : o.state;
+                if (typeof d !== "undefined")
+                    g.addPoint(type + ":" + name, Time.nowSeconds(), d, false);
             }
         }
         g.update();
