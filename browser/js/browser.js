@@ -242,20 +242,17 @@
         $ui.trigger("data_change");
     }
 
-    function updateGraph(data) {
+    function updateGraph($tc, data) {
+        var g = $("#graph_canvas").data("graph");
         for (var type in data) {
             for (var name in data[type]) {
-                // addpoint(trace, x, y)
-                $tc.trigger("addpoint",
-                            {
-                                trace: type + ":" + name,
-                                point: {
-                                    x: Time.nowSeconds(),
-                                    y: parseFloat($df.text())
-                                }
-                            });
+                g.addPoint(type + ":" + name,
+                           Time.nowSeconds(),
+                           parseFloat($df.text()),
+                           false);
             }
         }
+        g.update();
     }
 
     /**
@@ -295,6 +292,7 @@
                 $("#comms_error").html("");
                 $(".showif").hide(); // hide optional content
                 populate($("body"), "", data);
+                updateGraph(data);
                 poller = setTimeout(function() {
                     $(document).trigger("poll");
                 }, update_rate * 1000);
@@ -365,7 +363,7 @@
                     for (var name in data[type])
                         pull_data(data[type][name], type + ":" + name);
                 
-                $tc.trigger("update");
+                g.update();
             })
             .error(function(jqXHR, textStatus, errorThrown) {
                 console.log("Could not contact server  for logs: "
