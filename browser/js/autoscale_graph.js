@@ -21,7 +21,7 @@ function Trace(graph, name, type) {
     this.points = [];
     this.colour = trace_cols.shift();
     if (this.type === "binary")
-        this.slot = graph.slot++;
+        this.slot = graph.next_slot++;
 };
 
 Trace.prototype.outCode = function(p, min, max) {
@@ -158,9 +158,9 @@ Trace.prototype.getExtents = function() {
     return e;
 };
 
-Trace.prototype.binaryOffset = function(sample) {
-    var full_height = this.$canvas.height();
-    var slots = this.graph.slot;
+Trace.prototype.binaryOffset = function(sample, g) {
+    var full_height = g.$canvas.height();
+    var slots = g.next_slot;
     var slot_height = full_height / (slots + 1);
     var slot_centre = this.slot * slot_height;
     var zero_line = slot_centre - slot_height / 4;
@@ -188,16 +188,16 @@ Trace.prototype.render = function() {
     if (this.type === "binary") {
         p = {
             x: g.x2v(this.points[0].x),
-            y: this.binaryOffset(this.points[0].x)
+            y: this.binaryOffset(this.points[0].x, g)
         };
         g.ctx.moveTo(p.x, p.y);
         for (j = 1; j < this.points.length; j++) {
             p.x = g.x2v(this.points[j].x);
             g.ctx.lineTo(p.x, p.y);
-            p.y = this.binaryOffset(this.points[j].y);
+            p.y = this.binaryOffset(this.points[j].y, g);
             g.ctx.lineTo(p.x, p.y);
         }
-        p.x = this.$canvas.width();
+        p.x = g.$canvas.width();
         g.ctx.lineTo(p.x, p.y);
     } else {
         p = g.l2v(this.points[0]);
@@ -342,7 +342,7 @@ function Graph(options, $canvas) {
             $("#tip_canvas").hide();
         });
 
-    self.slot = 0;
+    self.next_slot = 0;
     self.traces = {};
 }
 /**
