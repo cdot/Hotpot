@@ -49,15 +49,8 @@ tr.rule {
     color: yellow;
 }
 
-/* The map showing mobile locations */
-#map {
-    width: 200px;
-    height: 200px;
-    float: right;
-}
-
 /* The canvas used to show graphs */
-#temperature_canvas {
+#graph_canvas {
     width: 100%;
 }
 

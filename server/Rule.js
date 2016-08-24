@@ -72,10 +72,3 @@ Rule.prototype.getConfiguration = function() {
     };
 };
 
-/**
- * Update the config block with the current definition of this rule
- */
-Rule.prototype.updateConfiguration = function(config) {
-    config.name = this.name;
-    Utils.updateFileableConfig(config, "test", this.testfn.toString());
-};

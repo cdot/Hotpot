@@ -159,13 +159,9 @@ Trace.prototype.getExtents = function() {
 };
 
 Trace.prototype.binaryOffset = function(sample, g) {
-    var full_height = g.$canvas.height();
-    var slots = g.next_slot;
-    var slot_height = full_height / (slots + 1);
-    var slot_centre = this.slot * slot_height;
-    var zero_line = slot_centre - slot_height / 4;
-    var one_line = slot_centre + slot_height / 4;
-    return sample.y < 0.5 ? zero_line : one_line;
+    var slot_height = g.$canvas.height() / 10;
+    var slot_base = (this.slot + 1) * slot_height;
+    return sample.y < 0.5 ? (slot_base + 1) : (slot_base + slot_height - 1);
 };
 
 /**

@@ -63,19 +63,27 @@ Config.fileableConfig = function(config, key) {
 };
 
 /**
- * Given a config block and a key name, update the stored data with
- * the value passed.
+ * Given a config block and a key name, return a promise to update the
+ * stored data with the value passed.
+ * @param {Config} a config block containing [key]
+ * @param {String} key the key we are changing
+ * @param {String} the value to set
+ * @return {Promise} a promise that takes a config_changed parameter that says
+ * if the config block was modified. This will be false if the change was handled
+ * be storing as an external file.
  */
 Config.updateFileableConfig = function(config, key, value) {
     if (typeof config[key + "_file"] !== "undefined")
-        writeFile(Utils.expandEnvVars(config[key + "_file"]),
-                  value, "utf8")
-    
-        .done(function() {
+       return writeFile(Utils.expandEnvVars(config[key + "_file"]),
+                        value, "utf8")
+        .then(function() {
             Utils.TRACE(TAG, "Updated ", key, "_file");
+            return Q(false);
         });
-    else
+    else {
         config[key] = value;
+        return Q(true);
+    }
 };
 
 /**

@@ -515,14 +515,21 @@ Controller.prototype.dispatch = function(path, data) {
             var i = parseInt(path[1]);
             if (i < 0 || i >= self.rule.length)
                 throw "No rule " + i;
-            if (path[2] === "name")
+            if (path[2] === "name") {
                 self.rule[i].name = data.value;
-            else if (path[2] === "test")
+                self.config.rule[i].name = this.name;
+                self.emit("config_change");
+            } else if (path[2] === "test") {
                 self.rule[i].setTest(data.value);
+                Config.updateFileableConfig(
+                    self.config.rule[i], "test", self.rule[i].testfn.toString())
+                .then(function(config_changed) {
+                    if (config_changed)
+                        self.emit("config_change");
+                });
+            }
             else
                 throw "Unrecognised set/rule command " + path[2];
-            self.rule[i].updateConfiguration(self.config.rule[i]);
-            self.emit("config_change");
         }
         else
             throw new Error("Unrecognised command");

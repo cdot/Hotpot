@@ -249,6 +249,8 @@
 
     function updateGraph(data) {
         var g = $("#graph_canvas").data("graph");
+        if (!g)
+            return; // not ready yet
         for (var type in data) {
             for (var name in data[type]) {
                 var o = data[type][name];
@@ -328,11 +330,7 @@
             max: {
                 x: Date.now() / 1000,
                 y: 40
-            },
-//            sort_axis: {
-//                "thermostat:HW": "x",
-//                "thermostat:CH": "x"
-//            }
+            }
         });
         $.get(
             ajax + "/log",
