@@ -242,6 +242,22 @@
         $ui.trigger("data_change");
     }
 
+    function updateGraph(data) {
+        for (var type in data) {
+            for (var name in data[type]) {
+                // addpoint(trace, x, y)
+                $tc.trigger("addpoint",
+                            {
+                                trace: type + ":" + name,
+                                point: {
+                                    x: Time.nowSeconds(),
+                                    y: parseFloat($df.text())
+                                }
+                            });
+            }
+        }
+    }
+
     /**
      * Populate UI from structure
      * @param $ui the element to populate
@@ -256,6 +272,7 @@
         }
         if (typeof $ui.data("type") === "undefined"
             && typeof data === "object") {
+            // Hierarchical sub-structure
             for (var subname in data) {
                 $ui
                     .find("[data-field='" + subname + "']")
@@ -292,8 +309,8 @@
             });
     });
 
-    $(document).on("initialise_temperature_graph", function() {
-        var $tc = $("#temperature_canvas");
+    $(document).on("initialise_graph", function() {
+        var $tc = $("#graph_canvas");
         $tc.autoscale_graph({
             render_label: function(axis, data) {
                 if (axis === "x")
@@ -308,10 +325,10 @@
                 x: Date.now() / 1000,
                 y: 40
             },
-            sort_axis: {
-                HW: "x",
-                CH: "x"
-            },
+//            sort_axis: {
+//                "thermostat:HW": "x",
+//                "thermostat:CH": "x"
+//            },
             trace_types: {
                 "pin:HW": "binary",
                 "pin:CH": "binary"
@@ -331,7 +348,8 @@
                             {
                                 x: basetime + da[j],
                                 y: da[j + 1]
-                            });
+                            },
+                            true);
                     }
                     // Closing point at same level as last measurement,
                     // just in case it was a long time ago
@@ -424,33 +442,6 @@
     function attachHandlers($root) {
         $(".editable", $root).on("click", editField);
 
-        /**
-         * Add a trace to the temperature graph canvas
-         * @param $df the field that carries the temperature
-         */
-        function addTrace(name, $df, $tc) {
-            $df.on("data_change", function() {
-                // addpoint(trace, x, y)
-                $tc.trigger("addpoint",
-                            {
-                                trace: name,
-                                point: {
-                                    x: Time.nowSeconds(),
-                                    y: parseFloat($df.text())
-                                }
-                            });
-            });
-        }
-
-        var $tc = $("#temperature_canvas");
-        $("[data-field='temperature']").each(
-            function() {
-                var $div = $(this).closest(".templated");
-                if ($div.length === 0)
-                    return; // in a template
-                addTrace($div.attr("data-field"), $(this), $tc);
-            });
-
         // Rule handlers
         $(".removeRule", $root).on("click", removeRule);
         $(".move_rule.up", $root).on("click", moveUp);
@@ -489,7 +480,7 @@
                 // immediately refresh to get the state ASAP
                 $(document).trigger("poll");
 
-                $(document).trigger("initialise_temperature_graph");
+                $(document).trigger("initialise_graph");
             })
             .error(function(jqXHR, textStatus, errorThrown) {
                 $("#comms_error").html(

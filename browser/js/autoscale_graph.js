@@ -1,26 +1,31 @@
 /*@preserve Copyright (C) 2015 Crawford Currie http://c-dot.co.uk license MIT*/
 
-/**
- * Simple auto-scaling graph for a single value trace using an HTML5 canvas
- * Options:
- *     traces: array of objects
- *        label: label for this trace
- *        current: required function returning current value
- *        colour: RGB colour of value plot
- *     background_col: colour of background
- *     text_col: colour of text
- *     max_y: optional top of y axis
- *     min_y: optional bottom of y axis
- * @class
- * @private
- */
-
 const TOP = 1;
 const BOTTOM = TOP << 1;
 const LEFT = BOTTOM << 1;
 const RIGHT = LEFT << 1;
 
-function outCode(p, min, max) {
+/**
+ * Construct a new trace line
+ * @param {string} name name of the trace
+ * @param {string} type option trace type, may be "binary"
+ * @class
+ * @private
+ */
+function Trace(graph, name, type) {
+    "use strict";
+    this.name = name;
+    this.graph = graph;
+    this.type = "continuous";
+    if (typeof type === "string")
+        this.type = type;
+    this.points = [];
+    this.colour = trace_cols.shift();
+    if (this.type === "binary")
+        this.slot = graph.slot++;
+};
+
+Trace.prototype.outCode = function(p, min, max) {
     "use strict";
     var code = 0;
     if (p.x < min.x)
@@ -32,14 +37,14 @@ function outCode(p, min, max) {
     else if (p.y > max.y)
 	code |= TOP;
     return code;
-}
+};
 
 // Cohen-Sutherland clipping
-function clipLine(a, b, min, max) {
+Trace.prototype.clipLine = function(a, b, min, max) {
     "use strict";
 
-    var ac = outCode(a, min, max);
-    var bc = outCode(b, min, max);
+    var ac = this.outCode(a, min, max);
+    var bc = this.outCode(b, min, max);
     var cc, x, y;
 
     while (ac + bc !== 0) {
@@ -66,11 +71,11 @@ function clipLine(a, b, min, max) {
 	if (cc === ac) {
             a.x = x;
             a.y = y;
-            ac = outCode(a, min, max);
+            ac = this.outCode(a, min, max);
         } else {
             b.x = x;
             b.y = y;
-            bc = outCode(b, min, max);
+            bc = this.outCode(b, min, max);
         }
     }
     return false;
@@ -85,26 +90,6 @@ var trace_cols = [
     "green",
     "white"
 ];
-
-/**
- * Construct a new trace line
- * @param {string} name name of the trace
- * @param {string} type option trace type, may be "binary"
- * @class
- * @ignore
- */
-function Trace(graph, name, type) {
-    "use strict";
-    this.name = name;
-    this.graph = graph;
-    this.type = "continuous";
-    if (typeof type === "string")
-        this.type = type;
-    this.points = [];
-    this.colour = trace_cols.shift();
-    if (this.type === "binary")
-        this.slot = graph.slot++;
-}
 
 /**
  * Add a point to the trace
@@ -141,10 +126,10 @@ Trace.prototype.clip = function(min, max) {
     // TODO: do this properly. At the moment it assumes clipping
     // on the left and leaves all else unclipped.
     var lp;
-    while (this.points.length > 0 && outCode(this.points[0], min, max) !== 0)
+    while (this.points.length > 0 && this.outCode(this.points[0], min, max) !== 0)
         lp = this.points.shift();
     if (lp && this.points.length > 0)
-        clipLine(lp, this.points[0], min, max);
+        this.clipLine(lp, this.points[0], min, max);
 };
 
 /**
@@ -237,11 +222,21 @@ Trace.prototype.renderLabel = function(g, x, y) {
 };
 
 /**
- * Construct a new graph
- * @param {object} options options for the graph
+ * Simple auto-scaling graph for a set of traces using an HTML5 canvas.
  * @param {jquery} $canvas jQuery object around canvas element
+ * @param {object} options options for the graph
+ * * `background_col`: colour of background
+ * * `text_col`: colour of text
+ * * `font_height`: height of label font
+ * * `min`: Point, optional bottom/left of y axis
+ * * `max`: as `min`
+ * * `adjust`: {}
+ *   * `max`: {}
+ *     * `x`: `clip` or `scale` - how to handle an out-or-range value at
+ *            this end of this axis
+ *     * `y`: as `x`
+ *   * `min`: as `max`
  * @class
- * @ignore
  */
 function Graph(options, $canvas) {
     "use strict";
@@ -256,7 +251,6 @@ function Graph(options, $canvas) {
         background_col: "black",
         text_col: "white",
         font_height: 10, // px
-        window: 5, // degrees either side of measured temp
         adjust: {}
     }, options);
     self.options.min = $.extend({
@@ -348,7 +342,11 @@ function Graph(options, $canvas) {
     self.traces = {};
     self.trace_type = {};
 }
-
+/**
+ * Convert a logical X to a canvas coordinate
+ * @param x {number} ordinate
+ * @private
+ */
 Graph.prototype.x2v = function(x) {
     "use strict";
     var full_width = this.$canvas.width();
@@ -357,6 +355,11 @@ Graph.prototype.x2v = function(x) {
                       / (this.options.max.x - this.options.min.x));
 };
 
+/**
+ * Convert a logical X to a canvas coordinate
+ * @param y {number} ordinate
+ * @private
+ */
 Graph.prototype.y2v = function(y) {
     "use strict";
     // Allow font_height above and below the drawing area for legend
@@ -373,6 +376,7 @@ Graph.prototype.y2v = function(y) {
  * Convert logical point on a trace to a physical point
  * @param {object} p {x:,y:} logical point (float)
  * @return {object} {x:,y:} physical point (int)
+ * @private
  */
 Graph.prototype.l2v = function(p) {
     "use strict";
@@ -384,9 +388,10 @@ Graph.prototype.l2v = function(p) {
 };
 
 /**
- * Convert a physical point on the canvas to a logical point
+ * Convert a canvas point to a logical point
  * @param {object} p {x:,y:} physical point (int)
  * @return {object} {x:,y:} logical point (float)
+ * @private
  */
 Graph.prototype.v2l = function(p) {
     "use strict";
@@ -405,11 +410,19 @@ Graph.prototype.v2l = function(p) {
 };
 
 /**
- * Add a point to the given trace on the graph
+ * Add a point to the given trace on the graph.
+ * Also: event `addpoint { trace: point: { x: y: } }` - however the event cannot
+ * be used to create the trace, only add a point to an existing trace.
+ * @param {string} tracename name of the trace
+ * @param x {number} x ordinate
+ * @param y {number} y ordinate
+ * @param {boolean} create Create the trace if it doesn't exist
  */
-Graph.prototype.addPoint = function(tracename, x, y) {
+Graph.prototype.addPoint = function(tracename, x, y, create) {
     "use strict";
     if (typeof this.traces[tracename] === "undefined") {
+        if (!create)
+            return;
         this.traces[tracename] = new Trace(
             this,
             tracename,
@@ -420,6 +433,7 @@ Graph.prototype.addPoint = function(tracename, x, y) {
 
 /**
  * Sort the points in a trace along the given axis
+ * @private
  */
 Graph.prototype.sortPoints = function(tracename, axis) {
     "use strict";
@@ -429,7 +443,8 @@ Graph.prototype.sortPoints = function(tracename, axis) {
 };
 
 /**
- * Update the graph
+ * Update (draw) the graph.
+ * Also: event `update`
  */
 Graph.prototype.update = function() {
     "use strict";
@@ -488,8 +503,8 @@ Graph.prototype.update = function() {
     
     // Paint the traces
     for (i in this.traces) {
-       if (typeof options.sort_axis[i] !== "undefined")
-           this.traces[i].sortPoints(options.sort_axis[i]);
+//        if (typeof options.sort_axis[i] !== "undefined")
+//           this.traces[i].sortPoints(options.sort_axis[i]);
         this.traces[i].render();
     }
 
@@ -533,7 +548,7 @@ Graph.prototype.update = function() {
         $(this).data("graph", new Graph(options, $canvas));
     
         $canvas.on("addpoint", function(e, data) {
-            $canvas.data("graph").addPoint(data.trace, data.point);
+            $canvas.data("graph").addPoint(data.trace, data.point, false);
             $canvas.trigger("update");
         });
 
