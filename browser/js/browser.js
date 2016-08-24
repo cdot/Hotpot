@@ -424,6 +424,33 @@
     function attachHandlers($root) {
         $(".editable", $root).on("click", editField);
 
+        /**
+         * Add a trace to the temperature graph canvas
+         * @param $df the field that carries the temperature
+         */
+        function addTrace(name, $df, $tc) {
+            $df.on("data_change", function() {
+                // addpoint(trace, x, y)
+                $tc.trigger("addpoint",
+                            {
+                                trace: name,
+                                point: {
+                                    x: Time.nowSeconds(),
+                                    y: parseFloat($df.text())
+                                }
+                            });
+            });
+        }
+
+        var $tc = $("#temperature_canvas");
+        $("[data-field='temperature']").each(
+            function() {
+                var $div = $(this).closest(".templated");
+                if ($div.length === 0)
+                    return; // in a template
+                addTrace($div.attr("data-field"), $(this), $tc);
+            });
+
         // Rule handlers
         $(".removeRule", $root).on("click", removeRule);
         $(".move_rule.up", $root).on("click", moveUp);
