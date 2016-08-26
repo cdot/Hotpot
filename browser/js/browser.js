@@ -14,7 +14,6 @@
     var update_rate = 10; // seconds
 
     var config;
-    var apis;
 
     var trace_options = {
         "pin:HW": { type: "binary", colour: "yellow" },
@@ -451,7 +450,7 @@
      * Populate the document by getting the configuration from
      * the server.
      */
-    $(document).on("configure", function() {
+    function configure() {
 
         // Can't use getJSON because of the rule functions
         $.get(
@@ -480,35 +479,10 @@
                         + " Will try again in " + setup_backoff
                         + " seconds</div>");
                 setTimeout(function() {
-                    $(document).trigger("configure");
+                    configure();
                 }, setup_backoff * 1000);
             });
     });
 
-    function get_apis() {
-        var urps = window.location.search.substring(1).split(/[&;]/);
-        for (var i = 0; i < urps.length; i++) {
-            var urp = urps[i].split("=");
-            if (urp[0] === "ip")
-                hotpot_ip = urp[1];
-        }
-        ajax = "/ajax";
-
-        $.get(
-            ajax + "/apis",
-            function(raw) {
-                apis = Utils.eval(raw, "browser");
-                $(document).trigger("configure");
-            })
-            .error(function(jqXHR, textStatus, errorThrown) {
-                $("#comms_error").html(
-                    "<div class='error'>Could not contact server "
-                        + " for setup: " + errorThrown
-                        + " Will try again in " + setup_backoff
-                        + " seconds</div>");
-                setTimeout(get_apis, setup_backoff * 1000);
-            });
-    }
-
-    $(document).ready(get_apis);
+    $(document).ready(configure);
 })(jQuery);

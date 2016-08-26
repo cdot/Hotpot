@@ -32,15 +32,10 @@ const RULE_INTERVAL = 5000;
  * * `rule`: array of Rule configurations
  * * `calendar`: object mapping calendar names to Calendar configurations
  * * `weather`: object mapping weather agent names to their configurations
- * @param {Config} apis Config object recording API information that will
- * be sent in response to an `/ajax/apis` request. The controller doesn't
- * care what is in this object, it simply passes it back in response to
- * `/ajax/apis`.
  * @class
  */
-function Controller(config, apis) {
+function Controller(config) {
     this.config = config;
-    this.apis = apis;
 }
 Util.inherits(Controller, Events);
 module.exports = Controller;
@@ -479,9 +474,6 @@ Controller.prototype.dispatch = function(path, data) {
     case "config": // Return the config with all _file expanded
         // /config
         return Config.getSerialisable(this.config);
-    case "apis": // Return the apis config
-        // /apis
-        return Q.fcall(function () { return self.apis; });
     case "remove_rule": // remove a rule
         // /remove_rule/{index}
         self.remove_rule(parseInt(path[0]));
