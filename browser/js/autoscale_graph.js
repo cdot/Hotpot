@@ -36,16 +36,20 @@ function Trace(graph, name, options) {
         min: {},
         max: {}
     }, options);
-    if (options.type === "binary")
-        this.slot = graph.next_slot++;
     if (typeof options.min.x === "undefined")
         options.min.x = Number.MAX_VALUE;
-    if (typeof options.min.y === "undefined")
-        options.min.y = Number.MAX_VALUE;
     if (typeof options.max.x === "undefined")
         options.max.x = Number.MIN_VALUE;
-    if (typeof options.max.y === "undefined")
-        options.max.y = Number.MIN_VALUE;
+    if (options.type === "binary") {
+        this.slot = graph.next_slot++;
+        options.min.y = 0;
+        options.max.y = 1;
+    } else {
+        if (typeof options.min.y === "undefined")
+            options.min.y = Number.MAX_VALUE;
+        if (typeof options.max.y === "undefined")
+            options.max.y = Number.MIN_VALUE;
+    }
     options.adjust = $.extend({
         max: {}, min: {}     
     }, options.adjust);
