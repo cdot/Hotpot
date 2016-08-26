@@ -24,62 +24,64 @@ const RIGHT = LEFT << 1;
 function Trace(graph, name, options) {
     "use strict";
     var self = this;
-    self.options = $.extend({
+    this.name = name;
+    this.graph = graph;
+    this.points = [];
+    options = $.extend({
         type: "continuous",
         min: {},
         max: {},
         colour: "white",
-        adjust: {}
+        adjust: {},
+        min: {},
+        max: {}
     }, options);
-    this.name = name;
-    this.graph = graph;
-    this.points = [];
-    if (this.options.type === "binary")
+    if (options.type === "binary")
         this.slot = graph.next_slot++;
-    self.options.min = $.extend({
-        x: Number.MAX_VALUE,
-        y: Number.MAX_VALUE
-    }, self.options.min);
-    self.options.max = $.extend({
-        x: Number.MIN_VALUE,
-        y: Number.MIN_VALUE
-    }, self.options.max);
-    self.options.adjust = $.extend({
-        max: {},
-        min: {}     
-    }, self.options.adjust);
+    if (typeof options.min.x === "undefined")
+        options.min.x = Number.MAX_VALUE;
+    if (typeof options.min.y === "undefined")
+        options.min.y = Number.MAX_VALUE;
+    if (typeof options.max.x === "undefined")
+        options.max.x = Number.MIN_VALUE;
+    if (typeof options.max.y === "undefined")
+        options.max.y = Number.MIN_VALUE;
+    options.adjust = $.extend({
+        max: {}, min: {}     
+    }, options.adjust);
     // TODO: can't have clip at both ends of an axis
-    self.options.adjust.min = $.extend({
-            x: "clip",
-            y: "scale"
-    }, self.options.adjust.min);
-    self.options.adjust.max = $.extend({
-            x: "scale",
-            y: "scale"
-    }, self.options.adjust.max);
-
+    options.adjust.min = $.extend({
+        x: "clip", y: "scale"
+    }, options.adjust.min);
+    options.adjust.max = $.extend({
+        x: "scale", y: "scale"
+    }, options.adjust.max);
+    this.options = options;
 }
 
-Trace.prototype.outCode = function(p, min, max) {
+/**
+ * Calculate the outcode for the given point in the given bounds
+ */
+Trace.prototype.outCode = function(p) {
     "use strict";
     var code = 0;
-    if (p.x < min.x)
+    if (p.x < this.options.min.x)
 	code |= LEFT;
-    else if (p.x > max.x)
+    else if (p.x > this.options.max.x)
 	code |= RIGHT;
-    if (p.y < min.y)
+    if (p.y < this.options.min.y)
 	code |= BOTTOM;
-    else if (p.y > max.y)
+    else if (p.y > this.options.max.y)
 	code |= TOP;
     return code;
 };
 
 // Cohen-Sutherland clipping
-Trace.prototype.clipLine = function(a, b, min, max) {
+Trace.prototype.clipLine = function(a, b) {
     "use strict";
 
-    var ac = this.outCode(a, min, max);
-    var bc = this.outCode(b, min, max);
+    var ac = this.outCode(a);
+    var bc = this.outCode(b);
     var cc, x, y;
 
     while (ac + bc !== 0) {
@@ -90,27 +92,27 @@ Trace.prototype.clipLine = function(a, b, min, max) {
         cc = (ac !== 0) ? ac : bc;
 
         if ((cc & TOP) !== 0) {
-            x = a.x + (b.x - a.x) * (max.y - a.y) / (b.y - a.y);
-            y = max.y;
+            x = a.x + (b.x - a.x) * (this.options.max.y - a.y) / (b.y - a.y);
+            y = this.options.max.y;
         } else if ((cc & BOTTOM) !== 0) {
-            x = a.x + (b.x - a.x) * (min.y - a.y) / (b.y - a.y);
-            y = min.y;
+            x = a.x + (b.x - a.x) * (this.options.min.y - a.y) / (b.y - a.y);
+            y = this.options.min.y;
         } else if ((cc & RIGHT) !== 0) {
-            y = a.y + (b.y - a.y) * (max.x - a.x) / (b.x - a.x);
-            x = max.x;
+            y = a.y + (b.y - a.y) * (this.options.max.x - a.x) / (b.x - a.x);
+            x = this.options.max.x;
         } else if ((cc & LEFT) !== 0) {
-            y = a.y + (b.y - a.y) * (min.x - a.x) / (b.x - a.x);
-            x = min.x;
+            y = a.y + (b.y - a.y) * (this.options.min.x - a.x) / (b.x - a.x);
+            x = this.options.min.x;
         }
 
 	if (cc === ac) {
             a.x = x;
             a.y = y;
-            ac = this.outCode(a, min, max);
+            ac = this.outCode(a);
         } else {
             b.x = x;
             b.y = y;
-            bc = this.outCode(b, min, max);
+            bc = this.outCode(b);
         }
     }
     return false;
@@ -132,20 +134,17 @@ Trace.prototype.addPoint = function(x, y) {
 };
 
 /**
- * Clip the data in the trace to the given range
- * @param {number} min bottom of range
- * @param {number} max top of range
+ * Clip the data in the trace to the viewport
  */
-Trace.prototype.clip = function(min, max) {
+Trace.prototype.clip = function() {
     "use strict";
     // TODO: do this properly. At the moment it assumes clipping
     // on the left and leaves all else unclipped.
     var lp;
-    while (this.points.length > 0
-           && this.outCode(this.points[0], min, max) !== 0)
+    while (this.points.length > 0 && this.outCode(this.points[0]) !== 0)
         lp = this.points.shift();
     if (lp && this.points.length > 0)
-        this.clipLine(lp, this.points[0], min, max);
+        this.clipLine(lp, this.points[0]);
 };
 
 /**
@@ -181,11 +180,11 @@ Trace.prototype.setViewport = function(vpt) {
  * Convert a logical 0|1 to a canvas Y
  */
 Trace.prototype.digitalY = function(sample) {
-    var h = this.viewport.y / 5;
-    return this.viewport.y + h + sample * 3 * h;
+    var h = this.viewport.dy / 5;
+    return this.viewport.y + this.viewport.dy - (h + sample * 3 * h);
 };
 
-/**
+/*
  * Convert a logical X to a canvas coordinate
  * @param x {number} ordinate
  * @private
@@ -205,7 +204,8 @@ Trace.prototype.x2v = function(x) {
 Trace.prototype.y2v = function(y) {
     "use strict";
     return Math.floor(
-        this.viewport.y + (y - this.options.min.y) * this.viewport.dy
+        this.viewport.y + this.viewport.dy
+            - (y - this.options.min.y) * this.viewport.dy
             / (this.options.max.y - this.options.min.y));
 };
 
@@ -290,20 +290,21 @@ Trace.prototype.render = function() {
             clip = true;
         }
     }
+/*
     if (clip)
         // SMELL: is this really necessary? It does keep the trace sizes
         // manageable, I suppose.
-        this.clip(options.min, options.max);
-
+        this.clip();
+*/
     if (this.points.length < 2)
         return;
 
-    ctx.strokeStyle = this.colour;
+    ctx.strokeStyle = this.options.colour;
 
     // Current
     ctx.beginPath();
     var p, j;
-    if (this.type === "binary") {
+    if (this.options.type === "binary") {
         p = {
             x: this.x2v(this.points[0].x),
             y: this.digitalY(this.points[0].y)
@@ -384,16 +385,16 @@ function Graph(options, $canvas) {
         var p = { x: e.pageX - targ_left, y: e.pageY - targ_top };
         var th = self.options.font_height;
 
-        if (p.y >= th && p.y <= $canvas.height() - th) {
-            var l;
-            for (var t in this.traces) {
-                l = this.traces[t].v2l(p);
+        if (p.y <= $canvas.height() - th) {
+            var l, tn;
+            for (tn in self.traces) {
+                l = self.traces[tn].v2l(p);
                 if (l)
                     break;
             }
             if (!l)
                 return;
-            var text = options.render_label("x", l.x) + ","
+            var text = " " + tn + ": " + options.render_label("x", l.x) + ","
                 + options.render_label("y", l.y);
 
             var $tipCanvas = $("#tip_canvas");
@@ -496,9 +497,11 @@ Graph.prototype.update = function() {
             x: 0, y: troff, dx: $canvas.width(), dy: trh
         });
         troff += trh;
+/*
         ctx.strokeStyle = tit.options.colour;
         ctx.strokeRect(tit.viewport.x, tit.viewport.y,
                        tit.viewport.dx, tit.viewport.dy);
+*/
     }
 
     // Paint the traces

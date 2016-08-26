@@ -117,7 +117,6 @@ Server.prototype.handle = function(path, params, request, response) {
     if (path.length < 1)
         throw "Bad command";
 
-    Utils.TRACE(TAG, "Handling ", path[0]);
     if (!this.ready) {
         // Not ready
         response.statusCode = 500;
@@ -139,7 +138,6 @@ Server.prototype.handle = function(path, params, request, response) {
         .then(function(reply) {
             var s = (typeof reply !== "undefined" && reply !== null)
                 ? serialize(reply) : "";
-            Utils.TRACE(TAG, "Handled ", path[0]);
             return s;
         });
     } else {

@@ -338,12 +338,10 @@
                     var options = trace_options[na];
                     options.min =
                         {
-                            x: Date.now() / 1000 - 24 * 60 * 60, // 24 hours ago
-                            y: options.type === "binary" ? 0 : 5
+                            x: Date.now() / 1000 - /*24*/2 * 60 * 60 // 24 hours ago
                         };
                     options.max = {
-                        x: Date.now() / 1000,
-                        y: options.type === "binary" ? 1 : 40
+                        x: Date.now() / 1000
                     };
                     var trace = g.addTrace(na, options);
                     for (var j = 1; j < da.length; j += 2) {

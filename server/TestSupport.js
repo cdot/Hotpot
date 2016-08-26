@@ -34,6 +34,10 @@ TestSupport.prototype.get = function(id, fn) {
     var offset = Math.random() / 100;
     var pstate = this.getPin(name);
     this.temperature[name] += (pstate === 0) ? -offset / 100 : offset;
+    if (this.temperature[name] < 20)
+        this.temperature[name] = 20;
+    if (this.temperature[name] > 60)
+        this.temperature[name] = 60;
     //console.log("WTF " + name + " (" + this.pinstate[name] + ") "
     // + odl + " -> " + this.temperature[name]);
     if (typeof fn !== "undefined")
