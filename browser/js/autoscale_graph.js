@@ -290,12 +290,12 @@ Trace.prototype.render = function() {
             clip = true;
         }
     }
-/*
+
     if (clip)
         // SMELL: is this really necessary? It does keep the trace sizes
         // manageable, I suppose.
         this.clip();
-*/
+
     if (this.points.length < 2)
         return;
 

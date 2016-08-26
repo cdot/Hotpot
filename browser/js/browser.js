@@ -338,7 +338,7 @@
                     var options = trace_options[na];
                     options.min =
                         {
-                            x: Date.now() / 1000 - /*24*/2 * 60 * 60 // 24 hours ago
+                            x: Date.now() / 1000 - 24 * 60 * 60 // 24 hours ago
                         };
                     options.max = {
                         x: Date.now() / 1000
