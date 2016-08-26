@@ -158,10 +158,10 @@ Trace.prototype.getExtents = function() {
     return e;
 };
 
-Trace.prototype.binaryOffset = function(sample, g) {
+Trace.prototype.digitalTrace = function(sample, g) {
     var slot_height = g.$canvas.height() / 10;
     var slot_base = (this.slot + 1) * slot_height;
-    return sample.y < 0.5 ? (slot_base + 1) : (slot_base + slot_height - 1);
+    return sample === 0 ? (slot_base + 1) : (slot_base + slot_height - 1);
 };
 
 /**
@@ -184,13 +184,13 @@ Trace.prototype.render = function() {
     if (this.type === "binary") {
         p = {
             x: g.x2v(this.points[0].x),
-            y: this.binaryOffset(this.points[0].x, g)
+            y: this.digitalTrace(this.points[0].y, g)
         };
         g.ctx.moveTo(p.x, p.y);
         for (j = 1; j < this.points.length; j++) {
             p.x = g.x2v(this.points[j].x);
             g.ctx.lineTo(p.x, p.y);
-            p.y = this.binaryOffset(this.points[j].y, g);
+            p.y = this.digitalTrace(this.points[j].y, g);
             g.ctx.lineTo(p.x, p.y);
         }
         p.x = g.$canvas.width();
