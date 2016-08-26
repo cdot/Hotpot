@@ -246,7 +246,7 @@ Trace.prototype.v2l = function(p) {
             / this.viewport.dx,
         y: this.options.min.y
             + (this.options.max.y - this.options.min.y)
-            * (p.y - this.viewport.y)
+            * (this.viewport.y + this.viewport.dy - p.y)
             / this.viewport.dy
     };
 };
