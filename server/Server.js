@@ -144,7 +144,9 @@ Server.prototype.handle = function(path, params, request, response) {
         });
     } else {
         // Handle file lookup
-        var filepath = this.config.docroot + "/" + path.join("/");
+        var filepath = Utils.expandEnvVars(this.config.docroot
+                                           + "/" + path.join("/"));
+        
         var m = /\.([A-Z0-9]+)$/i.exec(filepath);
         if (m) {
             var Mime = require("mime-types");

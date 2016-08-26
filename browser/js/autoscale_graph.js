@@ -8,20 +8,56 @@ const RIGHT = LEFT << 1;
 /**
  * Construct a new trace line
  * @param {string} name name of the trace
- * @param {string} type option trace type, may be "binary"
+ * @param {Config} options 
+ * * `type`: trace type, may be "binary" or "continuous" (default)
+ * * `min`: Point, optional bottom/left of y axis
+ * * `max`: as `min`
+ * * `colour`: colour of trace
+ * * `adjust`: {}
+ *   * `max`: {}
+ *     * `x`: `clip` or `scale` - how to handle an out-or-range value at
+ *            this end of this axis
+ *     * `y`: as `x`
+ *   * `min`: as `max`
  * @class
  */
-function Trace(graph, name, type) {
+function Trace(graph, name, options) {
     "use strict";
+    var self = this;
+    self.options = $.extend({
+        type: "continuous",
+        min: {},
+        max: {},
+        colour: "white",
+        adjust: {}
+    }, options);
     this.name = name;
     this.graph = graph;
-    this.type = "continuous";
-    if (typeof type === "string")
-        this.type = type;
     this.points = [];
-    this.colour = trace_cols.shift();
-    if (this.type === "binary")
+    if (this.options.type === "binary")
         this.slot = graph.next_slot++;
+    self.options.min = $.extend({
+        x: Number.MAX_VALUE,
+        y: Number.MAX_VALUE
+    }, self.options.min);
+    self.options.max = $.extend({
+        x: Number.MIN_VALUE,
+        y: Number.MIN_VALUE
+    }, self.options.max);
+    self.options.adjust = $.extend({
+        max: {},
+        min: {}     
+    }, self.options.adjust);
+    // TODO: can't have clip at both ends of an axis
+    self.options.adjust.min = $.extend({
+            x: "clip",
+            y: "scale"
+    }, self.options.adjust.min);
+    self.options.adjust.max = $.extend({
+            x: "scale",
+            y: "scale"
+    }, self.options.adjust.max);
+
 }
 
 Trace.prototype.outCode = function(p, min, max) {
@@ -80,16 +116,6 @@ Trace.prototype.clipLine = function(a, b, min, max) {
     return false;
 };
 
-var trace_cols = [
-    "red",
-    "orange",
-    "yellow",
-    "magenta",
-    "cyan",
-    "green",
-    "white"
-];
-
 /**
  * Add a point to the trace
  * @param {point} OR p = object `{ x:, y: }`
@@ -106,21 +132,6 @@ Trace.prototype.addPoint = function(x, y) {
 };
 
 /**
- * In-place sort the points in the data along the given axis
- * @param {string} axis x or y
- */
-Trace.prototype.sortPoints = function(axis) {
-    "use strict";
-    this.points.sort(function(a, b) {
-        if (a[axis] > b[axis])
-            return 1;
-        if (a[axis] < b[axis])
-            return -1;
-        return 0;
-    });
-};
-
-/**
  * Clip the data in the trace to the given range
  * @param {number} min bottom of range
  * @param {number} max top of range
@@ -130,7 +141,8 @@ Trace.prototype.clip = function(min, max) {
     // TODO: do this properly. At the moment it assumes clipping
     // on the left and leaves all else unclipped.
     var lp;
-    while (this.points.length > 0 && this.outCode(this.points[0], min, max) !== 0)
+    while (this.points.length > 0
+           && this.outCode(this.points[0], min, max) !== 0)
         lp = this.points.shift();
     if (lp && this.points.length > 0)
         this.clipLine(lp, this.points[0], min, max);
@@ -158,10 +170,85 @@ Trace.prototype.getExtents = function() {
     return e;
 };
 
-Trace.prototype.digitalTrace = function(sample, g) {
-    var slot_height = g.$canvas.height() / 10;
-    var slot_base = (this.slot + 1) * slot_height;
-    return sample === 1 ? (slot_base + 1) : (slot_base + slot_height - 1);
+/**
+ * Set the drawing area for this trace withing the graph canvas
+ */
+Trace.prototype.setViewport = function(vpt) {
+    this.viewport = vpt;
+};
+
+/**
+ * Convert a logical 0|1 to a canvas Y
+ */
+Trace.prototype.digitalY = function(sample) {
+    var h = this.viewport.y / 5;
+    return this.viewport.y + h + sample * 3 * h;
+};
+
+/**
+ * Convert a logical X to a canvas coordinate
+ * @param x {number} ordinate
+ * @private
+ */
+Trace.prototype.x2v = function(x) {
+    "use strict";
+    return Math.floor(
+        this.viewport.x + (x - this.options.min.x) * this.viewport.dx
+            / (this.options.max.x - this.options.min.x));
+};
+
+/**
+ * Convert a logical Y to a canvas coordinate
+ * @param y {number} ordinate
+ * @private
+ */
+Trace.prototype.y2v = function(y) {
+    "use strict";
+    return Math.floor(
+        this.viewport.y + (y - this.options.min.y) * this.viewport.dy
+            / (this.options.max.y - this.options.min.y));
+};
+
+/**
+ * Convert logical point on a trace to a physical point (does not work for
+ * digital traces)
+ * @param {object} p {x:,y:} logical point (float)
+ * @return {object} {x:,y:} physical point (int)
+ * @private
+ */
+Trace.prototype.l2v = function(p) {
+    "use strict";
+
+    return {
+        x: this.x2v(p.x),
+        y: this.y2v(p.y)
+    };
+};
+
+/**
+ * Convert a canvas point to a logical point
+ * @param {object} p {x:,y:} physical point (int)
+ * @return {object} {x:,y:} logical point (float) or null if the point
+ *  is outside the trace viewport
+ * @private
+ */
+Trace.prototype.v2l = function(p) {
+    "use strict";
+    if (p.x < this.viewport.x || p.y < this.viewport.y
+        || p.x > this.viewport.x + this.viewport.dx
+        || p.y > this.viewport.y + this.viewport.dy)
+        return undefined;
+
+    return {
+        x: this.options.min.x
+            + (this.options.max.x - this.options.min.x)
+            * (p.x - this.viewport.x)
+            / this.viewport.dx,
+        y: this.options.min.y
+            + (this.options.max.y - this.options.min.y)
+            * (p.y - this.viewport.y)
+            / this.viewport.dy
+    };
 };
 
 /**
@@ -175,50 +262,85 @@ Trace.prototype.render = function() {
         return;
 
     var g = this.graph;
+    var ctx = g.ctx;
 
-    g.ctx.strokeStyle = this.colour;
+    // Scale and clip the viewport
+    var options = this.options;
+    var range = {
+        x: options.max.x - options.min.x,
+        y: options.max.y - options.min.y
+    };
+
+    var adj = options.adjust;
+    var e = this.getExtents();
+    var clip = false;
+    for (var ax in e.min) {
+        // Scale first to shift the end of a clipped axis
+        if (e.min[ax] < options.min[ax] && adj.min[ax] === "scale")
+            options.min[ax] = e.min[ax];
+        if (e.max[ax] > options.max[ax] && adj.max[ax] === "scale")
+            options.max[ax] = e.max[ax];
+        // Now apply clip, and flag a trace clip.
+        if (e.min[ax] < options.min[ax] && adj.min[ax] === "clip") {
+            options.min[ax] = options.max[ax] - range[ax];
+            clip = true;
+        }
+        if (e.max[ax] > options.max[ax] && adj.max[ax] === "clip") {
+            options.max[ax] = options.min[ax] + range[ax];
+            clip = true;
+        }
+    }
+    if (clip)
+        // SMELL: is this really necessary? It does keep the trace sizes
+        // manageable, I suppose.
+        this.clip(options.min, options.max);
+
+    if (this.points.length < 2)
+        return;
+
+    ctx.strokeStyle = this.colour;
 
     // Current
-    g.ctx.beginPath();
+    ctx.beginPath();
     var p, j;
     if (this.type === "binary") {
         p = {
-            x: g.x2v(this.points[0].x),
-            y: this.digitalTrace(this.points[0].y, g)
+            x: this.x2v(this.points[0].x),
+            y: this.digitalY(this.points[0].y)
         };
-        g.ctx.moveTo(p.x, p.y);
+        ctx.moveTo(p.x, p.y);
         for (j = 1; j < this.points.length; j++) {
-            p.x = g.x2v(this.points[j].x);
-            g.ctx.lineTo(p.x, p.y);
-            p.y = this.digitalTrace(this.points[j].y, g);
-            g.ctx.lineTo(p.x, p.y);
+            p.x = this.x2v(this.points[j].x);
+            ctx.lineTo(p.x, p.y);
+            p.y = this.digitalY(this.points[j].y);
+            ctx.lineTo(p.x, p.y);
         }
-        p.x = g.$canvas.width();
-        g.ctx.lineTo(p.x, p.y);
+        p.x = this.viewport.x + this.viewport.dx;
+        ctx.lineTo(p.x, p.y);
     } else {
-        p = g.l2v(this.points[0]);
-        g.ctx.moveTo(p.x, p.y);
+        p = this.l2v(this.points[0]);
+        ctx.moveTo(p.x, p.y);
         for (j = 1; j < this.points.length; j++) {
-            p = g.l2v(this.points[j]);
-            g.ctx.lineTo(p.x, p.y);
+            p = this.l2v(this.points[j]);
+            ctx.lineTo(p.x, p.y);
         }
     }
 
-    g.ctx.stroke();
+    ctx.stroke();
 };
 
 /**
  * Render the label at (x, y) and return the width of the label
- * @param {Graph} g the graph we are rendering within
  * @param {number} x coordinate
  * @param {number} y coordinate
  */
-Trace.prototype.renderLabel = function(g, x, y) {
+Trace.prototype.renderLabel = function(x, y) {
     "use strict";
-    g.ctx.fillStyle = this.colour;
-    g.ctx.strokeStyle = this.colour;
-    g.ctx.fillText(this.name, x, y);
-    return g.ctx.measureText(this.name).width;
+    var ctx = this.graph.ctx;
+    ctx.fillStyle = this.options.colour;
+    ctx.strokeStyle = this.options.colour;
+    ctx.fillText(this.name, x, y);
+    return ctx.measureText(this.name).width;
 };
 
 /**
@@ -228,14 +350,6 @@ Trace.prototype.renderLabel = function(g, x, y) {
  * * `background_col`: colour of background
  * * `text_col`: colour of text
  * * `font_height`: height of label font
- * * `min`: Point, optional bottom/left of y axis
- * * `max`: as `min`
- * * `adjust`: {}
- *   * `max`: {}
- *     * `x`: `clip` or `scale` - how to handle an out-or-range value at
- *            this end of this axis
- *     * `y`: as `x`
- *   * `min`: as `max`
  * @class
  */
 function Graph(options, $canvas) {
@@ -246,34 +360,10 @@ function Graph(options, $canvas) {
     self.ctx = $canvas[0].getContext("2d");
 
     self.options = $.extend({
-        min: {},
-        max: {},
         background_col: "black",
         text_col: "white",
-        font_height: 10, // px
-        adjust: {}
+        font_height: 10 // px
     }, options);
-    self.options.min = $.extend({
-        x: Number.MAX_VALUE,
-        y: Number.MAX_VALUE
-    }, self.options.min);
-    self.options.max = $.extend({
-        x: Number.MIN_VALUE,
-        y: Number.MIN_VALUE
-    }, self.options.max);
-    self.options.adjust = $.extend({
-        max: {},
-        min: {}     
-    }, self.options.adjust);
-    // TODO: can't have clip at both ends of an axis
-    self.options.adjust.min = $.extend({
-            x: "clip",
-            y: "scale"
-    }, self.options.adjust.min);
-    self.options.adjust.max = $.extend({
-            x: "scale",
-            y: "scale"
-    }, self.options.adjust.max);
 
     $canvas.on("mousemove", function(e) {
         var targ;
@@ -295,7 +385,14 @@ function Graph(options, $canvas) {
         var th = self.options.font_height;
 
         if (p.y >= th && p.y <= $canvas.height() - th) {
-            var l = self.v2l(p);
+            var l;
+            for (var t in this.traces) {
+                l = this.traces[t].v2l(p);
+                if (l)
+                    break;
+            }
+            if (!l)
+                return;
             var text = options.render_label("x", l.x) + ","
                 + options.render_label("y", l.y);
 
@@ -342,73 +439,6 @@ function Graph(options, $canvas) {
     self.traces = {};
 }
 /**
- * Convert a logical X to a canvas coordinate
- * @param x {number} ordinate
- * @private
- */
-Graph.prototype.x2v = function(x) {
-    "use strict";
-    var full_width = this.$canvas.width();
-
-    return Math.floor((x - this.options.min.x) * full_width
-                      / (this.options.max.x - this.options.min.x));
-};
-
-/**
- * Convert a logical X to a canvas coordinate
- * @param y {number} ordinate
- * @private
- */
-Graph.prototype.y2v = function(y) {
-    "use strict";
-    // Allow font_height above and below the drawing area for legend
-    var full_height = this.$canvas.height();
-    var font_height = this.options.font_height;
-    return Math.floor(full_height -
-            (font_height
-             + ((y - this.options.min.y)
-                * (full_height - 2 * font_height)
-                / (this.options.max.y - this.options.min.y))));
-};
-
-/**
- * Convert logical point on a trace to a physical point
- * @param {object} p {x:,y:} logical point (float)
- * @return {object} {x:,y:} physical point (int)
- * @private
- */
-Graph.prototype.l2v = function(p) {
-    "use strict";
-
-    return {
-        x: this.x2v(p.x),
-        y: this.y2v(p.y)
-    };
-};
-
-/**
- * Convert a canvas point to a logical point
- * @param {object} p {x:,y:} physical point (int)
- * @return {object} {x:,y:} logical point (float)
- * @private
- */
-Graph.prototype.v2l = function(p) {
-    "use strict";
-    var full_width = this.$canvas.width();
-    var full_height = this.$canvas.height();
-    var font_height = this.options.font_height;
-
-    return {
-        x: this.options.min.x + 
-            (this.options.max.x - this.options.min.x) * p.x / full_width,
-        y: this.options.min.y + 
-            (this.options.max.y - this.options.min.y)
-            * (full_height - p.y - font_height)
-            / (full_height - 2 * font_height)
-    };
-};
-
-/**
  * Add a point to the given trace on the graph.
  * @param {string} tracename name of the trace
  * @param x {number} x ordinate
@@ -421,22 +451,13 @@ Graph.prototype.addPoint = function(tracename, x, y) {
 
 /**
  * Add a trace to the graph, of the given type ("binary" or anything else for a line)
+ * @param {string} tracename unique trace name
+ * @param {Config} trace config (see Trace)
  * @return {Trace} the trace
  */
-Graph.prototype.addTrace = function(tracename, type) {
-    this.traces[tracename] = new Trace(this, tracename, type);
+Graph.prototype.addTrace = function(tracename, options) {
+    this.traces[tracename] = new Trace(this, tracename, options);
     return this.traces[tracename];
-};
-
-/**
- * Sort the points in a trace along the given axis
- * @private
- */
-Graph.prototype.sortPoints = function(tracename, axis) {
-    "use strict";
-    if (typeof this.traces[tracename] === "undefined")
-        return;
-    this.traces[tracename].sortPoints(axis);
 };
 
 /**
@@ -447,8 +468,10 @@ Graph.prototype.update = function() {
     var $canvas = this.$canvas;
     var options = this.options;
     var ctx = this.ctx;
+    var i, j, num_tr = 0;
 
-    if ($canvas.height() === 0)
+    for (i in this.traces) num_tr++;
+    if ($canvas.height() === 0 || num_tr === 0)
         return;
 
     // Rendering doesn't work unless you force the attrs
@@ -458,80 +481,38 @@ Graph.prototype.update = function() {
         $canvas.data("attrs_set", true);
     }
 
-    // Always fill the background and paint the window. We may blat
-    // some or all of this with the history image. We actually only
-    // need to paint the rightmost pixel, but this is cheap.
-
     // Background
     ctx.fillStyle = options.background_col;
     ctx.fillRect(0, 0, $canvas.width(), $canvas.height());
 
-    // Scale and clip the viewport
-    var i, j, e, t, clip, a = options.adjust;
-    var range = {
-        x: options.max.x - options.min.x,
-        y: options.max.y - options.min.y
-    };
+
+    // Tell the traces their containing boxes
+    // Allow font_height below the drawing area for legend
+    var trh = ($canvas.height() - this.options.font_height) / num_tr;
+    var troff = 0;
     for (i in this.traces) {
-        t = this.traces[i];
-        e = t.getExtents();
-        clip = false;
-        for (var ax in e.min) {
-            // Scale first to shift the end of a clipped axis
-            if (e.min[ax] < options.min[ax] && a.min[ax] === "scale")
-                options.min[ax] = e.min[ax];
-            if (e.max[ax] > options.max[ax] && a.max[ax] === "scale")
-                options.max[ax] = e.max[ax];
-            // Now apply clip, and flag a trace clip.
-            if (e.min[ax] < options.min[ax] && a.min[ax] === "clip") {
-                options.min[ax] = options.max[ax] - range[ax];
-                clip = true;
-            }
-            if (e.max[ax] > options.max[ax] && a.max[ax] === "clip") {
-                options.max[ax] = options.min[ax] + range[ax];
-                clip = true;
-            }
-        }
-        if (clip) {
-            t.clip(options.min, options.max);
-        }
+        var tit = this.traces[i];
+        tit.setViewport({
+            x: 0, y: troff, dx: $canvas.width(), dy: trh
+        });
+        troff += trh;
+        ctx.strokeStyle = tit.options.colour;
+        ctx.strokeRect(tit.viewport.x, tit.viewport.y,
+                       tit.viewport.dx, tit.viewport.dy);
     }
-    
+
     // Paint the traces
     for (i in this.traces) {
-//        if (typeof options.sort_axis[i] !== "undefined")
-//           this.traces[i].sortPoints(options.sort_axis[i]);
         this.traces[i].render();
     }
 
     // Legends
-    ctx.fillStyle = options.text_col;
-    ctx.strokeStyle = options.text_col;
     ctx.font = options.font_height + "px sans-serif";
-
-    var labels = { min: {}, max: {} };
-
-    for (i in { max: 0, min: 1 }) {
-        for (j in { x: 0, y: 1 }) {
-            if (options.render_label)
-                labels[i][j] = options.render_label(j, options[i][j]);
-            else
-                labels[i][j] = "" + options[i][j].toPrecision(4);
-        }
-    }
-
-    ctx.textBaseline = "top";
-    ctx.fillText(labels.max.y, 0, 0);
-    ctx.fillText(labels.min.x, ctx.measureText(labels.max.y).width + 20, 0);
-    ctx.fillText(labels.max.x,
-                 $canvas.width() - ctx.measureText(labels.max.x).width - 10, 0);
-
     ctx.textBaseline = "bottom";
-    ctx.fillText(labels.min.y, 0, $canvas.height());
 
-    var x = ctx.measureText(t).width + 20;
+    var x = 20;
     for (i in this.traces) {
-        x += this.traces[i].renderLabel(this, x, $canvas.height()) + 15;
+        x += this.traces[i].renderLabel(x, $canvas.height()) + 15;
     }
 };
 

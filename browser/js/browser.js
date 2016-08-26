@@ -16,9 +16,12 @@
     var config;
     var apis;
 
-    var trace_types = {
-        "pin:HW": "binary",
-        "pin:CH": "binary"
+    var trace_options = {
+        "pin:HW": { type: "binary", colour: "yellow" },
+        "pin:CH": { type: "binary", colour: "cyan" },
+        "thermostat:HW" : { colour: "orange" },
+        "thermostat:CH" : { colour: "red" },
+        "weather:MetOffice": {colour: "green" }
     };
 
     var poller;
@@ -327,20 +330,22 @@
                         if (axis === "x")
                             return new Date(trd * 1000).toISOString();
                         return (Math.round(trd * 10) / 10).toString();
-                    },
-                    min: {
-                        x: Date.now() / 1000 - 24 * 60 * 60, // 24 hours ago
-                        y: 5
-                    },
-                    max: {
-                        x: Date.now() / 1000,
-                        y: 40
                     }
                 });
                 var g = $tc.data("graph");
                 function createTrace(da, na) {
                     var basetime = da[0];
-                    var trace = g.addTrace(na, trace_types[na]);
+                    var options = trace_options[na];
+                    options.min =
+                        {
+                            x: Date.now() / 1000 - 24 * 60 * 60, // 24 hours ago
+                            y: options.type === "binary" ? 0 : 5
+                        };
+                    options.max = {
+                        x: Date.now() / 1000,
+                        y: options.type === "binary" ? 1 : 40
+                    };
+                    var trace = g.addTrace(na, options);
                     for (var j = 1; j < da.length; j += 2) {
                         trace.addPoint(basetime + da[j], da[j + 1]);
                     }
