@@ -161,7 +161,7 @@ Trace.prototype.getExtents = function() {
 Trace.prototype.digitalTrace = function(sample, g) {
     var slot_height = g.$canvas.height() / 10;
     var slot_base = (this.slot + 1) * slot_height;
-    return sample === 0 ? (slot_base + 1) : (slot_base + slot_height - 1);
+    return sample === 1 ? (slot_base + 1) : (slot_base + slot_height - 1);
 };
 
 /**
