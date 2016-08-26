@@ -8,7 +8,6 @@
 (function($) {
     "use strict";
 
-    var ajax;
     var setup_backoff = 10; // seconds
     var update_backoff = 10; // seconds
     var update_rate = 10; // seconds
@@ -58,7 +57,7 @@
                 var params = {
                     value: s
                 };
-                $.post(ajax + "/set/" + getPath($self),
+                $.post("/ajax/set/" + getPath($self),
                        JSON.stringify(params))
                     .success(function() {
                         $self.text(s);
@@ -91,7 +90,7 @@
             };
          
             // Away from home, set up to report after interval
-            $.post(ajax + "/request",
+            $.post("/ajax/request",
                    JSON.stringify(params),
                    function(/*raw*/) {
                    });
@@ -123,7 +122,7 @@
             name: "new rule",
             test: "function() { }"
         };
-        $.post(ajax + "/insert_rule/" + getPath($self),
+        $.post("/ajax/insert_rule/" + getPath($self),
                JSON.stringify(data))
             .done(function() {
                 // Add it to the DOM
@@ -149,7 +148,7 @@
         var $rules = $self.closest("[data-field='rule']");
         var $rule = $self.closest(".rule");
         stopPolling();
-        $.post(ajax + "/removeRule/" + getPath($self))
+        $.post("/ajax/removeRule/" + getPath($self))
             .done(function() {
                 // Remove it from the DOM
                 $rule.remove();
@@ -174,7 +173,7 @@
         if ($rel.length === 0)
             return false;
         stopPolling();
-        $.post(ajax + "/move_" + dir + "/" + getPath($self))
+        $.post("/ajax/move_" + dir + "/" + getPath($self))
             .done(function() {
                 if (dir === "down")
                     $rel.after($rule.remove());
@@ -295,7 +294,7 @@
      */
     $(document).on("poll", function() {
         $.get(
-            ajax + "/state",
+            "/ajax/state",
             function(raw) {
                 var data;
                 eval("data=" + raw);
@@ -320,14 +319,14 @@
     $(document).on("initialise_graph", function() {
         var $tc = $("#graph_canvas");
         $.get(
-            ajax + "/log",
+            "/ajax/log",
             function(raw) {
                 var data;
                 eval("data=" + raw);
                 $tc.autoscale_graph({
                     render_label: function(axis, trd) {
                         if (axis === "x")
-                            return new Date(trd * 1000).toISOString();
+                            return new Date(trd * 1000).toString();
                         return (Math.round(trd * 10) / 10).toString();
                     }
                 });
@@ -454,7 +453,7 @@
 
         // Can't use getJSON because of the rule functions
         $.get(
-            ajax + "/config",
+            "/ajax/config",
             function(raw) {
                 eval("config=" + raw);
                 $("#comms_error").html("");
@@ -482,7 +481,7 @@
                     configure();
                 }, setup_backoff * 1000);
             });
-    });
+    }
 
     $(document).ready(configure);
 })(jQuery);
