@@ -530,7 +530,7 @@ Controller.prototype.dispatch = function(path, data) {
         var until = data.until;
         if (typeof until === "string")
             until = Date.parse(until);
-        this.addRequest(data.pin, "Mobile " + data.source,
+        this.addRequest(data.pin, data.source,
                         parseInt(data.state), until);
         break;
     case "refresh_calendars":

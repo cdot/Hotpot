@@ -84,7 +84,7 @@
 
             var params = {
                 // until: , - no timeout
-                source: "debug",
+                source: "Browser",
                 pin: pin,
                 state: val
             };
