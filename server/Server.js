@@ -19,24 +19,48 @@ const TAG = "Server";
  * dependencies. Only supports POST and GET, does not support auth.
  * The server sits on the selected report and processes GET and POST
  * requests. The predefined root path `/ajax` is used to decide when to
- * route requests to the controller object. Otherwise requests are
- * handled as files.
+ * route requests to a dispatcher function. Otherwise requests are
+ * handled as files relative to the defined `docroot`.
  * @param {Config} config configuration object
+ * * `docroot`: path to the document root, may contain env vars
  * * `ssl` optional SSL configuration. Will create an HTTP server otherwise.
  *   * `key`: text of the SSL key OR
  *   * `key_file`: name of a file containing the SSL key
  *   * `cert`: text of the certificate OR
  *   * `cert_file`: name of a file containing the SSL certificate
  * * `port`: port to serve on (required)
+ * * `auth` optional basic auth configuration.
+ *   * `user` username of authorised user
+ *   * `pass` password
+ *   * `realm` authentication realm
+ * @param {function} (optional) dispatch function for handling ajax requests
+ * ```
+ * dispatch(Array path, Object params) => Promise
+ * ```
+ * where `path` is an array of path elements parsed from the URL and `params`
+ * is an object mapping parameter names to values. The return value is a
+ * promise that resolves to an object (or undefined, or null) that will be
+ * serialised to form the body of the response.
+ * The object must be JSON-ifiable. Without a dispatch function, the server
+ * will be a simple file server.
  * @class
  */
-function Server(config, controller) {
+function Server(config, dispatch) {
     "use strict";
 
     var self = this;
     self.config = config;
-    self.controller = controller;
+    self.dispatch = dispatch;
     self.ready = false;
+    if (typeof config.auth !== "undefined") {
+        var BasicAuth = require("basic-auth");
+        this.authenticate =  function(request) {
+            var credentials = BasicAuth(request);
+            return credentials
+                && credentials.name === config.user
+                && credentials.pass === config.pass;
+        };
+    }
 }
 module.exports = Server;
 
@@ -46,8 +70,17 @@ module.exports = Server;
  */
 Server.prototype.start = function() {
     var self = this;
+    var config = self.config;
 
     var handler = function(request, response) {
+        if (typeof this.authenticate !== "undefined"
+           && !this.authenticate(request)) {
+            response.statusCode = 401
+            response.setHeader('WWW-Authenticate', 'Basic realm="'
+                               + config.realm + '"')
+            response.end('Access denied');
+            return;
+        }
         if (self[request.method]) {
             self[request.method].call(self, request, response);
         } else {
@@ -59,14 +92,14 @@ Server.prototype.start = function() {
 
     var promise = Q();
 
-    var https = self.config.ssl;
-    if (typeof https !== "undefined") {
+    var ssl_cfg = config.ssl;
+    if (typeof ssl_cfg !== "undefined") {
         var options = {};
 
         promise = promise
 
         .then(function() {
-            return Config.fileableConfig(https, "key");
+            return Config.fileableConfig(ssl_cfg, "key");
         })
 
         .then(function(k) {
@@ -75,7 +108,7 @@ Server.prototype.start = function() {
         })
 
         .then(function() {
-            return Config.fileableConfig(https, "cert");
+            return Config.fileableConfig(ssl_cfg, "cert");
         })
 
         .then(function(c) {
@@ -119,21 +152,23 @@ Server.prototype.handle = function(path, params, request, response) {
 
     if (!this.ready) {
         // Not ready
-        response.statusCode = 500;
+        response.statusCode = 503;
+        response.write("Not ready");
         response.end();
         return;
     }
     var contentType = "text/plain";
     var promise;
 
+    // Allow cross-domain posting
     response.setHeader("Access-Control-Allow-Origin", "*");
     response.setHeader("Access-Control-Allow-Methods", "POST,GET");
 
     if (path[0] === "ajax") {
-        // AJAX command, destined for the controller
+        // AJAX command, destined for the dispatcher
         path.shift();
 
-        promise = this.controller.dispatch(path, params)
+        promise = this.dispatch(path, params)
 
         .then(function(reply) {
             var s = (typeof reply !== "undefined" && reply !== null)
@@ -165,7 +200,7 @@ Server.prototype.handle = function(path, params, request, response) {
     },
     function(error) {
         // Send the error message in the payload
-        console.error("ERROR" + error);
+        console.error("ERROR " + error);
         Utils.TRACE(TAG, error.stack);
         var e = error.toString();
         response.setHeader("Content-Type", "text/plain");

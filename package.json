@@ -2,7 +2,10 @@
     "name": "Hottie",
     "version": "0.0.0",
     "description": "Central heating controller",
-    "main": "Hottie.js",
+    "main": "Hotpot.js",
+    "bugs": {
+        "url" : "https://github.com/cdot/hottie/issues"
+    },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
@@ -21,20 +24,21 @@
         "pi"
     ],
     "dependencies": {
-        "ds18x20": "0.2.0",
-        "events": "1.1.0",
-        "follow-redirects": "0.2.0",
-        "fs": "0.0.2",
-        "http": "0.0.0",
-        "https": "1.0.0",
-        "mime-types": "2.1.11",
-        "node-getopt": "0.2.3",
-        "serialize-javascript": "1.2.0",
-        "url": "0.11.0",
-        "util": "0.10.3",
-        "googleapis": "12.2.0",
-        "google-auth-library": "0.9.8",
-        "q": "1.4.1"
+        "basic-auth": ">= 1.0.4",
+        "ds18x20": ">= 0.2.0",
+        "events": ">= 1.1.0",
+        "follow-redirects": ">= 0.2.0",
+        "fs": ">= 0.0.2",
+        "googleapis": ">= 12.2.0",
+        "google-auth-library": ">= 0.9.8",
+        "http": ">= 0.0.0",
+        "https": ">= 1.0.0",
+        "mime-types": ">= 2.1.11",
+        "node-getopt": ">= 0.2.3",
+        "q": ">= 1.4.1",
+        "serialize-javascript": ">= 1.2.0",
+        "url": ">= 0.11.0",
+        "util": ">= 0.10.3"
     },
     "analyze": true,
     "eslintConfig": {

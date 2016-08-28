@@ -62,7 +62,7 @@ The server supports command-line options as follows:
 ```
   -h, --help        Show this help
   -c, --config=ARG  Configuration file (default ./hotpot.cfg)
-  -d, --debug=ARG   Run in debug mode e.g. --debug all
+  -d, --debug[=ARG]   Run in debug mode e.g. --debug all
 ```
 All debug statements are tagged with the time and the module e.g 
 ```
@@ -71,12 +71,15 @@ All debug statements are tagged with the time and the module e.g
 You can choose just to monitor just particular modules e.g. `--debug=Server`,
 or you can enable `all` and then choose which modules to *ignore* by prepending a minus sign e.g. `--debug=all,-Historian,-Server`
 
+Developers should note that the server must be run with --debug on any
+platform that doesn't have the expected hardware (pins and thermostats)
+installed, so that appropriate device stubs can be put in place.
+
 The server is configured by Javascript read from a file (default `./hotpot.cfg`)After the initial setup, the HTTP interface can be used to query and modify
-the configuration. Every time the server configuration is changed, it will
-automatically save the configuration file.
+the configuration. If time the server configuration is changed from the browser interface, the configuration file will be automatically saved.
 
 An example configuration file is given in `example.hotpot.cfg`. The
-configuration file contains a structured Javascript object with fields
+configuration file contains a Javascript object with fields
 as follows:
 * `server` - sets up the HTTP(S) server
   * `ssl` (optional) HTTPS key server private key `key` and certificate `cert`.
@@ -105,8 +108,6 @@ as follows:
     * `secrets` - secrets used by Google calendar (see Setting up calendars, below)
   * `rule` - list of rules that are used to control state of the system. Rules can be specified inline in a function, or can be specified as a filename that is to be compiled. Rules are executed in the order they are specified. See **Rules**, below.
 
-See server/example.hotpot.cfg for a complete example.
-
 ## Weather
 Weather information is retrieved from the UK Meteorological Office data service, via a simple API that can easily be overridden with your own weather service provider. The class "MetOffice" is the reference implementation.
 
@@ -115,28 +116,27 @@ are available for free.
 
 ## Rules
 
-Rules are Javascript functions associated with thermostats.
+Rules are Javascript functions.
 ```Javascript
-function rule()
-'this' is the Controller object
+function rule() => boolean
 ```
 Each function is called in in a polling loop, and it it returns true,
 the evaluation will stop. Rule functions are called with 'this' set to
 the Controller.
 
-Rule functions can interrogate any part of the system using the internal APIs. Annotated example rules are given for Hot Water `server/hw_rules.js` and Central Heating `server/ch_rules.js`.
+Rule functions can interrogate any part of the system using the internal APIs.
+Annotated example rules are given for Hot Water `server/hw_rules.js` and
+Central Heating `server/ch_rules.js`.
 
 # Browser interface
+The browser interface gives access to the
+functions of the controller using AJAX requests to the server. It can
+be used to review temperature logs, and perform simple overrides such as
+boosting temperature. The following URL requests are available:
 
-The browser interface is a low-level debugging tool that gives access to the
-functions of the controller using AJAX requests to the server. It can also
-be used to review temperature logs and mobile status. The following URL requests
-are available:
-
-* `/config` - retrieve the configuration of the server (JSON)
-* `/state` - retrieve the current state of the server (JSON)
+* `/config` - retrieve the configuration of the controller (JSON)
+* `/state` - retrieve the current state of the controller (JSON)
 * `/log/{type}/{name}` - retrieve type `pin`, `thermostat`, or `weather` logs, or all logs if `{type}/{name}` is not given (or all `{type}` logs if `{name}` is not given)
-* `/apis` - retrieve all the apis (JSON)
 * `/remove_rule/{index}` - remove the rule at {index}
 * `/move_up/{index}` - move the rule at {index} up one place
 * `/move_down/{index}` - move the rule at {index} down one place
@@ -149,7 +149,7 @@ are available:
 
 # Calendars
 
-Hotpot can be controlled by any number of Google calendars linked to the app.
+Hotpot can interface to any number of Google calendars.
 
 ## Setting up a calendar
 Follow the instructions in https://developers.google.com/google-apps/calendar/quickstart/nodejs for configuring the calendar API.
@@ -183,4 +183,5 @@ Hotpot is controlled by events in the calendar which contain special commands in
 The format of commands is `Hotpot:PIN=STATE` where `PIN` can be the name of a pin in `hotpot.cfg` (e.g. `HW` or `CH`) and `STATE` can be a number (0=off, 1=on, 2=boost) or one of the commands `on`, `off` or `boost`. `ALL` is special pin that will apply the command to all pins.
 
 Note that calendar events are only used to generate requests. It is up to the
-rules whether and how those requests are interpreted.
+rules whether and how those requests are interpreted. Rules should always
+contain a condition to stop runaway temperature rises.
