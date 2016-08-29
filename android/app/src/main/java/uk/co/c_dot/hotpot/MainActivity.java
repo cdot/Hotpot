@@ -4,18 +4,16 @@
 package uk.co.c_dot.hotpot;
 
 import android.Manifest;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.StrictMode;
 
 import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
+import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -23,141 +21,158 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.android.gms.maps.model.LatLng;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.MalformedURLException;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Hotpot main application.
- * <p>
- * The Hotpot application is divided into two parts; there's this activity, which provides
- * the UI, and a TrackingService that does the actual work of finding the location and
- * communicating it to the server.
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String TAG = "HOTPOT/MainActivity";
 
     // Constants used in preferences and intents
     public static final String DOMAIN = "uk.co.c_dot.hotpot.";
+    public static final String PREF_URL = DOMAIN + "URL";
+    public static final String PREF_CERTS = DOMAIN + "CERTS";
 
-    private Context mContext;
-
-    private class BroadcastListener extends BroadcastReceiver {
-        public void onReceive(Context context, Intent intent) {
-            final TextView tv;
-            final Button butt;
-            Log.d(TAG, "handle broadcast message " + intent.getAction());
-            switch (intent.getAction()) {
-                case TrackingService.FENCE_CROSSED:
-                    Location pos = intent.getParcelableExtra("POS");
-                    String fence = intent.getStringExtra("FENCE");
-                    String trans = intent.getStringExtra("TRANSITION");
-                    String report = fence + " " + trans + " " + pos;
-                    tv = (TextView) findViewById(R.id.display_status);
-                    tv.setText(report);
-                    break;
-                case TrackingService.HOME_CHANGED:
-                    LatLng home = intent.getParcelableExtra("POS");
-                    tv = (TextView) findViewById(R.id.display_home);
-                    tv.setText(home.toString());
-                    try {
-                        JSONObject fences = new JSONObject(intent.getStringExtra("FENCES"));
-                        // TODO: display fences
-                    } catch (JSONException jse) {
-                        // Should never happen
-                        assert(false);
-                    }
-                    break;
-                case TrackingService.STARTED:
-                    Log.d(TAG, "Service has started");
-                    butt = ((Button) findViewById(R.id.action_restart));
-                    butt.setText(getResources().getString(R.string.reconnect));
-                    break;
-                case TrackingService.STOPPING:
-                    // Something has caused the TrackingService to stop
-                    String why = intent.getStringExtra("REASON");
-                    Log.d(TAG, "Service has stopped: " + why);
-                    Toast.makeText(mContext, why, Toast.LENGTH_LONG).show();
-                    tv = (TextView) findViewById(R.id.display_status);
-                    tv.setText(why);
-                    butt = ((Button) findViewById(R.id.action_restart));
-                    butt.setText(getResources().getString(R.string.connect));
-                    break;
-            }
-        }
-    }
-
-    /**
-     * Call only when we are sure we have all requisite permissions
-     */
-    private void startLocationService() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String url = prefs.getString(TrackingService.PREF_URL, null);
-        if (url != null || url.length() == 0) {
-            Intent intent = new Intent(this, TrackingService.class);
-            intent.setAction(TrackingService.START);
-            Log.d(TAG, "Starting location service");
-            startService(intent);
-        } else {
-            // TODO: start the settings activity?
-            Toast.makeText(this, "Cannot start location service; URL not set",
-                    Toast.LENGTH_LONG).show();
-        }
-    }
-
-    /**
-     * Call to stop the service
-     */
-    private void stopLocationService() {
-        Log.d(TAG, "Stopping location service");
-        Intent intent = new Intent(this, TrackingService.class);
-        intent.setAction(TrackingService.STOP);
-        stopService(intent);
-    }
-
-    /**
-     * Callback for permissions request. Overrides AppCompatActivity
-     *
-     * @param requestCode  code set in the request
-     * @param permissions  permissions asked for
-     * @param grantResults dunno
-     */
-    @Override
-    public void onRequestPermissionsResult(
-            int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 123
-                && grantResults.length > 0
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startLocationService();
-        } else {
-            Toast.makeText(this, "Permission Denied", Toast.LENGTH_LONG).show();
-        }
-    }
+    private String mAndroidId = null;
+    private Context mContext = null;
+    private Thread mListeningThread = null;
+    private ServerConnection mServerConnection = null;
 
     public void onClickBoostHW(View view) {
-        sendBroadcast(new Intent(TrackingService.BOOST_HW));
     }
 
     public void onClickBoostCH(View view) {
-        sendBroadcast(new Intent(TrackingService.BOOST_CH));
     }
 
     public void onClickClose(View view) {
-        stopLocationService(); // broadcast STOP to all running services
         finish();
     }
 
-    public void onClickRestart(View view) {
-        stopLocationService();
-        startLocationService();
+    private void updateTextView(JSONObject jd, String group, String item, String field, int id)
+            throws JSONException {
+        JSONObject g = jd.getJSONObject(group);
+        JSONObject v = g.getJSONObject(item);
+        double value = v.getDouble(field);
+        TextView tv = ((TextView) MainActivity.this.findViewById(id));
+        tv.setText("" + value);
+    }
+
+    private class ListeningThread extends Thread {
+        private Handler mHandler;
+
+        private class StateUpdater implements Runnable {
+            private StateResponseHandler mResponseHandler;
+
+            public StateUpdater() {
+                mResponseHandler = new StateResponseHandler();
+            }
+
+            public void run() {
+                try {
+                    JSONObject params = new JSONObject();
+                    params.put("device", mAndroidId);
+                    mServerConnection.POST("/ajax/state", params, mResponseHandler);
+                } catch (JSONException je) {
+                    throw new Error(je);
+                }
+            }
+        }
+
+        private class StateResponseHandler implements ServerConnection.ResponseHandler {
+            public void done(Object data) {
+                try {
+                    JSONObject jd = (JSONObject) data;
+                    updateTextView(jd, "thermostat", "HW", "temperature", R.id.HW_temp);
+                    updateTextView(jd, "thermostat", "CH", "temperature", R.id.CH_temp);
+                    updateTextView(jd, "pin", "HW", "state", R.id.HW_state);
+                    updateTextView(jd, "pin", "CH", "state", R.id.CH_state);
+                } catch (JSONException je) {
+                    Toast.makeText(mContext, "Problems decoding response from server: " + je,
+                            Toast.LENGTH_SHORT).show();
+                }
+                if (!ListeningThread.this.isInterrupted())
+                    mHandler.postDelayed(new StateUpdater(), 1);
+            }
+
+            public void error(Exception e) {
+                // No point carrying on, can't recover from this
+                Toast.makeText(mContext, "Problems talking to server: " + e, Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        public void run() {
+            Looper.prepare();
+            mHandler = new Handler();
+            mHandler.postDelayed(new StateUpdater(), 1);
+            Looper.loop();
+        }
+    }
+
+    /**
+     * Implements SharedPreferences.OnSharedPreferenceChangeListener
+     * https://51.9.106.58:13196
+     *
+     * @param prefs preferences object
+     * @param key   the preference that changed
+     */
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+        if (key.equals(PREF_URL)) {
+            String sURL = prefs.getString(key, null);
+            Log.d(TAG, "setURL " + sURL);
+            // Pull certificates from the server and store them in an invisible preference
+            SharedPreferences.Editor ed = prefs.edit();
+            ed.remove(PREF_CERTS);
+            if (sURL != null) {
+                try {
+                    // Kill the server comms thread
+                    if (mListeningThread != null)
+                        mListeningThread.interrupt();
+                    mServerConnection = new ServerConnection(sURL);
+                    Set<String> certs = mServerConnection.getCertificates();
+                    if (certs != null && certs.size() > 0) {
+                        Log.d(TAG, sURL + " provided " + certs.size() + " certificates");
+                        // It's a bit crap that preferences can't store an ordered list in extras,
+                        // but fortunately it doesn't matter.
+                        ed.putStringSet(PREF_CERTS, new HashSet<>(certs));
+                    } else if (mServerConnection.isSSL()) {
+                        Toast.makeText(this,
+                                "Protocol is https, but server did not provide any certificates",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                    mListeningThread = new ListeningThread();
+                    mListeningThread.start();
+                } catch (MalformedURLException mue) {
+                    Toast.makeText(this, "Not a valid URL: " + mue.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+            ed.apply();
+        }
+    }
+    /**
+     * Action on the options menu
+     *
+     * @param item the selected item
+     * @return true to consume the event
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_settings) {
+            // User chose the "Settings" item, show the app settings UI...
+            Intent i = new Intent(this, SettingsActivity.class);
+            startActivity(i);
+            return true;
+        }
     }
 
     /**
@@ -168,51 +183,22 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+
+        mAndroidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         mContext = this;
-        Log.d(TAG, "onCreate called");
 
-        EditText urlView = ((EditText) findViewById(R.id.server_url));
+        setContentView(R.layout.activity_main);
+
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        String curl = prefs.getString(TrackingService.PREF_URL, null);
-        if (curl != null)
-            urlView.setText(curl);
+        prefs.registerOnSharedPreferenceChangeListener(this);
+        String curl = prefs.getString(PREF_URL, null);
 
-        urlView.addTextChangedListener(new TextWatcher() {
-
-                    public void afterTextChanged(Editable s) {
-                        Log.d(TAG, "FUCK OFF YOU STUPID CUNT");
-                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-                        SharedPreferences.Editor ed = prefs.edit();
-                        ed.putString(TrackingService.PREF_URL, s.toString());
-                        ed.apply();
-                    }
-
-                    public void beforeTextChanged(CharSequence s, int start,
-                                                  int count, int after) {
-                    }
-
-                    public void onTextChanged(CharSequence s, int start,
-                                              int before, int count) {
-                    }
-                });
-
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(TrackingService.FENCE_CROSSED);
-        intentFilter.addAction(TrackingService.HOME_CHANGED);
-        intentFilter.addAction(TrackingService.STARTED);
-        intentFilter.addAction(TrackingService.STOPPING);
-        registerReceiver(new BroadcastListener(), intentFilter);
-
-        // Check we have permission to get the location - may have to do this in the service?
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+        // Check we have permission to use the internet
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET)
                 == PackageManager.PERMISSION_GRANTED) {
-            startLocationService();
         } else {
             ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.INTERNET},
+                    new String[]{Manifest.permission.INTERNET},
                     123);
         }
 

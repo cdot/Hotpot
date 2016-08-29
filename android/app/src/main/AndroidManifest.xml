@@ -11,7 +11,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/label"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+        android:theme="@style/HotpotTheme">
 
         <activity
             android:name=".MainActivity"
@@ -22,9 +22,10 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".TrackingService"
-            android:exported="false" />
+        <activity
+            android:name=".SettingsActivity"
+            android:label="Settings"
+            android:theme="@android:style/Theme.Black.NoTitleBar"></activity>
 
     </application>
 </manifest>

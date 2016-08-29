@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="@string/prefs_title">
+        <EditTextPreference
+            android:dialogTitle="@string/server_url"
+            android:inputType="textUri"
+            android:key="uk.co.c_dot.hotpot.URL"
+            android:summary="@string/server_url_desc"
+            android:title="@string/server_url" />
+    </PreferenceCategory>
+</PreferenceScreen>

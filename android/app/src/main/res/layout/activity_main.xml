@@ -10,32 +10,10 @@
         android:hint="@string/url_default"
         android:inputType="textUri" />
 
-    <Button
-        android:id="@+id/action_restart"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:onClick="onClickRestart"
-        android:text="@string/connect" />
-
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:labelFor="@+id/display_home"
-        android:text="@string/home_location"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/display_home"
-        android:layout_width="match_parent"
-        android:layout_height="20dp"
-        android:text="@string/unknown" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/boost"
-        android:contentDescription="@string/boost_help"
+        android:text="@string/HW"
         android:textStyle="bold" />
 
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -44,33 +22,110 @@
         android:layout_gravity="center_horizontal"
         android:orientation="horizontal">
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="5dp"
+            android:text="@string/state" />
+
+        <TextView
+            android:id="@+id/HW_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:text="@string/unknown" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="5dp"
+            android:text="@string/temp" />
+
+        <TextView
+            android:id="@+id/HW_temp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/unknown" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:text="°C" />
+
         <Button
             android:id="@+id/action_boost_HW"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="10dp"
             android:onClick="onClickBoostHW"
-            android:text="@string/action_boost_HW" />
-
-        <Button
-            android:id="@+id/action_boost_CH"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:onClick="onClickBoostCH"
-            android:text="@string/action_boost_CH" />
+            android:text="@string/boost" />
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:labelFor="@+id/display_status"
-        android:text="@string/status_title"
+        android:text="@string/CH"
         android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/display_status"
-        android:layout_width="match_parent"
-        android:layout_height="fill_parent"
-        android:text="@string/unknown" />
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="5dp"
+            android:text="@string/state" />
+
+        <TextView
+            android:id="@+id/CH_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:text="@string/unknown" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="5dp"
+            android:text="@string/temp" />
+
+        <TextView
+            android:id="@+id/CH_temp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/unknown" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:text="°C" />
+
+        <Button
+            android:id="@+id/action_boost_CH"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:onClick="onClickBoostCH"
+            android:text="@string/boost" />
+    </LinearLayout>
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/action_refresh_calendar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:onClick="onClickRefreshCalendar"
+            android:text="@string/refresh_calendar" />
+    </LinearLayout>
 </LinearLayout>

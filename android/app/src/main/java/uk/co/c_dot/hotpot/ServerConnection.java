@@ -48,7 +48,7 @@ import javax.net.ssl.X509TrustManager;
 /**
  * A connection to a server identified by a URL. Only supports POST requests with JSON responses.
  * Supports (optional) SSL with untrusted certificates (does not check hosts or certificates)
- *
+ * <p/>
  * When used in SSL mode this class makes some assumptions that are inherently insecure in order
  * to work with self-signed certificates. Specifically, the default hostname verification is
  * suspended, and it trusts arbitrary certificates (does not require certificates to be signed
@@ -125,13 +125,23 @@ public class ServerConnection {
      * fetch certificates from the remote server, loading them into the connection. Note that
      * this constructor must only be used with an absolutely trusted URL - for example, when
      * first defining the parameters of a connection that will subsequently be used with
-     * cached certificates.
+     * cached certificates. Automatically resolves any single level of redirect.
      *
      * @param url URL of trusted server
      * @throws MalformedURLException if the URL is bad, or the server didn't pass any certificates
      */
     public ServerConnection(String url) throws MalformedURLException {
         mURL = new URL(url);
+        try {
+            // Resolve any redirect
+            HttpURLConnection connection = connect(mURL);
+            URL realURL = connection.getURL();
+            if (realURL.equals(mURL)) {
+                mURL = realURL;
+            }
+        } catch (IOException ioe) {
+            Log.d(TAG, "IO excetion resolving redirect fetching certificates: " + ioe);
+        }
         mCertificates = null;
         if (mURL.getProtocol().equals("https")) {
             try {
@@ -316,6 +326,7 @@ public class ServerConnection {
 
     /**
      * Connect to the given using the appropriate protocol
+     *
      * @param url the URL to connect to
      * @throws IOException if there's a problem
      */
@@ -338,6 +349,7 @@ public class ServerConnection {
 
     /**
      * Reads a UTF-8 encoded string from the connection.
+     *
      * @param connection connection to read from
      * @return the response
      * @throws IOException if there's a problem
