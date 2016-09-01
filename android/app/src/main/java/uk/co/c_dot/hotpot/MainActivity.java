@@ -48,10 +48,12 @@ public class MainActivity extends AppCompatActivity
 
     private static final String TAG = "HOTPOT/MainActivity";
 
-    // Constants used in preferences and intents
+    // Constants used in preferences and intents. Must be consistent with string resources.
     public static final String DOMAIN = "uk.co.c_dot.hotpot.";
     public static final String PREF_URL = DOMAIN + "URL";
     public static final String PREF_FREQ = DOMAIN + "FREQ";
+    public static final String PREF_USER = DOMAIN + "USER";
+    public static final String PREF_PASS = DOMAIN + "PASS";
 
     // Broadcast messages coming from update thread
     private static final String UPDATE = DOMAIN + "UPDATE";
@@ -288,9 +290,11 @@ public class MainActivity extends AppCompatActivity
             return;
         }
         Log.d(TAG, "Starting server connection on " + sURL);
+        String user = prefs.getString(PREF_USER, null);
+        String pass = prefs.getString(PREF_PASS, null);
         try {
             // Probe the connection, looking for possible redirect
-            mServerConnection = new ServerConnection(sURL);
+            mServerConnection = new ServerConnection(sURL, user, pass);
             // Check SSL certificates
             if (mServerConnection.isSSL()) {
                 Set<Certificate> certs = mServerConnection.getCertificates();
@@ -341,10 +345,15 @@ public class MainActivity extends AppCompatActivity
      */
     @Override
     public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-        if (key.equals(PREF_URL)) {
-            resetServerConnection();
-        } else if (key.equals(PREF_FREQ)) {
-            Log.d(TAG, "set update freq " + prefs.getString(key, "5"));
+        switch (key) {
+            case PREF_URL:
+            case PREF_USER:
+            case PREF_PASS:
+                resetServerConnection();
+                break;
+            case PREF_FREQ:
+                Log.d(TAG, "set update freq " + prefs.getString(key, "5"));
+                break;
         }
     }
 

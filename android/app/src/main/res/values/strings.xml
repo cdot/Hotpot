@@ -14,15 +14,27 @@
     <string name="refresh_calendar">Refresh Calendar</string>
     <string name="refresh_state">Refresh State</string>
     <string name="server_title">Hotpot Server</string>
+    <string name="server_pass">Server Password</string>
+    <string name="server_pass_desc">None</string>
     <string name="server_url">Server URL</string>
     <string name="server_url_desc">No URL set yet</string>
+    <string name="server_user">Server Username</string>
+    <string name="server_user_desc">None</string>
     <string name="settings">Settings</string>
     <string name="state">State</string>
     <string name="temp">Temp</string>
     <string name="unknown">unknown</string>
     <string name="update_freq">Update Frequency</string>
     <string name="update_freq_desc">How often to update temperature/state, in seconds</string>
+
     <string name="FREQ">Update temperature/state every %s seconds</string>
+    <string name="PASS">******</string>
+    <string name="USER">%s</string>
     <string name="URL">Currently %s</string>
+
+    <string name="PREF_FREQ">uk.co.c_dot.hotpot.FREQ</string>
+    <string name="PREF_PASS">uk.co.c_dot.hotpot.PASS</string>
+    <string name="PREF_URL">uk.co.c_dot.hotpot.URL</string>
+    <string name="PREF_USER">uk.co.c_dot.hotpot.USER</string>
 </resources>
 

@@ -100,29 +100,15 @@ public class ServerConnection {
     private SSLContext mSSLContext = null;
 
     /**
+     * * Base64 encoded authentication string (if provided)
+     */
+    private String mAuthentication = null;
+
+    /**
      * Only used if this is an SSL connection. These are the certificates to be used with the
      * connection..
      */
     Set<Certificate> mCertificates = null;
-
-    /**
-     * Create a new server connection to the given URL with the given SSL certificates.
-     * Does not resolve redirects.
-     *
-     * @param url   server URL
-     * @param certs base 64 encoded SSL certificates
-     * @throws MalformedURLException if the URL is bad
-     * @throws KeyStoreException     if there's a problem loading the certificates
-     */
-    public ServerConnection(String url, Set<Certificate> certs)
-            throws MalformedURLException, KeyStoreException {
-        mURL = new URL(url);
-        mCertificates = certs;
-        if (mURL.getProtocol().equals("https")) {
-            loadKeyStore(certs);
-            mSSLContext = null; // to force reload
-        }
-    }
 
     /**
      * Create a new server connection to the given trusted URL, and, if the protocol is https,
@@ -134,13 +120,52 @@ public class ServerConnection {
      * @param url URL of trusted server
      * @throws MalformedURLException if the URL is bad, or the server didn't pass any certificates
      */
-    public ServerConnection(String url) throws MalformedURLException {
+    public ServerConnection(String url, String user, String pass) throws MalformedURLException {
         mURL = new URL(url);
         mCertificates = null;
-        // TODO: handle authentication
+
         Log.d(TAG, "Create server connection on " + mURL);
-        // Follow any redirect, either 30x status or HTML REFRESH
-        followRedirect();
+        if (user != null && pass != null) {
+            String auth = user + ":" + pass;
+		    mAuthentication = Base64.encodeToString(auth.getBytes(), Base64.NO_WRAP);
+        }
+
+        /**
+         * Given an initial URL, try and connect and see if a 30x redirect moves us on. If it does,
+         * follow the redirect and set a new mURL. If the connection succeeds and we can pull a body
+         * with a 200 status, inspect that body to see if it is HTML. If it is, and we can parse
+         * a REFRESH meta tag from it, then follow the redirect therein.
+         */
+        try {
+            HttpURLConnection connection = connect(mURL);
+            connection.setInstanceFollowRedirects(true);
+            Log.d(TAG, "Probe redirect RESPONSE CODE WAS " + connection.getResponseCode());
+
+            if (connection.getResponseCode() >= 400)
+                return;
+
+            String reply = readResponse(connection);
+
+            // Test for a 30x redirect
+            URL realURL = connection.getURL();
+
+            if (realURL.equals(mURL)) {
+                // No 30x redirect. But if the response is well-formed HTML, it may contain
+                //  a REFRESH meta-tag. Explore that option.
+                String redirect = exploreRedirect(reply);
+                if (redirect != null) {
+                    realURL = new URL(redirect);
+                    // Drop the path
+                    realURL = new URL(realURL.getProtocol(), realURL.getHost(), realURL.getPort(), "");
+                    Log.d(TAG, "REFRESH redirected to " + realURL);
+                }
+            } else
+                Log.d(TAG, connection.getResponseCode() + " redirected to " + realURL);
+            if (!realURL.equals(mURL))
+                mURL = realURL;
+        } catch (IOException ioe) {
+            Log.d(TAG, "IO exception resolving redirect: " + ioe);
+        }
         if (mURL.getProtocol().equals("https")) {
             try {
                 Set<Certificate> certs = fetchCertificates();
@@ -330,6 +355,7 @@ public class ServerConnection {
      * @throws IOException if there's a problem
      */
     private HttpURLConnection connect(URL url) throws IOException {
+        HttpURLConnection conn;
         if (url.getProtocol().equals("https")) {
             try {
                 HttpsURLConnection connection
@@ -337,13 +363,17 @@ public class ServerConnection {
                 connection.setHostnameVerifier(new UnselectiveHostnameVerifier());
                 SSLContext context = getContext();
                 connection.setSSLSocketFactory(context.getSocketFactory());
-                return connection;
+                conn = connection;
             } catch (UnknownHostException uhe) {
                 throw new IOException(uhe);
             }
         } else {
-            return (HttpURLConnection) url.openConnection();
+            conn = (HttpURLConnection) url.openConnection();
         }
+        conn.setUseCaches(false);
+        if (mAuthentication != null)
+            conn.setRequestProperty("Authorization", "Basic " + mAuthentication);
+        return conn;
     }
 
     /**
@@ -469,42 +499,6 @@ public class ServerConnection {
     }
 
     /**
-     * Given an initial URL, try and connect and see if a 30x redirect moves us on. If it does,
-     * follow the redirect and set a new mURL. If the connection succeeds and we can pull a body
-     * with a 200 status, inspect that body to see if it is HTML. If it is, and we can parse
-     * a REFRESH meta tag from it, then follow the redirect therein.
-     */
-    private void followRedirect() {
-        try {
-            HttpURLConnection connection = connect(mURL);
-            connection.setInstanceFollowRedirects(true);
-            Log.d(TAG, "Probe redirect RESPONSE CODE WAS " + connection.getResponseCode());
-            String reply = readResponse(connection);
-            if (connection.getResponseCode() >= 400)
-                return;
-
-            // Test for a 30x redirect
-            URL realURL = connection.getURL();
-            if (realURL.equals(mURL)) {
-                // No 30x redirect. But if the response is well-formed HTML, it may contain
-                //  a REFRESH meta-tag. Explore that option.
-                String redirect = exploreRedirect(reply);
-                if (redirect != null) {
-                    realURL = new URL(redirect);
-                    // Drop the path
-                    realURL = new URL(realURL.getProtocol(), realURL.getHost(), realURL.getPort(), "");
-                    Log.d(TAG, "REFRESH redirected to " + realURL);
-                }
-            } else
-                Log.d(TAG, connection.getResponseCode() + " redirected to " + realURL);
-            if (!realURL.equals(mURL))
-                mURL = realURL;
-        } catch (IOException ioe) {
-            Log.d(TAG, "IO exception resolving redirect: " + ioe);
-        }
-    }
-
-    /**
      * GET an request synchronously, calling a callback on receiving a response.
      *
      * @param path   URL path + params
@@ -518,6 +512,9 @@ public class ServerConnection {
             HttpURLConnection connection = connect(url);
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+            if (connection.getResponseCode() >= 300)
+                throw new IOException("Error " + connection.getResponseCode()
+                            + " " + connection.getResponseMessage());
             String reply = readResponse(connection);
             if (reply == null || reply.equals("")) {
                 Log.d(TAG, "GET response is null");
@@ -580,6 +577,9 @@ public class ServerConnection {
                 out.write(b);
                 out.close();
             }
+            if (connection.getResponseCode() >= 300)
+                throw new IOException("Error " + connection.getResponseCode()
+                        + " " + connection.getResponseMessage());
             String reply = readResponse(connection);
             if (reply == null || reply.equals("")) {
                 Log.d(TAG, "POST response is null");
