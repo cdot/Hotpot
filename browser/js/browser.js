@@ -17,8 +17,8 @@
     var trace_options = {
         "pin:HW": { type: "binary", colour: "yellow" },
         "pin:CH": { type: "binary", colour: "cyan" },
-        "thermostat:HW" : { colour: "orange" },
-        "thermostat:CH" : { colour: "red" },
+        "thermostat:HW": { colour: "orange" },
+        "thermostat:CH": { colour: "red" },
         "weather:MetOffice": {colour: "green" }
     };
 

@@ -53,12 +53,13 @@ function Server(config, dispatch) {
     self.dispatch = dispatch;
     self.ready = false;
     if (typeof config.auth !== "undefined") {
-        var BasicAuth = require("basic-auth");
-        this.authenticate =  function(request) {
+        self.authenticate = function(request) {
+            var BasicAuth = require("basic-auth");
             var credentials = BasicAuth(request);
-            return credentials
-                && credentials.name === config.user
-                && credentials.pass === config.pass;
+            if (typeof credentials === "undefined")
+                return false;
+            return (credentials.name === self.config.auth.user
+                    && credentials.pass === self.config.auth.pass);
         };
     }
 }
@@ -73,13 +74,15 @@ Server.prototype.start = function() {
     var config = self.config;
 
     var handler = function(request, response) {
-        if (typeof this.authenticate !== "undefined"
-           && !this.authenticate(request)) {
-            response.statusCode = 401
-            response.setHeader('WWW-Authenticate', 'Basic realm="'
-                               + config.realm + '"')
-            response.end('Access denied');
-            return;
+        if (typeof self.authenticate !== "undefined") {
+            if (!self.authenticate(request)) {
+                Utils.TRACE(TAG, "Authentication failed");
+                response.statusCode = 401;
+                response.setHeader('WWW-Authenticate', 'Basic realm="'
+                                   + config.auth.realm + '"');
+                response.end('Access denied');
+                return;
+            }
         }
         if (self[request.method]) {
             self[request.method].call(self, request, response);
@@ -114,6 +117,8 @@ Server.prototype.start = function() {
         .then(function(c) {
             options.cert = c;
             Utils.TRACE(TAG, "SSL certificate loaded");
+            if (typeof self.config.auth !== "undefined")
+                Utils.TRACE(TAG, "Requires authentication");
             Utils.TRACE(TAG, "HTTPS starting on port ", self.config.port);
         })
 
@@ -121,6 +126,8 @@ Server.prototype.start = function() {
             return require("https").createServer(options, handler);
         });
     } else {
+        if (typeof self.config.auth !== "undefined")
+            Utils.TRACE(TAG, "Requires authentication");
         Utils.TRACE(TAG, "HTTP starting on port ", self.config.port);
         promise = promise
         .then(function() {

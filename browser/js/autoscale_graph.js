@@ -23,14 +23,11 @@ const RIGHT = LEFT << 1;
  */
 function Trace(graph, name, options) {
     "use strict";
-    var self = this;
     this.name = name;
     this.graph = graph;
     this.points = [];
     options = $.extend({
         type: "continuous",
-        min: {},
-        max: {},
         colour: "white",
         adjust: {},
         min: {},
@@ -473,7 +470,7 @@ Graph.prototype.update = function() {
     var $canvas = this.$canvas;
     var options = this.options;
     var ctx = this.ctx;
-    var i, j, num_tr = 0;
+    var i, num_tr = 0;
 
     for (i in this.traces) num_tr++;
     if ($canvas.height() === 0 || num_tr === 0)
