@@ -144,7 +144,7 @@ boosting temperature. The following URL requests are available:
   will quickly be overridden by rules / requests.
 * `/set/rule/{index}/name?value=` - set a rule name
 * `/set/rule/{index}/test?value=` - set a rule test function
-* `/request?source={name};pin={name};state={1|1|2};until={epoch}` - set a request on behalf of the given source for the given pin, asking for the given state. The request will (optionally) remain active until the given date.
+* `/request?source={name};pin={name};state=[0|1|2];until={epoch}` - set a request on behalf of the given source for the given pin, asking for the given state. The request will (optionally) remain active until the given date.
 * `/refresh_calendars` - force a calendar refresh from google
 
 # Calendars

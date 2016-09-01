@@ -544,7 +544,7 @@ Controller.prototype.dispatch = function(path, data) {
     default:
         throw "Unrecognised command " + command;
     }
-    return Q.fcall(function() { return "OK"; });
+    return Q.fcall(function() { return { status: "OK" }; });
 };
 
 /**

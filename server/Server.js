@@ -140,12 +140,13 @@ Server.prototype.start = function() {
  * Common handling for POST or GET
  * @private
  */
-Server.prototype.handle = function(path, params, request, response) {
+Server.prototype.handle = function(spath, params, request, response) {
     "use strict";
 
-    if (path.indexOf("/") !== 0 || path.length === 0)
+    if (spath.indexOf("/") !== 0 || spath.length === 0)
         throw "Bad command";
-    path = path.substring(1).split("/");
+    spath = spath.substring(1);
+    var path = spath.split(/\/+/);
 
     if (path.length < 1)
         throw "Bad command";
@@ -175,6 +176,8 @@ Server.prototype.handle = function(path, params, request, response) {
                 ? serialize(reply) : "";
             return s;
         });
+    } else if (path.join("") === "") {
+        promise = Q("");
     } else {
         // Handle file lookup
         var filepath = Utils.expandEnvVars(this.config.docroot

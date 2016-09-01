@@ -3,6 +3,7 @@
  */
 package uk.co.c_dot.hotpot;
 
+import android.os.Looper;
 import android.util.Base64;
 import android.util.JsonReader;
 import android.util.JsonToken;
@@ -11,6 +12,9 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -99,18 +103,18 @@ public class ServerConnection {
      * Only used if this is an SSL connection. These are the certificates to be used with the
      * connection..
      */
-    Set<String> mCertificates = null;
+    Set<Certificate> mCertificates = null;
 
     /**
-     * Create a new server connection to the given URL with the given SSL certificates (only used
-     * if the protocol is https)
+     * Create a new server connection to the given URL with the given SSL certificates.
+     * Does not resolve redirects.
      *
      * @param url   server URL
      * @param certs base 64 encoded SSL certificates
      * @throws MalformedURLException if the URL is bad
      * @throws KeyStoreException     if there's a problem loading the certificates
      */
-    public ServerConnection(String url, Set<String> certs)
+    public ServerConnection(String url, Set<Certificate> certs)
             throws MalformedURLException, KeyStoreException {
         mURL = new URL(url);
         mCertificates = certs;
@@ -132,20 +136,14 @@ public class ServerConnection {
      */
     public ServerConnection(String url) throws MalformedURLException {
         mURL = new URL(url);
-        try {
-            // Resolve any redirect
-            HttpURLConnection connection = connect(mURL);
-            URL realURL = connection.getURL();
-            if (realURL.equals(mURL)) {
-                mURL = realURL;
-            }
-        } catch (IOException ioe) {
-            Log.d(TAG, "IO excetion resolving redirect fetching certificates: " + ioe);
-        }
         mCertificates = null;
+        // TODO: handle authentication
+        Log.d(TAG, "Create server connection on " + mURL);
+        // Follow any redirect, either 30x status or HTML REFRESH
+        followRedirect();
         if (mURL.getProtocol().equals("https")) {
             try {
-                Set<String> certs = fetchCertificates();
+                Set<Certificate> certs = fetchCertificates();
                 loadKeyStore(certs);
             } catch (KeyStoreException kse) {
                 // We don't treat this as an error, we just assume the server had no useable
@@ -165,12 +163,19 @@ public class ServerConnection {
     }
 
     /**
+     * Get the connected URL
+     */
+    public URL getUrl() {
+        return mURL;
+    }
+
+    /**
      * Get the certificates trusted for use with the connection. These are either certificates
      * presented when the object is set up, or those gleaned from the server.
      *
      * @return a set of base 64 encoded certificates
      */
-    public Set<String> getCertificates() {
+    public Set<Certificate> getCertificates() {
         return mCertificates;
     }
 
@@ -180,7 +185,7 @@ public class ServerConnection {
      * @param certs base 64 encoded certificates
      * @throws KeyStoreException if anything goes wrong
      */
-    private void loadKeyStore(Set<String> certs) throws KeyStoreException {
+    private void loadKeyStore(Set<Certificate> certs) throws KeyStoreException {
         Log.d(TAG, "Loading key store");
         mCertificates = new HashSet<>();
         try {
@@ -194,20 +199,17 @@ public class ServerConnection {
                 throw new KeyStoreException(nsa.getMessage());
             }
             if (certs != null) {
-                for (String b64_cert : certs) {
-                    Log.d(TAG, "Loading cert" + b64_cert);
-                    InputStream caInput = new ByteArrayInputStream(
-                            Base64.decode(b64_cert, Base64.DEFAULT));
-                    try {
-                        Certificate ca = cf.generateCertificate(caInput);
-                        Log.d(TAG, "trusted certificate ca="
+                int count = 0;
+                for (Certificate ca : certs) {
+                       Log.d(TAG, "Loading trusted certificate "
                                 + ((X509Certificate) ca).getSubjectDN());
                         mKeyStore.setCertificateEntry("ca", ca);
-                        mCertificates.add(b64_cert);
-                    } finally {
-                        caInput.close();
-                    }
+                        mCertificates.add(ca);
+                        count++;
                 }
+                Log.d(TAG, "Keystore loaded with " + count + " certificates");
+            } else {
+                Log.d(TAG, "No certs to load");
             }
         } catch (IOException ioe) {
             throw new KeyStoreException("IO exception " + ioe.getMessage());
@@ -289,9 +291,9 @@ public class ServerConnection {
      * empty TrustManager implementation, so must only be used under strict conditions
      * e.g. when setting up preferences.
      */
-    private Set<String> fetchCertificates() throws KeyStoreException {
+    private Set<Certificate> fetchCertificates() throws KeyStoreException {
         SSLContext sslCtx; // temporary, while we are fetching the certificates
-        Set<String> certs = new HashSet<>();
+        Set<Certificate> certs = new HashSet<>();
 
         try {
             sslCtx = SSLContext.getInstance("TLS");
@@ -310,14 +312,11 @@ public class ServerConnection {
 
             if (connection.getResponseCode() == 200) {
                 for (Certificate c : connection.getServerCertificates()) {
-                    String s = Base64.encodeToString(c.getEncoded(), Base64.DEFAULT);
-                    Log.d(TAG, "CERT=" + c.toString() + "=" + s);
-                    certs.add(s);
+                    Log.d(TAG, "Fetched certificate " + ((X509Certificate) c).getSubjectDN());
+                    certs.add(c);
                 }
             }
             connection.disconnect();
-        } catch (CertificateEncodingException cee) {
-            throw new KeyStoreException("Certificate encoding: " + cee.getMessage());
         } catch (IOException ioe) {
             throw new KeyStoreException("IO exception: " + ioe.getMessage());
         }
@@ -421,48 +420,202 @@ public class ServerConnection {
     }
 
     /**
+     * Parse the body as HTML, looking for a well formed META http-equiv="REFRESH" tag. The
+     * body must be valid XML up to the point where the tag is seen (or the first &lt;/head&gt;
+     * or &lt;body&gt is encountered)
+     *
+     * @param body retrieved page
+     * @return new URL being redirected to.
+     */
+    private String exploreRedirect(String body) {
+        try {
+            XmlPullParser parser = XmlPullParserFactory.newInstance().newPullParser();
+            parser.setInput(new StringReader(body));
+            int event;
+            while ((event = parser.next()) != XmlPullParser.END_DOCUMENT) {
+                if (event == XmlPullParser.START_TAG) {
+                    String tag = parser.getName().toLowerCase();
+                    if (tag.equals("meta")) {
+                        String attr, content = null;
+                        /*for (int i = 0; i < parser.getAttributeCount(); i++) {
+                            Log.d(TAG, "META " + parser.getAttributeNamespace(i)
+                                    + " pf " + parser.getAttributePrefix(i)
+                                    + " t " + parser.getAttributeType(i)
+                                    + "" + parser.getAttributeName(i));
+                        }*/
+                        attr = parser.getAttributeValue(null, "http-equiv");
+                        if (attr == null)
+                            continue;
+                        if (attr.toLowerCase().equals("refresh")) {
+                            content = parser.getAttributeValue(null, "content");
+                            if (content != null) {
+                                int us = content.indexOf(";");
+                                if (us >= 0)
+                                    return content.substring(us + 1).trim();
+                            }
+                        }
+                    } else if (tag.equals("body")) {
+                        break;
+                    }
+                } else if (event == XmlPullParser.END_TAG && parser.getName().toLowerCase().equals("head"))
+                    break;
+            }
+        } catch (XmlPullParserException xppe) {
+            Log.d(TAG, "XPPE " + xppe);
+        } catch (IOException ioe) {
+            Log.d(TAG, "IOE " + ioe);
+        }
+        return null;
+    }
+
+    /**
+     * Given an initial URL, try and connect and see if a 30x redirect moves us on. If it does,
+     * follow the redirect and set a new mURL. If the connection succeeds and we can pull a body
+     * with a 200 status, inspect that body to see if it is HTML. If it is, and we can parse
+     * a REFRESH meta tag from it, then follow the redirect therein.
+     */
+    private void followRedirect() {
+        try {
+            HttpURLConnection connection = connect(mURL);
+            connection.setInstanceFollowRedirects(true);
+            Log.d(TAG, "Probe redirect RESPONSE CODE WAS " + connection.getResponseCode());
+            String reply = readResponse(connection);
+            if (connection.getResponseCode() >= 400)
+                return;
+
+            // Test for a 30x redirect
+            URL realURL = connection.getURL();
+            if (realURL.equals(mURL)) {
+                // No 30x redirect. But if the response is well-formed HTML, it may contain
+                //  a REFRESH meta-tag. Explore that option.
+                String redirect = exploreRedirect(reply);
+                if (redirect != null) {
+                    realURL = new URL(redirect);
+                    // Drop the path
+                    realURL = new URL(realURL.getProtocol(), realURL.getHost(), realURL.getPort(), "");
+                    Log.d(TAG, "REFRESH redirected to " + realURL);
+                }
+            } else
+                Log.d(TAG, connection.getResponseCode() + " redirected to " + realURL);
+            if (!realURL.equals(mURL))
+                mURL = realURL;
+        } catch (IOException ioe) {
+            Log.d(TAG, "IO exception resolving redirect: " + ioe);
+        }
+    }
+
+    /**
+     * GET an request synchronously, calling a callback on receiving a response.
+     *
+     * @param path   URL path + params
+     * @param rh     Response handler
+     */
+    public void GET_sync(final String path, final ResponseHandler rh) {
+        try {
+            URL url = new URL(mURL.getProtocol(), mURL.getHost(), mURL.getPort(),
+                    path != null ? path : "");
+
+            HttpURLConnection connection = connect(url);
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+            String reply = readResponse(connection);
+            if (reply == null || reply.equals("")) {
+                Log.d(TAG, "GET response is null");
+                if (rh != null)
+                    rh.done(null);
+            } else {
+                try { // and parse it
+                    if (rh != null)
+                        rh.done(parseJSON(new JsonReader(new StringReader(reply))));
+                } catch (JSONException je) {
+                    Log.e(TAG, "Failed to parse JSON response " + je);
+                    if (rh != null)
+                        rh.error(je);
+                }
+            }
+        } catch (IOException ioe) {
+            Log.e(TAG, "IO exception while reading response: " + ioe);
+            if (rh != null)
+                rh.error(ioe);
+        }
+    }
+
+    /**
+     * GET an request asynchronously, calling a callback on receiving a response.
+     *
+     * @param path   URL path + params
+     * @param rh     Response handler
+     */
+    public void GET_async(final String path, final ResponseHandler rh) {
+        // Handle the request in a new thread to avoid blocking the message queue
+        Thread ut = new Thread() {
+            public void run() {
+                GET_sync(path, rh);
+            }
+        };
+        ut.start();
+    }
+
+    /**
+     * POST an request synchronously, calling a callback on receiving a response.
+     *
+     * @param path   URL path
+     * @param params Request parameters
+     * @param rh     Response handler
+     */
+    public void POST_sync(final String path, final JSONObject params,
+                          final ResponseHandler rh) {
+        try {
+            URL url = new URL(mURL.getProtocol(), mURL.getHost(), mURL.getPort(),
+                    path != null ? path : "");
+
+            HttpURLConnection connection = connect(url);
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+            if (params != null) {
+                connection.setDoOutput(true);
+                byte[] b = params.toString().getBytes(Charset.forName("UTF-8"));
+                connection.setFixedLengthStreamingMode(b.length);
+                OutputStream out = new BufferedOutputStream(connection.getOutputStream());
+                out.write(b);
+                out.close();
+            }
+            String reply = readResponse(connection);
+            if (reply == null || reply.equals("")) {
+                Log.d(TAG, "POST response is null");
+                if (rh != null)
+                    rh.done(null);
+            } else {
+                try { // and parse it
+                    if (rh != null)
+                        rh.done(parseJSON(new JsonReader(new StringReader(reply))));
+                } catch (JSONException je) {
+                    Log.e(TAG, "Failed to parse JSON response " + je);
+                    if (rh != null)
+                        rh.error(je);
+                }
+            }
+        } catch (IOException ioe) {
+            Log.e(TAG, "IO exception while reading response: " + ioe);
+            if (rh != null)
+                rh.error(ioe);
+        }
+    }
+
+    /**
      * POST an request asynchronously, calling a callback on receiving a response.
      *
      * @param path   URL path
      * @param params Request parameters
      * @param rh     Response handler
      */
-    public void POST(final String path, final JSONObject params, final ResponseHandler rh) {
-        Log.d(TAG, "POST " + path + " " + params);
+    public void POST_async(final String path, final JSONObject params,
+                           final ResponseHandler rh) {
+        Log.d(TAG, mURL + " POST " + path + " " + params);
         // Handle the request in a new thread to avoid blocking the message queue
         Thread ut = new Thread() {
             public void run() {
-                try {
-                    String sURL = mURL.toString()
-                            + (path != null ? path : "");
-
-                    byte[] b = params.toString().getBytes(Charset.forName("UTF-8"));
-
-                    HttpURLConnection connection = connect(new URL(sURL));
-
-                    connection.setDoOutput(true);
-                    connection.setFixedLengthStreamingMode(b.length);
-                    OutputStream out = new BufferedOutputStream(connection.getOutputStream());
-                    out.write(b);
-                    out.close();
-                    Log.d(TAG, "Waiting for POST response");
-                    String reply = readResponse(connection);
-                    if (reply == null || reply.equals("")) {
-                        Log.d(TAG, "POST response is null");
-                        rh.done(null);
-                    } else {
-                        Log.d(TAG, "Reading POST response " + reply);
-                        try { // and parse it
-                            rh.done(parseJSON(new JsonReader(new StringReader(reply))));
-                        } catch (JSONException je) {
-                            Log.e(TAG, "Failed to parse JSON response " + je);
-                            rh.error(je);
-                        }
-                    }
-                } catch (IOException ioe) {
-                    Log.e(TAG, "IO exception while reading response" + ioe);
-                    rh.error(ioe);
-                }
+                POST_sync(path, params, rh);
             }
         };
         ut.start();

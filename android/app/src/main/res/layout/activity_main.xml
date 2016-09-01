@@ -1,14 +1,17 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <EditText
-        android:id="@+id/server_url"
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/hotpot_toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/url_default"
-        android:inputType="textUri" />
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -103,7 +106,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="10dp"
-            android:text="°C" />
+            android:text="@string/degrees_c" />
 
         <Button
             android:id="@+id/action_boost_CH"
@@ -121,11 +124,20 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/action_refresh_calendar"
+            android:id="@+id/action_refresh_state"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
             android:layout_marginEnd="10dp"
-            android:onClick="onClickRefreshCalendar"
-            android:text="@string/refresh_calendar" />
+            android:onClick="onClickRefreshState"
+            android:text="@string/refresh_state" />
+        <Button
+        android:id="@+id/action_refresh_calendar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+        android:layout_marginEnd="10dp"
+        android:onClick="onClickRefreshCalendar"
+        android:text="@string/refresh_calendar" />
     </LinearLayout>
 </LinearLayout>
