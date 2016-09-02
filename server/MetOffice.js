@@ -9,6 +9,7 @@ const Q = require("q");
 const http = require("follow-redirects").http;
 
 const Location = require("../common/Location.js");
+const Time = require("../common/Time.js");
 
 const Utils = require("../common/Utils");
 
@@ -68,14 +69,13 @@ var MetOffice = function(config, location) {
 };
 
 /**
- * Set the lat/long of the place we are getting weather data for
+ * Return a promoise to set the lat/long of the place we are getting weather data for
  * @param {Location} loc where
  */
 MetOffice.prototype.setLocation = function(loc) {
     "use strict";
     var self = this;
-    Utils.TRACE(TAG, "starting at ", loc);
-    this.findNearestLocation(loc)
+    return this.findNearestLocation(loc)
     .then(function() {
         self.update();
     });
@@ -119,7 +119,7 @@ MetOffice.prototype.findClosest = function(data, loc) {
     var best, mindist = Number.MAX_VALUE;
     for (var i in list) {
         var ll = new Location(list[i]);
-        var dist = loc.haversine(ll);
+        var dist = ll.haversine(loc);
         if (dist < mindist) {
             mindist = dist;
             best = list[i];
@@ -187,7 +187,6 @@ MetOffice.prototype.analyseWeather = function(data) {
     for (i in periods) {
         var period = periods[i];
         var baseline = Date.parse(period.value);
-Utils.TRACE(TAG, "Baseline is ", Date, baseline);
         if (typeof this.historian !== "undefined")
             this.historian.reset(baseline);
 
