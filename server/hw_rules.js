@@ -1,10 +1,10 @@
-function() {
+function () {
 
     // Get the current state of the HW pin
     var state = this.pin.HW.getState();
 
     // Check the temperature of the HW thermostat
-    if (this.thermostat.HW.temperature > 40) {
+    if (this.thermostat.HW.temperature > 45) {
         // Hot enough, so switch off regardless of other rules
         if (state === 1) {
             Utils.TRACE("Rules", "HW is ", this.thermostat.HW.temperature,
@@ -37,7 +37,7 @@ function() {
     }
 
     // we are in time band
-    if (state === 0 && this.thermostat.HW.temperature < 38) {
+    if (state === 0 && this.thermostat.HW.temperature < 42) {
         Utils.TRACE("Rules", "HW only ", this.thermostat.HW.temperature,
                     "°C, so on");
         this.setPin("HW", 1);
