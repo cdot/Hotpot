@@ -78,35 +78,7 @@ installed, so that appropriate device stubs can be put in place.
 The server is configured by Javascript read from a file (default `./hotpot.cfg`)After the initial setup, the HTTP interface can be used to query and modify
 the configuration. If time the server configuration is changed from the browser interface, the configuration file will be automatically saved.
 
-An example configuration file is given in `example.hotpot.cfg`. The
-configuration file contains a Javascript object with fields
-as follows:
-* `server` - sets up the HTTP(S) server
-  * `ssl` (optional) HTTPS key server private key `key` and certificate `cert`.
-   If no private key and certificate are given, an HTTP server will be used.
-  * `port` - the network port to use (default is 13196)
-  * `location` - sets the latitude and longitude of the home location
-* `apis` - access keys etc. for public API keys
-  * `weather` - sets up access to the weather server (see **Weather** below).
-  * `google_maps` - sets up access to Google maps (see **Routing** below).
-* `controller`
-  * `thermostat` - sets up the DS18X20 thermostats available to the system. This object is indexed by the (user-assigned) name of the thermostat. Each thermostat has:
-    * `id` - used to communicate with the sensor
-    * `poll_interval` - (optional) gap between polls, in ms (default 1000)
-    * `history` (optional)
-      * `file` - (required) pathname to file to store history for this thermostat
-      * `interval` - gap between history snapshots, in seconds (default 60 i.e. once every minute)
-      * `limit` (optional, if not given then maxbytes is required) number of snapshots to keep in history file. At least this many, and on occasion up to 2X as many, snapshots will be stored (24 * 60)
-      * `maxbytes` (optional, if not specified then `limit` and `interval` are required) can be specified to limit the size of the history file to a certain number of bytes.
-  * `pin` - sets up the GPIO pins, mapping the pin name to the GPIO pin number. The pin names `HW` and `CH` have special support to take account of a subtle dependency in Y-plan systems, but otherwise pin names are up to the user.
-    * `history` - (optional) sets up a history log recording the pin state. See `thermostat.history` above for details.
-  * `mobile` - sets up the mobiles, each name maps to:
-    * `id` - the unique ID of the mobile e.g. the Android device identifier. `debug` is used for browsers.
-  * `calendar` - sets up calendars
-    * `id` - name of th calendar e.g. `primary`
-    * `auth_cache`: pathname of a file on the server used to cache the authentication for this calendar
-    * `secrets` - secrets used by Google calendar (see Setting up calendars, below)
-  * `rule` - list of rules that are used to control state of the system. Rules can be specified inline in a function, or can be specified as a filename that is to be compiled. Rules are executed in the order they are specified. See **Rules**, below.
+An annotated example configuration file is given in `example.hotpot.cfg`.
 
 ## Weather
 Weather information is retrieved from the UK Meteorological Office data service, via a simple API that can easily be overridden with your own weather service provider. The class "MetOffice" is the reference implementation.
@@ -128,8 +100,8 @@ Rule functions can interrogate any part of the system using the internal APIs.
 Annotated example rules are given for Hot Water `server/hw_rules.js` and
 Central Heating `server/ch_rules.js`.
 
-# Browser interface
-The browser interface gives access to the
+# AJAX interface
+The AJAX interface gives access to the
 functions of the controller using AJAX requests to the server. It can
 be used to review temperature logs, and perform simple overrides such as
 boosting temperature. The following URL requests are available:
@@ -185,3 +157,16 @@ The format of commands is `Hotpot:PIN=STATE` where `PIN` can be the name of a pi
 Note that calendar events are only used to generate requests. It is up to the
 rules whether and how those requests are interpreted. Rules should always
 contain a condition to stop runaway temperature rises.
+
+# Android App
+The Android app provides a simple interface to a Hotpot server.
+Setup requires the server URL and authentication details. The app will
+interrogate the server and update status so long as the device isn't using
+mobile data; if it starts using mobile data, it has to be refreshed on demand.
+App users can boost pins, but that's the limit of their control.
+
+# Browser App
+The browser app is served automatically when `/browser.html` is loaded from
+a browser. The app provides similar capabilities to the Android app, though it
+adds continuous monitoring of temperatures and states of the system. Users of the browser app can also remotely edit rules and upload the changes.
+

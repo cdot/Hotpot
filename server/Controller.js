@@ -90,7 +90,7 @@ Controller.prototype.createWeatherAgents = function(configs) {
     if (Object.keys(configs).length > 0) {
         var self = this;
         Utils.forEach(configs, function(config, name) {
-            var WeatherAgent = require("./" + config.class + ".js");
+            var WeatherAgent = require("./" + name + ".js");
             self.weather[name] = new WeatherAgent(config, self.location);
         });
     }

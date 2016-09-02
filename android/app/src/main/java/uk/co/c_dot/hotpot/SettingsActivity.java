@@ -37,6 +37,8 @@ public class SettingsActivity extends PreferenceActivity {
             // Force initialisation from shared preferences
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
             onSharedPreferenceChanged(prefs, MainActivity.PREF_URL);
+            onSharedPreferenceChanged(prefs, MainActivity.PREF_USER);
+            onSharedPreferenceChanged(prefs, MainActivity.PREF_PASS);
             onSharedPreferenceChanged(prefs, MainActivity.PREF_FREQ);
         }
 

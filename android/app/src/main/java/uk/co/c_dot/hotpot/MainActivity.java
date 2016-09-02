@@ -10,6 +10,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
+import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -24,11 +26,11 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
+import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.support.v7.widget.Toolbar;
@@ -38,6 +40,9 @@ import org.json.JSONObject;
 
 import java.net.MalformedURLException;
 import java.security.cert.Certificate;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Set;
 
 /**
@@ -66,24 +71,33 @@ public class MainActivity extends AppCompatActivity
     private ListeningThread mListeningThread = null;
     private int mThreadCounter = 0;
 
-    private void boost(String pin) {
+    // Record of which pins are boosted
+    private HashMap<String, Boolean> mBoosted;
+
+    /**
+     * Boost (or unboost) the given pin
+     * @param pin the pin name
+     */
+    private void toggleBoost(View view, String pin) {
         JSONObject params = new JSONObject();
         try {
             params.put("source", mAndroidId);
             params.put("pin", pin);
-            params.put("state", "2");
+            params.put("state", mBoosted.get(pin) ? 0 : 2);
+            // When a boost button state changes, the button label is changed until the
+            // next update from the server, to indicate we are pending a changed
+            ((TextView)view).setText(getResources().getString(
+                    mBoosted.get(pin) ? R.string.pending_off : R.string.pending_on));
         } catch (JSONException je) {
         }
         mServerConnection.POST_async("/ajax/request", params, null);
     }
 
     public void onClickBoostHW(View view) {
-        boost("HW");
+        toggleBoost(view, "HW");
     }
 
-    public void onClickBoostCH(View view) {
-        boost("CH");
-    }
+    public void onClickBoostCH(View view) { toggleBoost(view, "CH"); }
 
     public void onClickRefreshCalendar(View view) {
         mServerConnection.GET_async("/ajax/refresh_calendars", null);
@@ -140,14 +154,57 @@ public class MainActivity extends AppCompatActivity
     private class BroadcastListener extends BroadcastReceiver {
         @Override
         public void onReceive(Context ctx, Intent i) {
-            if (i.getAction().equals(UPDATE)) {
-                View v = MainActivity.this.findViewById(i.getIntExtra("id", 0));
-                if (v instanceof Button) // Button is a subclass of textView so must be first
-                    ((Button) v).setEnabled(Boolean.parseBoolean(i.getStringExtra("value")));
-                else if (v instanceof TextView)
-                    ((TextView) v).setText(i.getStringExtra("value"));
-                else
-                    Log.e(TAG, "Unexpected type in UPDATE");
+            if (!i.getAction().equals(UPDATE))
+                return;
+            Resources res = getResources();
+            TextView v;
+            JSONObject group, item, req;
+            int state;
+            boolean boosted;
+            try {
+                JSONObject jd = new JSONObject(i.getStringExtra("state"));
+                v = (TextView) MainActivity.this.findViewById(R.id.update_time);
+                v.setText(DateFormat.format(res.getString(R.string.date_format), jd.getLong("time")));
+
+                group = jd.getJSONObject("thermostat");
+                v = (TextView) MainActivity.this.findViewById(R.id.HW_temp);
+                v.setText(String.format("%.2f", group.getJSONObject("HW").getDouble("temperature")));
+                v = (TextView) MainActivity.this.findViewById(R.id.CH_temp);
+                v.setText(String.format("%.2f", group.getJSONObject("CH").getDouble("temperature")));
+
+                group = jd.getJSONObject("pin");
+
+                item = group.getJSONObject("HW");
+                state = item.getInt("state");
+                boosted = false;
+                try { // might not be there
+                    req = item.getJSONObject("request");
+                    boosted = (req != null && req.getInt("state") == 2);
+                } catch (JSONException je) {
+                }
+                mBoosted.put("HW", boosted);
+                v = (TextView) MainActivity.this.findViewById(R.id.HW_state);
+                v.setText(boosted ? res.getString(R.string.boosted) : String.format("%d", state));
+                v = (TextView) MainActivity.this.findViewById(R.id.action_boost_HW);
+                v.setText(res.getString(boosted ? R.string.unboost : R.string.boost));
+
+                item = group.getJSONObject("CH");
+                state = item.getInt("state");
+                boosted = false;
+                try { // might not be there
+                    req = item.getJSONObject("request");
+                    boosted = (req != null && req.getInt("state") == 2);
+                } catch (JSONException je) {
+                }
+                mBoosted.put("CH", boosted);
+                v = (TextView) MainActivity.this.findViewById(R.id.CH_state);
+                v.setText(boosted ? res.getString(R.string.boosted) : String.format("%d", state));
+                v = (TextView) MainActivity.this.findViewById(R.id.action_boost_CH);
+                v.setText(res.getString(boosted ? R.string.unboost : R.string.boost));
+            } catch (JSONException je) {
+                String mess = getResources().getString(R.string.ERR_edr, je);
+                Log.e(TAG, mess);
+                Toast.makeText(MainActivity.this, mess, Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -164,50 +221,16 @@ public class MainActivity extends AppCompatActivity
 
         // Send a field value update to the main activity
         private void send(String action, int id, Object value) {
-            Intent i = new Intent();
-            i.setAction(UPDATE);
-            i.putExtra("id", id);
-            i.putExtra("value", value.toString());
-            LocalBroadcastManager.getInstance(MainActivity.this).sendBroadcast(i);
+
         }
 
         // Implements ServerConnection.ResponseHandler
         @Override
         public void done(Object data) {
-            JSONObject jd = (JSONObject) data, ths, pins, req, pin;
-            String state;
-            try {
-                ths = jd.getJSONObject("thermostat");
-                send(UPDATE, R.id.HW_temp, String.format("%.2f", ths.getJSONObject("HW").getDouble("temperature")));
-                send(UPDATE, R.id.CH_temp, String.format("%.2f", ths.getJSONObject("CH").getDouble("temperature")));
-
-                pins = jd.getJSONObject("pin");
-
-                pin = pins.getJSONObject("HW");
-                state = "" + pin.getInt("state");
-                try {
-                    req = pin.getJSONObject("request");
-                    if (req != null && req.getInt("state") == 2)
-                        state = "BOOSTED";
-                } catch (JSONException je) {
-                }
-                send(UPDATE, R.id.HW_state, state);
-
-                pin = pins.getJSONObject("CH");
-                state = "" + pin.getInt("state");
-                try {
-                    req = pin.getJSONObject("request");
-                    if (req != null && req.getInt("state") == 2)
-                        state = "BOOSTED";
-                } catch (JSONException je) {
-                }
-                send(UPDATE, R.id.CH_state, state);
-
-            } catch (JSONException je) {
-                String mess = "Exception decoding response from server: " + je;
-                Log.e(TAG, mess);
-                Toast.makeText(MainActivity.this, mess, Toast.LENGTH_SHORT).show();
-            }
+            Intent i = new Intent();
+            i.setAction(UPDATE);
+            i.putExtra("state", data.toString());
+            LocalBroadcastManager.getInstance(MainActivity.this).sendBroadcast(i);
             if (callback != null)
                 callback.run();
         }
@@ -215,9 +238,9 @@ public class MainActivity extends AppCompatActivity
         // Implements ServerConnection.ResponseHandler
         @Override
         public void error(Exception e) {
-            String mess = "Problems talking to server: " + e;
+            String mess = getResources().getString(R.string.ERR_ptts, e);
             Log.e(TAG, mess);
-            Toast.makeText(MainActivity.this, mess, Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, mess, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -300,14 +323,14 @@ public class MainActivity extends AppCompatActivity
                 Set<Certificate> certs = mServerConnection.getCertificates();
                 if (certs == null || certs.size() == 0) {
                     Toast.makeText(MainActivity.this,
-                            "Protocol is https, but server did not provide any certificates",
+                            getResources().getString(R.string.ERR_nocert),
                             Toast.LENGTH_SHORT).show();
                 }
             }
             Log.d(TAG, "Connection to " + mServerConnection.getUrl() + " established");
             startListeningThread();
         } catch (MalformedURLException mue) {
-            String mess = "Not a valid URL: " + mue.getMessage();
+            String mess = getResources().getString(R.string.ERR_nvu, mue.getMessage());
             Log.e(TAG, mess);
             Toast.makeText(MainActivity.this, mess, Toast.LENGTH_SHORT).show();
         }
@@ -332,7 +355,7 @@ public class MainActivity extends AppCompatActivity
             mAllowedToPOST = true;
             resetServerConnection();
         } else {
-            Toast.makeText(this, "Permission Denied", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getResources().getString(R.string.ERR_pd), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -396,6 +419,10 @@ public class MainActivity extends AppCompatActivity
     public void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "onCreate");
         super.onCreate(savedInstanceState);
+
+        mBoosted = new HashMap<>();
+        mBoosted.put("HW", false);
+        mBoosted.put("CH", false);
 
         mAndroidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         Log.d(TAG, "androidID " + mAndroidId);

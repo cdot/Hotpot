@@ -173,7 +173,7 @@ public class ServerConnection {
             } catch (KeyStoreException kse) {
                 // We don't treat this as an error, we just assume the server had no useable
                 // certificates to offer us
-                Log.d(TAG, "Failure fetching certificates: " + kse);
+                Log.e(TAG, "Failure fetching certificates: " + kse);
             }
         }
     }
@@ -237,9 +237,9 @@ public class ServerConnection {
                 Log.d(TAG, "No certs to load");
             }
         } catch (IOException ioe) {
-            throw new KeyStoreException("IO exception " + ioe.getMessage());
+            throw new KeyStoreException(ioe.getMessage());
         } catch (CertificateException ce) {
-            throw new KeyStoreException("Certificate exception " + ce.getMessage());
+            throw new KeyStoreException(ce.getMessage());
         }
     }
 
@@ -343,7 +343,7 @@ public class ServerConnection {
             }
             connection.disconnect();
         } catch (IOException ioe) {
-            throw new KeyStoreException("IO exception: " + ioe.getMessage());
+            throw new KeyStoreException(ioe.getMessage());
         }
         return certs;
     }
