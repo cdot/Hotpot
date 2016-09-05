@@ -15,7 +15,7 @@ const readline = require("readline");
 
 const Utils = require("../common/Utils.js");
 
-const Config = require("./Config.js");
+const Config = require("../common/Config.js");
 
 const HELP = "Hotpot Google Calendar Authorisation\n"
     + "This program will cache the access token required to access "

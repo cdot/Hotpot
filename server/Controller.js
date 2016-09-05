@@ -7,11 +7,11 @@ const Events = require("events").EventEmitter;
 const Q = require("q");
 
 const Utils = require("../common/Utils.js");
+const Config = require("../common/Config.js");
 
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
 const Rule = require("./Rule.js");
-const Config = require("./Config");
 
 const TAG = "Controller";
 

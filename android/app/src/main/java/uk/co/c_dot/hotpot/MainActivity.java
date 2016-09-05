@@ -38,6 +38,7 @@ import android.support.v7.widget.Toolbar;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.security.cert.Certificate;
 import java.text.SimpleDateFormat;
@@ -318,18 +319,9 @@ public class MainActivity extends AppCompatActivity
         try {
             // Probe the connection, looking for possible redirect
             mServerConnection = new ServerConnection(sURL, user, pass);
-            // Check SSL certificates
-            if (mServerConnection.isSSL()) {
-                Set<Certificate> certs = mServerConnection.getCertificates();
-                if (certs == null || certs.size() == 0) {
-                    Toast.makeText(MainActivity.this,
-                            getResources().getString(R.string.ERR_nocert),
-                            Toast.LENGTH_SHORT).show();
-                }
-            }
             Log.d(TAG, "Connection to " + mServerConnection.getUrl() + " established");
             startListeningThread();
-        } catch (MalformedURLException mue) {
+        } catch (IOException mue) {
             String mess = getResources().getString(R.string.ERR_nvu, mue.getMessage());
             Log.e(TAG, mess);
             Toast.makeText(MainActivity.this, mess, Toast.LENGTH_SHORT).show();

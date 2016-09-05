@@ -3,8 +3,8 @@ const getopt = require("node-getopt");
 const Q = require("q");
 
 const Utils = require("../common/Utils.js");
+const Config = require("../common/Config.js");
 
-const Config = require("./Config.js");
 const Calendar = require("./Calendar.js");
 
 var cliopt = getopt.create([

@@ -15,10 +15,10 @@ const Q = require("q");
 
 const Location = require("../common/Location.js");
 const Utils = require("../common/Utils.js");
+const Config = require("../common/Config.js");
 
 const Server = require("./Server.js");
 const Controller = require("./Controller.js");
-const Config = require("./Config.js");
 
 const TAG = "Hotpot";
 

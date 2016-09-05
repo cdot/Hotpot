@@ -3,62 +3,46 @@
 /*eslint-env node */
 
 /**
- * Stand-alone program to:
- * * Get the current public IP address of this host
- * * Compare it with the IP address stored in a web-accessible file
- * * Update that file if the address is different
  * @module GetIP
+ * See README.md for information.
  */
-
-/*
-{
-    debug: true,
-    netgear_router: {
-        url: "http://admin:password@192.168.1.1/RST_status.htm",
-        logout_url: "http://192.168.1.1/LGO_logout.htm"
-    },
-    ftp: {
-        debugEnable: true,
-        host: "ftp.isp.net",
-        user: "example",
-        pass: "password",
-        path: "/htdocs/hotpot.html"
-    },
-    http: {
-        host: "example.co.uk",
-        port: "80",
-        path: "/hotpot.html"
-    },
-    target: {
-        protocol: "https",
-        port: 13196,
-        path: ""
-    }
-}
-*/
-
+const getopt = require("node-getopt");
 const Q = require("q");
 const JSFtp = require("jsftp");
 const Fs = require("fs");
+const readFile = Q.denodeify(Fs.readFile);
+
 const Utils = require("../common/Utils");
+const Config = require("../common/Config.js");
+
+var cliopt = getopt.create([
+    [ "h", "help", "Show this help" ],
+    [ "", "debug", "Run in debug mode" ],
+    [ "", "force", "Force an update, even if the target hasn't changed" ],
+    [ "c", "config=ARG", "Configuration file (default ./GetIP.cfg)" ]
+])
+    .bindHelp()
+    .parseSystem()
+    .options;
+
+if (typeof cliopt.config === "undefined")
+    cliopt.config = "./GetIP.cfg";
+
+if (cliopt.debug)
+    Utils.setTRACE("all");
 
 var config;
-eval("config=" + Fs.readFileSync("./getip.config"));
 
-const TEMPLATE = '<!DOCTYPE html\n' +
-  'PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"\n' +
-  '"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n' +
-  '<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">\n' +
-  '<head>\n' +
-  '<title>Untitled Document</title>\n' +
-  '<meta http-equiv="REFRESH" content="0; #protocol://#ipaddr#port#path" />\n' +
-  '<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />\n' +
-  '</head>\n' +
-  '<body>\n' +
-  'Redirecting\n' +
-  '</body>';
+Config.load(cliopt.config)
+.done(function(cfg) {
+    config = cfg;
+    step1();
+});
 
-// Update the IP address using FTP, if it has changed
+/**
+ * Return a promise to update the IP address using FTP, if it has changed
+ * (or config.force is on)
+ */
 function update(data) {
     "use strict";
 
@@ -66,27 +50,29 @@ function update(data) {
 
     if (config.ftp.debugEnable) {
         Ftp.on("jsftp_debug", function(eventType, daa) {
-            Utils.TRACE("DEBUG: ", eventType);
+            Utils.TRACE("FTP DEBUG: ", eventType);
             Utils.TRACE(JSON.stringify(daa, null, 2));
         });
     }
 
     Utils.TRACE("Push up new redirect");
 
-    Ftp.put(new Buffer(data), config.ftp.path,
-            function(hadErr) {
-                Utils.TRACE("Upload finished");
-                if (hadErr)
-                    Utils.TRACE("Had an error" + hadErr);
-                else
-                    Utils.TRACE(config.ftp.path + " updated");
-                Ftp.raw.quit();
-            });
+    return Q.Promise(function(resolve, reject) {
+        Ftp.put(new Buffer(data), config.ftp.path,
+                function(hadErr) {
+                    Utils.TRACE("Upload finished");
+                    Ftp.raw.quit();
+                    if (hadErr)
+                        reject(hadErr);
+                    else
+                        resolve();
+                })
+    });
 }    
 
 function httpGET(url, nofollow) {
     "use strict";
-    Utils.TRACE("Getting ", url);
+    Utils.TRACE("GET ", url);
     var result = "";
     var getter;
     if (nofollow)
@@ -118,11 +104,11 @@ function httpGET(url, nofollow) {
     });
 }
 
+// Known details, taken from the target
 var current = {};
 
 /**
- * Determine if the address has changed and if it has, upload a changed
- * HTML.
+ * Upload a changed HTML.
  * @ignore
  */
 function finish(ip) {
@@ -131,38 +117,51 @@ function finish(ip) {
         && current.path && current.path === config.target.path
         && current.port && current.port === config.target.port) {
         console.log("Existing address is correct");
-        return;
+        if (!config.force) {
+            console.log("No update required");
+            return;
+        }
     }
+
     current.ipaddr = ip;
     current.port = config.target.port;
     current.protocol = config.target.protocol;
     current.path = config.target.path;
 
-    console.log("Update " + ip);
-    var html = TEMPLATE;
-    for (var k in current) {
-        if (typeof current[k] !== "undefined")
-            html = html.replace(new RegExp("#" + k), current[k]);
-    }
-    update(html);
+    readFile(Utils.expandEnvVars(config.template))
+    .then(function(buf) {
+        var html = buf.toString();
+        console.log("Update " + ip);
+        for (var k in current) {
+            if (typeof current[k] !== "undefined")
+                html = html.replace(new RegExp("#" + k, "g"), current[k]);
+        }
+        return update(html);
+    })
+    .catch(function (e) {
+        Utils.ERROR("Update failed", e);
+    });
 }
 
 /**
- * Fetch the current HTML, if it's available.
+ * Fetch and parse the current HTML, if it's available.
  * @private
  */
 function step1() {
     httpGET(config.http, true) // dodge redirects
     .then(function(data) {
-        var m = /"REFRESH" content=\"0: ([^:]+):\/\/([0-9.]+|\[[0-9:]+\])(:[0-9]+)?([^"]+)?"/.exec(data);
-        if (m) {
-            Utils.TRACE("Existing redirect target");
-            current.protocol = m[1];
-            current.ipaddr = m[2];
-            if (m[3])
-                current.port = m[3];
-            if (m[4])
-                current.path = m[4];
+        var s = data.toString();
+        // The current information is encoded in a JSON block comment
+        var m = /<!--GetIP((.|\n)*?)-->/g.exec(s);
+        if (m && m[1]) {
+            try {
+                eval("current=" + m[1]);
+                Utils.TRACE("Existing redirect target ", current);
+            } catch (e) {
+                Utils.TRACE("Old redirect meta-information unparseable ", e);
+            }
+        } else {
+            Utils.TRACE("Old redirect had no meta-information", s);
         }
         step2();
     })
@@ -280,7 +279,3 @@ function step5() {
     });
 }
 
-if (config.debug)
-    Utils.setTRACE("all");
-
-step1();

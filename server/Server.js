@@ -10,7 +10,7 @@ const serialize = require("serialize-javascript");
 const Url = require("url");
 
 const Utils = require("../common/Utils.js");
-const Config = require("./Config.js");
+const Config = require("../common/Config.js");
 
 const TAG = "Server";
 

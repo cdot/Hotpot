@@ -18,7 +18,6 @@ import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,12 +33,10 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.HashSet;
-import java.util.Set;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -87,184 +84,17 @@ public class ServerConnection {
     /**
      * Base URL for the server. Different requests are sent by varying the path and params.
      */
-    private URL mURL = null;
-
-    /**
-     * SSL keystore, if this is an SSL connection.
-     */
-    private KeyStore mKeyStore = null;
+    private URL mURL;
 
     /**
      * Only used if this is an SSL connection
      */
-    private SSLContext mSSLContext = null;
+    private SSLContext mSSLContext;
 
     /**
      * * Base64 encoded authentication string (if provided)
      */
-    private String mAuthentication = null;
-
-    /**
-     * Only used if this is an SSL connection. These are the certificates to be used with the
-     * connection..
-     */
-    Set<Certificate> mCertificates = null;
-
-    /**
-     * Create a new server connection to the given trusted URL, and, if the protocol is https,
-     * fetch certificates from the remote server, loading them into the connection. Note that
-     * this constructor must only be used with an absolutely trusted URL - for example, when
-     * first defining the parameters of a connection that will subsequently be used with
-     * cached certificates. Automatically resolves any single level of redirect.
-     *
-     * @param url URL of trusted server
-     * @throws MalformedURLException if the URL is bad, or the server didn't pass any certificates
-     */
-    public ServerConnection(String url, String user, String pass) throws MalformedURLException {
-        mURL = new URL(url);
-        mCertificates = null;
-
-        Log.d(TAG, "Create server connection on " + mURL);
-        if (user != null && pass != null) {
-            String auth = user + ":" + pass;
-		    mAuthentication = Base64.encodeToString(auth.getBytes(), Base64.NO_WRAP);
-        }
-
-        /**
-         * Given an initial URL, try and connect and see if a 30x redirect moves us on. If it does,
-         * follow the redirect and set a new mURL. If the connection succeeds and we can pull a body
-         * with a 200 status, inspect that body to see if it is HTML. If it is, and we can parse
-         * a REFRESH meta tag from it, then follow the redirect therein.
-         */
-        try {
-            HttpURLConnection connection = connect(mURL);
-            connection.setInstanceFollowRedirects(true);
-            Log.d(TAG, "Probe redirect RESPONSE CODE WAS " + connection.getResponseCode());
-
-            if (connection.getResponseCode() >= 400)
-                return;
-
-            String reply = readResponse(connection);
-
-            // Test for a 30x redirect
-            URL realURL = connection.getURL();
-
-            if (realURL.equals(mURL)) {
-                // No 30x redirect. But if the response is well-formed HTML, it may contain
-                //  a REFRESH meta-tag. Explore that option.
-                String redirect = exploreRedirect(reply);
-                if (redirect != null) {
-                    realURL = new URL(redirect);
-                    // Drop the path
-                    realURL = new URL(realURL.getProtocol(), realURL.getHost(), realURL.getPort(), "");
-                    Log.d(TAG, "REFRESH redirected to " + realURL);
-                }
-            } else
-                Log.d(TAG, connection.getResponseCode() + " redirected to " + realURL);
-            if (!realURL.equals(mURL))
-                mURL = realURL;
-        } catch (IOException ioe) {
-            Log.d(TAG, "IO exception resolving redirect: " + ioe);
-        }
-        if (mURL.getProtocol().equals("https")) {
-            try {
-                Set<Certificate> certs = fetchCertificates();
-                loadKeyStore(certs);
-            } catch (KeyStoreException kse) {
-                // We don't treat this as an error, we just assume the server had no useable
-                // certificates to offer us
-                Log.e(TAG, "Failure fetching certificates: " + kse);
-            }
-        }
-    }
-
-    /**
-     * Is the connection encrypted?
-     *
-     * @return true if this is an SSL connection
-     */
-    public boolean isSSL() {
-        return mURL.getProtocol().equals("https");
-    }
-
-    /**
-     * Get the connected URL
-     */
-    public URL getUrl() {
-        return mURL;
-    }
-
-    /**
-     * Get the certificates trusted for use with the connection. These are either certificates
-     * presented when the object is set up, or those gleaned from the server.
-     *
-     * @return a set of base 64 encoded certificates
-     */
-    public Set<Certificate> getCertificates() {
-        return mCertificates;
-    }
-
-    /**
-     * Load the key store from a set of certificates sorted in a string set.
-     *
-     * @param certs base 64 encoded certificates
-     * @throws KeyStoreException if anything goes wrong
-     */
-    private void loadKeyStore(Set<Certificate> certs) throws KeyStoreException {
-        Log.d(TAG, "Loading key store");
-        mCertificates = new HashSet<>();
-        try {
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            // Create a KeyStore containing our trusted CAs
-            String keyStoreType = KeyStore.getDefaultType();
-            mKeyStore = KeyStore.getInstance(keyStoreType);
-            try {
-                mKeyStore.load(null, null);
-            } catch (NoSuchAlgorithmException nsa) {
-                throw new KeyStoreException(nsa.getMessage());
-            }
-            if (certs != null) {
-                int count = 0;
-                for (Certificate ca : certs) {
-                       Log.d(TAG, "Loading trusted certificate "
-                                + ((X509Certificate) ca).getSubjectDN());
-                        mKeyStore.setCertificateEntry("ca", ca);
-                        mCertificates.add(ca);
-                        count++;
-                }
-                Log.d(TAG, "Keystore loaded with " + count + " certificates");
-            } else {
-                Log.d(TAG, "No certs to load");
-            }
-        } catch (IOException ioe) {
-            throw new KeyStoreException(ioe.getMessage());
-        } catch (CertificateException ce) {
-            throw new KeyStoreException(ce.getMessage());
-        }
-    }
-
-    /**
-     * Get the SSL context.This is a method because we need to be able to reset the context
-     * after loading the keysotre from certificates returned by the server.
-     *
-     * @return the SSL context
-     * @throws IOException if there's a problem with the keys or the key store
-     */
-    private SSLContext getContext() throws IOException {
-        if (mSSLContext == null) {
-            try {
-                String algorithm = TrustManagerFactory.getDefaultAlgorithm();
-                TrustManagerFactory tmf = TrustManagerFactory.getInstance(algorithm);
-                tmf.init(mKeyStore);
-                mSSLContext = SSLContext.getInstance("TLS");
-                mSSLContext.init(null, tmf.getTrustManagers(), null);
-            } catch (KeyStoreException | NoSuchAlgorithmException | KeyManagementException e) {
-                // Should never happen
-                throw new IOException(e);
-            }
-        }
-        return mSSLContext;
-    }
+    private String mAuthentication;
 
     /**
      * Because the server is using a self-signed certificate, we override the hostname
@@ -312,40 +142,137 @@ public class ServerConnection {
     }
 
     /**
-     * Fetch the certificates that an HTTPS server uses to sign it's comms. This uses an
-     * empty TrustManager implementation, so must only be used under strict conditions
-     * e.g. when setting up preferences.
+     * Create a new server connection to the given trusted URL, and, if the protocol is https,
+     * fetch certificates from the remote server, loading them into the connection. Note that
+     * this constructor must only be used with an absolutely trusted URL - for example, when
+     * first defining the parameters of a connection that will subsequently be used with
+     * cached certificates. Automatically resolves any single level of redirect.
+     *
+     * @param url URL of trusted server
+     * @throws IOException if there was  problem
      */
-    private Set<Certificate> fetchCertificates() throws KeyStoreException {
+    public ServerConnection(String url, String user, String pass) throws IOException {
+
+        Log.d(TAG, "Create server connection on " + mURL);
+        if (user != null && pass != null) {
+            String auth = user + ":" + pass;
+            mAuthentication = Base64.encodeToString(auth.getBytes(), Base64.NO_WRAP);
+        } else
+            mAuthentication = null;
+
+        mURL = null;
+        mSSLContext = null;
+        peekConnect(new URL(url), 5);
+    }
+
+    /**
+     * Given an initial URL, try and connect and see if a 30x redirect moves us on. If it does,
+     * follow the redirect and set a new mURL. If the connection succeeds and we can pull a body
+     * with a 200 status, inspect that body to see if it is HTML. If it is, and we can parse
+     * a REFRESH meta tag from it, then follow the redirect therein.
+     * Fetch the certificates that an HTTPS server uses to sign it's comms. This uses an
+     * empty TrustManager implementation, so must only be used under strict conditions.
+     * Sets up mURL and (if appropriate) mSSLContext
+     */
+    private void peekConnect(URL url, int redirLimit) throws IOException {
         SSLContext sslCtx; // temporary, while we are fetching the certificates
-        Set<Certificate> certs = new HashSet<>();
 
-        try {
-            sslCtx = SSLContext.getInstance("TLS");
+        Log.d(TAG, "Peeking at " + url);
 
-            sslCtx.init(null, new TrustManager[]{new CavalierTrustManager()}, null);
-        } catch (NoSuchAlgorithmException nsae) {
-            throw new KeyStoreException("No such algorithm: " + nsae.getMessage());
-        } catch (KeyManagementException kme) {
-            throw new KeyStoreException("Key management: " + kme.getMessage());
+        HttpURLConnection conn;
+
+        if (url.getProtocol().equals("https")) {
+            try {
+                sslCtx = SSLContext.getInstance("TLS");
+                sslCtx.init(null, new TrustManager[]{new CavalierTrustManager()}, null);
+                Log.d(TAG, "Peeking connection with cavalier trust manager");
+
+            } catch (NoSuchAlgorithmException nsae) {
+                throw new IOException("No such algorithm: " + nsae.getMessage());
+            } catch (KeyManagementException kme) {
+                throw new IOException("Key management: " + kme.getMessage());
+            }
+
+            HttpsURLConnection sslConn = (HttpsURLConnection) url.openConnection();
+            Log.d(TAG, "Opened connection to " + url);
+
+            sslConn.setHostnameVerifier(new UnselectiveHostnameVerifier());
+            sslConn.setSSLSocketFactory(sslCtx.getSocketFactory());
+            conn = sslConn;
+            conn.setUseCaches(false);
+        } else {
+            conn = (HttpURLConnection) url.openConnection();
         }
-        try {
-            HttpsURLConnection connection = (HttpsURLConnection) mURL.openConnection();
+        conn.setInstanceFollowRedirects(true);
+        if (mAuthentication != null)
+            conn.setRequestProperty("Authorization", "Basic " + mAuthentication);
 
-            connection.setHostnameVerifier(new UnselectiveHostnameVerifier());
-            connection.setSSLSocketFactory(sslCtx.getSocketFactory());
+        if (conn.getResponseCode() >= 300)
+            throw new IOException("Peek at " + url + " failed, response was " + conn.getResponseCode());
 
-            if (connection.getResponseCode() == 200) {
-                for (Certificate c : connection.getServerCertificates()) {
-                    Log.d(TAG, "Fetched certificate " + ((X509Certificate) c).getSubjectDN());
-                    certs.add(c);
+        // See if we have a redirect
+        String reply = readResponse(conn);
+
+        URL realURL = conn.getURL();
+
+        // A 30x redirect should be handled by Http*URLConnection. But an HTML refresh redirect
+        // is another matter.
+        if (realURL.equals(url)) {
+            // No 30x redirect. But if the response is well-formed HTML, it may contain
+            // a REFRESH meta-tag. Explore that option.
+            String redirect = exploreRedirect(reply);
+            if (redirect != null) {
+                realURL = new URL(redirect);
+                // Drop the path
+                realURL = new URL(realURL.getProtocol(), realURL.getHost(), realURL.getPort(), "");
+                if (!realURL.equals(url)) {
+                    Log.d(TAG, "REFRESH redirected to " + realURL);
+                    if (redirLimit == 0)
+                        throw new IOException("Exceeded redirect limit " + realURL);
+                    peekConnect(realURL, redirLimit - 1);
+                    return;
                 }
             }
-            connection.disconnect();
-        } catch (IOException ioe) {
-            throw new KeyStoreException(ioe.getMessage());
+        } else {
+            Log.d(TAG, conn.getResponseCode() + " redirect to " + realURL);
         }
-        return certs;
+
+        // Get certificates
+        if (conn instanceof HttpsURLConnection) {
+            HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+            try {
+                // Create a KeyStore containing our trusted CAs
+                String keyStoreType = KeyStore.getDefaultType();
+                KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+                keyStore.load(null, null);
+
+                for (Certificate ca : sslConn.getServerCertificates()) {
+                    Log.d(TAG, "Fetched certificate " + ((X509Certificate) ca).getSubjectDN());
+                    keyStore.setCertificateEntry("ca", ca);
+                }
+
+                String algorithm = TrustManagerFactory.getDefaultAlgorithm();
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(algorithm);
+                tmf.init(keyStore);
+                Log.d(TAG, "Initialised TrustManagerFactory with " + keyStore.size() + " certificates");
+                mSSLContext = SSLContext.getInstance("TLS");
+                mSSLContext.init(null, tmf.getTrustManagers(), null);
+
+            } catch (CertificateException | KeyStoreException | NoSuchAlgorithmException | KeyManagementException e) {
+                Log.e(TAG, "Failure setting up SSL context " + e);
+                // Should never happen
+                throw new IOException(e);
+            }
+        }
+        conn.disconnect();
+        mURL = url;
+    }
+
+    /**
+     * Get the connected URL
+     */
+    public URL getUrl() {
+        return mURL;
     }
 
     /**
@@ -357,16 +284,10 @@ public class ServerConnection {
     private HttpURLConnection connect(URL url) throws IOException {
         HttpURLConnection conn;
         if (url.getProtocol().equals("https")) {
-            try {
-                HttpsURLConnection connection
-                        = (HttpsURLConnection) url.openConnection();
-                connection.setHostnameVerifier(new UnselectiveHostnameVerifier());
-                SSLContext context = getContext();
-                connection.setSSLSocketFactory(context.getSocketFactory());
-                conn = connection;
-            } catch (UnknownHostException uhe) {
-                throw new IOException(uhe);
-            }
+            HttpsURLConnection sslConn = (HttpsURLConnection) url.openConnection();
+            sslConn.setHostnameVerifier(new UnselectiveHostnameVerifier());
+            sslConn.setSSLSocketFactory(mSSLContext.getSocketFactory());
+            conn = sslConn;
         } else {
             conn = (HttpURLConnection) url.openConnection();
         }
@@ -501,8 +422,8 @@ public class ServerConnection {
     /**
      * GET an request synchronously, calling a callback on receiving a response.
      *
-     * @param path   URL path + params
-     * @param rh     Response handler
+     * @param path URL path + params
+     * @param rh   Response handler
      */
     public void GET_sync(final String path, final ResponseHandler rh) {
         try {
@@ -514,7 +435,7 @@ public class ServerConnection {
             connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
             if (connection.getResponseCode() >= 300)
                 throw new IOException("Error " + connection.getResponseCode()
-                            + " " + connection.getResponseMessage());
+                        + " " + connection.getResponseMessage());
             String reply = readResponse(connection);
             if (reply == null || reply.equals("")) {
                 Log.d(TAG, "GET response is null");
@@ -540,8 +461,8 @@ public class ServerConnection {
     /**
      * GET an request asynchronously, calling a callback on receiving a response.
      *
-     * @param path   URL path + params
-     * @param rh     Response handler
+     * @param path URL path + params
+     * @param rh   Response handler
      */
     public void GET_async(final String path, final ResponseHandler rh) {
         // Handle the request in a new thread to avoid blocking the message queue

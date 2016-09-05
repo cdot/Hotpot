@@ -145,7 +145,7 @@ calendar: {
 ```
 Paste the copied fields from `client_secret` into the `secrets` object.
 
-Run the command-line program `node authorise_calendar.js` and follow the instructions.
+`cd` to the `server` subdirectory and run the command-line program `node AuthoriseCalendar.js` and follow the instructions. Note that this requires an existing `hotpot.cfg`.
 
 Calendars are cached and updated every 24 hours. An update can be forced by visiting `/refresh_calendars` to the server.
 
@@ -158,15 +158,18 @@ Note that calendar events are only used to generate requests. It is up to the
 rules whether and how those requests are interpreted. Rules should always
 contain a condition to stop runaway temperature rises.
 
-# Android App
+## Android App
 The Android app provides a simple interface to a Hotpot server.
 Setup requires the server URL and authentication details. The app will
 interrogate the server and update status so long as the device isn't using
 mobile data; if it starts using mobile data, it has to be refreshed on demand.
 App users can boost pins, but that's the limit of their control.
 
-# Browser App
+## Browser App
 The browser app is served automatically when `/browser.html` is loaded from
 a browser. The app provides similar capabilities to the Android app, though it
 adds continuous monitoring of temperatures and states of the system. Users of the browser app can also remotely edit rules and upload the changes.
 
+# GetIP
+
+GetIP is a program to help with accessing a home server that is hidden behind a DHCP server. See the README.md file in that subdirectory.
