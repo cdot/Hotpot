@@ -80,6 +80,14 @@ the configuration. If time the server configuration is changed from the browser 
 
 An annotated example configuration file is given in `example.hotpot.cfg`.
 
+### History
+
+System change events, such as temperature and pin state, can be logged to files
+for later analysis. There is no limit on the size of these files, and you are
+recommended to rotate them on a regular basis. When a log is rotated make sure the old log is deleted - you don't want to leave an empty file behind.
+
+Histories can either be sampling - such as temperatures - or logging, such as pin states or weather agents. Sampling histories require an interval to be specified to set how often the item is sampled. Logging histories rely on the caller explicitly logging events.
+
 ## Weather
 Weather information is retrieved from the UK Meteorological Office data service, via a simple API that can easily be overridden with your own weather service provider. The class "MetOffice" is the reference implementation.
 

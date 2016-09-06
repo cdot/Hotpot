@@ -64,8 +64,6 @@ function Thermostat(name, config) {
             name: self.name,
             file: hc.file,
             interval: hc.interval,
-            max_samples: hc.max_samples,
-            max_bytes: hc.max_bytes,
             sample: function() {
                 // Only log temperatures to one decimal place
                 return Math.round(self.temperature * 10) / 10;

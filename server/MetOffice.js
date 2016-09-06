@@ -62,8 +62,7 @@ var MetOffice = function(config, location) {
         this.historian = new Historian({
             name: this.name,
             file: hc.file,
-            max_bytes: hc.max_bytes,
-            max_samples: hc.max_samples
+            unique: true
         });
     }
 };
@@ -187,8 +186,6 @@ MetOffice.prototype.analyseWeather = function(data) {
     for (i in periods) {
         var period = periods[i];
         var baseline = Date.parse(period.value);
-        if (typeof this.historian !== "undefined")
-            this.historian.reset(baseline);
 
         var dvs = period.Rep;
         for (j in dvs) {

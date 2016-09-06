@@ -3,6 +3,7 @@
 /*eslint-env node */
 const Q = require("q");
 const fs = require("fs");
+const readFile = Q.denodeify(fs.readFile);
 const writeFile = Q.denodeify(fs.writeFile);
 const statFile = Q.denodeify(fs.stat);
 const appendFile = Q.denodeify(fs.appendFile);
@@ -15,103 +16,114 @@ const TAG = "Historian";
 /**
  * Logger. Can either log according to a time interval using a sampling
  * callback, or only on demand.
- * @param options {object}
+ * @param config {Config}
  * * `sample`: function returning a sample. Called every `interval`
  *    when `start()` is called.
  * * `interval`: time, sample frequency in seconds, required if `start()`
  *    is called.
- * * `max_samples`: maximum number of samples to record
- * * `max_bytes`: maximum number of bytes to store in `file`
+ * * `unordered`: set to true if samples may have out-of-order times.
  * * `file`: string required file to store log data in
  * If `sample` is not given, or `start()` is not called, sampling is only by
  * calling `record()`
  * @class
  */
-function Historian(options) {
+function Historian(config) {
     "use strict";
 
-    this.name = options.name;
-    this.sample = options.sample;
-    this.max_samples = options.max_samples;
-    this.max_bytes = options.max_bytes;
-    this.interval = options.interval;
-    this.file = Utils.expandEnvVars(options.file);
-
-    // @private
-    this.basetime = Math.floor(Time.nowSeconds());
-
-    // @private
-    this.history = [];
-
-    Utils.TRACE(TAG, "Set up for ", this.name, this.file);
-    this.rewriteHistory();
+    this.config = config;
+    Utils.TRACE(TAG, "for ", this.config.name, " in ", this.path());
 }
 module.exports = Historian;
 
 /**
- * Reset the historian to the given start time
- * @param {int} time base time for the historian, in seconds
+ * @private
+ * Get the expanded file name
  */
-Historian.prototype.reset = function(time) {
-    Utils.TRACE(TAG, this.name, " reset baseline to ", Date, time);
-    this.basetime = time;
-    this.history = [];
-    this.rewriteHistory();
+Historian.prototype.path = function() {
+    "use strict";
+    return Utils.expandEnvVars(this.config.file);
 };
 
 /**
- * Get a promise to rewrite the history file from the history
- * cached in this object.
+ * Return a promise to rewrite the history file with the given data
  * @private
  */
-Historian.prototype.rewriteHistory = function() {
+Historian.prototype.rewriteFile = function(report) {
+    "use strict";
+    var self = this;
+    this.basetime = report.length > 0 ? report[0].time : Time.nowSeconds();
+    var s = "B," + this.basetime + "\n";
+    for (var i in report)
+        s += (report[i].time - this.basetime) + "," + report[i].sample + "\n";
+    return writeFile(this.path(), s)
+    .then(function() {
+        Utils.TRACE(TAG, "Wrote ", this.path());
+    };
+};
+
+/**
+ * Load history from the data file
+ * @private
+ */
+Historian.prototype.loadFromFile = function() {
     "use strict";
     var self = this;
 
-    var report = self.history;
-    var s = "B," + self.basetime + "\n";
-    for (var i in report)
-        s += (report[i].time - self.basetime) + "," + report[i][1] + "\n";
-    return writeFile(this.file, s)
-    .catch(function(err) {
-        Utils.ERROR(TAG, "Failed to write '",
-                    self.file, "': ", err.toString());
+    return readFile(this.path())
+    .then(function(data) {
+        var lines = data.toString().split("\n");
+        var basetime;
+        var report = [];
+        var i;
+
+        // Load report
+        for (var i in lines) {
+            var csv = lines[i].split(",", 2);
+            if (csv[0] === "B") // basetime
+                basetime = parseFloat(csv[1]);
+            else if (csv.length === 2) {
+                var point = {
+                    time: basetime + parseFloat(csv[0]),
+                    sample: parseFloat(csv[1])
+                };
+                report.push(point);
+            }
+        }
+        if (self.config.unordered && report.length > 1) {
+            // Sort samples by time. If two samples occur at the same
+            // time, keep the most recently added.
+            var doomed = report;
+            report = [];
+            for (i = 0; i < doomed.length; i++)
+                doomed[i].index = i;
+            doomed.sort(function(a, b) {
+                if (a.time < b.time)
+                    return -1;
+                if (a.time > b.time)
+                    return 1;
+                if (a.index < b.index)
+                    a.dead = true;
+                else
+                    b.dead = true;
+                return 0;
+            });
+            for (i = 0; i < doomed.length; i++) {
+                if (!doomed[i].dead)
+                    report.push({
+                        time: doomed[i].time,
+                        sample: doomed[i].sample
+                    });
+            }
+            if (report.length != doomed.length)
+                self.rewriteFile(report);
+        }
+
+        return report;
     });
 };
 
 /**
- * Load history from a data string
- * @param {string} data data string
- * @private
- */
-Historian.prototype.load = function(data) {
-    "use strict";
-    var lines = data.toString().split("\n");
-    var basetime;
-    var report = [];
-    
-    if (typeof this.max_samples !== "undefined"
-        && lines.length > this.max_samples)
-        lines.splice(0, lines.length - this.max_samples);
-
-    // Load report
-    for (var i in lines) {
-        var csv = lines[i].split(",", 2);
-        if (csv[0] === "B") // basetime
-            basetime = parseFloat(csv[1]);
-        else {
-            var point = {
-                time: basetime + parseFloat(csv[0]),
-                sample: parseFloat(csv[1])
-            };
-            report.push(point);
-        }
-    }
-    return report;
-};
-
-/**
- * Get a serialisable 1D array for the history.
+ * Get a promise for a serialisable 1D array for the history.
  * @return {array} First element is the base time in epoch seconds,
  * subsequent elements are alternating times and samples. Times are
  * in seconds and are all relative to basetime.
@@ -119,11 +131,12 @@ Historian.prototype.load = function(data) {
 Historian.prototype.getSerialisableHistory = function() {
     "use strict";
     var self = this;
-    return Q.fcall(function() {
-        var report = self.history;
-        var res = [ self.basetime ];
+    return self.loadFromFile()
+    .then(function(report) {
+        var basetime = report.length > 0 ? report[0].time : Time.nowSeconds();
+        var res = [ basetime ];
         for (var i in report) {
-            res.push(report[i].time - self.basetime);
+            res.push(report[i].time - basetime);
             res.push(report[i].sample);
         }
         return res;
@@ -140,18 +153,18 @@ Historian.prototype.start = function(quiet) {
 
     var self = this;
 
-    if (typeof self.sample !== "function")
+    if (typeof self.config.sample !== "function")
         throw "Cannot start Historian; sample() not defined";
 
-    if (typeof self.interval === "undefined")
+    if (typeof self.config.interval === "undefined")
         throw "Cannot start Historian; interval not defined";
 
-    var sample = self.sample();
+    var sample = self.config.sample();
 
     function repoll() {
         setTimeout(function() {
             self.start(true);
-        }, self.interval * 1000);
+        }, self.config.interval * 1000);
     }
 
     if (typeof sample !== "number") {
@@ -166,7 +179,7 @@ Historian.prototype.start = function(quiet) {
     }
 
     if (!quiet)
-        Utils.TRACE(TAG, this.name, " started");
+        Utils.TRACE(TAG, this.config.name, " started");
 
     self.record(sample)
     .then(repoll);
@@ -188,34 +201,24 @@ Historian.prototype.record = function(sample, time) {
 
     time = Math.round(time);
 
-    Utils.TRACE(TAG, self.name, " record ", sample, " ", Date, time * 1000);
-
     self.last_recorded = sample;
-    self.history.push({time: time, sample: sample });
 
-    return statFile(self.file).then(
-        function(stats) {
-            // If we hit 2 * the size limit, open the file and
-            // reduce the size.
-            if (stats.size > self.max_bytes) {
-                Utils.TRACE(TAG, self.name, " history is full");
-                return self.rewriteHistory();
-            }
-            // otherwise simply append
-            return appendFile(
-                self.file,
-                Math.round(time - self.basetime)
-                    + "," + sample + "\n")
-            .catch(function(ferr) {
-                Utils.ERROR(TAG, "failed to append to '",
-                            self.file, "': ",
-                            ferr.toString());
-            });
-        })
-        .catch(function(err) {
-            Utils.TRACE(TAG, "Failed to stat history file '",
-                          self.file, "': ", err);
-            // Probably the first time; write the whole history file
-            return self.rewriteHistory();
+    return statFile(self.path())
+    .then(function(stats) {
+        var basetime = self.basetime;
+        appendFile(
+            self.path(),
+            Math.round(time - self.basetime)
+                + "," + sample + "\n")
+        .catch(function(ferr) {
+            Utils.ERROR(TAG, "failed to append to '",
+                        self.path(), "': ",
+                        ferr.toString());
         });
+    })
+    .catch(function(err) {
+        Utils.TRACE(TAG, "Failed to stat history file '",
+                    self.path(), "': ", err);
+        return self.rewriteFile([ { time: 0, sample: sample } ]);
+    });
 };

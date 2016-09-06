@@ -76,9 +76,7 @@ function Pin(name, config) {
         var Historian = require("./Historian");
         self.historian = new Historian({
             name: self.name + "_pin",
-            file: hc.file,
-            max_bytes: hc.max_bytes,
-            max_samples: hc.max_samples
+            file: hc.file
         });
     } else
         Utils.TRACE(TAG, self.name, " has no historian");
