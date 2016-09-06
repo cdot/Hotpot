@@ -36,7 +36,8 @@ const IS_NUMBER = [
  * this.weather.get("Feels Like Temperature")
  *
  * Note that nothing will happen until you call setLocation to set the
- * location for which the weather is being received.
+ * location for which the weather is being received (which must not be
+ * done before you have called initialise())
  *
  * This reference implementation gets current and predicted
  * weather information from the UK Met Office 3 hourly forecast updates.
@@ -46,34 +47,40 @@ const IS_NUMBER = [
  * * `class`: name of this class
  * * `api_key`: API key for requests to the Met Office website
  * * `history`: Historian configuration for recording outside temperature
- * @param {Location} location (optional) location (can be set later)
  * @class
  */
-var MetOffice = function(config, location) {
+var MetOffice = function(config) {
     "use strict";
     this.name = "MetOffice";
     this.config = config;
     this.api_key = "?key=" + config.api_key;
-    if (typeof location !== "undefined")
-        this.setLocation(location);
     var hc = config.history;
     if (typeof hc !== "undefined") {
         var Historian = require("./Historian");
         this.historian = new Historian({
             name: this.name,
             file: hc.file,
-            unique: true
+            unordered: true
         });
     }
 };
 
 /**
- * Return a promoise to set the lat/long of the place we are getting weather data for
+ * Return a promise to initialise the agent
+ */
+MetOffice.prototype.initialise = function() {
+    return Q();
+}
+
+/**
+ * Return a promoise to set the lat/long of the place we are getting
+ * weather data for
  * @param {Location} loc where
  */
 MetOffice.prototype.setLocation = function(loc) {
     "use strict";
     var self = this;
+    Utils.TRACE(TAG, "Set location ", loc);
     return this.findNearestLocation(loc)
     .then(function() {
         self.update();
@@ -182,10 +189,13 @@ MetOffice.prototype.analyseWeather = function(data) {
     for (i in lu)
         s2c[lu[i].name] = lu[i].$;
 
+    this.before = null;
+    this.after = null;
     var periods = data.SiteRep.DV.Location.Period;
+    Utils.TRACE(TAG, "Analysis yields ", periods.length, " periods");
     for (i in periods) {
         var period = periods[i];
-        var baseline = Date.parse(period.value);
+        var baseline = Date.parse(period.value) / 1000;
 
         var dvs = period.Rep;
         for (j in dvs) {
@@ -197,16 +207,18 @@ MetOffice.prototype.analyseWeather = function(data) {
                 else
                     report[key] = dvs[j][k];
             }
-            // Convert baseline from minutes into epoch ms
-            report.$ = baseline + report.$ * 60 * 1000;
-            if (report.$ <= Time.now()) {
+            // Convert baseline from minutes into epoch s
+            report.$ = baseline + report.$ * 60;
+            if (report.$ <= Time.nowSeconds()) {
                 if (this.historian)
-                    this.historian.record(report.Temperature, report.$ / 1000);
-                this.before = report;
-            } else {
+                    this.historian.record(report.Temperature, report.$);
+                if (!this.before || this.before.$ < report.$) {
+                    this.before = report;
+                    Utils.TRACE(TAG, "Before ", report.Temperature);
+                }
+            } else if (!this.after || this.after.$ > report.$) {
                 this.after = report;
-                //Utils.TRACE(TAG, "Before ", this.before, " after ", this.after));
-                return;
+                Utils.TRACE(TAG, "After ", report.Temperature);
             }
         }
     }
@@ -220,7 +232,7 @@ MetOffice.prototype.getWeather = function() {
     "use strict";
 
     if (typeof this.after !== "undefined"
-        && Time.now() < this.after.$) {
+        && Time.nowSeconds() < this.after.$) {
         return Q();
     }
 
@@ -259,11 +271,11 @@ MetOffice.prototype.update = function() {
     Utils.TRACE(TAG, "Updating from MetOffice website");
     this.getWeather()
     .done(function() {
-        var wait = self.after.$ - Time.now();
-        Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
+        var wait = self.after.$ - Time.nowSeconds();
+        Utils.TRACE(TAG, "Next update in ", wait / 60, " minutes");
         setTimeout(function() {
             self.update();
-        }, wait);
+        }, wait * 1000);
     });
 };
 
@@ -282,7 +294,7 @@ MetOffice.prototype.get = function(what) {
         return 0;
     var est = this.before[what];
     if (this.after[what] !== est && IS_NUMBER.indexOf(what) >= 0) {
-        var frac = (Time.now() - this.before.$)
+        var frac = (Time.nowSeconds() - this.before.$)
             / (this.after.$ - this.before.$);
         est += (this.after[what] - est) * frac;
     }

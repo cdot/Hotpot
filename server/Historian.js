@@ -51,14 +51,13 @@ Historian.prototype.path = function() {
 Historian.prototype.rewriteFile = function(report) {
     "use strict";
     var self = this;
-    this.basetime = report.length > 0 ? report[0].time : Time.nowSeconds();
-    var s = "B," + this.basetime + "\n";
-    for (var i in report)
-        s += (report[i].time - this.basetime) + "," + report[i].sample + "\n";
+    var s = "";
+    for (var i = 0; i < report.length; i++)
+        s += report[i].time + "," + report[i].sample + "\n";
     return writeFile(this.path(), s)
     .then(function() {
         Utils.TRACE(TAG, "Wrote ", this.path());
-    };
+    });
 };
 
 /**
@@ -72,18 +71,15 @@ Historian.prototype.loadFromFile = function() {
     return readFile(this.path())
     .then(function(data) {
         var lines = data.toString().split("\n");
-        var basetime;
         var report = [];
         var i;
 
         // Load report
         for (var i in lines) {
             var csv = lines[i].split(",", 2);
-            if (csv[0] === "B") // basetime
-                basetime = parseFloat(csv[1]);
-            else if (csv.length === 2) {
+            if (csv.length === 2) {
                 var point = {
-                    time: basetime + parseFloat(csv[0]),
+                    time: parseFloat(csv[0]),
                     sample: parseFloat(csv[1])
                 };
                 report.push(point);
@@ -126,7 +122,7 @@ Historian.prototype.loadFromFile = function() {
  * Get a promise for a serialisable 1D array for the history.
  * @return {array} First element is the base time in epoch seconds,
  * subsequent elements are alternating times and samples. Times are
- * in seconds and are all relative to basetime.
+ * in seconds.
  */
 Historian.prototype.getSerialisableHistory = function() {
     "use strict";
@@ -205,11 +201,7 @@ Historian.prototype.record = function(sample, time) {
 
     return statFile(self.path())
     .then(function(stats) {
-        var basetime = self.basetime;
-        appendFile(
-            self.path(),
-            Math.round(time - self.basetime)
-                + "," + sample + "\n")
+        return appendFile(self.path(), time + "," + sample + "\n")
         .catch(function(ferr) {
             Utils.ERROR(TAG, "failed to append to '",
                         self.path(), "': ",
@@ -217,8 +209,6 @@ Historian.prototype.record = function(sample, time) {
         });
     })
     .catch(function(err) {
-        Utils.TRACE(TAG, "Failed to stat history file '",
-                    self.path(), "': ", err);
-        return self.rewriteFile([ { time: 0, sample: sample } ]);
+        return self.rewriteFile([ { time: time, sample: sample } ]);
     });
 };

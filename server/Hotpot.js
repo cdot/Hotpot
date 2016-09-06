@@ -54,8 +54,6 @@ HOTPOT_DEBUG = undefined;
     .then(function(cfg) {
         config = cfg;
         controller = new Controller(config.controller);
-        var loc = new Location(config.server.location);
-        controller.setLocation(loc);
         server = new Server(config.server, 
                             function(path, params) {
                                 return controller.dispatch(path, params);
@@ -63,7 +61,11 @@ HOTPOT_DEBUG = undefined;
     })
 
     .then(function() {
-        return controller.initialise();
+        return controller.initialise()
+        .then(function() {
+            var loc = new Location(config.server.location);
+            controller.setLocation(loc);
+        });
     })
 
     .then(function() {

@@ -86,15 +86,19 @@ Controller.prototype.initialise = function() {
  */
 Controller.prototype.createWeatherAgents = function(configs) {
     this.weather = {};
+    var promise = Q();
 
     if (Object.keys(configs).length > 0) {
         var self = this;
         Utils.forEach(configs, function(config, name) {
             var WeatherAgent = require("./" + name + ".js");
-            self.weather[name] = new WeatherAgent(config, self.location);
+            self.weather[name] = new WeatherAgent(config);
+            promise = promise.then(function() {
+                return self.weather[name].initialise();
+            })
         });
     }
-    return Q();
+    return promise;
 };
 
 /**
@@ -122,7 +126,7 @@ Controller.prototype.createCalendars = function(configs) {
                 function(id, pin) {
                     self.removeRequests(pin, id);
                 });
-            // Queue a calendar update
+            // Queue an asynchronous calendar update
             self.calendar[name].update(1000);
         });
     }
@@ -143,15 +147,15 @@ Controller.prototype.createPins = function(configs) {
 
     self.pin = {};
 
-    var promises = Q();
+    var promise = Q();
     Utils.forEach(configs, function(config, id) {
         self.pin[id] = new Pin(id, config);
-        promises = promises.then(function() {
+        promise = promise.then(function() {
             return self.pin[id].initialise();
         });
     });
 
-    return promises;
+    return promise;
 };
 
 /**
@@ -244,7 +248,6 @@ Controller.prototype.createRules = function(configs) {
  */
 Controller.prototype.setLocation = function(location) {
     "use strict";
-    this.location = location;
     Utils.forEach(this.weather, function(wa) {
         wa.setLocation(location);
     });
@@ -327,7 +330,7 @@ Controller.prototype.getSerialisableLog = function() {
 
     Utils.forEach(this, function(block, field) {
         promise = promise.then(function() {
-            self.getSetLogs(self[field])
+            return self.getSetLogs(self[field])
             .then(function(logset) {
                 if (typeof logset !== "undefined")
                     logs[field] = logset;
