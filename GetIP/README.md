@@ -14,8 +14,12 @@ The pattern employed by GetIP is:
   first and then various 3rd party sites
 * Download the existing redirect, and if the address therein (if found) is
   unchanged, stop.
-* Load a template for the redirect file
+* Load and fill a template for the redirect file
 * Use FTP to upload the completed template to the known host.
+
+The existing IP address is determined by running through a sequence
+of different ways to get the IP address; by looking at a local router,
+then by reflection off an external website.
 
 # Configuration
 
@@ -59,6 +63,10 @@ may include the following tokens:
 * `#ipaddr` - expands to the DHCP'd ipaddress
 * `#port` - expands to the port e.g. `:8080`
 * `#path` - expands to the path e.g. `/blah.html`
+
+`protocol`, `port` and `path` all come from the config file. `ipaddr` comes
+from whatever GetIP determines is the public IP address of the server.
+
 The template may also include `<!--GetIP...-->` where ... is a JSON
 structure containing the redirect target e.g
 ```

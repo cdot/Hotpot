@@ -91,10 +91,13 @@ Utils.TRACE = function() {
         (Utils.trace.indexOf("all") >= 0
          || Utils.trace.indexOf(level) >= 0)
         && (Utils.trace.indexOf("-" + level) < 0)) {
-        var mess = new Date().toISOString() + " " + level + ": "
-            + Utils.joinArgs(arguments, 1);
-        console.log(mess);
+        Utils.LOG(new Date().toISOString(), " ", level, ": ",
+                  Utils.joinArgs(arguments, 1));
     }
+};
+
+Utils.LOG = function() {
+    console.log(Utils.joinArgs(arguments));
 };
 
 /**

@@ -76,7 +76,7 @@ Server.prototype.start = function() {
     var handler = function(request, response) {
         if (typeof self.authenticate !== "undefined") {
             if (!self.authenticate(request)) {
-                Utils.TRACE(TAG, "Authentication failed");
+                Utils.TRACE(TAG, "Authentication failed ", request.url);
                 response.statusCode = 401;
                 response.setHeader('WWW-Authenticate', 'Basic realm="'
                                    + config.auth.realm + '"');

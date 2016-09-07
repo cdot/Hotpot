@@ -15,6 +15,26 @@ const readFile = Q.denodeify(Fs.readFile);
 const Utils = require("../common/Utils");
 const Config = require("../common/Config.js");
 
+function Url(e) {
+    for (var i in e)
+        this[i] = e[i];
+}
+
+Url.prototype.toString = function() {
+    return (this.protocol? this.protocol : "?")
+        + "://"
+        + (this.ipaddr ? this.ipaddr : "?")
+        + (this.port ? this.port : "")
+        + (this.path ? this.path : "");
+};
+
+Url.prototype.equals = function(other) {
+    return (this.ipaddr === other.ipaddr)
+        && (this.protocol === other.protocol)
+        && (this.path === other.path)
+        && (this.port === other.port);
+};
+
 var cliopt = getopt.create([
     [ "h", "help", "Show this help" ],
     [ "", "debug", "Run in debug mode" ],
@@ -104,38 +124,37 @@ function httpGET(url, nofollow) {
     });
 }
 
-// Known details, taken from the target
-var current = {};
-
 /**
  * Upload a changed HTML.
  * @ignore
  */
 function finish(ip) {
-    if (current.ipaddr && ip === current.ipaddr
-        && current.protocol && current.protocol === config.target.protocol
-        && current.path && current.path === config.target.path
-        && current.port && current.port === config.target.port) {
-        console.log("Existing address is correct");
+    var url = new Url(config.target);
+    url.ipaddr = ip;
+
+    if (url.equals(current)) {
+        Utils.LOG("Existing ", current, " is correct");
         if (!config.force) {
-            console.log("No update required");
+            Utils.LOG("No update required");
             return;
         }
-    }
+    } else
+        Utils.LOG("Old target ", current);
 
     current.ipaddr = ip;
     current.port = config.target.port;
     current.protocol = config.target.protocol;
     current.path = config.target.path;
+    Utils.LOG("New target ", current);
 
     readFile(Utils.expandEnvVars(config.template))
     .then(function(buf) {
         var html = buf.toString();
-        console.log("Update " + ip);
         for (var k in current) {
             if (typeof current[k] !== "undefined")
                 html = html.replace(new RegExp("#" + k, "g"), current[k]);
         }
+        html = html.replace(new RegExp("#url", "g"), current.toString());
         return update(html);
     })
     .catch(function (e) {
@@ -155,7 +174,7 @@ function step1() {
         var m = /<!--GetIP((.|\n)*?)-->/g.exec(s);
         if (m && m[1]) {
             try {
-                eval("current=" + m[1]);
+                eval("current=new Url(" + m[1] + ")");
                 Utils.TRACE("Existing redirect target ", current);
             } catch (e) {
                 Utils.TRACE("Old redirect meta-information unparseable ", e);
@@ -231,13 +250,14 @@ function step3(second) {
     httpGET(config.netgear_router.url)
     .then(function(data) {
         return Q.Promise(function(resolve, reject) {
-            var l = data.split(/\n/);
-            var il;
-            for (var i = 0; i < l.length; i++) {
-                if (/IP Address/.test(l[i])) {
-                    i++;
-                    il = l[i].replace(/^.*?>([\d.]+).*/, "$1");
-                    resolve(il);
+            data = data.replace(/\n/g, " ");
+            var scan = /<td[^>]*>\s*IP Address\s*<\/td>\s*<td[^>]*>\s*(\d+\.\d+\.\d+\.\d+)\s*</g;
+            var m;
+            while ((m = scan.exec(data)) != null) {
+                if (!/^192\.168/.test(m[1])) {
+                    Utils.LOG("Got ", m[1], " from Netgear Router");
+                    finish(m[1]);
+                    resolve();
                     return;
                 }
             }
@@ -246,7 +266,11 @@ function step3(second) {
         });
     }, didnt_work)        
     .finally(function() {
-        httpGET(config.netgear_router.logout_url);       
+        httpGET(config.netgear_router.logout_url)
+        .catch(function(e) {
+            if (!/status: 401/.test(e))
+                Utils.TRACE("Problem logging out of netgear router ", e);
+        });       
     });
 }
 
