@@ -50,7 +50,6 @@ Historian.prototype.path = function() {
  */
 Historian.prototype.rewriteFile = function(report) {
     "use strict";
-    var self = this;
     var s = "";
     for (var i = 0; i < report.length; i++)
         s += report[i].time + "," + report[i].sample + "\n";
@@ -115,6 +114,10 @@ Historian.prototype.loadFromFile = function() {
         }
 
         return report;
+    })
+    .catch(function(e) {
+        Utils.TRACE(TAG, "Failed to open history ", e);
+        return [];
     });
 };
 
@@ -126,8 +129,7 @@ Historian.prototype.loadFromFile = function() {
  */
 Historian.prototype.getSerialisableHistory = function() {
     "use strict";
-    var self = this;
-    return self.loadFromFile()
+    return this.loadFromFile()
     .then(function(report) {
         var basetime = report.length > 0 ? report[0].time : Time.nowSeconds();
         var res = [ basetime ];
@@ -147,16 +149,16 @@ Historian.prototype.getSerialisableHistory = function() {
 Historian.prototype.start = function(quiet) {
     "use strict";
 
-    var self = this;
-
-    if (typeof self.config.sample !== "function")
+    if (typeof this.config.sample !== "function")
         throw "Cannot start Historian; sample() not defined";
 
-    if (typeof self.config.interval === "undefined")
+    if (typeof this.config.interval === "undefined")
         throw "Cannot start Historian; interval not defined";
 
-    var sample = self.config.sample();
+    var time = Time.nowSeconds();
+    var sample = this.config.sample();
 
+    var self = this;
     function repoll() {
         setTimeout(function() {
             self.start(true);
@@ -169,7 +171,7 @@ Historian.prototype.start = function(quiet) {
     }
 
     // Don't record if this sample has the same value as the last
-    if (sample === self.last_recorded) {
+    if (sample === this.last_sample) {
         repoll();
         return;
     }
@@ -177,7 +179,7 @@ Historian.prototype.start = function(quiet) {
     if (!quiet)
         Utils.TRACE(TAG, this.config.name, " started");
 
-    self.record(sample)
+    this.record(sample)
     .then(repoll);
 };
 
@@ -190,25 +192,32 @@ Historian.prototype.start = function(quiet) {
 Historian.prototype.record = function(sample, time) {
     "use strict";
 
-    var self = this;
-
     if (typeof time === "undefined")
         time = Time.nowSeconds();
 
     time = Math.round(time);
 
-    self.last_recorded = sample;
+    var promise;
 
-    return statFile(self.path())
-    .then(function(stats) {
+    // If we've skipped recording several samples since the last
+    // recorded sample, pop in a checkpoint
+    if (typeof this.last_time != "undefined"
+        && time > this.last_time + 5 * this.config.interval / 4)
+        promise = appendFile(
+            this.path(),
+            (time - this.config.interval) + "," + this.last_sample + "\n")
+    else
+        promise = Q();
+
+    this.last_time = time;
+    this.last_sample = sample;
+
+    var self = this;
+    return promise.then(function() {
         return appendFile(self.path(), time + "," + sample + "\n")
         .catch(function(ferr) {
             Utils.ERROR(TAG, "failed to append to '",
-                        self.path(), "': ",
-                        ferr.toString());
+                        self.path(), "': ", ferr);
         });
-    })
-    .catch(function(err) {
-        return self.rewriteFile([ { time: time, sample: sample } ]);
     });
 };
