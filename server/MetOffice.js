@@ -6,7 +6,9 @@
 /*eslint-env node */
 
 const Q = require("q");
-const http = require("follow-redirects").http;
+const Fs = require("fs");
+const Http = require("follow-redirects").http;
+const Url = require("url");
 
 const Location = require("../common/Location.js");
 const Time = require("../common/Time.js");
@@ -14,7 +16,7 @@ const Time = require("../common/Time.js");
 const Utils = require("../common/Utils");
 
 /** @private */
-const URL_ROOT = "http://datapoint.metoffice.gov.uk/public/data/val/wxfcs/";
+const USUAL_PATH = "/public/data/val/wxfcs/all/json/";
 
 /** @private */
 const TAG = "MetOffice";
@@ -51,6 +53,7 @@ const IS_NUMBER = [
  */
 var MetOffice = function(config) {
     "use strict";
+    this.url = Url.parse("http://datapoint.metoffice.gov.uk");
     this.name = "MetOffice";
     this.config = config;
     this.api_key = "?key=" + config.api_key;
@@ -80,6 +83,7 @@ MetOffice.prototype.initialise = function() {
 MetOffice.prototype.setLocation = function(loc) {
     "use strict";
     var self = this;
+    loc = new Location(loc);
     Utils.TRACE(TAG, "Set location ", loc);
     return this.findNearestLocation(loc)
     .then(function() {
@@ -132,12 +136,12 @@ MetOffice.prototype.findClosest = function(data, loc) {
         }
     }
     Utils.TRACE(TAG, "Nearest location is ", best.name, " at ",
-                  new Location(best));
+                new Location(best));
     this.location_id = best.id;
 };
 
 /**
- * Returna  promise to find the ID of the nearest location to the
+ * Return a  promise to find the ID of the nearest location to the
  * given lat,long.
  * @param {Location} loc where is "here"
  * @private
@@ -147,11 +151,18 @@ MetOffice.prototype.findNearestLocation = function(loc) {
 
     var self = this;
 
-    var url = URL_ROOT + "all/json/sitelist" + this.api_key;
+    var path = USUAL_PATH + "sitelist" + this.api_key;
+    var options = {
+        protocol: this.url.protocol,
+        hostname: this.url.hostname,
+        port: this.url.port,
+        path: path
+    };
+
     return Q.Promise(function(resolve, reject) {
-        http.get(
-            url,
-            function(res) {
+        Http.get(
+            options,
+            (res) => {
                 var result = "";
                 if (res.statusCode < 200 || res.statusCode > 299) {
                     reject(new Error(
@@ -167,7 +178,7 @@ MetOffice.prototype.findNearestLocation = function(loc) {
                     resolve();
                 });
             })
-        .on("error", function(err) {
+        .on("error", (err) => {
             Utils.ERROR(TAG, "Failed to GET from ", url, ": ", err.toString());
             reject(err);
         });
@@ -192,7 +203,7 @@ MetOffice.prototype.analyseWeather = function(data) {
     this.before = null;
     this.after = null;
     var periods = data.SiteRep.DV.Location.Period;
-    Utils.TRACE(TAG, "Analysis yields ", periods.length, " periods");
+
     for (i in periods) {
         var period = periods[i];
         var baseline = Date.parse(period.value) / 1000;
@@ -209,16 +220,18 @@ MetOffice.prototype.analyseWeather = function(data) {
             }
             // Convert baseline from minutes into epoch s
             report.$ = baseline + report.$ * 60;
+            if (this.historian)
+                this.historian.record(report.Temperature, report.$);
             if (report.$ <= Time.nowSeconds()) {
-                if (this.historian)
-                    this.historian.record(report.Temperature, report.$);
                 if (!this.before || this.before.$ < report.$) {
                     this.before = report;
-                    Utils.TRACE(TAG, "Before ", report.Temperature);
+                    Utils.TRACE(TAG, "Before ", report.Temperature,
+                               " ", Date, new Date(report.$ * 1000));
                 }
             } else if (!this.after || this.after.$ > report.$) {
                 this.after = report;
-                Utils.TRACE(TAG, "After ", report.Temperature);
+                Utils.TRACE(TAG, "After ", report.Temperature,
+                               " ", Date, new Date(report.$ * 1000));
             }
         }
     }
@@ -237,12 +250,18 @@ MetOffice.prototype.getWeather = function() {
     }
 
     var self = this;
-    var url = URL_ROOT + "all/json/" + this.location_id
-        + this.api_key + "&res=3hourly";
+    var path = USUAL_PATH + "sitelist" + this.api_key;
+    var options = {
+        protocol: this.url.protocol,
+        hostname: this.url.hostname,
+        port: this.url.port,
+        path: USUAL_PATH + this.location_id + this.api_key + "&res=3hourly"
+    };
+
     return Q.Promise(function(fulfill, fail) {
-        http.get(
-            url,
-            function(res) {
+        Http.get(
+            options,
+            (res) => {
                 var result = "";
                 res.on("data", function(chunk) {
                     result += chunk;
@@ -252,7 +271,7 @@ MetOffice.prototype.getWeather = function() {
                     fulfill();
                 });
             })
-            .on("error", function(err) {
+            .on("error", (err) => {
                 Utils.ERROR(TAG, "Failed to GET from ",
                             url, ": ", err.toString());
                 fail(err);

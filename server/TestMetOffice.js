@@ -1,8 +1,8 @@
 const getopt = require("node-getopt");
 const Q = require("q");
 const Utils = require("../common/Utils.js");
+const Config = require("../common/Config.js");
 const MetOffice = require("./MetOffice.js");
-const Config = require("./Config.js");
 
 var cliopt = getopt.create([
     [ "h", "help", "Show this help" ],
@@ -26,6 +26,9 @@ Config.load(cliopt.config)
 
     mo.getSerialisableState().then(function(d) {
         Utils.TRACE("STATE", d);
-	Utils.TRACE("LOG", mo.getSerialisableLog());
+	mo.getSerialisableLog()
+        .then((result) => {
+            Utils.TRACE(result);
+        });
     });
 });
