@@ -13,13 +13,13 @@ var cliopt = getopt.create([
     .options;
 
 if (typeof cliopt.config === "undefined")
-    cliopt.config = "./hotpot.cfg";
+    cliopt.config = "$HOME/hotpot.cfg";
 
 Utils.setTRACE("all");
 
 Q.longStackSupport = true;
 
-Config.load(cliopt.config)
+Config.load(Utils.expandEnvVars(cliopt.config))
 .then(function(config) {
     var mo = new MetOffice(config.controller.weather.MetOffice);
     mo.setLocation(config.server.location).done();
@@ -31,4 +31,7 @@ Config.load(cliopt.config)
             Utils.TRACE(result);
         });
     });
+},
+function(err) {
+    Utils.TRACE(err);
 });

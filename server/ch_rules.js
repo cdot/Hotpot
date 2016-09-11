@@ -1,4 +1,4 @@
-function() {
+function () {
     var state = this.pin.CH.getState();
 
     if (this.thermostat.CH.temperature > 20) {
@@ -42,7 +42,7 @@ function() {
     }
 
     // Demand is away from home, or we are in time band
-    if (state === 0 && this.thermostat.CH.temperature < 16) {
+    if (state === 0 && this.thermostat.CH.temperature < 14) {
         Utils.TRACE("Rules", "CH only ", this.thermostat.CH.temperature,
                     "°C, so on");
         this.setPin("CH", 1);
