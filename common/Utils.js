@@ -22,6 +22,7 @@ Utils.expandEnvVars = function(data) {
     if (typeof data !== "string") {
         throw "Cannot expand " + (typeof data);
     }
+    data = data.replace(/^~/, "$HOME");
     return data.replace(
             /(\$[A-Z]+)/g, function(match) {
                 var v = match.substring(1);
