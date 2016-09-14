@@ -77,3 +77,14 @@ structure containing the redirect target e.g
  "path": "/browser.html"
 }
 ```
+
+# GetTime
+
+A stand-along Raspberry Pi depends on it's CMOS clock for the time. While
+the drift of this clock is minimal, it does need to be set correctly on
+boot. This could be done using an NTP server, but this is overkill; it's
+easier just to ping a reliable site on the web and get the time from the
+headers in the response. That's what GetTime.js does, using `http://ntp.org`,
+and then sets the local time using the `date` shell command.
+
+Must be run as admin to set the time.
