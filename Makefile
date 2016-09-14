@@ -6,6 +6,7 @@
 
 SOURCES := \
 	GetIP/GetIP.js \
+	GetIP/GetTime.js \
 	server/AuthoriseCalendars.js \
 	server/Calendar.js \
 	server/Controller.js \

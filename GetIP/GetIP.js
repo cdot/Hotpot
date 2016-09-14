@@ -21,7 +21,7 @@ function Url(e) {
 }
 
 Url.prototype.toString = function() {
-    return (this.protocol? this.protocol : "?")
+    return (this.protocol ? this.protocol : "?")
         + "://"
         + (this.ipaddr ? this.ipaddr : "?")
         + (this.port ? this.port : "")
@@ -51,7 +51,7 @@ if (typeof cliopt.config === "undefined")
 if (cliopt.debug)
     Utils.setTRACE("all");
 
-var config;
+var config, current = {};
 
 Config.load(cliopt.config)
 .done(function(cfg) {
@@ -86,7 +86,7 @@ function update(data) {
                         reject(hadErr);
                     else
                         resolve();
-                })
+                });
     });
 }    
 

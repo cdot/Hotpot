@@ -5,7 +5,6 @@ const Q = require("q");
 const fs = require("fs");
 const readFile = Q.denodeify(fs.readFile);
 const writeFile = Q.denodeify(fs.writeFile);
-const statFile = Q.denodeify(fs.stat);
 const appendFile = Q.denodeify(fs.appendFile);
 
 const Time = require("../common/Time.js");
@@ -74,7 +73,7 @@ Historian.prototype.loadFromFile = function() {
         var i;
 
         // Load report
-        for (var i in lines) {
+        for (i in lines) {
             var csv = lines[i].split(",", 2);
             if (csv.length === 2) {
                 var point = {
@@ -109,7 +108,7 @@ Historian.prototype.loadFromFile = function() {
                         sample: doomed[i].sample
                     });
             }
-            if (report.length != doomed.length)
+            if (report.length !== doomed.length)
                 self.rewriteFile(report);
         }
 
@@ -155,7 +154,6 @@ Historian.prototype.start = function(quiet) {
     if (typeof this.config.interval === "undefined")
         throw "Cannot start Historian; interval not defined";
 
-    var time = Time.nowSeconds();
     var sample = this.config.sample();
 
     var self = this;
@@ -201,11 +199,11 @@ Historian.prototype.record = function(sample, time) {
 
     // If we've skipped recording several samples since the last
     // recorded sample, pop in a checkpoint
-    if (typeof this.last_time != "undefined"
+    if (typeof this.last_time !== "undefined"
         && time > this.last_time + 5 * this.config.interval / 4)
         promise = appendFile(
             this.path(),
-            (time - this.config.interval) + "," + this.last_sample + "\n")
+            (time - this.config.interval) + "," + this.last_sample + "\n");
     else
         promise = Q();
 

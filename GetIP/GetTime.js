@@ -28,7 +28,7 @@ Http.get(
             var Sys = require('child_process');
 
             Sys.execFile("/bin/date", [ "-s", res.headers.date ],
-            (error, stdout, stderr) => {
+            function(error, stdout, stderr) {
                 if (error)
                     console.error(error);
              });

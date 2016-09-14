@@ -6,7 +6,6 @@
 /*eslint-env node */
 
 const Q = require("q");
-const Fs = require("fs");
 const Http = require("follow-redirects").http;
 const Url = require("url");
 
@@ -73,7 +72,7 @@ var MetOffice = function(config) {
  */
 MetOffice.prototype.initialise = function() {
     return Q();
-}
+};
 
 /**
  * Return a promoise to set the lat/long of the place we are getting
@@ -162,7 +161,7 @@ MetOffice.prototype.findNearestLocation = function(loc) {
     return Q.Promise(function(resolve, reject) {
         Http.get(
             options,
-            (res) => {
+            function(res) {
                 var result = "";
                 if (res.statusCode < 200 || res.statusCode > 299) {
                     reject(new Error(
@@ -178,8 +177,8 @@ MetOffice.prototype.findNearestLocation = function(loc) {
                     resolve();
                 });
             })
-        .on("error", (err) => {
-            Utils.ERROR(TAG, "Failed to GET from ", url, ": ", err.toString());
+        .on("error", function(err) {
+            Utils.ERROR(TAG, "Failed to GET sitelist: ", err.toString());
             reject(err);
         });
     });
@@ -250,7 +249,6 @@ MetOffice.prototype.getWeather = function() {
     }
 
     var self = this;
-    var path = USUAL_PATH + "sitelist" + this.api_key;
     var options = {
         protocol: this.url.protocol,
         hostname: this.url.hostname,
@@ -261,7 +259,7 @@ MetOffice.prototype.getWeather = function() {
     return Q.Promise(function(fulfill, fail) {
         Http.get(
             options,
-            (res) => {
+            function(res) {
                 var result = "";
                 res.on("data", function(chunk) {
                     result += chunk;
@@ -271,9 +269,8 @@ MetOffice.prototype.getWeather = function() {
                     fulfill();
                 });
             })
-            .on("error", (err) => {
-                Utils.ERROR(TAG, "Failed to GET from ",
-                            url, ": ", err.toString());
+            .on("error", function(err) {
+                Utils.ERROR(TAG, "Failed to GET weather: ", err.toString());
                 fail(err);
             });
     });

@@ -95,7 +95,7 @@ Controller.prototype.createWeatherAgents = function(configs) {
             self.weather[name] = new WeatherAgent(config);
             promise = promise.then(function() {
                 return self.weather[name].initialise();
-            })
+            });
         });
     }
     return promise;
