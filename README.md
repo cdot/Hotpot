@@ -62,14 +62,15 @@ The server supports command-line options as follows:
 ```
   -h, --help        Show this help
   -c, --config=ARG  Configuration file (default ./hotpot.cfg)
-  -d, --debug[=ARG]   Run in debug mode e.g. --debug all
+  -t, --trace[=ARG] Trace module e.g. --trace all
+  -d, --debug       Run in debug mode - uses stubs for missing hardware
 ```
-All debug statements are tagged with the time and the module e.g 
+All trace and debug statements are tagged with the time and the module e.g 
 ```
 2016-08-13T08:37:08.694Z Server: HTTP starting on port 13196
 ```
-You can choose just to monitor just particular modules e.g. `--debug=Server`,
-or you can enable `all` and then choose which modules to *ignore* by prepending a minus sign e.g. `--debug=all,-Historian,-Server`
+You can choose just to monitor just particular modules e.g. `--trace=Server`,
+or you can enable `all` and then choose which modules to *ignore* by prepending a minus sign e.g. `--trace=all,-Historian,-Server`
 
 Developers should note that the server must be run with --debug on any
 platform that doesn't have the expected hardware (pins and thermostats)
@@ -117,15 +118,9 @@ boosting temperature. The following URL requests are available:
 * `/config` - retrieve the configuration of the controller (JSON)
 * `/state` - retrieve the current state of the controller (JSON)
 * `/log/{type}/{name}` - retrieve type `pin`, `thermostat`, or `weather` logs, or all logs if `{type}/{name}` is not given (or all `{type}` logs if `{name}` is not given)
-* `/remove_rule/{index}` - remove the rule at {index}
-* `/move_up/{index}` - move the rule at {index} up one place
-* `/move_down/{index}` - move the rule at {index} down one place
-* `/set/pin/{name}?value=` - set the pin state/ Not very useful, as this setting
-  will quickly be overridden by rules / requests.
-* `/set/rule/{index}/name?value=` - set a rule name
-* `/set/rule/{index}/test?value=` - set a rule test function
 * `/request?source={name};pin={name};state=[0|1|2];until={epoch}` - set a request on behalf of the given source for the given pin, asking for the given state. The request will (optionally) remain active until the given date.
-* `/refresh_calendars` - force a calendar refresh from google
+* `/refresh_calendars` - force a calendar refresh from google, useful if an event has been added/removed from the calendar (there is no support for push notifications)
+* `/restart` - force a restart of the server.
 
 # Calendars
 

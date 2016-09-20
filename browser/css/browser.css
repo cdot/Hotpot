@@ -15,38 +15,13 @@ body {
 .editable {
 }
 
-tr.rule {
-    vertical-align: top;
-    text-align: left;
+.template {
+    display: none;
 }
 
 /* Fixed width font for e.g. temperatures */
 .monospace {
     font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
-}
-
-/* A template div, never shown */
-.template {
-    display:none;
-}
-
-/* A rule move button that is disabled e.g. by being at top or bottom of rule
- * list */
-.move_rule.disabled {
-    display:none;
-}
-
-/* Link to add rules */
-.add_rule {
-    color: olive;
-}
-
-.add_rule:hover {
-    color: yellow;
-}
-
-.active_rule {
-    color: yellow;
 }
 
 /* The canvas used to show graphs */

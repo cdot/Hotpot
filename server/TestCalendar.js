@@ -1,4 +1,5 @@
 // Test for Calendar
+/*eslint-env node */
 const getopt = require("node-getopt");
 const Q = require("q");
 
@@ -22,7 +23,8 @@ Q.longStackSupport = true;
 
 Config.load(cliopt.config)
 .done(function(config) {
-   var cal = new Calendar("Crawford", config.controller.calendar.Crawford);
+   var cal = new Calendar("Crawford", config.controller.calendar.Crawford,
+                         trigger, remove);
 
     cal
     .authorise()
@@ -31,7 +33,7 @@ Config.load(cliopt.config)
     })
     .then(function() {
         console.log("Active event:");
-        console.log(Utils.dump(cal.getCurrent()));
+        console.log(Utils.dump(cal.get()));
     })
     .catch(function(e) {
         console.error(e.stack);

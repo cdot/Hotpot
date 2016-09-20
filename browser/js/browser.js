@@ -77,8 +77,8 @@
      * User clicks a requests field
      * @return {boolean} false to terminate event handling
      */
-    function changeRequest() {
-        var val = parseInt($(this).val());
+    function requestState() {
+        var val = parseInt($(this).data("value"));
         $(this).parents(".templated[data-field]").each(function() {
             var pin = ($(this).data("field"));
 
@@ -96,111 +96,6 @@
                    });
             return false; // prevent repeated calls
         });
-    }
-
-    /**
-     * Rule has been moved, need to renumber
-     * @param $rules the rule list element
-     */
-    function renumberRules($rules) {
-        var index = 0;
-        $rules.find(".rule").each(function() {
-            $(this).attr("data-field", index);
-            index++;
-        });
-    }
-
-    /**
-     * User clicks add rule
-     * @return {boolean} false to terminate event handling
-     */
-    function addRule() {
-        var $self = $(this);
-        stopPolling();
-        var $rules = $self.closest("[data-field='rule']");
-        var data = {
-            name: "new rule",
-            test: "function() { }"
-        };
-        $.post("/ajax/insert_rule/" + getPath($self),
-               JSON.stringify(data))
-            .done(function() {
-                // Add it to the DOM
-                fillContainer(
-                    $rules,
-                    "rule",
-                    data);
-                attachHandlers($rules.find(".rule").last());
-                renumberRules($self.closest("[data-field='rule']"));
-            })
-            .always(function() {
-                $(document).trigger("poll");
-            });
-        return false; // prevent repeated calls
-    }
-
-    /**
-     * User clicks remove rule
-     * @return {boolean} false to terminate event handling
-     */
-    function removeRule() {
-        var $self = $(this);
-        var $rules = $self.closest("[data-field='rule']");
-        var $rule = $self.closest(".rule");
-        stopPolling();
-        $.post("/ajax/removeRule/" + getPath($self))
-            .done(function() {
-                // Remove it from the DOM
-                $rule.remove();
-                renumberRules($rules);
-            })
-            .always(function() {
-                $(document).trigger("poll");
-            });
-        return false; // prevent repeated calls
-    }
-
-    /**
-     * Support for user clicks that move rules
-     * @param {int} dir the direction to move, -1 = up, 1 = down
-     * @return {boolean} false to terminate event handling
-     */
-    function moveRule(dir) {
-        var $self = $(this);
-        var $rule = $self.closest(".rule");
-        var $rules = $self.closest("[data-field='rule']");
-        var $rel = (dir === "down") ? $rule.next() : $rule.prev();
-        if ($rel.length === 0)
-            return false;
-        stopPolling();
-        $.post("/ajax/move_" + dir + "/" + getPath($self))
-            .done(function() {
-                if (dir === "down")
-                    $rel.after($rule.remove());
-                else
-                    $rel.before($rule.remove());
-                renumberRules($rules);
-            })
-            .always(function() {
-                $(document).trigger("poll");
-            });
-        return false; // prevent repeated calls
-    }
-
-    /**
-     * User clicks move rule down
-     * @return {boolean} false to terminate event handling
-     */
-    function moveDown() {
-        return moveRule.call(this, "down");
-    }
-
-    /**
-     * User clicks move rule up
-     * @return {boolean} false to terminate event handling
-     */
-    function moveUp() {
-        return moveRule.call(this, "up");
     }
 
     /**
@@ -223,28 +118,19 @@
                 });
         }
 
-        if (t === "location") {
-            var m = $ui.data("marker");
-            if (typeof m !== "undefined") {
-                m.setPosition({
-                    lat: parseFloat(value.lat),
-                    lng: parseFloat(value.lng)
-                });
-            }
-            v = value.lat + "," + value.lng;
-        } else {
-            // Text / number field
-            if (t === "float") {
-                if (typeof value === "number")
-                    v = value.toPrecision(5);
-                else
-                    v = typeof value;
-            } if (t === "date") {
-                v = new Date(Math.round(value)).toString();
-            } else
-                v = value.toString();
-            $ui.text(v);
-        }
+        // Text / number field
+        if (t === "float") {
+            if (typeof value === "number")
+                v = value.toPrecision(5);
+            else
+                v = typeof value;
+        } else if (t === "date") {
+            v = new Date(Math.round(value)).toString();
+        } else
+            v = value.toString();
+        $ui.text(v);
+
+        // tell the graph
         $ui.trigger("data_change");
     }
 
@@ -258,7 +144,7 @@
                 var d = (typeof o.temperature !== "undefined")
                     ? o.temperature : o.state;
                 if (typeof d !== "undefined")
-                    g.addPoint(type + ":" + name, Time.nowSeconds(), d);
+                    g.addPoint(type + ":" + name, Time.now(), d);
             }
         }
         g.update();
@@ -326,7 +212,7 @@
                 $tc.autoscale_graph({
                     render_label: function(axis, trd) {
                         if (axis === "x")
-                            return new Date(trd * 1000).toString();
+                            return new Date(trd).toString();
                         return (Math.round(trd * 10) / 10).toString();
                     }
                 });
@@ -336,11 +222,12 @@
                     var options = trace_options[na];
                     options.min =
                         {
-                            x: Date.now() / 1000 - 24 * 60 * 60 // 24 hours ago
+                            x: Date.now() - 24 * 60 * 60 * 1000 // 24 hours ago
                         };
                     options.max = {
-                        x: Date.now() / 1000
+                        x: Date.now()
                     };
+
                     var trace = g.addTrace(na, options);
                     for (var j = 1; j < da.length; j += 2) {
                         trace.addPoint(basetime + da[j], da[j + 1]);
@@ -348,7 +235,7 @@
                     // Closing point at same level as last measurement,
                     // just in case it was a long time ago
                     if (da.length > 1)
-                        trace.addPoint(Time.nowSeconds(), da[da.length - 1]);
+                        trace.addPoint(Time.now(), da[da.length - 1]);
                 }
                 for (var type in data)
                     for (var name in data[type])
@@ -388,14 +275,6 @@
                 setValue($expansion.find(
                     "[data-field='" + subname + "']").first(), data[subname]);
         }
-        // Name radio group unique to this template
-        $expansion
-            .find("input[type='radio']")
-            .each(function() {
-                $(this)
-                    .attr("name", "radio_" + name)
-                    .addClass("pin_radio");
-            });
         return $expansion;
     };
 
@@ -430,19 +309,7 @@
      */
     function attachHandlers($root) {
         $(".editable", $root).on("click", editField);
-
-        // Rule handlers
-        $(".removeRule", $root).on("click", removeRule);
-        $(".move_rule.up", $root).on("click", moveUp);
-        $(".move_rule.down", $root).on("click", moveDown);
-
-        // Disable the first move-up and the last move-down in
-        // any group of rules
-        $(".move_rule.up", $root).first().addClass("disabled");
-        $(".move_rule.down", $root).last().addClass("disabled");
-        $(".add_rule", $root).on("click", addRule);
-
-        $(".pin_radio").on("change", changeRequest);
+        $(".state_button").on("click", requestState);
     }
 
     /**

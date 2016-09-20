@@ -140,7 +140,7 @@ Calendar.prototype.fillCache = function() {
     .then(function() {
         var google = require("googleapis");
         var calendar = google.calendar("v3");
-        var now = Date.now();
+        var now = Time.now();
 
         // Q.denodeify doesn't work for this, so have to promisify it
         // manually :-(

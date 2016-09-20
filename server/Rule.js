@@ -4,6 +4,8 @@
 
 const TAG = "Rule";
 
+const Config = require("../common/Config");
+
 // We need this to be gloabl (outside the scope of the node module)
 // so the module can't be strict
 /** @ignore */
@@ -17,7 +19,7 @@ Utils = require("../common/Utils.js");
  * @protected
  * @class
  */
-function Rule(name) {
+function Rule(name, config) {
     "use strict";
 
     this.index = undefined;
@@ -27,6 +29,12 @@ function Rule(name) {
      * @public
      */
     this.name = name;
+
+    /**
+     * Configuration data
+     */
+    this.config = config;
+
     /**
      * Test function
      * @type {function}
@@ -37,9 +45,23 @@ function Rule(name) {
 module.exports = Rule;
 
 /**
+ * Promise to initialise a new rule, possibly reading rule function
+ * from external file.
+ */
+Rule.prototype.initialise = function() {
+    var self = this;
+
+    return Config.fileableConfig(self.config, "test")
+    .then(function(fn) {
+        self.setTest(fn, self.config.test_file);
+        Utils.TRACE(TAG, self.name, " initialised");
+    });
+};
+
+/**
  * Set the test function for this rule
  * @param {function} fn the function (may be a string)
- * @protected
+ * @private
  */
 Rule.prototype.setTest = function(fn, source) {
     "use strict";

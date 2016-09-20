@@ -31,21 +31,17 @@ Config.load = function(file) {
 };
 
 /**
- * Save the configuration back
+ * Return a promise to save the configuration to a file
  */
 Config.save = function(config, file) {
     "use strict";
 
-    writeFile(Utils.expandEnvVars(file),
+    return writeFile(Utils.expandEnvVars(file),
               serialize(config, 2), "utf8")
 
     .catch(function(e) {
         Utils.ERROR(TAG, "ConfigurationManager save failed: ", e.stack);
-    })
-
-    .done(function() {
-        Utils.TRACE(TAG, file, " updated");
-                });
+    });
 };
 
 /**

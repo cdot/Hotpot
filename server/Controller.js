@@ -77,6 +77,16 @@ Controller.prototype.initialise = function() {
     });
 };
 
+Controller.prototype.reconfigure = function() {
+    var self = this;
+
+    Utils.TRACE(TAG, "Refreshing rules");
+    return self.createRules(self.config.rule)
+    .then(function() {
+        self.resetValve();
+    });
+};
+
 /**
  * Create weather agents
  * @param {Array} configs array of weather agent configurations
@@ -225,19 +235,13 @@ Controller.prototype.createThermostats = function(configs) {
 Controller.prototype.createRules = function(configs) {
     "use strict";
     var self = this;
-
     var promise = Q();
 
     self.rule = [];
-    Utils.forEach(configs, function(config) {
-        var rule = new Rule(config.name);
-        self.addRule(rule, false);
-        // Pull the initial test function in
+    Utils.forEach(configs, function(config, id) {
+        self.rule[id] = new Rule(id, config);
         promise = promise.then(function() {
-            return Config.fileableConfig(config, "test")
-                .then(function(fn) {
-                    rule.setTest(fn, config.test_file);
-                });
+            return self.rule[id].initialise();
         });
     });
     return promise;
@@ -379,7 +383,7 @@ Controller.prototype.setPromise = function(channel, on) {
     return self.pin[channel].getStatePromise()
 
     .then(function(cur) {
-        if (on && cur === 1 || !on && cur === 0)
+        if (cur === on)
             return Q(); // no more promises
 
         // Y-plan systems have a state where if the heating is on but the
@@ -477,55 +481,6 @@ Controller.prototype.dispatch = function(path, data) {
     case "config": // Return the config with all _file expanded
         // /config
         return Config.getSerialisable(this.config);
-    case "remove_rule": // remove a rule
-        // /remove_rule/{index}
-        self.remove_rule(parseInt(path[0]));
-        break;
-    case "insert_rule": // insert a new rule at the end
-        // /insert_rule?name=;test=;
-        var r = new Rule(data.name);
-        r.setTest(data.test);
-        self.addRule(r, true);
-        break;
-    case "move_up": // promote a rule in the evaluation order
-        // /move_up/{index}
-        self.move_rule(parseInt(path[0]), -1);
-        break;
-    case "move_down": // demote a rule
-        // /move_down/{index}
-        self.move_rule(parseInt(path[0]), 1);
-        break;
-    case "set": // change the configuration of a system element
-        // /set/pin/{name}?value=
-        // Pretty useless! Rules will override it before you can blink.
-        if (path[0] === "pin")
-            return self.setPromise(path[1], data.value);
-
-        // /set/rule/{index}/name?value=
-        // /set/rule/{index}/test?value=
-        else if (path[0] === "rule") {
-            var i = parseInt(path[1]);
-            if (i < 0 || i >= self.rule.length)
-                throw "No rule " + i;
-            if (path[2] === "name") {
-                self.rule[i].name = data.value;
-                self.config.rule[i].name = this.name;
-                self.emit("config_change");
-            } else if (path[2] === "test") {
-                self.rule[i].setTest(data.value);
-                Config.updateFileableConfig(
-                    self.config.rule[i], "test", self.rule[i].testfn.toString())
-                .then(function(config_changed) {
-                    if (config_changed)
-                        self.emit("config_change");
-                });
-            }
-            else
-                throw "Unrecognised set/rule command " + path[2];
-        }
-        else
-            throw new Error("Unrecognised command");
-        break;
     case "request":
         // Push a request onto a pin (or all pins). Requests may come
         // from external sources such as mobiles or browsers.
@@ -535,6 +490,18 @@ Controller.prototype.dispatch = function(path, data) {
             until = Date.parse(until);
         this.addRequest(data.pin, data.source,
                         parseInt(data.state), until);
+        break;
+    case "restart":
+        self.emit("config_refresh");
+        break;
+    case "set":
+        var tim = data.value;
+        if (path[0] === "time") {
+            if (!tim || tim === "")
+                Time.unforce();
+            else
+                Time.force(tim);
+        }
         break;
     case "refresh_calendars":
         // Force the refresh of all calendars (sent manually when one changes)
@@ -551,100 +518,6 @@ Controller.prototype.dispatch = function(path, data) {
 };
 
 /**
- * Get the index of a rule specified by name, object or index.
- * @private
- */
-Controller.prototype.getRuleIndex = function(i) {
-    "use strict";
-    if (typeof i !== "string") {
-        for (var j in this.rule) {
-            if (this.rule[j].name === i) {
-                return j;
-            }
-        }
-    } else if (typeof i === "object") {
-        return i.index;
-    }
-    return i;
-};
-
-/**
- * Add a new rule to the end of the rule list.
- * @param rule {Rule} the rule
- * @param update_config true to update the configuration too (and cause it
- * to be saved)
- * @private
- */
-Controller.prototype.addRule = function(rule, update_config) {
-    "use strict";
-    rule.index = this.rule.length;
-    this.rule.push(rule);
-    this.renumberRules();
-
-    if (update_config) {
-        this.config.rule.push(rule.getConfiguration());
-        self.emit("config_change");
-    }
-
-    Utils.TRACE(TAG, "Rule '", rule.name, "' inserted at ", rule.index);
-};
-
-/**
- * Move a rule a specified number of places in the order.
- * @param i the number (or name, or rule object) of the rule to delete
- * @param move {integer} number of places to move the rule, negative to move up,
- * positive to move down
- * @private
- */
-Controller.prototype.move_rule = function(i, move) {
-    "use strict";
-    if (move === 0)
-        return;
-    i = this.getRuleIndex(i);
-    var dest = i + move;
-    if (dest < 0)
-        dest = 0;
-    if (dest >= this.rule.length)
-        dest = this.rule.length - 1;
-
-    var removed = this.rule.splice(i, 1);
-    this.rule.splice(dest, 0, removed[0]);
-    removed = this.config.rule.splice(i, 1);
-    this.config.rule.splice(dest, 0, removed[0]);
-    this.renumberRules();
-    self.emit("config_change");
-    Utils.TRACE(TAG, this.name, " rule ", i, " moved to ", dest);
-};
-
-/**
- * Remove a rule.
- * @param i the number (or name, or rule object) of the rule to delete
- * @return the removed rule function
- * @private
- */
-Controller.prototype.remove_rule = function(i) {
-    "use strict";
-    i = this.getRuleIndex(i);
-    var del = this.rule.splice(i, 1);
-    this.config.rule.splice(i, 1);
-    this.renumberRules();
-    Utils.TRACE(TAG, this.name, " rule ", del[0].name,
-                  "(", i, ") removed");
-    self.emit("config_change");
-    return del[0];
-};
-
-/**
- * Reset the index of rules.
- * @private
- */
-Controller.prototype.renumberRules = function() {
-    "use strict";
-    for (var j = 0; j < this.rule.length; j++)
-        this.rule[j].index = j;
-};
-
-/**
  * Evaluate rules at regular intervals.
  * @private
  */
@@ -652,43 +525,22 @@ Controller.prototype.pollRules = function() {
     "use strict";
     var self = this;
 
-    // Test each of the rules in order until one returns true,
-    // then stop testing. This allows us to inject rules
-    // before the standard set and override them completely.
-    var remove = [];
-    Utils.forEach(self.rule, function(rule, i) {
+    // Test each of the rules
+    Utils.forEach(self.rule, function(rule) {
         if (typeof rule.testfn !== "function") {
             Utils.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
             return true;
         }
-        var result;
-        try {
-            result = rule.testfn.call(self);
-        } catch (e) {
+
+        rule.testfn.call(self)
+        .catch(function(e) {
             if (typeof e.stack !== "undefined")
                 Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
             Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.toString());
-        }
-        // If a rule returns the string "remove", it will be
-        // removed from the rules list
-        if (typeof result === "string") {
-            if (result === "remove")
-                remove.push(i);
-        } else if (typeof result === "boolean" && result) {
-            return false;
-        }
-        return true;
+        });
     });
 
-    // Remove rules flagged for removal
-    while (remove.length > 0) {
-        var ri = remove.pop();
-        Utils.TRACE(TAG, "Remove rule ", ri);
-        self.rule.splice(ri, 1);
-        self.renumberRules();
-        self.emit("config_change");
-    }
-
+    // Queue the next poll
     Q.delay(RULE_INTERVAL).done(function() {
         self.pollRules();
     });

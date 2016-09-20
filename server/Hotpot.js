@@ -28,7 +28,8 @@ HOTPOT_DEBUG = undefined;
     var cliopt = getopt.create([
         [ "h", "help", "Show this help" ],
         [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ],
-        [ "", "debug[=ARG]", "Run in debug mode e.g. --debug all" ]
+        [ "t", "trace=ARG", "Trace modules e.g. --trace=Rules" ],
+        [ "d", "debug", "Run in debug mode, using stubs for missing hardware" ]
     ])
         .bindHelp()
         .setHelp(DESCRIPTION + "[[OPTIONS]]")
@@ -43,8 +44,11 @@ HOTPOT_DEBUG = undefined;
         Q.longStackSupport = true;
         var TestSupport = require("./TestSupport.js");
         HOTPOT_DEBUG = new TestSupport();
-        Utils.setTRACE(cliopt.debug);
-    } else
+    }
+
+    if (cliopt.trace && cliopt.trace !== "")
+        Utils.setTRACE(cliopt.trace);
+    else
         Utils.TRACE = function() {};
 
     var config, controller, server;
@@ -78,7 +82,15 @@ HOTPOT_DEBUG = undefined;
         controller.on(
             "config_change",
             function() {
-                Config.save(config, cliopt.config);
+                Config.save(config, cliopt.config)
+                .done(function() {
+                    Utils.TRACE(TAG, cliopt.config, " updated");
+                });
+            });
+        controller.on(
+            "config_refresh",
+            function() {
+                controller.reconfigure(config.controller);
             });
     })
 

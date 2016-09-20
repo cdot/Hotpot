@@ -233,7 +233,6 @@ Pin.prototype.getState = function() {
 Pin.prototype.getStatePromise = function() {
     "use strict";
     return readFile(this.value_path, "utf8")
-
     .then(function(data) {
         return parseInt(data);
     });
@@ -300,11 +299,14 @@ Pin.prototype.purgeRequests = function(state, source) {
 /**
  * Add a request. A request is an override for rules that suspends the
  * normal rules either for a period of time ('until' is a number), or until
- * the rules purge the request. The interpretation
- * of requests is in the hands of the rules; the pin simply stores them. The
- * only thing the Pin does with a request is to expire those that have
- * passed their timeout (see #purgeRequests)
- * Active requests for state 0 override those for state 1 or 2.
+ * the rules purge the request. The exact interpretation
+ * of requests is in the hands of the rules; the pin simply stores them.
+ * A pin may have multiple requests, but only one request from each source.
+ * When it gets a request it purges all existing requests from the same source
+ * before adding the new request. The special state -1 (none) is used to
+ * remove all existing requests.
+ * Where multiple sources have active requests, then requests for lower states
+ * override requests for higher states.
  * @param {Pin.Request} request the request, see Pin.Request in the class
  * description
  */ 
@@ -330,9 +332,9 @@ Pin.prototype.getActiveRequest = function() {
             if (active_req.state === 0)
                 return active_req;
         }
-        else if (this.requests[i].state === 0)
-            // Override active_req.state === 1
-            return this.requests[i];
+        else if (!active_req || this.requests[i].state < active_req.state)
+            // Lower state overrides higher
+            active_req = this.requests[i];
     }
     return active_req;
 };

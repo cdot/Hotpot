@@ -5,8 +5,7 @@
 const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
 /**
- * Functions for comparing times around the current time. All computations are
- * in Local time.
+ * Functions for comparing times around the current time.
  * @namespace
  */
 var Time = {
@@ -32,15 +31,49 @@ Time.toDate = function(d) {
 };
 
 /**
- * Debug support - force now to a specific time
+ * Convert a variety f types to a number of ms
+ * @private
  */
-Time.force_now = function(now) {
+Time.toMs = function(d) {
+    switch (typeof d) {
+    case "string":
+        return Time.parse(d).getTime();
+    case "number":
+        return d;
+    case "object":
+        return d.getTime();
+    }
+    throw "Unconvertible date type " + (typeof d);
+};
+
+/**
+ * Unit test support. Force now to a specific time for the duration
+ * of a function call.
+ */
+Time.for_now = function(now, scope) {
+    if (typeof now === "object")
+        now = now.getTime();
+    Time.now = function() {
+        return now;
+    };
+    scope();
+    Time.now = Date.now;
+};
+
+/**
+ * Debug support. Force now to a specific time until unset.
+*/
+Time.force = function(now) {
+    now = Date.parse(now);
     Time.now = function() {
         return now;
     };
 };
 
-Time.unforce_now = function() {
+/**
+ * Debug support. Revert to system time
+*/
+Time.unforce = function() {
     Time.now = Date.now;
 };
 
@@ -56,7 +89,7 @@ Time.midnight = function() {
 };
 
 /**
- * Parse a server local time HH[:MM[:SS]] string to a Date relative to midnight.
+ * Parse a server local time HH[:MM[:SS]] string to a Date offset from midnight.
  * Times must be in the range 00:00:00..23:59:59
  * @param {string} s time string
  * @return {Date} the date
@@ -94,19 +127,18 @@ Time.nowSeconds = function() {
  */
 Time.between = function(t1, t2) {
     "use strict";
-    t1 = Time.toDate(t1);
-    t2 = Time.toDate(t2);
+    var now = Time.now();
+    t1 = Time.toMs(t1);
+    t2 = Time.toMs(t2);
 
     if (t1 > t2) {
         // e.g. 22:00..02:00, check 12:00..02:00 tomorrow
-        if (Time.between(Time.midnight(), t2))
+        if (now < t2)
             return true;
         // Now check t1..midnight tonight
-        t2 = new Date(Time.midnight() + ONE_DAY);
+        t2 = Time.midnight().getTime() + ONE_DAY;
     }
-
     // Now all within current 24 hour period, t1 < t2
-    var now = Time.now();
     return (t1 <= now && now < t2);
 };
 
@@ -119,8 +151,7 @@ Time.between = function(t1, t2) {
  */
 Time.after = function(t1) {
     "use strict";
-    t1 = Time.toDate(t1);
-    return (t1 < Time.now());
+    return (Time.toMs(t1) < Time.now());
 };
 
 /**
@@ -132,6 +163,5 @@ Time.after = function(t1) {
  */
 Time.before = function(t1) {
     "use strict";
-    t1 = Time.toDate(t1);
-    return (Time.now() < t1);
+    return (Time.now() < Time.toMs(t1));
 };

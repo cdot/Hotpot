@@ -56,6 +56,7 @@ var MetOffice = function(config) {
     this.name = "MetOffice";
     this.config = config;
     this.api_key = "?key=" + config.api_key;
+    this.log = [];
     var hc = config.history;
     if (typeof hc !== "undefined") {
         var Historian = require("./Historian");
@@ -75,8 +76,9 @@ MetOffice.prototype.initialise = function() {
 };
 
 /**
- * Return a promoise to set the lat/long of the place we are getting
- * weather data for
+ * Return a promise to set the lat/long of the place we are getting
+ * weather data for. This will start the automatic updater that will
+ * refresh the weather cache with new data as and when it comes available.
  * @param {Location} loc where
  */
 MetOffice.prototype.setLocation = function(loc) {
@@ -86,8 +88,19 @@ MetOffice.prototype.setLocation = function(loc) {
     Utils.TRACE(TAG, "Set location ", loc);
     return this.findNearestLocation(loc)
     .then(function() {
-        self.update();
+        return self.update(true);
     });
+};
+
+/**
+ * Stop the automatic updater.
+ */
+MetOffice.prototype.stop = function() {
+    if (typeof this.timeout !== undefined) {
+        clearTimeout(this.timeout);
+        delete this.timeout;
+        Utils.TRACE(TAG, "Stopped");
+    }
 };
 
 /**
@@ -111,7 +124,34 @@ MetOffice.prototype.getSerialisableLog = function() {
     "use strict";
     if (!this.historian)
         return Q();
-    return this.historian.getSerialisableHistory();
+    return this.historian.getSerialisableHistory()
+    .then(function(h) {
+        // Clip to the current time
+        var before = -1, after = -1;
+        var now = Time.now();
+        for (var i = 1; i < h.length; i += 2) {
+            if (h[0] + h[i] <= now)
+                before = i;
+            else {
+                after = i;
+                break;
+            }
+        }
+        var est;
+        if (before >= 0 && after > before) {
+            est = h[before + 1];
+            if (h[after + 1] !== est) {
+                var frac = ((now - h[0]) - h[before]) / (h[after] - h[before]);
+                est += (h[after + 1] - est) * frac;
+            }
+        }
+        h.splice(after);
+        if (typeof est !== "undefined") {
+            h.push(now - h[0]);
+            h.push(est);
+        }
+        return h;
+    });
 };
 
 /**
@@ -185,13 +225,11 @@ MetOffice.prototype.findNearestLocation = function(loc) {
 };
 
 /**
- * Bracket the weather information returned, pulling out the information
- * for the time previous to now and the next predicted time and storing
- * them in "before" and "after" fields, and storing the temperature history
- * in the historian.
+ * Parse the weather information returned, pushing it into the log
+ * and storing the temperature history in the historian.
  * @private
  */
-MetOffice.prototype.analyseWeather = function(data) {
+MetOffice.prototype.buildLog = function(data) {
     "use strict";
 
     var lu = data.SiteRep.Wx.Param;
@@ -199,16 +237,16 @@ MetOffice.prototype.analyseWeather = function(data) {
     for (i in lu)
         s2c[lu[i].name] = lu[i].$;
 
-    this.before = null;
-    this.after = null;
     var periods = data.SiteRep.DV.Location.Period;
+    var rebased = false;
+    var new_reports = 0;
 
-    for (i in periods) {
+    for (i = 0; i < periods.length; i++) {
         var period = periods[i];
-        var baseline = Date.parse(period.value) / 1000;
+        var baseline = Date.parse(period.value);
 
         var dvs = period.Rep;
-        for (j in dvs) {
+        for (j = 0; j < dvs.length; j++) {
             var report = {};
             for (k in dvs[j]) {
                 var key = s2c[k];
@@ -217,23 +255,25 @@ MetOffice.prototype.analyseWeather = function(data) {
                 else
                     report[key] = dvs[j][k];
             }
-            // Convert baseline from minutes into epoch s
-            report.$ = baseline + report.$ * 60;
+            // Convert baseline from minutes into epoch ms
+            report.$ = baseline + report.$ * 60 * 1000;
             if (this.historian)
                 this.historian.record(report.Temperature, report.$);
-            if (report.$ <= Time.nowSeconds()) {
-                if (!this.before || this.before.$ < report.$) {
-                    this.before = report;
-                    Utils.TRACE(TAG, "Before ", report.Temperature,
-                               " ", Date, new Date(report.$ * 1000));
+            if (!rebased) {
+                // Delete log entries after the time of the current report
+                for (k = 0; k < this.log.length; k++) {
+                    if (this.log[k].$ >= report.$) {
+                        this.log.splice(k);
+                        break;
+                    }
                 }
-            } else if (!this.after || this.after.$ > report.$) {
-                this.after = report;
-                Utils.TRACE(TAG, "After ", report.Temperature,
-                               " ", Date, new Date(report.$ * 1000));
+                rebased = true;
             }
+            this.log.push(report);
+            new_reports++;
         }
     }
+    Utils.TRACE(TAG, new_reports, " new reports");
 };
 
 /**
@@ -244,7 +284,7 @@ MetOffice.prototype.getWeather = function() {
     "use strict";
 
     if (typeof this.after !== "undefined"
-        && Time.nowSeconds() < this.after.$) {
+        && Time.now() < this.after.$) {
         return Q();
     }
 
@@ -265,7 +305,7 @@ MetOffice.prototype.getWeather = function() {
                     result += chunk;
                 });
                 res.on("end", function() {
-                    self.analyseWeather(JSON.parse(result));
+                    self.buildLog(JSON.parse(result));
                     fulfill();
                 });
             })
@@ -276,6 +316,23 @@ MetOffice.prototype.getWeather = function() {
     });
 };
 
+MetOffice.prototype.bracket = function() {
+    var now = Time.now();
+    var b = {};
+
+    for (var i = 0; i < this.log.length; i++) {
+        var report = this.log[i];
+        if (report.$ <= now) {
+            if (!b.before || b.before.$ < report.$)
+                b.before = report;
+        } else if (!b.after || b.after.$ > report.$) {
+            b.after = report;
+            break;
+        }
+    }
+    return b;
+};
+
 /**
  * Update the current forecast from the metoffice, and schedule the
  * next update.
@@ -284,21 +341,25 @@ MetOffice.prototype.getWeather = function() {
 MetOffice.prototype.update = function() {
     "use strict";
     var self = this;
+    if (self.timeout)
+        clearTimeout(self.timeout);
+    delete self.timeout;
     Utils.TRACE(TAG, "Updating from MetOffice website");
-    this.getWeather()
-    .done(function() {
-        var wait = self.after.$ - Time.nowSeconds();
-        Utils.TRACE(TAG, "Next update in ", wait / 60, " minutes");
-        setTimeout(function() {
-            self.update();
-        }, wait * 1000);
+    return this.getWeather()
+    .then(function() {
+        var br = self.bracket();
+        self.last_update = Time.now();
+        var wait = br.after.$ - self.last_update;
+        Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
+        self.timeout = setTimeout(function() {
+            self.update().done();
+        }, wait);
     });
 };
 
 /**
  * Get the current weather estimate for the given field. If the field
- * is a number, interpolate linearly between "before" and "after" to get
- * a midpoint.
+ * is a number, interpolate linearly to get a midpoint.
  * @param {string} what the field name to interpolate
  * e.g. "Feels Like Temperature"
  * @return the weather item
@@ -306,13 +367,15 @@ MetOffice.prototype.update = function() {
  */
 MetOffice.prototype.get = function(what) {
     "use strict";
-    if (typeof this.before === "undefined")
+
+    var b = this.bracket();
+    if (!b.before || !b.after)
         return 0;
-    var est = this.before[what];
-    if (this.after[what] !== est && IS_NUMBER.indexOf(what) >= 0) {
-        var frac = (Time.nowSeconds() - this.before.$)
-            / (this.after.$ - this.before.$);
-        est += (this.after[what] - est) * frac;
+    var est = b.before[what];
+    if (b.after[what] !== est && IS_NUMBER.indexOf(what) >= 0) {
+        var frac = (Time.now() - b.before.$)
+            / (b.after.$ - b.before.$);
+        est += (b.after[what] - est) * frac;
     }
     return est;
 };

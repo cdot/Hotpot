@@ -18,7 +18,7 @@ const TAG = "Historian";
  * @param config {Config}
  * * `sample`: function returning a sample. Called every `interval`
  *    when `start()` is called.
- * * `interval`: time, sample frequency in seconds, required if `start()`
+ * * `interval`: time, sample frequency in ms, required if `start()`
  *    is called.
  * * `unordered`: set to true if samples may have out-of-order times.
  * * `file`: string required file to store log data in
@@ -30,6 +30,7 @@ function Historian(config) {
     "use strict";
 
     this.config = config;
+    this.timeout = null;
     Utils.TRACE(TAG, "for ", this.config.name, " in ", this.path());
 }
 module.exports = Historian;
@@ -122,15 +123,15 @@ Historian.prototype.loadFromFile = function() {
 
 /**
  * Get a promise for a serialisable 1D array for the history.
- * @return {array} First element is the base time in epoch seconds,
+ * @return {array} First element is the base time in epoch ms,
  * subsequent elements are alternating times and samples. Times are
- * in seconds.
+ * in ms.
  */
 Historian.prototype.getSerialisableHistory = function() {
     "use strict";
     return this.loadFromFile()
     .then(function(report) {
-        var basetime = report.length > 0 ? report[0].time : Time.nowSeconds();
+        var basetime = report.length > 0 ? report[0].time : Time.now();
         var res = [ basetime ];
         for (var i in report) {
             res.push(report[i].time - basetime);
@@ -158,18 +159,14 @@ Historian.prototype.start = function(quiet) {
 
     var self = this;
     function repoll() {
-        setTimeout(function() {
+        self.timeout = setTimeout(function() {
             self.start(true);
-        }, self.config.interval * 1000);
-    }
-
-    if (typeof sample !== "number") {
-        repoll();
-        return;
+        }, self.config.interval);
     }
 
     // Don't record if this sample has the same value as the last
-    if (sample === this.last_sample) {
+    if (typeof sample !== "number"
+        || sample === this.last_sample) {
         repoll();
         return;
     }
@@ -182,22 +179,31 @@ Historian.prototype.start = function(quiet) {
 };
 
 /**
+ * Stop the polling loop
+ */
+Historian.prototype.stop = function() {
+    if (typeof this.timeout !== undefined) {
+        clearTimeout(this.timeout);
+        delete this.timeout;
+        Utils.TRACE(TAG, this.config.name, " stopped");
+    }
+};
+
+/**
  * Get a promise to record a sample in the log.
  * @param {number} sample the data to record
- * @param {int} time (optional) time in s to force into the record
+ * @param {int} time (optional) time in ms to force into the record
  * @public
  */
 Historian.prototype.record = function(sample, time) {
     "use strict";
 
     if (typeof time === "undefined")
-        time = Time.nowSeconds();
-
-    time = Math.round(time);
+        time = Time.now();
 
     var promise;
 
-    // If we've skipped recording several samples since the last
+    // If we've skipped recording an interval since the last
     // recorded sample, pop in a checkpoint
     if (typeof this.last_time !== "undefined"
         && time > this.last_time + 5 * this.config.interval / 4)

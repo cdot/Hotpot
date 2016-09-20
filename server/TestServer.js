@@ -1,3 +1,7 @@
+/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+
+/*eslint-env node */
+
 /**
  * Simple test program to create an HTTP server
  * on 13198

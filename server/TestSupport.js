@@ -1,9 +1,10 @@
 /*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
 
+/*eslint-env node */
+
 // Test support
 
 const fs = require("fs");
-const Utils = require("../common/Utils.js");
 
 function TestSupport() {
     console.log("****** Running with TestSupport ******");
@@ -20,6 +21,7 @@ module.exports = TestSupport;
 TestSupport.prototype.mapThermostat = function(id, name) {
     this.thermoMap[id] = name;
     this.temperature[name] = 20;
+    this.warmDown(name);
 };
 
 // Map an ID - e.g. of a temp sensor - to a name
@@ -27,19 +29,28 @@ TestSupport.prototype.mapPin = function(id, name) {
     this.pinMap[name] = id;
 };
 
+TestSupport.prototype.warmDown = function(name) {
+    var self = this;
+    if (this.pinMap[name]) {
+        var odl = this.temperature[name];
+        var offset = Math.random() / 10;
+        var pState = this.getPin(name);
+        this.temperature[name] += (pState === 0) ? -offset : offset;
+        if (this.temperature[name] < 13)
+            this.temperature[name] = 13;
+        if (this.temperature[name] > 60)
+            this.temperature[name] = 60;
+        //console.log("WTF " + name + " (" + pState + ") "
+        //            + odl + " -> " + this.temperature[name]);
+    }
+    setTimeout(function() {
+        self.warmDown(name);
+    }, 1000);
+};
+
 // Simulate a ds18x20
 TestSupport.prototype.get = function(id, fn) {
     var name = this.thermoMap[id];
-    var odl = this.temperature[name];
-    var offset = Math.random() / 100;
-    var pstate = this.getPin(name);
-    this.temperature[name] += (pstate === 0) ? -offset / 100 : offset;
-    if (this.temperature[name] < 20)
-        this.temperature[name] = 20;
-    if (this.temperature[name] > 60)
-        this.temperature[name] = 60;
-    //console.log("WTF " + name + " (" + this.pinstate[name] + ") "
-    // + odl + " -> " + this.temperature[name]);
     if (typeof fn !== "undefined")
         fn(null, this.temperature[name]);
     else
@@ -49,5 +60,5 @@ TestSupport.prototype.get = function(id, fn) {
 // private
 TestSupport.prototype.getPin = function(name) {
     return parseInt(fs.readFileSync(this.pin_path + this.pinMap[name]));
-}
+};
 
