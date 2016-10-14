@@ -31,6 +31,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.support.v7.widget.Toolbar;
@@ -111,6 +112,10 @@ public class MainActivity extends AppCompatActivity
     public void onClickRefreshState(View view) {
         // sync so the response is handled in the same thread, simlpy so we can Toast
         mServerConnection.GET_sync("/ajax/state", new AjaxStateResponseHandler(null));
+    }
+
+    public void onRetryConnect(View view) {
+        resetServerConnection();
     }
 
     private boolean isOnline() {
@@ -267,7 +272,7 @@ public class MainActivity extends AppCompatActivity
                     mHandler.getLooper().quit();
                     return;
                 }
-                if (allowContinuousUpdates()) {
+                if (mServerConnection != null && allowContinuousUpdates()) {
                     Log.d(TAG, "Getting /ajax/state");
                     // POST_sync to wait for the response
                     mServerConnection.GET_sync("/ajax/state", mRH);
@@ -293,7 +298,8 @@ public class MainActivity extends AppCompatActivity
         }
 
         public void run() {
-            Log.d(TAG, "Starting on " + mServerConnection.getUrl());
+            Log.d(TAG, "Starting " + (mServerConnection != null ? " on "
+                    + mServerConnection.getUrl() : " with no server"));
             Looper.prepare();
             mHandler = new Handler();
             mHandler.postDelayed(mSU, 1);
@@ -316,15 +322,24 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "Starting server connection on " + sURL);
         String user = prefs.getString(PREF_USER, null);
         String pass = prefs.getString(PREF_PASS, null);
+        View disconnectedLayout = MainActivity.this.findViewById(R.id.disconnected_layout);
+        View connectedLayout = MainActivity.this.findViewById(R.id.connected_layout);
+        int vises;
         try {
             // Probe the connection, looking for possible redirect
             mServerConnection = new ServerConnection(sURL, user, pass);
-            Log.d(TAG, "Connection to " + mServerConnection.getUrl() + " established");
+            Log.d(TAG, "Connection to " + mServerConnection.getUrl().toString() + " established");
+            disconnectedLayout.setVisibility(View.GONE);
+            connectedLayout.setVisibility(View.VISIBLE);
             startListeningThread();
         } catch (IOException mue) {
             String mess = getResources().getString(R.string.ERR_nvu, mue.getMessage());
             Log.e(TAG, mess);
             Toast.makeText(MainActivity.this, mess, Toast.LENGTH_SHORT).show();
+            TextView v = (TextView) MainActivity.this.findViewById(R.id.server_status);
+            v.setText(mess);
+            connectedLayout.setVisibility(View.GONE);
+            disconnectedLayout.setVisibility(View.VISIBLE);
         }
     }
 
