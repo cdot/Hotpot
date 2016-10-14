@@ -18,7 +18,7 @@ var cliopt = getopt.create([
     .options;
 
 Http.get(
-    "http://ntp.org",
+    "http://www.ntp.org",
     function(res) {
 	console.log(res.headers.date);
         if (res.statusCode < 200 || res.statusCode > 299) {

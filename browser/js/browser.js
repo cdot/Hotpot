@@ -73,6 +73,14 @@
         return false; // prevent repeated calls
     }
 
+    function refreshCalendars() {
+        $("#refresh_calendars").attr("disabled", "disabled");
+        $.get("/ajax/refresh_calendars",
+	function() {
+	    $("#refresh_calendars").removeAttr("disabled");
+        });
+    }
+
     /**
      * User clicks a requests field
      * @return {boolean} false to terminate event handling
@@ -310,6 +318,7 @@
     function attachHandlers($root) {
         $(".editable", $root).on("click", editField);
         $(".state_button").on("click", requestState);
+	$("#refresh_calendars").on("click", refreshCalendars);
     }
 
     /**
