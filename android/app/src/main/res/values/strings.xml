@@ -6,6 +6,7 @@
     <string name="boosted">BOOSTED</string>
     <string name="boost_help">Turn on the service until it reaches the target temperature programmed into the rules</string>
     <string name="connect">Connect to Server</string>
+    <string name="retry">Retry</string>
     <string name="CH">Central Heating</string>
     <string name="date_format">HH:mm:ss EEE, dd.MM.yy</string>
     <string name="degrees_c">°C</string>
@@ -47,5 +48,6 @@
     <string name="ERR_nocert">Protocol is https, but server did not provide any certificates</string>
     <string name="ERR_nvu">Not a valid URL: %s</string>
     <string name="ERR_pd">Permission Denied</string>
+    <string name="ERR_nsc">No server connection</string>
 </resources>
 
