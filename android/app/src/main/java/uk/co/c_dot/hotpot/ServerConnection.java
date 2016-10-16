@@ -3,7 +3,6 @@
  */
 package uk.co.c_dot.hotpot;
 
-import android.os.Looper;
 import android.util.Base64;
 import android.util.JsonReader;
 import android.util.JsonToken;
@@ -24,9 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
@@ -34,9 +31,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.HashSet;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -49,7 +44,7 @@ import javax.net.ssl.X509TrustManager;
 /**
  * A connection to a server identified by a URL. Only supports POST requests with JSON responses.
  * Supports (optional) SSL with untrusted certificates (does not check hosts or certificates)
- * <p/>
+ * <p>
  * When used in SSL mode this class makes some assumptions that are inherently insecure in order
  * to work with self-signed certificates. Specifically, the default hostname verification is
  * suspended, and it trusts arbitrary certificates (does not require certificates to be signed
@@ -68,9 +63,9 @@ public class ServerConnection {
         /**
          * Called with the Object read from the response.
          *
-         * @param jr the object read from the response
+         * @param reply the string read from the response
          */
-        void done(Object jr);
+        void handleReply(String reply);
 
         /**
          * Called if an error occurs while reading the response. The exception will be an
@@ -79,6 +74,32 @@ public class ServerConnection {
          * @param e error exception
          */
         void error(Exception e);
+    }
+
+    /**
+     * Handler for a POST JSON response
+     */
+    public static abstract class JSONHandler implements ResponseHandler {
+        /**
+         * Called with the Object read from the response.
+         *
+         * @param jr the object read from the response
+         */
+        public abstract void handleReply(Object jr);
+
+        /**
+         * Implements ResponseHandler
+         *
+         * @param reply the string read from the response
+         */
+        public void handleReply(String reply) {
+            try {
+                handleReply(parseJSON(new JsonReader(new StringReader(reply))));
+            } catch (JSONException | IOException je) {
+                Log.e(TAG, "Failed to parse JSON response " + je);
+                error(je);
+            }
+        }
     }
 
     /**
@@ -387,7 +408,7 @@ public class ServerConnection {
                 if (event == XmlPullParser.START_TAG) {
                     String tag = parser.getName().toLowerCase();
                     if (tag.equals("meta")) {
-                        String attr, content = null;
+                        String attr;
                         /*for (int i = 0; i < parser.getAttributeCount(); i++) {
                             Log.d(TAG, "META " + parser.getAttributeNamespace(i)
                                     + " pf " + parser.getAttributePrefix(i)
@@ -398,7 +419,7 @@ public class ServerConnection {
                         if (attr == null)
                             continue;
                         if (attr.toLowerCase().equals("refresh")) {
-                            content = parser.getAttributeValue(null, "content");
+                            String content = parser.getAttributeValue(null, "content");
                             if (content != null) {
                                 int us = content.indexOf(";");
                                 if (us >= 0)
@@ -440,17 +461,9 @@ public class ServerConnection {
             if (reply == null || reply.equals("")) {
                 Log.d(TAG, "GET response is null");
                 if (rh != null)
-                    rh.done(null);
-            } else {
-                try { // and parse it
-                    if (rh != null)
-                        rh.done(parseJSON(new JsonReader(new StringReader(reply))));
-                } catch (JSONException je) {
-                    Log.e(TAG, "Failed to parse JSON response " + je);
-                    if (rh != null)
-                        rh.error(je);
-                }
-            }
+                    rh.handleReply(null);
+            } else if (rh != null)
+                rh.handleReply(reply);
         } catch (IOException ioe) {
             Log.e(TAG, "IO exception while reading response: " + ioe);
             if (rh != null)
@@ -505,16 +518,10 @@ public class ServerConnection {
             if (reply == null || reply.equals("")) {
                 Log.d(TAG, "POST response is null");
                 if (rh != null)
-                    rh.done(null);
+                    rh.handleReply(null);
             } else {
-                try { // and parse it
-                    if (rh != null)
-                        rh.done(parseJSON(new JsonReader(new StringReader(reply))));
-                } catch (JSONException je) {
-                    Log.e(TAG, "Failed to parse JSON response " + je);
-                    if (rh != null)
-                        rh.error(je);
-                }
+                if (rh != null)
+                    rh.handleReply(reply);
             }
         } catch (IOException ioe) {
             Log.e(TAG, "IO exception while reading response: " + ioe);

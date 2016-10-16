@@ -32,15 +32,17 @@ function () {
         }
 
         // Consider the time
-        if (Time.between('08:00', '18:00') // day
-            || Time.between('22:00', '06:40')) { // night
+        if (Time.between('22:00', '06:40')) { // night
             if (state === 1)
                 Utils.TRACE("Rules", "out of time band, so CH off");
             return self.setPromise("CH", 0);
         }
 
+        var lower_bound = Time.between('08:00', '18:00')
+            ? 14 : 18;
+
         // we are in time band
-        if (self.thermostat.CH.temperature < 14) {
+        if (self.thermostat.CH.temperature < lower_bound) {
             if (state === 0)
                 Utils.TRACE("Rules", "CH only ",
                             self.thermostat.CH.temperature,

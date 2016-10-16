@@ -11,14 +11,12 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.StrictMode;
-
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
@@ -26,26 +24,20 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.support.v7.widget.Toolbar;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.security.cert.Certificate;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.Set;
 
 /**
  * Hotpot main application.
@@ -76,8 +68,23 @@ public class MainActivity extends AppCompatActivity
     // Record of which pins are boosted
     private HashMap<String, Boolean> mBoosted;
 
+    // Handler for a OK/FAIL JSON handler. Update on OK.
+    private class UpdateOnOKHandler extends ServerConnection.JSONHandler {
+        public void handleReply(Object data) {
+            // Force an update
+            restartListeningThread();
+        }
+
+        public void error(Exception e) {
+            String mess = getResources().getString(R.string.ERR_ptts, e);
+            Log.e(TAG, mess);
+            Toast.makeText(MainActivity.this, mess, Toast.LENGTH_LONG).show();
+        }
+    }
+
     /**
      * Boost (or unboost) the given pin
+     *
      * @param pin the pin name
      */
     private void toggleBoost(View view, String pin) {
@@ -85,24 +92,27 @@ public class MainActivity extends AppCompatActivity
         try {
             params.put("source", mAndroidId);
             params.put("pin", pin);
-            params.put("state", mBoosted.get(pin) ? 0 : 2);
+            params.put("state", mBoosted.get(pin) ? -1 : 2);
             // When a boost button state changes, the button label is changed until the
             // next update from the server, to indicate we are pending a changed
-            ((TextView)view).setText(getResources().getString(
+            ((TextView) view).setText(getResources().getString(
                     mBoosted.get(pin) ? R.string.pending_off : R.string.pending_on));
         } catch (JSONException je) {
+            // Should never happen
         }
-        mServerConnection.POST_async("/ajax/request", params, null);
+        mServerConnection.POST_async("/ajax/request", params, new UpdateOnOKHandler());
     }
 
     public void onClickBoostHW(View view) {
         toggleBoost(view, "HW");
     }
 
-    public void onClickBoostCH(View view) { toggleBoost(view, "CH"); }
+    public void onClickBoostCH(View view) {
+        toggleBoost(view, "CH");
+    }
 
     public void onClickRefreshCalendar(View view) {
-        mServerConnection.GET_async("/ajax/refresh_calendars", null);
+        mServerConnection.GET_async("/ajax/refresh_calendars", new UpdateOnOKHandler());
     }
 
     public void onClickQuit(MenuItem item) {
@@ -111,7 +121,7 @@ public class MainActivity extends AppCompatActivity
 
     public void onClickRefreshState(View view) {
         // sync so the response is handled in the same thread, simlpy so we can Toast
-        mServerConnection.GET_sync("/ajax/state", new AjaxStateResponseHandler(null));
+        mServerConnection.GET_sync("/ajax/state", new StateResponseHandler(null));
     }
 
     public void onRetryConnect(View view) {
@@ -143,14 +153,13 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private void startListeningThread() {
+    private void restartListeningThread() {
         stopListeningThread();
         if (mAllowedToPOST) {
             mListeningThread = new ListeningThread();
             mListeningThread.start();
         } else {
             Log.e(TAG, "Tried to start listening thread before permissions granted");
-            assert (false);
         }
     }
 
@@ -218,21 +227,20 @@ public class MainActivity extends AppCompatActivity
     /**
      * Handler for the response from /ajax/state
      */
-    private class AjaxStateResponseHandler implements ServerConnection.ResponseHandler {
+    private class StateResponseHandler extends ServerConnection.JSONHandler {
         Runnable callback;
 
-        AjaxStateResponseHandler(Runnable cb) {
+        StateResponseHandler(Runnable cb) {
             callback = cb;
         }
 
         // Send a field value update to the main activity
         private void send(String action, int id, Object value) {
-
         }
 
         // Implements ServerConnection.ResponseHandler
         @Override
-        public void done(Object data) {
+        public void handleReply(Object data) {
             Intent i = new Intent();
             i.setAction(UPDATE);
             i.putExtra("state", data.toString());
@@ -258,7 +266,7 @@ public class MainActivity extends AppCompatActivity
         public String TAG;
 
         private Handler mHandler;
-        private AjaxStateResponseHandler mRH;
+        private StateResponseHandler mRH;
         private StateUpdater mSU = null;
         private long mUpdateFreq = 5000;
 
@@ -284,7 +292,7 @@ public class MainActivity extends AppCompatActivity
         public ListeningThread() {
             TAG = MainActivity.TAG + ".Thread" + MainActivity.this.mThreadCounter++;
             mSU = new StateUpdater();
-            mRH = new AjaxStateResponseHandler(new Runnable() {
+            mRH = new StateResponseHandler(new Runnable() {
                 public void run() {
                     if (ListeningThread.this.isInterrupted()) {
                         Log.d(TAG, "Interrupted when handling server response");
@@ -302,6 +310,7 @@ public class MainActivity extends AppCompatActivity
                     + mServerConnection.getUrl() : " with no server"));
             Looper.prepare();
             mHandler = new Handler();
+            // Perform a state update immediately
             mHandler.postDelayed(mSU, 1);
             Looper.loop();
             Log.d(TAG, "Terminated");
@@ -331,7 +340,7 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "Connection to " + mServerConnection.getUrl().toString() + " established");
             disconnectedLayout.setVisibility(View.GONE);
             connectedLayout.setVisibility(View.VISIBLE);
-            startListeningThread();
+            restartListeningThread();
         } catch (IOException mue) {
             String mess = getResources().getString(R.string.ERR_nvu, mue.getMessage());
             Log.e(TAG, mess);
@@ -472,7 +481,7 @@ public class MainActivity extends AppCompatActivity
         // Have to check if the listening thread is already running, because it is started in
         // onCreate.
         if (mListeningThread == null)
-            startListeningThread();
+            restartListeningThread();
     }
 
     /**
