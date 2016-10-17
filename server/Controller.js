@@ -366,7 +366,7 @@ Controller.prototype.setPin = function(channel, on) {
  * @param {number} state 1 (on) or 0 (off)
  * @private
  */
-Controller.prototype.setPromise = function(channel, on) {
+Controller.prototype.setPromise = function(channel, new_state) {
     "use strict";
     var self = this;
 
@@ -376,43 +376,47 @@ Controller.prototype.setPromise = function(channel, on) {
 
     if (this.pending) {
         return Q.delay(VALVE_RETURN).then(function() {
-            return self.setPin(channel, on);
+            return self.setPin(channel, new_state);
         });
     }
 
     return self.pin[channel].getStatePromise()
 
-    .then(function(cur) {
-        if (cur === on)
-            return Q(); // no more promises
+    .then(function(cur_state) {
+        if (cur_state === new_state)
+            return Q(); // already in the right state
 
         // Y-plan systems have a state where if the heating is on but the
         // hot water is off, and the heating is turned off, then the grey
         // wire to the valve (the "hot water off" signal) is held high,
         // stalling the motor and consuming power pointlessly. We need some
         // special processing to avoid this state.
-        // If heating only on, and it's going off, switch on HW
-        // to kill the grey wire. This allows the spring to fully
-        // return. Then after a timeout, set the desired state.
-        var hw_state = self.pin.HW.getState();
-        if (channel === "CH" && !on
-            && hw_state === 1 && hw_state === 0) {
-            return self.pin.CH.set(0)
-            .then(function() {
-                return self.pin.HW.set(1);
-            })
-            .then(function() {
-                self.pending = true;
-                return Q.delay(VALVE_RETURN);
-            })
-            .then(function() {
-                self.pending = false;
-                return self.pin[channel].set(on);
-            });
+
+        if (cur_state === 1 && channel === "CH" && new_state === 0) {
+            // CH is on, and it's going off
+            var hw_state = self.pin.HW.getState();
+            if (hw_state === 0) {
+                // HW is off, so switch off CH and switch on HW to kill
+                // the grey wire.
+                // This allows the spring to fully return. Then after a
+                // timeout, turn the CH on.
+                return self.pin.CH.set(0) // switch off CH
+                .then(function() {
+                    return self.pin.HW.set(1); // switch on HW
+                })
+                .then(function() {
+                    self.pending = true;
+                    return Q.delay(VALVE_RETURN); // wait for spring
+                })
+                .then(function() {
+                    self.pending = false;
+                    return self.pin.CH.set(0); // switch off CH
+                });
+            }
         }
         // Otherwise this is a simple state transition, just
         // promise to set the appropriate pin
-        return self.pin[channel].set(on);
+        return self.pin[channel].set(new_state);
     });
 };
 

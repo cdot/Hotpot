@@ -77,7 +77,7 @@
         $("#refresh_calendars").attr("disabled", "disabled");
         $.get("/ajax/refresh_calendars",
 	function() {
-	    $("#refresh_calendars").removeAttr("disabled");
+            $("#refresh_calendars").removeAttr("disabled");
         });
     }
 

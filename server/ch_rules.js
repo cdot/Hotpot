@@ -9,6 +9,7 @@ function () {
                             "°C so turning off");
             // Cancel any boost requests
             self.pin.CH.purgeRequests(2);
+            // setPromise is a NOP if already in the right state
             return self.setPromise("CH", 0);
         }
 
@@ -38,8 +39,9 @@ function () {
             return self.setPromise("CH", 0);
         }
 
+        // Daytime lower limit is 16C
         var lower_bound = Time.between('08:00', '18:00')
-            ? 14 : 18;
+            ? 16 : 18;
 
         // we are in time band
         if (self.thermostat.CH.temperature < lower_bound) {
