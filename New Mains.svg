@@ -164,8 +164,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.4"
-     inkscape:cx="210.75473"
-     inkscape:cy="406.79639"
+     inkscape:cx="451.39073"
+     inkscape:cy="635.36782"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -371,7 +371,7 @@
          y="139.03201">Valve</tspan></text>
     <path
        style="fill:none;stroke:#0f26a6;stroke-width:7.08661413;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 354.05439,379.8933 55.41842,41.57576 30.44411,0.29586 1.04603,-265.28173"
+       d="m 354.05439,379.8933 55.41842,41.57576 30.44411,0.29586 1.04603,-243.13887"
        id="path3299"
        sodipodi:nodetypes="cccc"
        inkscape:connector-curvature="0" />
@@ -1104,5 +1104,38 @@
          id="tspan4339"
          x="232.14285"
          y="808.07654">Grelco</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:OpenSymbol;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
+       x="399.86832"
+       y="194.15125"
+       id="text2497-3"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan2499-6"
+         x="399.86832"
+         y="194.15125">1</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:OpenSymbol;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
+       x="369.15402"
+       y="196.29411"
+       id="text2501-7"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan2503-5"
+         x="369.15402"
+         y="196.29411">3</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:OpenSymbol;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
+       x="347.01117"
+       y="196.29411"
+       id="text2505-3"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan2507-5"
+         x="347.01117"
+         y="196.29411">2</tspan></text>
   </g>
 </svg>

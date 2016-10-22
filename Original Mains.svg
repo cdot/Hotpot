@@ -15,7 +15,7 @@
    id="svg2"
    sodipodi:version="0.32"
    inkscape:version="0.91 r"
-   sodipodi:docname="Wiring.svg"
+   sodipodi:docname="Original Mains.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
    version="1.1">
   <defs
@@ -210,9 +210,9 @@
      objecttolerance="10"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4"
-     inkscape:cx="402.40123"
-     inkscape:cy="559.6717"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="474.20655"
+     inkscape:cy="800.49833"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -405,7 +405,7 @@
          y="71.07695">Valve</tspan></text>
     <path
        style="fill:none;stroke:#0f26a6;stroke-width:7.08661413;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 406.76285,311.93824 0.41842,59.4329 86.87268,0.29586 -0.38254,-283.138874"
+       d="m 406.76285,311.93824 0.41842,59.4329 86.87268,0.29586 -0.73968,-263.49602"
        id="path3299"
        sodipodi:nodetypes="cccc"
        inkscape:connector-curvature="0" />
@@ -1004,5 +1004,33 @@
            height="112.14286"
            x="508.57144"
            y="588.07648" /></flowRegion><flowPara
-         id="flowPara8405"></flowPara></flowRoot>  </g>
+         id="flowPara8405" /></flowRoot>    <ellipse
+       style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path8711-6"
+       cx="515.71429"
+       cy="91.290756"
+       rx="2.8571429"
+       ry="3.0357144" />
+    <ellipse
+       style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path8711-6-2"
+       cx="492.14285"
+       cy="92.71933"
+       rx="2.8571429"
+       ry="3.0357144" />
+    <ellipse
+       style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path8711-6-9"
+       cx="416.07144"
+       cy="102.71932"
+       rx="2.8571429"
+       ry="3.0357144" />
+    <ellipse
+       style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path8711-6-1"
+       cx="390.71426"
+       cy="104.1479"
+       rx="2.8571429"
+       ry="3.0357144" />
+  </g>
 </svg>

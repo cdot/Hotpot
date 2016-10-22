@@ -23,16 +23,13 @@
     <canvas id="graph_canvas"></canvas>
     <canvas id="tip_canvas"></canvas>
 
-    <button id="refresh_calendars">Refresh Calendars</button>
-
     <h2>Thermostats</h2>
     <div id="thermostat" data-field="thermostat" width="100%"></div>
 
     <h2>Pins</h2>
     <div id="pin" data-field="pin"></div>
 
-    <h2>Rules</h2>
-    <div id="rule" data-field="rule"></div>
+    <button id="refresh_calendars">Refresh Calendars</button>
 
     <!-- Templates. The template is the content, not the container -->
 
@@ -68,14 +65,5 @@
         </span>
       </div>
     </div>
-
-    <!-- Rule template -->
-    <div class="template" data-template="rule">
-      <div>
-        <h3 data-field="name" valign="top"></h3>
-        <pre data-field="test" class="function"></pre>
-      </div>
-    </div>
-
   </body>
 </html>
