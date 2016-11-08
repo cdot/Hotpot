@@ -155,11 +155,18 @@ Calendars are cached and updated every 24 hours. An update can be forced by visi
 ## Controlling Hotpot from the Calendar
 Hotpot is controlled by events in the calendar which contain special commands in the event summary or description. For example, `Hotpot:HW=on` will raise a request for Hotpot to turn the hot water on for the duration of the event. Requests are handled in the rules - see `hw_rules.js` for an example.
 
-The format of commands is `Hotpot:PIN=STATE` where `PIN` can be the name of a pin in `hotpot.cfg` (e.g. `HW` or `CH`) and `STATE` can be a number (0=off, 1=on, 2=boost) or one of the commands `on`, `off` or `boost`. `ALL` is special pin that will apply the command to all pins.
+The format of commands is `Hotpot: <pin> <state>` where `<pin>` can be the name of a pin in `hotpot.cfg` (e.g. `HW` or `CH`) and `<state>` can be a number (0=off, 1=on, 2=boost, 3=away) or one of the commands `on`, `off`, `boost` or `away'. `all` is special pin that will apply the command to all pins. Pin names are case sensitive; nothing else is. Examples:
+```
+Hotpot: all off
+Hotpot: all 0
+Hotpot: HW away
+HOTPOT: CH boost
+```
+The first and second turn everything ff ofor the duration of the event. The second puts HW into "away" state. The third turns CH to "boost".
 
 Note that calendar events are only used to generate requests. It is up to the
 rules whether and how those requests are interpreted. Rules should always
-contain a condition to stop runaway temperature rises.
+contain conditions to stop runaway temperature rises and freezing.
 
 ## Android App
 The Android app provides a simple interface to a Hotpot server.

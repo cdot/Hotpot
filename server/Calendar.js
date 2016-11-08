@@ -177,26 +177,34 @@ Calendar.prototype.fillCache = function() {
             var start = Date.parse(event.start.dateTime || event.start.date);
             var end = Date.parse(event.end.dateTime || event.end.date);
             // Can have orders in the event summary or the description
-            // Only the first found is obeyed.
             var fullText = event.summary + " " + event.description;
-            var match = /Hotpot:([A-Za-z]+)=([A-Za-z0-9]+)/.exec(fullText);
-            if (match !== null) {
+            var re = /HOTPOT\s*:\s*([A-Z]+)\s+([A-Z0-9]+)/ig;
+            var match;
+            while ((match = re.exec(fullText)) !== null) {
+                var pin = match[1];
                 var state = match[2];
                 if (/^[0-9]+$/i.test(state))
                     state = parseInt(state);
-                else if (/^off$/i.test(state))
+                else if (/^(off|away)$/i.test(state))
                     state = 0;
                 else if (/^on$/i.test(state))
                     state = 1;
                 else if (/^boost$/i.test(state))
                     state = 2;
+                else {
+                    Utils.TRACE(TAG, "Ignored bad calendar entry ",
+                                Date, start, "..",
+                                Date, end, " ",
+                                pin, "=", state);
+                    continue;
+                }
                 Utils.TRACE(TAG, "Got entry ", Date, start, "..",
                             Date, end, " ",
-                            match[1], "=", state);
+                            pin, "=", state);
                 self.schedule.push(new ScheduledEvent(
                     self,
                     "Calendar:" + self.name + ":" + self.schedule.length,
-                    start, end, match[1], state));
+                    start, end, pin, state));
             }
         }
         Utils.TRACE(TAG, self.name, " ready");
