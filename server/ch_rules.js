@@ -54,7 +54,7 @@ function () {
 
         // Daytime lower limit is lower than morning and evening
         var lower_bound = Time.between('08:00', '18:00')
-            ? 15 : 17;
+            ? 16 : 17;
 
         // we are in time band
         if (self.thermostat.CH.temperature < lower_bound) {
