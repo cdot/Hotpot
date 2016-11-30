@@ -2,7 +2,13 @@ function () {
     var self = this;
     return this.pin.CH.getStatePromise()
     .then(function(state) {
-        if (self.thermostat.CH.temperature > 19) {
+        // Daytime lower limit is lower than morning and evening
+        var lower_bound = Time.between('08:00', '18:00')
+            ? 16 : 17;
+        var upper_bound = Time.between('08:00', '18:00')
+            ? 17 : 18;
+
+        if (self.thermostat.CH.temperature > upper_bound) {
             // Warm enough inside, so switch off regardless of other rules
             if (state === 1)
                 Utils.TRACE("Rules", "CH is ", self.thermostat.CH.temperature,
@@ -51,10 +57,6 @@ function () {
                 Utils.TRACE("Rules", "out of time band, so CH off");
             return self.setPromise("CH", 0);
         }
-
-        // Daytime lower limit is lower than morning and evening
-        var lower_bound = Time.between('08:00', '18:00')
-            ? 16 : 17;
 
         // we are in time band
         if (self.thermostat.CH.temperature < lower_bound) {
