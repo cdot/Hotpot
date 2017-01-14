@@ -178,7 +178,7 @@ Calendar.prototype.fillCache = function() {
             var end = Date.parse(event.end.dateTime || event.end.date);
             // Can have orders in the event summary or the description
             var fullText = event.summary + " " + event.description;
-            var re = /HOTPOT\s*:\s*([A-Z]+)\s+([A-Z0-9]+)/ig;
+            var re = /HOTPOT\s*:\s*([A-Z]+)[=\s]+([A-Z0-9]+)/ig;
             var match;
             while ((match = re.exec(fullText)) !== null) {
                 var pin = match[1];
