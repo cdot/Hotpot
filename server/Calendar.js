@@ -182,6 +182,8 @@ Calendar.prototype.fillCache = function() {
             var match;
             while ((match = re.exec(fullText)) !== null) {
                 var pin = match[1];
+                if (pin.toUpperCase() === "ALL")
+                    pin = "ALL";
                 var state = match[2];
                 if (/^[0-9]+$/i.test(state))
                     state = parseInt(state);
