@@ -27,7 +27,7 @@
     <div id="thermostat" data-field="thermostat" width="100%"></div>
 
     <h2>Pins</h2>
-    <div id="pin" data-field="pin"></div>
+    <table id="pin" data-field="pin"></table>
 
     <button id="refresh_calendars">Refresh Calendars</button>
 
@@ -44,26 +44,27 @@
 
     <!-- Pin template -->
     <div class="template" data-template="pin">
-      <div>
-        <b data-field="name"></b>
-        <span data-field="state" style="padding-right: 10pt">X</span>
-        <span data-field="request">
+      <tr>
+        <th data-field="name"></th>
+        <td data-field="state">X</td>
+        <td>
           Request
           <button class="state_button" data-value="-1">Clear</button>
           <button class="state_button" data-value="0">OFF</button>
           <button class="state_button" data-value="1">ON</button>
           <button class="state_button" data-value="2">BOOST</button>
-          <span class="showif source state until">
-            <span data-field="source"></span>
-            is requesting state
-            <span data-field="state"></span>
-            <span class="showif until">
-              until
-              <span data-field="until" data-type="date"></span>
-            </span>
+        </td>
+        <td class="showif source state until">
+          <span data-field="source"></span>
+          is requesting state
+          <span data-field="state"></span>
+          <span class="showif until">
+            until
+            <span data-field="until" data-type="date"></span>
           </span>
-        </span>
-      </div>
+        </td>
+      </tr>
     </div>
+
   </body>
 </html>
