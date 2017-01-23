@@ -439,8 +439,10 @@ Controller.prototype.addRequest = function(pin, source, state, until) {
         Utils.forEach(this.pin, function(p) {
             p.addRequest(req);
         });
-    } else
+    } else if (typeof this.pin[pin] !=== "undefined")
         this.pin[pin].addRequest(req);
+    else
+        Utils.ERROR(TAG, "Cannot addRequest; No such pin '" + pin + "'");
 };
 
 /**
@@ -455,8 +457,10 @@ Controller.prototype.removeRequests = function(pin, source) {
         Utils.forEach(this.pin, function(p) {
             p.purgeRequests(undefined, source);
         });
-    } else
+    } else if (typeof this.pin[pin] !== "undefined")
         this.pin[pin].purgeRequests(undefined, source);
+    else
+        Utils.ERROR(TAG, "Cannot addRequest; No such pin '" + pin + "'");
 };
 
 /**
