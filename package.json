@@ -42,6 +42,9 @@
     },
     "analyze": true,
     "eslintConfig": {
+        "parserOptions": {
+            "ecmaVersion": 6
+        },
         "env": {
             "browser": true,
             "jquery": true
@@ -69,11 +72,12 @@
             "new-cap" : 0,
             "dot-notation" : 1,
             "no-trailing-spaces" : 0,
-            "no-use-before-define": "3 nofunc",
+            "no-use-before-define": 0,
             "no-loop-func": 1,
             "no-process-exit": 0,
             "no-eval": 1,
-            "quotes": 0
+            "quotes": 0,
+            "strict": 0
         }
     }
 }

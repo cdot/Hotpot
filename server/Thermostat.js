@@ -129,13 +129,14 @@ Thermostat.prototype.getSerialisableState = function() {
  * @return {Promise} promise to get an array of alternating times and
  * temps. Times are all relative to a base time, which is in the first
  * array element.
+ * @param since optional param giving start of logs as a ms datime
  * @protected
  */
-Thermostat.prototype.getSerialisableLog = function() {
+Thermostat.prototype.getSerialisableLog = function(since) {
     "use strict";
     if (!this.historian)
         return Q();
-    return this.historian.getSerialisableHistory();
+    return this.historian.getSerialisableHistory(since);
 };
 
 /**

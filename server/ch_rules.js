@@ -16,7 +16,7 @@ function () {
             // Cancel any boost requests
             self.pin.CH.purgeRequests(2);
             // setPromise is a NOP if already in the right state
-            return self.setPromise("CH", 0);
+            return self.setPromise("CH", 0, "Warm enough");
         }
 
         if (self.thermostat.CH.temperature < 4) {
@@ -25,7 +25,7 @@ function () {
             if (state === 0)
                 Utils.TRACE("Rules", "CH is ", self.thermostat.CH.temperature,
                             "°C so turning on");
-            return self.setPromise("CH", 1);
+            return self.setPromise("CH", 1, "Risk of frost");
         }
 
         // See if it's warm enough outside not to bother with heating
@@ -34,7 +34,7 @@ function () {
                 Utils.TRACE("CH", "Weather is ",
                             self.weather("Feels Like Temperature"),
                             " so CH off");
-            return self.setPromise("CH", 0);
+            return self.setPromise("CH", 0, "Warm enough outside");
         }
 
         // See if there's any demand from requests
@@ -48,14 +48,15 @@ function () {
             if (restate !== state)
                 Utils.TRACE("Rules", "active request for CH, ", req.state,
                             " from ", req.source);
-            return self.setPromise("CH", restate);
+            return self.setPromise("CH", restate,
+                                  req.source + " requested " + req.state);
         }
 
         // Consider the time
         if (Time.between('22:00', '06:40')) { // night
             if (state === 1)
                 Utils.TRACE("Rules", "out of time band, so CH off");
-            return self.setPromise("CH", 0);
+            return self.setPromise("CH", 0, "Out of time");
         }
 
         // we are in time band
@@ -64,7 +65,7 @@ function () {
                 Utils.TRACE("Rules", "CH only ",
                             self.thermostat.CH.temperature,
                             "°C, so on");
-            return self.setPromise("CH", 1);
+            return self.setPromise("CH", 1, "Too cold");
         }
     });
 }

@@ -11,7 +11,8 @@
     var setup_backoff = 10; // seconds
     var update_backoff = 10; // seconds
     var update_rate = 10; // seconds
-
+    var graph_width = 24 * 60 * 60 * 1000; // milliseconds
+    
     var config;
 
     var trace_options = {
@@ -212,8 +213,10 @@
 
     $(document).on("initialise_graph", function() {
         var $tc = $("#graph_canvas");
-        $.get(
+        var params = { since: Date.now() - graph_width };
+        $.post(
             "/ajax/log",
+            JSON.stringify(params),
             function(raw) {
                 var data;
                 eval("data=" + raw);
@@ -230,7 +233,7 @@
                     var options = trace_options[na];
                     options.min =
                         {
-                            x: Date.now() - 24 * 60 * 60 * 1000 // 24 hours ago
+                            x: Date.now() - graph_width
                         };
                     options.max = {
                         x: Date.now()

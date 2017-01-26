@@ -123,19 +123,23 @@ Historian.prototype.loadFromFile = function() {
 
 /**
  * Get a promise for a serialisable 1D array for the history.
+ * @param since earliest datime we are interested in. Can prune log
+ * data before this.
  * @return {array} First element is the base time in epoch ms,
  * subsequent elements are alternating times and samples. Times are
  * in ms.
  */
-Historian.prototype.getSerialisableHistory = function() {
+Historian.prototype.getSerialisableHistory = function(since) {
     "use strict";
     return this.loadFromFile()
     .then(function(report) {
         var basetime = report.length > 0 ? report[0].time : Time.now();
         var res = [ basetime ];
         for (var i in report) {
-            res.push(report[i].time - basetime);
-            res.push(report[i].sample);
+            if (typeof since === "undefined" || report[i].time >= since) {
+                res.push(report[i].time - basetime);
+                res.push(report[i].sample);
+            }
         }
         return res;
     });

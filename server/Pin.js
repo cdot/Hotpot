@@ -53,12 +53,18 @@ function Pin(name, config) {
     var self = this;
 
     /**
-     * Name of the pin e.g. HW
-     * @type {string}
+     * @property {string} name Name of the pin e.g. HW
      * @public
      */
     self.name = name;
 
+    /**
+     * @property {string} reason Descriptive reason the pin is currently in
+     * the state it is.
+     * @public
+     */
+    self.reason = "";
+    
     if (typeof HOTPOT_DEBUG !== "undefined")
         HOTPOT_DEBUG.mapPin(self.config.gpio, self.name);
 
@@ -70,7 +76,9 @@ function Pin(name, config) {
 
     Utils.TRACE(TAG, "'", self.name,
                   "' constructed on gpio ", self.config.gpio);
-    
+
+    /** @property { object} historian Historian object that records state
+     * for this pin */
     var hc = config.history;
     if (typeof hc !== "undefined") {
         var Historian = require("./Historian");
@@ -195,17 +203,19 @@ Pin.prototype.DESTROY = function() {
 
 /**
  * Set the pin state. Don't use this on a Y-plan system, use
- * {@link Controller.Controller#setPin|Controller.setPin} instead.
+ * {@link Controller.Controller#setPromise|Controller.setPromise} instead.
  * @param {integer} state of the pin
+* @param {String} reason Reason the pin is being set
  * @return {Promise} a promise to set the pin state
  * @public
  */
-Pin.prototype.set = function(state) {
+Pin.prototype.set = function(state, reason) {
     "use strict";
     var self = this;
 
     Utils.TRACE(TAG, self.value_path, " = ", (state === 1 ? "ON" : "OFF"));
 
+    self.reason = reason;
     var promise = writeFile(self.value_path, state, "UTF8");
     if (self.historian)
         promise = promise.then(function() {
@@ -251,7 +261,7 @@ Pin.prototype.getSerialisableState = function() {
     return this.getStatePromise()
     .then(function(value) {
         self.purgeRequests();
-        var state = {};
+        var state = { reason: self.reason };
         var ar = self.getActiveRequest();
         if (typeof ar !== "undefined")
             state.request = ar;
@@ -262,12 +272,13 @@ Pin.prototype.getSerialisableState = function() {
 
 /**
  * Get a promise for the current log of the pin state.
+ * @param since optional param giving start of logs as a ms datime
  */
-Pin.prototype.getSerialisableLog = function() {
+Pin.prototype.getSerialisableLog = function(since) {
     "use strict";
     if (!this.historian)
         return Q();
-    return this.historian.getSerialisableHistory();
+    return this.historian.getSerialisableHistory(since);
 };
 
 /**

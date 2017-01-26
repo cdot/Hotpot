@@ -119,12 +119,13 @@ MetOffice.prototype.getSerialisableState = function() {
 /**
  * Get a promise for the current log of the weather forecast. This
  * simply records the estimated outside temperature.
+ * @param since optional param giving start of logs as a ms datime
  */
-MetOffice.prototype.getSerialisableLog = function() {
+MetOffice.prototype.getSerialisableLog = function(since) {
     "use strict";
     if (!this.historian)
         return Q();
-    return this.historian.getSerialisableHistory()
+    return this.historian.getSerialisableHistory(since)
     .then(function(h) {
         // Clip to the current time
         var before = -1, after = -1;

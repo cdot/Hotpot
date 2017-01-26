@@ -46,6 +46,8 @@ Controller.prototype.initialise = function() {
 
     var self = this;
 
+    self.rule_state = {};
+    
     return Q()
 
     .then(function() {
@@ -174,7 +176,7 @@ Controller.prototype.createPins = function(configs) {
  */
 Controller.prototype.resetValve = function() {
     var self = this;
-    var promise = this.pin.HW.set(1)
+    var promise = this.pin.HW.set(1, "Reset")
 
     .then(function() {
         Utils.TRACE(TAG, "Reset: HW(1) done");
@@ -184,12 +186,12 @@ Controller.prototype.resetValve = function() {
 
     .then(function() {
         Utils.TRACE(TAG, "Reset: delay done");
-        return self.pin.CH.set(0);
+        return self.pin.CH.set(0, "Reset");
     })
 
     .then(function() {
         Utils.TRACE(TAG, "Reset: CH(0) done");
-        return self.pin.HW.set(0);
+        return self.pin.HW.set(0, "Reset");
     })
 
     .then(function() {
@@ -292,10 +294,12 @@ Controller.prototype.getSerialisableState = function() {
 };
 
 /**
- * Get the logs for a type e.g. pin, thermostat, weather
+ * Get the logs for a set
+ * @param set  e.g. pin, thermostat, weather
+ * @param since optional param giving start of logs as a ms datime
  * @private
  */
-Controller.prototype.getSetLogs = function(set) {
+Controller.prototype.getSetLogs = function(set, since) {
     var promise = Q();
     var logset;
 
@@ -305,7 +309,7 @@ Controller.prototype.getSetLogs = function(set) {
                 logset = {};
 
             promise = promise.then(function() {
-                return item.getSerialisableLog();
+                return item.getSerialisableLog(since);
             })
 
             .then(function(value) {
@@ -322,9 +326,10 @@ Controller.prototype.getSetLogs = function(set) {
 /**
  * Generate and promise to return a serialisable version of the
  * logs, suitable for use in an AJAX response.
+ * @param since optional param giving start of logs as a ms datime
  * @return {object} a promise to create serialisable structure
  */
-Controller.prototype.getSerialisableLog = function() {
+Controller.prototype.getSerialisableLog = function(since) {
     "use strict";
 
     var logs = {};
@@ -334,7 +339,7 @@ Controller.prototype.getSerialisableLog = function() {
 
     Utils.forEach(this, function(block, field) {
         promise = promise.then(function() {
-            return self.getSetLogs(self[field])
+            return self.getSetLogs(self[field], since)
             .then(function(logset) {
                 if (typeof logset !== "undefined")
                     logs[field] = logset;
@@ -348,25 +353,16 @@ Controller.prototype.getSerialisableLog = function() {
 };
 
 /**
- * Set the on/off state of a pin, suitable for calling from Rules.
- * This is more
+ * Get a promise to set the on/off state of a pin, suitable for
+ * calling from Rules. This is more
  * sophisticated than a simple `Pin.set()` call, because there is a
  * relationship between the state of the pins in Y-plan systems
  * that must be respected.
  * @param {String} channel e.g. "HW" or "CH"
  * @param {number} state 1 (on) or 0 (off)
+ * @param {String} reason reason for the state
  */
-Controller.prototype.setPin = function(channel, on) {
-    this.setPromise(channel, on).done();
-};
-
-/**
- * Get a promise to call `setPin()`.
- * @param {String} channel e.g. "HW" or "CH"
- * @param {number} state 1 (on) or 0 (off)
- * @private
- */
-Controller.prototype.setPromise = function(channel, new_state) {
+Controller.prototype.setPromise = function(channel, new_state, reason) {
     "use strict";
     var self = this;
 
@@ -376,15 +372,16 @@ Controller.prototype.setPromise = function(channel, new_state) {
 
     if (this.pending) {
         return Q.delay(VALVE_RETURN).then(function() {
-            return self.setPin(channel, new_state);
+            return self.setPromise(channel, new_state, reason);
         });
     }
 
     return self.pin[channel].getStatePromise()
 
     .then(function(cur_state) {
-        if (cur_state === new_state)
+        if (cur_state === new_state) {
             return Q(); // already in the right state
+        }
 
         // Y-plan systems have a state where if the heating is on but the
         // hot water is off, and the heating is turned off, then the grey
@@ -400,9 +397,9 @@ Controller.prototype.setPromise = function(channel, new_state) {
                 // the grey wire.
                 // This allows the spring to fully return. Then after a
                 // timeout, turn the CH on.
-                return self.pin.CH.set(0) // switch off CH
+                return self.pin.CH.set(0, reason + " (tx0)") // switch off CH
                 .then(function() {
-                    return self.pin.HW.set(1); // switch on HW
+                    return self.pin.HW.set(1, reason + " (tx1)"); // switch on HW
                 })
                 .then(function() {
                     self.pending = true;
@@ -410,13 +407,13 @@ Controller.prototype.setPromise = function(channel, new_state) {
                 })
                 .then(function() {
                     self.pending = false;
-                    return self.pin.CH.set(0); // switch off CH
+                    return self.pin.CH.set(0, reason); // switch off CH
                 });
             }
         }
         // Otherwise this is a simple state transition, just
         // promise to set the appropriate pin
-        return self.pin[channel].set(new_state);
+        return self.pin[channel].set(new_state, reason);
     });
 };
 
@@ -439,7 +436,7 @@ Controller.prototype.addRequest = function(pin, source, state, until) {
         Utils.forEach(this.pin, function(p) {
             p.addRequest(req);
         });
-    } else if (typeof this.pin[pin] !=== "undefined")
+    } else if (typeof this.pin[pin] !== "undefined")
         this.pin[pin].addRequest(req);
     else
         Utils.ERROR(TAG, "Cannot addRequest; No such pin '" + pin + "'");
@@ -482,10 +479,10 @@ Controller.prototype.dispatch = function(path, data) {
     case "log":
         // /log[/{type}[/{name}]]
         if (typeof path[0] === "undefined")
-            return self.getSerialisableLog();
+            return self.getSerialisableLog(data.since);
         if (typeof path[1] === "undefined")
-            return self.getSetLogs(self[path[0]]);
-        return self[path[0]][path[1]].getSerialisableLog();
+            return self.getSetLogs(self[path[0]], data.since);
+        return self[path[0]][path[1]].getSerialisableLog(data.since);
     case "config": // Return the config with all _file expanded
         // /config
         return Config.getSerialisable(this.config);
