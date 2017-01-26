@@ -35,7 +35,7 @@ lint: $(subst .js,.esl,$(SOURCES))
 
 # Make HML source-code documentation
 doc: $(SOURCES)
-	~/.node_modules/.bin/jsdoc -c jsdoc_config.json -d doc $(SOURCES)
+	jsdoc -c jsdoc_config.json -d=doc $(SOURCES)
 
 # Clean up
 clean:
