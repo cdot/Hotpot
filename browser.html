@@ -50,6 +50,7 @@
       <tr>
         <th data-field="name"></th>
         <td data-field="state"></td>
+        <td data-field="reason"></td>
         <td>
           Request
           <button class="state_button" data-value="-1">Clear</button>
@@ -57,7 +58,15 @@
           <button class="state_button" data-value="1">ON</button>
           <button class="state_button" data-value="2">BOOST</button>
         </td>
-        <td data-field="reason"></td>
+        <td class="showif source state until" data-field="request">
+          <span data-field="source"></span>
+          is requesting state
+          <span data-field="state"></span>
+          <span class="showif until">
+            until
+            <span data-field="until" data-type="date"></span>
+          </span>
+        </td>
       </tr>
     </table>
 
