@@ -5,6 +5,8 @@
 const Q = require("q");
 
 const Utils = require("../common/Utils");
+const Config = require("../common/Config");
+const Historian = require("./Historian");
 
 const TAG = "Thermostat";
 
@@ -20,10 +22,8 @@ var ds18x20;
  * object.
  * @class
  * @param name {String} name by which the caller identifies the thermostat
- * @param config configuration for the thermostat
- * * `id`: unique ID used to communicate with this thermostat
- * * `history`: (optional) Historian configuration for recording the
- *   temperature measured by the thermostat.
+ * @param config configuration for the thermostat - see
+ * Thermostat.prototype.Config
  */
 function Thermostat(name, config) {
     "use strict";
@@ -46,7 +46,9 @@ function Thermostat(name, config) {
     }
 
     this.config = config;
-   
+    Config.check("Thermostat " + name, config, name,
+                 Thermostat.prototype.Config);
+    
     // Name of the thermostat e.g. "HW"
     this.name = name;
 
@@ -60,20 +62,24 @@ function Thermostat(name, config) {
         var Historian = require("./Historian.js");
         if (typeof hc.interval === "undefined")
             hc.interval = 300; // 5 minutes
-        this.historian = new Historian({
-            name: self.name,
-            file: hc.file,
-            interval: hc.interval,
-            sample: function() {
-                // Only log temperatures to one decimal place
-                return Math.round(self.temperature * 10) / 10;
-            }
-        });
+        hc.sample = function() {
+            // Only log temperatures to one decimal place
+            return Math.round(self.temperature * 10) / 10;
+        };
+        this.historian = new Historian(self.name, hc);
     }
 
     if (typeof HOTPOT_DEBUG !== "undefined")
         HOTPOT_DEBUG.mapThermostat(config.id, name);
 }
+
+Thermostat.prototype.Config = {
+    id: {
+        $type: "string",
+        $doc: "unique ID used to communicate with this thermostat"
+    },
+    history: Utils.extend(Historian.prototype.Config, { $optional: true })
+};
 
 /**
  * Return a promise to intiialise the thermostat with a valid value read

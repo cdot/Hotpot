@@ -8,28 +8,36 @@ const readFile = Q.denodeify(Fs.readFile);
 
 const Utils = require("../common/Utils.js");
 const Time = require("../common/Time.js");
+const Config = require("../common/Config.js");
 
-const CACHE_LENGTH = 24 * 60 * 60 * 1000; // cache size in ms
+// MS in an hour
+const HOURS = 60 * 60 * 1000;
 
 const TAG = "Calendar";
 
 /**
  * Calendar event cache entry. Events stored here are filtered; only central
- * heating events are cached. The cache size is limited by CACHE_LENGTH.
+ * heating events are cached. The cache size is limited by the config.
  * Longer means less frequent automatic updates, and larger memory
  * footprint for the server, but less network traffic.
  * @ignore
  */
 function ScheduledEvent(cal, id, start, end, pin, state) {
-    var now = Time.now();
+    // Reference to container {Calendar}
     this.calendar = cal;
+    // Event ID
     this.id = id;
+    // Pin the event applies to e.g. "CH"
     this.pin = pin;
+    // Required state
     this.state = state;
+    // Start of the event, in epoch ms
     this.startms = start;
+    // End of the event, in epoch ms
     this.endms = end;
-
+    
     var self = this;
+    var now = Time.now();
     if (start > now) {
         Utils.TRACE(TAG, "Event will start at ", Date, start,
                    " now is ", Date, now);
@@ -44,6 +52,7 @@ function ScheduledEvent(cal, id, start, end, pin, state) {
     }
 }
 
+// Cancel this event. Will remove the event from the containing calendar.
 ScheduledEvent.prototype.cancel = function() {
     Utils.TRACE(TAG, this.id, " cancelled");
     if (typeof this.event !== "undefined")
@@ -53,6 +62,7 @@ ScheduledEvent.prototype.cancel = function() {
     this.event = undefined;
 };
 
+// Start this event. The calendar trigger will be called.
 ScheduledEvent.prototype.start = function() {
     Utils.TRACE(TAG, this.id, " starting");
     if (typeof this.calendar.trigger === "function")
@@ -66,13 +76,7 @@ ScheduledEvent.prototype.start = function() {
 /**
  * Get active events from a Google calendar.
  * @param {string} name name of the calendar
- * @param {Config} config configuration
- * * `id`: calendar id, as used by Google
- * * `auth_cache`: file to cache authorisation in
- * * `secrets`: secrets used by google OAuth
- *   * `client_id`
- *   * `client_secret`
- *   * `redirect_uris`
+ * @param {Config} config see Calendar.prototype.Config
  * @param {function} trigger callback triggered when an event starts
  * (or after an update and the event has already started).
  * ```
@@ -92,14 +96,64 @@ ScheduledEvent.prototype.start = function() {
  */
 function Calendar(name, config, trigger, remove) {
     "use strict";
+    // @property {String} name name of the calendar
     this.name = name;
+    // Reference to config object
     this.config = config;
+    Config.check("Calendar " + name, config, name, Calendar.prototype.Config);
+    // GoogleAuthClient.OAuth2
     this.oauth2Client = undefined;
+    // Current events schedule
     this.schedule = [];
+    // Trigger function called when an event starts
     this.trigger = trigger;
+    // Function called when an event is removed
     this.remove = remove;
+    // current timeout, as returned by setTimeout
+    this.timeoutId = undefined;
+    // @property {string} last_update last time the calendars were updated
+    this.last_update = undefined;
 }
 module.exports = Calendar;
+
+Calendar.prototype.Config = {
+    id: {
+        $doc: "calendar id, as used by Google",
+        $type: "string"
+    },
+    secrets: {
+        $doc: "secrets used by google OAuth",
+        client_id:  {
+            $doc: "see README.md",
+            $type: "string"
+        },
+        client_secret:  {
+            $doc: "see README.md",
+            $type: "string"
+        },
+        redirect_uris: {
+            $doc: "see README.md",
+            $array_of: { $type: "string" }
+        }
+    },
+    auth_cache: {
+        $doc: "File containing cached oauth authentication",
+        $type: "string", $file: "r"
+    },
+    require_prefix: {
+        $doc: "set true if a 'hotpot:' prefix is required in the calendar",
+        $type: "boolean",
+        $optional: true
+    },
+    update_period: {
+        $doc: "Delay between calendar reads, in hours",
+        $type: "number"
+    },
+    cache_length: {
+        $doc: "Period of calendar entries to cache, in hours",
+        $type: "number"
+    }
+};
 
 /**
  * Return a promise to start the calendar
@@ -144,24 +198,29 @@ Calendar.prototype.fillCache = function() {
 
         // Q.denodeify doesn't work for this, so have to promisify it
         // manually :-(
+        var params = {
+            auth: self.oauth2Client,
+            calendarId: self.config.id,
+            // For reasons undocumented by google, if timeMin and
+            // timeMax are the same time it returns no events. So
+            // we need to offset them.
+            timeMin: (new Date()).toISOString(),
+            timeMax: (new Date(now + self.config.cache_length * HOURS))
+                .toISOString(),
+            // Expand recurring events
+            singleEvents: true
+        };
+        
+        // If a prefix is required, add a query
+        if (self.config.require_prefix)
+            params.q = "Hotpot:";
+        
         return Q.Promise(function(ok, fail) {
             calendar.events.list(
-                {
-                    auth: self.oauth2Client,
-                    calendarId: "primary",//self.config.id,
-                    // For reasons undocumented by google, if timeMin and
-                    // timeMax are the same time it returns no events. So
-                    // we need to offset them by a second.
-                    timeMin: (new Date()).toISOString(),
-                    timeMax: (new Date(now + CACHE_LENGTH))
-                              .toISOString(),
-                    q: "Hotpot:",
-                    singleEvents: true
-                },
+                params,
                 function(err, response) {
                     if (err) {
-                        Utils.TRACE(TAG, self.name, " update failed ", err);
-                        fail(err);
+                        fail("'" + self.name + "' events list failed: " + err);
                     } else {
                         ok(response);
                     }
@@ -172,13 +231,18 @@ Calendar.prototype.fillCache = function() {
     .then(function(response) {
         self.clearSchedule();
         var events = response.items;
+        var re = new RegExp(
+            (self.config.require_prefix ? "HOTPOT:\\s*" : "")
+                + "([A-Z]+)[=\\s]+(0|1|2|on|off|away|boost)", "ig");
+        Utils.TRACE(TAG, "'" + self.name + "' has "
+                    + events.length + " events");
+        self.last_update = new Date();
         for (var i = 0; i < events.length; i++) {
             var event = events[i];
             var start = Date.parse(event.start.dateTime || event.start.date);
             var end = Date.parse(event.end.dateTime || event.end.date);
             // Can have orders in the event summary or the description
             var fullText = event.summary + " " + event.description;
-            var re = /HOTPOT\s*:\s*([A-Z]+)[=\s]+([A-Z0-9]+)/ig;
             var match;
             while ((match = re.exec(fullText)) !== null) {
                 var pin = match[1];
@@ -200,7 +264,7 @@ Calendar.prototype.fillCache = function() {
                                 pin, "=", state);
                     continue;
                 }
-                Utils.TRACE(TAG, "Got entry ", Date, start, "..",
+                Utils.TRACE(TAG, "Parsed event ", Date, start, "..",
                             Date, end, " ",
                             pin, "=", state);
                 self.schedule.push(new ScheduledEvent(
@@ -213,7 +277,7 @@ Calendar.prototype.fillCache = function() {
     })
 
     .catch(function(e) {
-        throw "Calendar had an error: " + e.stack;
+        throw "Calendar had an error: " + e;
     });
 };
 
@@ -238,13 +302,46 @@ Calendar.prototype.update = function(after) {
     var self = this;
 
     // Kill the old timer
-    if (this.update_timeout)
-        clearTimeout(this.update_timeout);
-    this.update_timeout = setTimeout(function() {
+    if (this.timeoutId)
+        clearTimeout(this.timeoutId);
+    this.timeoutId = setTimeout(function() {
         Utils.TRACE(TAG, "Updating '", self.name, "'");
-        self.fillCache().done(function() {
-            self.update_timeout = undefined;
-            self.update(CACHE_LENGTH);
-        });
+        self.fillCache().then(
+            function() {
+                self.timeoutId = undefined;
+                self.update(self.config.update_period * HOURS);
+            },
+            function(err) {
+                // Report, but don't propagate, the error
+                Utils.ERROR(TAG, err);
+            });
     }, after);
+};
+
+Calendar.prototype.listCalendars = function() {
+    "use strict";
+    var self = this;
+
+    return this.authorise()
+
+    .then(function() {
+        var google = require("googleapis");
+        var calendar = google.calendar("v3");
+
+        // Q.denodeify doesn't work for this, so have to promisify it
+        // manually :-(
+        return Q.Promise(function(ok, fail) {
+            calendar.calendarList.list(
+                {
+                    auth: self.oauth2Client
+                },
+                function(err, response) {
+                    if (err) {
+                        fail("calendarList failed: " + err);
+                    } else {
+                        ok(response.items);
+                    }
+                });
+        });
+    });
 };

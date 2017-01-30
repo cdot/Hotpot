@@ -11,8 +11,7 @@ Q.longStackSupport = true;
 
 describe('Historian', function() {
     describe('unordered', function() {
-        var h = new Historian({
-            name: "test",
+        var h = new Historian("test", {
             unordered: true,
             file: "/tmp/unordered_historian.log"
         });
@@ -58,8 +57,7 @@ describe('Historian', function() {
     describe('sampled', function() {
         var nsamples = 0;
 
-        var h = new Historian({
-            name: "test2",
+        var h = new Historian("test2", {
             file: "/tmp/sampled_historian.log",
             interval: 50,
             sample: function() {

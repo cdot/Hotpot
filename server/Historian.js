@@ -9,31 +9,55 @@ const appendFile = Q.denodeify(fs.appendFile);
 
 const Time = require("../common/Time.js");
 const Utils = require("../common/Utils.js");
+const Config = require("../common/Config");
 
 const TAG = "Historian";
 
 /**
  * Logger. Can either log according to a time interval using a sampling
  * callback, or only on demand.
- * @param config {Config}
- * * `sample`: function returning a sample. Called every `interval`
- *    when `start()` is called.
- * * `interval`: time, sample frequency in ms, required if `start()`
- *    is called.
- * * `unordered`: set to true if samples may have out-of-order times.
- * * `file`: string required file to store log data in
+ * @param {string} name identifier
+ * @param config {Config} see Historian.prototype.Config
  * If `sample` is not given, or `start()` is not called, sampling is only by
  * calling `record()`
  * @class
  */
-function Historian(config) {
+function Historian(name, config) {
     "use strict";
 
+    this.name = name;
+    
     this.config = config;
+    Config.check("Historian " + name, config, name, Historian.prototype.Config);
+
     this.timeout = null;
-    Utils.TRACE(TAG, "for ", this.config.name, " in ", this.path());
+    Utils.TRACE(TAG, "for ", name, " in ", this.path());
 }
 module.exports = Historian;
+
+Historian.prototype.Config = {
+    file: {
+        $doc: "Full path to the log file",
+        $type: "string",
+        $file: "w"
+    },
+    unordered: {
+        $doc: "Set if sample events may be added out of order",
+        $optional: true,
+        $type: "boolean"
+    },
+    interval: {
+        $doc: "Sample frequency in ms, required if `start()` is called",
+        $optional: true,
+        $type: "number"
+    },
+    sample: {
+        // Function returning a sample. Called every `interval` when
+        // `start()` is called. Set in code, cannot be set in the config.
+        $optional: true,
+        $type: "function"
+    }
+};
 
 /**
  * @private
@@ -176,7 +200,7 @@ Historian.prototype.start = function(quiet) {
     }
 
     if (!quiet)
-        Utils.TRACE(TAG, this.config.name, " started");
+        Utils.TRACE(TAG, this.name, " started");
 
     this.record(sample)
     .then(repoll);
@@ -189,7 +213,7 @@ Historian.prototype.stop = function() {
     if (typeof this.timeout !== undefined) {
         clearTimeout(this.timeout);
         delete this.timeout;
-        Utils.TRACE(TAG, this.config.name, " stopped");
+        Utils.TRACE(TAG, this.name, " stopped");
     }
 };
 

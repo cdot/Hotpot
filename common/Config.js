@@ -16,7 +16,10 @@ const TAG = "Config";
  * Functions involved in managing configuration data
  * @namespace
  */
-var Config = {};
+var Config = {
+    // Module specs; populated by modules
+    Specs: {}
+};
 
 /**
  * Return a promise to load the configuration
@@ -130,6 +133,147 @@ Config.getSerialisable = function(config) {
         return res;
     });
 };
+
+/**
+ * Perform guided checks on a config structure.
+ * The spec is a data structure that mirrors the actual config structure
+ * and contains directives to support validation.
+ * Each level in the structure defines a single level in the config.
+ * Keywords, starting with $, are used to control the check. Names that don't
+ * start with $ are field names that are expected to be found in the config.
+ *
+ * For example, given a config for defining a thermostat, which is characterised
+ * by an ID, we might have in the config:
+ *
+ * CH: {
+ *   id: "28-0316027f81ff",
+ * }
+ *
+ * this can be checked against the following spec:
+ *
+ * {
+ *   id: {
+ *     $type: "string",
+ *     $doc: "unique ID used to communicate with this thermostat"
+ * }
+ *
+ * The keywords in the spec define the type of the datum ($type)
+ * and a block of documentation ($doc).
+ * Keywords exist to modify the spec:
+ *   $type - type of the datum (as returned by typeof, defaults to "object")
+ *   $doc - a documentation string for the datum
+ *   $optional - this datum is optional
+ *   $skip - skip deeper checking of this item
+ *   $array_of - object is an array of elements, each of which has
+ *   this spec.
+ * For example,
+ *
+ *   thermostat: {
+ *     $doc: "Set of Thermostats",
+ *     $array_of: {
+ *       id: {
+ *         $type: "string",
+ *         $optional: true,
+ *         $doc: "Optional ID used to communicate with this thermostat"
+ *     }
+ *   }
+ * @param {string} context The context of the check, used in messages only
+ * @param {object} config The config under inspection
+ * @param {index} The index of the structure in the parent object. This
+ * will be a number for an array entry, or a key for a hash.
+ * @param {object} spec A specification that drives the check of the config.
+ */
+Config.check = function(context, config, index, spec) {
+    var i;
+    
+    if (typeof config === "undefined") {
+        if (spec.$optional)
+            return;
+        throw "Bad config: " + context + " not optional at "
+            + Utils.dump(config);
+    }
+    
+    if (spec.$type && typeof config !== spec.$type) {
+        throw "Bad config: " + context + " wanted " + spec.$type + " for "
+            + index + " but got " + Utils.dump(config);
+    }
+    
+    if (!spec.$type && typeof config !== "object") {
+        throw "Bad config: " + context + " expected object at "
+            + Utils.dump(config);
+    }
+
+    if (spec.$skip)
+        return;
+    
+    if (!spec.$type || spec.$type === "object") {
+        if (typeof spec.$array_of !== "undefined") {
+            for (var i in config) {
+                Config.check(context + "[" + i + "]",
+                             config[i], i, spec.$array_of);
+            }
+        } else {
+            for (var i in config) {
+                if (!spec[i])
+                    throw "Bad config: " + context + " unexpected field '"
+                    + i + "' at "
+                    + Utils.dump(config)
+                    + "\n" + Utils.dump(spec);
+            }
+            for (var i in spec) {
+                if (i.charAt(0) !== '$') {
+                    Config.check(context + "." + i, config[i], i, spec[i]);
+                }
+            }
+        }
+    } else if (spec.$type === "string" && typeof spec.$file !== "undefined") {
+        var mode = Fs.constants.F_OK;
+        if (spec.$file.indexOf("r") >= 0)
+            mode = mode | Fs.constants.R_OK;
+        if (spec.$file.indexOf("w") >= 0)
+            mode = mode | Fs.constants.W_OK;
+        if (spec.$file.indexOf("x") >= 0)
+            mode = mode | Fs.constants.X_OK;
+        Fs.access(
+            Utils.expandEnvVars(config), mode,
+            function(err) {
+                if (err)
+                    throw "Bad config: " + context + " " + config
+                    + spec.$file + " check failed: "
+                    + err;
+            });
+    }
+};
+
+Config.help = function(spec, index, preamble) {
+    if (typeof preamble === "undefined")
+        preamble = "";
+    
+    var help = "\n" + preamble
+        + (index ? index + ": " : "" );
+    var ds = (spec.$doc ? "// "
+              + (spec.$type ? spec.$type + ", " : "")
+              + spec.$doc : "");
+    
+    if (!spec.$type || spec.$type === "object") {
+        if (typeof spec.$array_of !== "undefined") {
+            help += "[ " + ds;
+            help += Config.help(spec.$array_of, undefined, preamble + " ");
+            help += "\n" + preamble + "]";
+        } else {
+            help += "{ " + ds;
+            for (var i in spec) {
+                if (i.charAt(0) !== '$') {
+                    help += Config.help(spec[i], i, preamble + " ");
+                }
+            }
+            help += "\n" + preamble + "}";
+        }
+    } else
+        help += ds;
+     
+    return help;
+}
 
 module.exports = Config;
 

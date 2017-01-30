@@ -21,7 +21,7 @@ const TAG = "Server";
  * requests. The predefined root path `/ajax` is used to decide when to
  * route requests to a dispatcher function. Otherwise requests are
  * handled as files relative to the defined `docroot`.
- * @param {Config} config configuration object
+ * @param {Config} config see configuration object
  * * `docroot`: path to the document root, may contain env vars
  * * `ssl` optional SSL configuration. Will create an HTTP server otherwise.
  *   * `key`: text of the SSL key OR
@@ -50,6 +50,7 @@ function Server(config, dispatch) {
 
     var self = this;
     self.config = config;
+    Config.check("Server", config, "", Server.prototype.Config);
     self.dispatch = dispatch;
     self.ready = false;
     if (typeof config.auth !== "undefined") {
@@ -65,6 +66,71 @@ function Server(config, dispatch) {
 }
 module.exports = Server;
 
+Server.prototype.Config = {
+    $doc: "HTTP(S) server",
+    port: {
+        $doc: "Port to run the server on",
+        $type: "number"
+    },
+    docroot: {
+        $doc: "Absolute file path to server documents",
+        $type: "string",
+        $file: "dr"
+    },
+    location: {
+        $doc: "Where in the world the server is located",
+        latitude: {
+            $doc: "Decimal latitude",
+            $type: "number"
+        },
+        longitude: {
+            $doc: "Decimal longitude",
+            $type: "number"
+        }
+    },
+    ssl: {
+        $doc: "SSL configuration",
+        $optional: true,
+        cert: {
+            $type: "string",
+            $optional: true,
+            $doc: "Text of SSL certificate"
+        },
+        cert_file: {
+            $doc: "Path to a file containing the SSL certificate",
+            $optional: true,
+            $type: "string",
+            $file: "r"
+        },
+        key: {
+            $type: "string",
+            $optional: true,
+            $doc: "Text of SSL key"
+        },
+        key_file: {
+            $optional: true,
+            $doc: "Path to a file containing SSL key",
+            $type: "string",
+            $file: "r"
+        }
+    },
+    auth: {
+        $doc: "Basic auth to access the server",
+        $optional: true,
+        user: {
+            $doc: "Username",
+            $type: "string"
+        },
+        pass: {
+            $doc: "Password",
+            $type: "string"
+        },
+        realm: {
+            $doc: "Authentication realm",
+            $type: "string"
+        }
+    }
+};
 /**
  * Get a promise to start the server.
  * @return {Promise} a promise to start the server

@@ -34,7 +34,8 @@ function Rule(name, config) {
      * Configuration data
      */
     this.config = config;
-
+    Config.check("Rule " + name, config, name, Rule.prototype.Config);
+    
     /**
      * Test function
      * @type {function}
@@ -43,6 +44,14 @@ function Rule(name, config) {
     this.testfn = undefined;
 }
 module.exports = Rule;
+
+Rule.prototype.Config = {
+    test_file: {
+        $doc: "File to read the rule function from",
+        $type: "string",
+        $file: "r"
+    }
+};
 
 /**
  * Promise to initialise a new rule, possibly reading rule function

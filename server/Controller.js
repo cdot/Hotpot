@@ -12,6 +12,7 @@ const Config = require("../common/Config.js");
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
 const Rule = require("./Rule.js");
+const Calendar = require("./Calendar");
 
 const TAG = "Controller";
 
@@ -36,9 +37,34 @@ const RULE_INTERVAL = 5000;
  */
 function Controller(config) {
     this.config = config;
+    Config.check("Controller", config, "", Controller.prototype.Config);
 }
 Util.inherits(Controller, Events);
 module.exports = Controller;
+
+Controller.prototype.Config = {
+    thermostat: {
+        $doc: "Set of Thermostats",
+        $array_of: Thermostat.prototype.Config
+    },
+    pin: {
+        $doc: "Set of Pins",
+        $array_of: Pin.prototype.Config
+    },
+    rule: {
+        $doc: "Set of Rules",
+        $array_of: Rule.prototype.Config
+    },
+    calendar: {
+        $doc: "Set of Calendars",
+        $array_of: Calendar.prototype.Config
+    },
+    weather: {
+        $doc: "Array of weather agents",
+        // We don't know what class the agents are yet
+        $array_of: { $skip: true }
+    }
+};
 
 Controller.prototype.initialise = function() {
     "use strict";
@@ -101,6 +127,7 @@ Controller.prototype.createWeatherAgents = function(configs) {
     var promise = Q();
 
     if (Object.keys(configs).length > 0) {
+        Utils.TRACE(TAG, "Creating weather agents");
         var self = this;
         Utils.forEach(configs, function(config, name) {
             var WeatherAgent = require("./" + name + ".js");
@@ -126,6 +153,7 @@ Controller.prototype.createCalendars = function(configs) {
     this.calendar = {};
 
     if (Object.keys(configs).length > 0) {
+        Utils.TRACE(TAG, "Creating Calendars");
 
         var self = this;
         Utils.forEach(configs, function(config, name) {
@@ -159,6 +187,7 @@ Controller.prototype.createPins = function(configs) {
 
     self.pin = {};
 
+    Utils.TRACE(TAG, "Creating Pins");
     var promise = Q();
     Utils.forEach(configs, function(config, id) {
         self.pin[id] = new Pin(id, config);
@@ -216,6 +245,9 @@ Controller.prototype.createThermostats = function(configs) {
     var promise = Q();
 
     this.thermostat = {};
+    
+    Utils.TRACE(TAG, "Creating Thermostats");
+    
     Utils.forEach(configs, function(config, id) {
         self.thermostat[id] = new Thermostat(id, config);
         promise = promise.then(function() {
@@ -240,6 +272,7 @@ Controller.prototype.createRules = function(configs) {
     var promise = Q();
 
     self.rule = [];
+    Utils.TRACE(TAG, "Creating Rules");
     Utils.forEach(configs, function(config, id) {
         self.rule[id] = new Rule(id, config);
         promise = promise.then(function() {

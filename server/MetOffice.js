@@ -13,6 +13,8 @@ const Location = require("../common/Location.js");
 const Time = require("../common/Time.js");
 
 const Utils = require("../common/Utils");
+const Config = require("../common/Config");
+const Historian = require("./Historian");
 
 /** @private */
 const USUAL_PATH = "/public/data/val/wxfcs/all/json/";
@@ -45,9 +47,6 @@ const IS_NUMBER = [
  * It then performs a simple interpolation to guess the current weather at
  * the server location.
  * @param {Config} config configuration
- * * `class`: name of this class
- * * `api_key`: API key for requests to the Met Office website
- * * `history`: Historian configuration for recording outside temperature
  * @class
  */
 var MetOffice = function(config) {
@@ -55,17 +54,22 @@ var MetOffice = function(config) {
     this.url = Url.parse("http://datapoint.metoffice.gov.uk");
     this.name = "MetOffice";
     this.config = config;
+    Config.check(this.name, config, this.name, MetOffice.prototype.Config);
     this.api_key = "?key=" + config.api_key;
     this.log = [];
     var hc = config.history;
     if (typeof hc !== "undefined") {
-        var Historian = require("./Historian");
-        this.historian = new Historian({
-            name: this.name,
-            file: hc.file,
-            unordered: true
-        });
+        hc.unordered = true;
+        this.historian = new Historian(this.name, hc);
     }
+};
+
+MetOffice.prototype.Config = {
+    api_key: {
+        $type: "string",
+        $doc: "API key for requests to the Met Office website"
+    },
+    history: Utils.extend(Historian.prototype.Config, { $optional: true })
 };
 
 /**

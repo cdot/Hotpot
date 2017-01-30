@@ -7,6 +7,8 @@ const Q = require("q");
 const readFile = Q.denodeify(Fs.readFile);
 const writeFile = Q.denodeify(Fs.writeFile);
 const Utils = require("../common/Utils");
+const Config = require("../common/Config");
+const Historian = require("./Historian");
 
 const TAG = "Pin";
 
@@ -40,16 +42,14 @@ const REQUEST_BOOST = 2;
  * can be used to expire the request at a given time.
  * @class
  * @param {string} name name of the pin e.g. HW
- * @param {Config} config configuration block for the pin.
- * * `gpio`: the number of the gpio pin
- * * `history`: (optional) Historian configuration for recording the
- *   state of the pin.
+ * @param {Config} config see Pin.prototype.Config
  */
 function Pin(name, config) {
     "use strict";
 
     this.config = config;
-
+    Config.check("Pin " + name, config, name, Pin.prototype.Config);
+    
     var self = this;
 
     /**
@@ -82,13 +82,20 @@ function Pin(name, config) {
     var hc = config.history;
     if (typeof hc !== "undefined") {
         var Historian = require("./Historian");
-        self.historian = new Historian({
-            name: self.name + "_pin",
+        self.historian = new Historian(self.name + "_pin", {
             file: hc.file
         });
     } else
         Utils.TRACE(TAG, self.name, " has no historian");
 }
+
+Pin.prototype.Config = {
+    gpio: {
+        $type: "number",
+        $doc: "the number of the gpio pin"
+    },
+    history: Utils.extend(Historian.prototype.Config, { $optional: true })
+};
 
 /**
  * Return a promise to initialise the pin
@@ -322,7 +329,7 @@ Pin.prototype.purgeRequests = function(state, source) {
  * description
  */ 
 Pin.prototype.addRequest = function(request) {
-    Utils.TRACE(TAG, "Add request ", request);
+    Utils.TRACE(TAG, this.name + " add request ", request);
     this.purgeRequests(undefined, request.source);
     if (request.state >= 0)
         this.requests.push(request);

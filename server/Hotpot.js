@@ -28,6 +28,7 @@ HOTPOT_DEBUG = undefined;
     var cliopt = getopt.create([
         [ "h", "help", "Show this help" ],
         [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ],
+        [ "C", "confhelp", "Configuration file help" ],
         [ "t", "trace=ARG", "Trace modules e.g. --trace=Rules" ],
         [ "d", "debug", "Run in debug mode, using stubs for missing hardware" ]
     ])
@@ -35,7 +36,7 @@ HOTPOT_DEBUG = undefined;
         .setHelp(DESCRIPTION + "[[OPTIONS]]")
         .parseSystem()
         .options;
-   
+                 
     if (typeof cliopt.config === "undefined")
         cliopt.config = "./hotpot.cfg";
 
@@ -54,6 +55,18 @@ HOTPOT_DEBUG = undefined;
     var config, controller, server;
 
     Config.load(cliopt.config)
+
+    .then(function(cfg) {
+        if (cliopt.confhelp) {
+            Utils.LOG(TAG, " ", Config.help(
+                {
+                    server: Server.prototype.Config,
+                    controller: Controller.prototype.Config
+                }));
+            eval("process.exit(1)");
+        }
+        return cfg;
+    })
 
     .then(function(cfg) {
         config = cfg;
