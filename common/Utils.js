@@ -33,6 +33,11 @@ Utils.expandEnvVars = function(data) {
 };
 
 /**
+ * Add extend() to Utils namespace - See npm extend
+ */
+Utils.extend = require("extend");
+    
+/**
  * Debugging support for dumping a circular structure
  * @param {object} data thing to dump
  * @return {string} dump of data
