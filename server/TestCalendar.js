@@ -1,6 +1,7 @@
-// Test for Calendar
+// Test for Calendar. Supports listing of available calendars, useful
+// for setting up initial config.
 /*eslint-env node */
-const getopt = require("node-getopt");
+const Getopt = require("node-getopt");
 const Q = require("q");
 
 const Utils = require("../common/Utils.js");
@@ -8,35 +9,67 @@ const Config = require("../common/Config.js");
 
 const Calendar = require("./Calendar.js");
 
-var cliopt = getopt.create([
+var getopt = new Getopt([
     [ "h", "help", "Show this help" ],
-    [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ]
+    [ "l", "list", "List available calendars" ],
+    [ "c", "calendar=ARG", "Name of calendar (default is first)" ],
+    [ "f", "config=ARG", "Configuration file (default ./hotpot.cfg)" ]
 ])
     .bindHelp()
-    .parseSystem()
-    .options;
+    .parseSystem();
+
+var cliopt = getopt.options;
 
 if (typeof cliopt.config === "undefined")
     cliopt.config = "./hotpot.cfg";
 
 Q.longStackSupport = true;
 
-Config.load(cliopt.config)
-.done(function(config) {
-   var cal = new Calendar("Crawford", config.controller.calendar.Crawford,
-                         trigger, remove);
+//Utils.setTRACE("all");
 
+function showCalendar(calendar, config) {
+    config.controller.calendar[calendar].id = "primary";
+    var cal = new Calendar(calendar, config.controller.calendar[calendar]);
     cal
-    .authorise()
-    .then(function() {
-        return cal.fillCache();
-    })
-    .then(function() {
-        console.log("Active event:");
-        console.log(Utils.dump(cal.get()));
-    })
-    .catch(function(e) {
-        console.error(e.stack);
-    });
-});
+        .authorise()
+        .then(function() {
+            return cal.fillCache();
+        })
+        .then(function() {
+            console.log(Utils.dump(cal));
+        })
+        .catch(function(e) {
+            console.error(e.stack);
+        });
+}
 
+function listCalendars(calendar, config) {
+    var cfg = config.controller.calendar[calendar];
+
+    var cal = new Calendar(calendar, cfg);
+    cal.authorise()
+        .then(function() {
+            return cal.listCalendars();
+        })
+        .then(function(data) {
+            for (var i in data) {
+                console.log(data[i].summary + " - '" + data[i].id + "'");
+            }
+        })
+        .catch(function(e) {
+            console.error(e.stack);
+        });
+}
+
+Config.load(cliopt.config)
+    .done(function(config) {
+        if (!cliopt.calendar) {
+            for (cliopt.calendar in config.controller.calendar)
+                break;
+            console.log("Using calendar '" + cliopt.calendar + "'");
+        }
+        if (cliopt.list)
+            listCalendars(cliopt.calendar, config);
+        else
+            showCalendar(cliopt.calendar, config);
+    });
