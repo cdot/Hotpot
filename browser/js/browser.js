@@ -135,6 +135,7 @@
                 v = typeof value;
         } else if (t === "date") {
             v = new Date(Math.round(value)).toString();
+            v = v.replace(/\s\S+\s\(.*$/, "");
         } else
             v = value.toString();
         $ui.text(v);
@@ -306,7 +307,10 @@
             return;
 
         // Each item in a type is named
-        for (var name in data) {
+        var names = Object.keys(data);
+        names.sort();
+        for (var i in names) {
+            var name = names[i];
             // name might be a hash key or an array index
             var $item = expandTemplate(tmpl, name, data[name]);
             $container.append($item);

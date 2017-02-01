@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>HotPot remote monitor</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon" />
+    <script type="text/javascript" src="jquery/jquery-2.2.3.min.js"></script>
+    <script type="text/javascript" src="js/edit_in_place.js"></script>
+    <script type="text/javascript" src="js/autoscale_graph.js"></script>
+    <script type="text/javascript" src="../common/BrowserStubs.js"></script>
+    <script type="text/javascript" src="../common/Utils.js"></script>
+    <script type="text/javascript" src="../common/Time.js"></script>
+    <script type="text/javascript" src="../common/Location.js"></script>
+    <script type="text/javascript" src="js/browser.js"></script>
+    <link rel="stylesheet" href="css/mobile.css">
+  </head>
+  <body>
+    <h1>Hotpot</h1>
+    <div id="comms_error"></div>
+
+    <div>
+      <span data-field="time" data-type="date" class="editable"></span>
+    </div>
+
+    <!--<canvas id="graph_canvas"></canvas>
+    <canvas id="tip_canvas"></canvas>-->
+
+    <h3>Thermostats</h3>
+    <table id="thermostat" data-field="thermostat"></table>
+
+    <h3>Pins</h3>
+    <table id="pin" data-field="pin"></table>
+
+    <h3>Calendars</h3>
+    <button id="refresh_calendars">Refresh Calendars</button>
+
+    <!-- Templates. The template is the content, not the container -->
+
+    <!-- Thermostat Template -->
+    <table class="template" data-template="thermostat">
+      <tr>
+        <th data-field="name"></th>
+        <td>
+          <span data-field="temperature" data-type="float">
+          </span> °C
+        </td>
+      </tr>
+    </table>
+
+    <!-- Pin template -->
+    <table class="template" data-template="pin">
+      <tr>
+        <th data-field="name" align="left"></th>
+        <td colspan=3>
+          <span data-field="state"></span>
+          <span data-field="reason"></span>
+        </td>
+      </tr>
+      <tr>
+        <td width="25%">
+          <button class="state_button" data-value="-1">Clear</button>
+        </td><td width="25%">
+          <button class="state_button" data-value="0">OFF</button>
+        </td><td width="25%">
+          <button class="state_button" data-value="1">ON</button>
+        </td><td>
+          <button class="state_button" data-value="2">BOOST</button>
+        </td>
+      </tr>
+      <tr>
+        <td colspan=3 class="showif source state until" data-field="request">
+          <span data-field="source"></span>
+          requests
+          <span data-field="state"></span>
+          <span class="showif until">
+            until
+            <span data-field="until" data-type="date"></span>
+          </span>
+        </td>
+      </tr>
+    </table>
+
+  </body>
+</html>

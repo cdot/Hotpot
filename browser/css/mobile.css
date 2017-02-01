@@ -1,0 +1,40 @@
+body {
+    background-color: #393939;
+    font-family: Helvetica,Arial,sans-serif;
+    font-size: 36pt;
+    color: white;
+}
+
+/* In-place editable thing */
+.editable {
+}
+
+.template {
+    display: none;
+}
+
+button {
+    font-size: 36pt;
+}
+
+/* Fixed width font for e.g. temperatures */
+.monospace {
+    font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
+}
+
+/* The canvas used to show graphs */
+#graph_canvas {
+    width: 100%;
+}
+
+/* Overlay over the temperature canvas */
+#tip_canvas {
+    left:-200px; 
+    top:-200px;
+    width: 200px;
+    height: 200px;
+    color: white;
+    background-color: transparent;
+    display: none;
+    position: absolute;
+}
