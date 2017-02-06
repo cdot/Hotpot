@@ -49,7 +49,7 @@ function () {
                 Utils.TRACE("Rules", "active request for CH, ", req.state,
                             " from ", req.source);
             return self.setPromise("CH", restate,
-                                  req.source + " requested " + req.state);
+                                  "Requested by " + req.source);
         }
 
         // Consider the time

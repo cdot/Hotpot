@@ -35,7 +35,13 @@ Utils.expandEnvVars = function(data) {
 /**
  * Add extend() to Utils namespace - See npm extend
  */
-Utils.extend = require("extend");
+Utils.extend = function() {
+    if (typeof $ !== "undefined")
+        Utils.extend = $.extend;
+    else
+        Utils.extend = require("extend");
+    return Utils.extend.apply(this, arguments);
+}
     
 /**
  * Debugging support for dumping a circular structure

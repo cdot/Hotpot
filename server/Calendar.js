@@ -269,7 +269,7 @@ Calendar.prototype.fillCache = function() {
                             pin, "=", state);
                 self.schedule.push(new ScheduledEvent(
                     self,
-                    "Calendar:" + self.name + ":" + self.schedule.length,
+                    self.name + " calendar",
                     start, end, pin, state));
             }
         }
@@ -294,7 +294,7 @@ Calendar.prototype.getSerialisableState = function() {
 	    state[event.pin] = {
 		state: event.state,
 		start: event.startms,
-		end: event.endms
+		length: event.endms - event.startms
 	    }
 	}
     }

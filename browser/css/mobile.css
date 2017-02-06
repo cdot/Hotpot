@@ -17,9 +17,12 @@ button {
     font-size: 36pt;
 }
 
-/* Fixed width font for e.g. temperatures */
-.monospace {
-    font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
+tr.state_button_row {
+    width: 25%;
+}
+
+#graphs {
+    display: none;
 }
 
 /* The canvas used to show graphs */

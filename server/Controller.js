@@ -430,9 +430,9 @@ Controller.prototype.setPromise = function(channel, new_state, reason) {
                 // the grey wire.
                 // This allows the spring to fully return. Then after a
                 // timeout, turn the CH on.
-                return self.pin.CH.set(0, reason + " (tx0)") // switch off CH
+                return self.pin.CH.set(0, reason) // switch off CH
                 .then(function() {
-                    return self.pin.HW.set(1, reason + " (tx1)"); // switch on HW
+                    return self.pin.HW.set(1, reason); // switch on HW
                 })
                 .then(function() {
                     self.pending = true;

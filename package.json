@@ -34,6 +34,7 @@
         "google-auth-library": ">= 0.9.8",
         "http": ">= 0.0.0",
         "https": ">= 1.0.0",
+	"jquery":  ">= 2.2.3",
         "mime-types": ">= 2.1.11",
         "node-getopt": ">= 0.2.3",
         "q": ">= 1.4.1",

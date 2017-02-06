@@ -11,9 +11,10 @@
     var setup_backoff = 10; // seconds
     var update_backoff = 10; // seconds
     var update_rate = 10; // seconds
-    var graph_width = 24 * 60 * 60 * 1000; // milliseconds
     
     var config;
+
+    var graph_width = 24 * 60 * 60 * 1000; // milliseconds
 
     var trace_options = {
         "pin:HW": { type: "binary", colour: "yellow" },
@@ -24,61 +25,13 @@
     };
 
     var poller;
-    function stopPolling() {
-        if (poller) {
-            clearTimeout(poller);
-            poller = null;
-        }
-    }
-
-    /**
-     * Get the path of an element, as used in AJAX requests to
-     * the server. The path corresponds to the hierarchical structure
-     * of the config.json used by the server.
-     * @param $node the element to get the path of
-     * @return {string} /-separated path
-     */
-    function getPath($node) {
-        var path = [];
-        $node.parents("[data-field]").each(function() {
-            path.unshift($(this).data("field"));
-        });
-        path.push($node.data("field"));
-        return path.join("/");
-    }
-
-    /**
-     * User clicks edit text of a value field
-     */
-    function editField() {
-        stopPolling();
-        $(this).edit_in_place({
-            changed: function(s) {
-                var $self = $(this);
-                var params = {
-                    value: s
-                };
-                $.post("/ajax/set/" + getPath($self),
-                       JSON.stringify(params))
-                    .success(function() {
-                        $self.text(s);
-                    })
-                    .always(function() {
-                        $(document).trigger("poll");
-                    });
-            },
-            cancel: function() {
-                $(document).trigger("poll");
-            }
-        });
-        return false; // prevent repeated calls
-    }
 
     function refreshCalendars() {
         $("#refresh_calendars").attr("disabled", "disabled");
         $.get("/ajax/refresh_calendars",
 	function() {
             $("#refresh_calendars").removeAttr("disabled");
+            $(document).trigger("poll");
         });
     }
 
@@ -102,11 +55,19 @@
             $.post("/ajax/request",
                    JSON.stringify(params),
                    function(/*raw*/) {
+                       $(document).trigger("poll");
                    });
             return false; // prevent repeated calls
         });
     }
 
+    function zeroExtend(num, len) {
+        var str = "" + num;
+        while (str.length < len)
+            str = '0' + str;
+        return str;
+    }
+    
     /**
      * Set the value of a typed field from a data value
      * Only used for non-object data
@@ -120,8 +81,11 @@
 
         if (typeof value !== "undefined" && value !== null) {
             // Only show if they have a value
-            $ui .parents(".showif")
-                .filter("." + $ui.data("field"))
+            $ui .parents("[data-show-if]")
+                .filter(function(index) {
+                    return $(this).attr("data-show-if")
+                        .includes($ui.attr("data-field"))
+                })
                 .each(function() {
                     $(this).show();
                 });
@@ -130,9 +94,31 @@
         // Text / number field
         if (t === "float") {
             if (typeof value === "number")
-                v = value.toPrecision(5);
+                v = value.toFixed(2);
             else
                 v = typeof value;
+        } else if (t === "datime") {
+            var date = new Date(Math.round(value));
+            var day = date.getDate();
+            var month = date.getMonth() + 1;
+            var year = date.getFullYear();
+            var hours = date.getHours();
+            var mins = date.getMinutes();
+            v = day + "/" + month + "/" + year + " "
+                + hours + ":" + zeroExtend(mins, 2);
+        } else if (t === "duration") {
+            value = value / 1000;
+            var secs = value % 60;
+            value = Math.floor(value / 60);
+            var mins = value % 60;
+            var hours = Math.floor(value / 60);
+            v = (hours > 0 ? hours + "h " : "")
+                + (mins > 0 ? mins + "m ": "")
+                + (secs > 0 ? secs + "s" : "");
+            if (v === "")
+                v = "<1s";
+        } else if (t === "intbool") {
+            v = (value + 0 === 0 ? "OFF" : "ON");
         } else if (t === "date") {
             v = new Date(Math.round(value)).toString();
             v = v.replace(/\s\S+\s\(.*$/, "");
@@ -161,34 +147,97 @@
     }
 
     /**
-     * Populate UI from structure
-     * @param $ui the element to populate
-     * @param {string} name the identifier for the datum
+     * Populate UI. The structure of the UI is used to query
+     * the data in the state report.
+     * @param $obj the element to populate
      * @param {object} data the content of the datum
      */
-    function populate($ui, name, data) {
-        function subpop() {
-            populate($(this),
-                     subname,
-                     data[subname]);
-        }
-        if (typeof $ui.data("type") === "undefined"
-            && typeof data === "object") {
-            // Hierarchical sub-structure
-            for (var subname in data) {
-                $ui
-                    .find("[data-field='" + subname + "']")
-                    .first()
-                    .each(subpop);
+    function populate($obj, data) {
+        
+        function subpop($ui, data, path) {
+            $ui.find('.suspect').each(function() {
+                $(this).removeClass("suspect");
+            });
+            if (typeof data === "object") {
+                // There's sub-structure under here. Either find an element
+                // with corresponding path or, failing that, create a new
+                // one using the template named on the container
+                var names = Object.keys(data).sort();
+                for (var i in names) {
+                    var subname = names[i];
+                    var abspath = path + "/" + subname;
+                    var $child = $ui
+                        .find("[data-path='" + abspath + "']");
+                    if ($child.length === 0) {
+                        // The path doesn't exist, create it from template
+                        var tmpl = $ui.attr('data-use-template');
+                        if (tmpl) {
+                            var tmpl = $("[data-define-template='" + tmpl
+                                          + "']").html();
+                            var $instance = $(tmpl);
+                            // In case the template doesn't have a top level
+                            if ($instance.length > 1)
+                                $instance = $("<div></div>").append($instance);
+                            $instance.addClass("templated");
+                            // Make sure data has an index if it's an object
+                            if (typeof data[subname] === "object")
+                                data[subname].$index = subname;
+                            // Make paths absolute in the template instance
+                            $instance.find("[data-field]").each(
+                                function() {
+                                    var field = $(this).attr("data-field");
+                                    var newpath = abspath + "/" + field;
+                                    // SMELL: setting data isn't enough for
+                                    // .find(), have to explicitly set the
+                                    // attr too.
+                                    $(this)
+                                        .attr("data-path", newpath);
+                                });
+                            $instance
+                                .attr("data-path", abspath)
+                                .attr("data-field", subname)
+                                .find(".state_button")
+                                .on("click", requestState);
+                            $ui.append($instance);
+                            $child = $instance;
+                        } else
+                            console.log("Data has no element or template at "
+                                        + abspath);
+
+                    } else if ($child.length !== 1)
+                        throw "Same path found on " + $child.length
+                        + " elements: " + abspath;
+                    $child.each(function() {
+                        subpop($(this), data[subname], abspath);
+                    });
+                }
+            } else { // leaf
+                setValue($ui, data);
             }
-        } else // leaf
-            setValue($ui, data);
+        }
+        $obj.find("[data-path]").each(function() {
+            $(this).addClass("suspect");
+        });
+        $obj.find("[data-show-if]")
+            .hide();
+        subpop($obj, data, "");
+        $obj.find(".suspect").remove();
     }
 
     /**
      * Wake up on schedule and refresh the state
      */
     $(document).on("poll", function() {
+        function setPollTimeout() {
+            poller = setTimeout(function() {
+                $(document).trigger("poll");
+            }, update_backoff * 1000)
+        }
+        
+        if (poller) {
+            clearTimeout(poller);
+            poller = undefined;
+        }
         $.get(
             "/ajax/state",
             function(raw) {
@@ -196,143 +245,89 @@
                 eval("data=" + raw);
                 $("#comms_error").html("");
                 $(".showif").hide(); // hide optional content
-                populate($("body"), "", data);
+                populate($("#data"), data);
                 updateGraph(data);
-                poller = setTimeout(function() {
-                    $(document).trigger("poll");
-                }, update_rate * 1000);
+                setPollTimeout();
             })
-            .error(function(jqXHR, status, err) {
+            .fail(function(jqXHR, status, err) {
                 $("#comms_error").html(
                     "<div class='error'>Could not contact server for update: "
                         + err + "</div>");
-                poller = setTimeout(function() {
-                    $(document).trigger("poll");
-                }, update_backoff * 1000);
+                setPollTimeout();
             });
     });
 
     $(document).on("initialise_graph", function() {
-        var $tc = $("#graph_canvas");
-        var params = { since: Date.now() - graph_width };
-        $.post(
-            "/ajax/log",
-            JSON.stringify(params),
-            function(raw) {
-                var data;
-                eval("data=" + raw);
-                $tc.autoscale_graph({
-                    render_label: function(axis, trd) {
-                        if (axis === "x")
-                            return new Date(trd).toString();
-                        return (Math.round(trd * 10) / 10).toString();
-                    }
-                });
-                var g = $tc.data("graph");
-                function createTrace(da, na) {
-                    var basetime = da[0];
-                    var options = trace_options[na];
-                    options.min =
-                        {
-                            x: Date.now() - graph_width
+        $("#graph_canvas").each(function() {
+            var $tc = $(this);
+            var params = { since: Date.now() - graph_width };
+            $.post(
+                "/ajax/log",
+                JSON.stringify(params),
+                function(raw) {
+                    var data;
+                    eval("data=" + raw);
+                    $tc.autoscale_graph({
+                        render_label: function(axis, trd) {
+                            if (axis === "x")
+                                return new Date(trd).toString();
+                            return (Math.round(trd * 10) / 10).toString();
+                        }
+                    });
+                    var g = $tc.data("graph");
+                    function createTrace(da, na) {
+                        var basetime = da[0];
+                        var options = trace_options[na];
+                        options.min =
+                            {
+                                x: Date.now() - graph_width
+                            };
+                        options.max = {
+                            x: Date.now()
                         };
-                    options.max = {
-                        x: Date.now()
-                    };
-
-                    var trace = g.addTrace(na, options);
-                    for (var j = 1; j < da.length; j += 2) {
-                        trace.addPoint(basetime + da[j], da[j + 1]);
+                        
+                        var trace = g.addTrace(na, options);
+                        for (var j = 1; j < da.length; j += 2) {
+                            trace.addPoint(basetime + da[j], da[j + 1]);
+                        }
+                        // Closing point at same level as last measurement,
+                        // just in case it was a long time ago
+                        if (da.length > 1)
+                            trace.addPoint(Time.now(), da[da.length - 1]);
                     }
-                    // Closing point at same level as last measurement,
-                    // just in case it was a long time ago
-                    if (da.length > 1)
-                        trace.addPoint(Time.now(), da[da.length - 1]);
-                }
-                for (var type in data)
-                    for (var name in data[type])
-                        createTrace(data[type][name], type + ":" + name);
-                
-                g.update();
-            })
-            .error(function(jqXHR, textStatus, errorThrown) {
-                console.log("Could not contact server  for logs: "
-                            + errorThrown);
-            });
-
+                    for (var type in data)
+                        for (var name in data[type])
+                            createTrace(data[type][name], type + ":" + name);
+                    
+                    g.update();
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    console.log("Could not contact server  for logs: "
+                                + errorThrown);
+                });
+        });
     });
 
-    /**
-     * Expand the given template string
-     * @param {string} tmpl the template
-     * @param {string} name the name of the datum
-     * @param {object} data the data for the datum
-     */
-    var expandTemplate = function(tmpl, name, data) {
-        // Create a new data block from the template
-        var $expansion = $(tmpl);
-        $expansion.addClass("templated");
-        $expansion.attr("data-field", name);
-        // May be overwritten during field expansion, below
-        $expansion
-            .find("[data-field='name']")
-            .first()
-            .text(name);
-        for (var subname in data) {
-            if (typeof data[subname] === "object") {
-                fillContainer($expansion.find(
-                    "[data-field='" + subname + "']").first(),
-                              subname, data[subname]);
-            } else
-                setValue($expansion.find(
-                    "[data-field='" + subname + "']").first(), data[subname]);
-        }
-        return $expansion;
-    };
-
-    /**
-     * Fill a container with items created from a template.
-     * @param $container the container
-     * @param {string} type the type of object in the container
-     * e.g. "thermostat"
-     * @param {object} data an array or hash of items that are
-     * used to configure the items in the container
-     */
-    var fillContainer = function($container, type, data) {
-        if (typeof data !== "object")
-            throw "Can't template a non-container" + JSON.stringify(data);
-
-        var tmpl = $("[data-template='" + type + "']").html();
-        if (!tmpl)
-            return;
-
-        // Each item in a type is named
-        var names = Object.keys(data);
-        names.sort();
-        for (var i in names) {
-            var name = names[i];
-            // name might be a hash key or an array index
-            var $item = expandTemplate(tmpl, name, data[name]);
-            $container.append($item);
-        }
-    };
-
-    /**
-     * Attach handlers to everything under the root
-     * @param $root the root below which to attach handlers. undef
-     * will attach to eveything in the document.
-     */
-    function attachHandlers($root) {
-        $(".editable", $root).on("click", editField);
-        $(".state_button").on("click", requestState);
-	$("#refresh_calendars").on("click", refreshCalendars);
+    function showDisplay(id) {
+        $(".display").hide();
+        $("#" + id).show();
+        if (id === "graphs")
+            $("#graph_canvas").data("graph").update();
     }
-
+    
     /**
      * Populate the document by getting the configuration from
      * the server.
      */
     function configure() {
+
+	$("#refresh_calendars").on("click", refreshCalendars);
+	$("#to-controls").on("click", function() {
+            showDisplay("data");
+        });
+	$("#to-graphs").on("click", function() {
+            showDisplay("graphs");
+        });
 
         // Can't use getJSON because of the rule functions
         $.get(
@@ -340,21 +335,13 @@
             function(raw) {
                 eval("config=" + raw);
                 $("#comms_error").html("");
-                // data is a map containing thermostat, pin, mobile
-                for (var type in config) {
-                    fillContainer(
-                        $("[data-field='" + type + "']").first(),
-                        type, config[type]);
-                }
-                // Templates all expanded
-                attachHandlers();
 
                 // immediately refresh to get the state ASAP
                 $(document).trigger("poll");
 
                 $(document).trigger("initialise_graph");
             })
-            .error(function(jqXHR, textStatus, errorThrown) {
+            .fail(function(jqXHR, textStatus, errorThrown) {
                 $("#comms_error").html(
                     "<div class='error'>Could not contact server "
                         + " for setup: " + errorThrown
