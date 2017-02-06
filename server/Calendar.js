@@ -281,6 +281,28 @@ Calendar.prototype.fillCache = function() {
     });
 };
 
+
+/**
+ * The serialisable state of a calendar is the current (or next) active
+ * event in the calendar for each unique pin in the calendar. 
+ */
+Calendar.prototype.getSerialisableState = function() {
+    var state = {};
+    for (var i in this.schedule) {
+	var event = this.schedule[i];
+	if (typeof state[event.pin] === "undefined") {
+	    state[event.pin] = {
+		state: event.state,
+		start: event.startms,
+		end: event.endms
+	    }
+	}
+    }
+    return Q.fcall(function() {
+        return state;
+    });
+};
+
 /**
  * Clear the existing schedule
  * @private
