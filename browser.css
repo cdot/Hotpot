@@ -1,12 +1,8 @@
 body {
     background-color: #393939;
     font-family: Helvetica,Arial,sans-serif;
-    font-size: 36pt;
+    font-size: 4vmin;
     color: white;
-}
-
-/* In-place editable thing */
-.editable {
 }
 
 .template {
@@ -14,10 +10,10 @@ body {
 }
 
 button {
-    font-size: 36pt;
+    font-size: 4vmin;
 }
 
-tr.state_button_row {
+tr.state_button_row td {
     width: 25%;
 }
 

@@ -8,12 +8,8 @@
 (function($) {
     "use strict";
 
-    var setup_backoff = 10; // seconds
     var update_backoff = 10; // seconds
-    var update_rate = 10; // seconds
     
-    var config;
-
     var graph_width = 24 * 60 * 60 * 1000; // milliseconds
 
     var trace_options = {
@@ -82,7 +78,7 @@
         if (typeof value !== "undefined" && value !== null) {
             // Only show if they have a value
             $ui .parents("[data-show-if]")
-                .filter(function(index) {
+                .filter(function() {
                     return $(this).attr("data-show-if")
                         .includes($ui.attr("data-field"))
                 })
@@ -152,10 +148,59 @@
      * @param $obj the element to populate
      * @param {object} data the content of the datum
      */
-    function populate($obj, data) {
+    function populate($obj, container) {
+
+        function subpopSubname($ui, path, subname, data) {
+            var abspath = path + "/" + subname;
+            var $child = $ui
+                .find("[data-path='" + abspath + "']");
+            if ($child.length === 0) {
+                // The path doesn't exist, create it from template
+                var tmpl = $ui.attr('data-use-template');
+                if (tmpl) {
+                    var tmpl = $("[data-define-template='" + tmpl
+                                 + "']").html();
+                    var $instance = $(tmpl);
+                    // In case the template doesn't have a top level
+                    if ($instance.length > 1)
+                        $instance = $("<div></div>").append($instance);
+                    $instance.addClass("templated");
+                    // Make sure data has an index if it's an object
+                    if (typeof data[subname] === "object")
+                        data[subname].$index = subname;
+                    // Make paths absolute in the template instance
+                    $instance.find("[data-field]").each(
+                        function() {
+                            var field = $(this).attr("data-field");
+                            var newpath = abspath + "/" + field;
+                            // SMELL: setting data isn't enough for
+                            // .find(), have to explicitly set the
+                            // attr too.
+                            $(this)
+                                .attr("data-path", newpath);
+                        });
+                    $instance
+                        .attr("data-path", abspath)
+                        .attr("data-field", subname)
+                        .find(".state_button")
+                        .on("click", requestState);
+                    $ui.append($instance);
+                    $child = $instance;
+                } else
+                    console.log("Data has no element or template at "
+                                + abspath);
+
+            } else if ($child.length !== 1)
+                throw "Same path found on " + $child.length
+                + " elements: " + abspath;
+            
+            $child.each(function() {
+                subpop($(this), data[subname], abspath);
+            });
+        }
         
-        function subpop($ui, data, path) {
-            $ui.find('.suspect').each(function() {
+        function subpop($thing, data, path) {
+            $thing.find('.suspect').each(function() {
                 $(this).removeClass("suspect");
             });
             if (typeof data === "object") {
@@ -164,63 +209,18 @@
                 // one using the template named on the container
                 var names = Object.keys(data).sort();
                 for (var i in names) {
-                    var subname = names[i];
-                    var abspath = path + "/" + subname;
-                    var $child = $ui
-                        .find("[data-path='" + abspath + "']");
-                    if ($child.length === 0) {
-                        // The path doesn't exist, create it from template
-                        var tmpl = $ui.attr('data-use-template');
-                        if (tmpl) {
-                            var tmpl = $("[data-define-template='" + tmpl
-                                          + "']").html();
-                            var $instance = $(tmpl);
-                            // In case the template doesn't have a top level
-                            if ($instance.length > 1)
-                                $instance = $("<div></div>").append($instance);
-                            $instance.addClass("templated");
-                            // Make sure data has an index if it's an object
-                            if (typeof data[subname] === "object")
-                                data[subname].$index = subname;
-                            // Make paths absolute in the template instance
-                            $instance.find("[data-field]").each(
-                                function() {
-                                    var field = $(this).attr("data-field");
-                                    var newpath = abspath + "/" + field;
-                                    // SMELL: setting data isn't enough for
-                                    // .find(), have to explicitly set the
-                                    // attr too.
-                                    $(this)
-                                        .attr("data-path", newpath);
-                                });
-                            $instance
-                                .attr("data-path", abspath)
-                                .attr("data-field", subname)
-                                .find(".state_button")
-                                .on("click", requestState);
-                            $ui.append($instance);
-                            $child = $instance;
-                        } else
-                            console.log("Data has no element or template at "
-                                        + abspath);
-
-                    } else if ($child.length !== 1)
-                        throw "Same path found on " + $child.length
-                        + " elements: " + abspath;
-                    $child.each(function() {
-                        subpop($(this), data[subname], abspath);
-                    });
+                    subpopSubname($thing, path, names[i], data);
                 }
             } else { // leaf
-                setValue($ui, data);
+                setValue($thing, data);
             }
         }
+        
         $obj.find("[data-path]").each(function() {
             $(this).addClass("suspect");
         });
-        $obj.find("[data-show-if]")
-            .hide();
-        subpop($obj, data, "");
+        $obj.find("[data-show-if]").hide();
+        subpop($obj, container, "");
         $obj.find(".suspect").remove();
     }
 
@@ -257,56 +257,63 @@
             });
     });
 
-    $(document).on("initialise_graph", function() {
-        $("#graph_canvas").each(function() {
-            var $tc = $(this);
-            var params = { since: Date.now() - graph_width };
-            $.post(
-                "/ajax/log",
-                JSON.stringify(params),
-                function(raw) {
-                    var data;
-                    eval("data=" + raw);
-                    $tc.autoscale_graph({
-                        render_label: function(axis, trd) {
-                            if (axis === "x")
-                                return new Date(trd).toString();
-                            return (Math.round(trd * 10) / 10).toString();
-                        }
-                    });
-                    var g = $tc.data("graph");
-                    function createTrace(da, na) {
-                        var basetime = da[0];
-                        var options = trace_options[na];
-                        options.min =
-                            {
-                                x: Date.now() - graph_width
-                            };
-                        options.max = {
-                            x: Date.now()
-                        };
-                        
-                        var trace = g.addTrace(na, options);
-                        for (var j = 1; j < da.length; j += 2) {
-                            trace.addPoint(basetime + da[j], da[j + 1]);
-                        }
-                        // Closing point at same level as last measurement,
-                        // just in case it was a long time ago
-                        if (da.length > 1)
-                            trace.addPoint(Time.now(), da[da.length - 1]);
-                    }
-                    for (var type in data)
-                        for (var name in data[type])
-                            createTrace(data[type][name], type + ":" + name);
-                    
-                    g.update();
-                })
-                .fail(function(jqXHR, textStatus, errorThrown) {
-                    console.log("Could not contact server  for logs: "
-                                + errorThrown);
-                });
-        });
-    });
+    // Initialise the graph canvas by requesting 
+    function initialiseGraph() {
+        var $canvas = $(this);
+        var params = { since: Date.now() - graph_width };
+
+        function createTrace(g, da, na) {
+            var basetime = da[0];
+            var options = trace_options[na];
+            options.min =
+                {
+                    x: Date.now() - graph_width
+                };
+            options.max = {
+                x: Date.now()
+            };
+            
+            var trace = g.addTrace(na, options);
+            for (var j = 1; j < da.length; j += 2) {
+                trace.addPoint(basetime + da[j], da[j + 1]);
+            }
+            // Closing point at same level as last measurement,
+            // just in case it was a long time ago
+            if (da.length > 1)
+                trace.addPoint(Time.now(), da[da.length - 1]);
+        }
+
+        function fillGraph(data) {
+            $canvas.autoscale_graph({
+                render_label: function(axis, trd) {
+                    if (axis === "x")
+                        return new Date(trd).toString();
+                    return (Math.round(trd * 10) / 10).toString();
+                }
+            });
+            
+            var g = $canvas.data("graph");
+            
+            for (var type in data)
+                for (var name in data[type])
+                    createTrace(g, data[type][name], type + ":" + name);
+            
+            g.update();
+        }
+
+        $.post(
+            "/ajax/log",
+            JSON.stringify(params),
+            function(raw) {
+                var data;
+                eval("data=" + raw);
+                fillGraph(data);
+            })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                console.log("Could not contact server  for logs: "
+                            + errorThrown);
+            });
+    }
 
     function showDisplay(id) {
         $(".display").hide();
@@ -316,8 +323,8 @@
     }
     
     /**
-     * Populate the document by getting the configuration from
-     * the server.
+     * Add handlers and fire initial events to configure the graphs
+     * and start the polling loop.
      */
     function configure() {
 
@@ -328,29 +335,9 @@
 	$("#to-graphs").on("click", function() {
             showDisplay("graphs");
         });
-
-        // Can't use getJSON because of the rule functions
-        $.get(
-            "/ajax/config",
-            function(raw) {
-                eval("config=" + raw);
-                $("#comms_error").html("");
-
-                // immediately refresh to get the state ASAP
-                $(document).trigger("poll");
-
-                $(document).trigger("initialise_graph");
-            })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                $("#comms_error").html(
-                    "<div class='error'>Could not contact server "
-                        + " for setup: " + errorThrown
-                        + " Will try again in " + setup_backoff
-                        + " seconds</div>");
-                setTimeout(function() {
-                    configure();
-                }, setup_backoff * 1000);
-            });
+        $("#graph_canvas").each(initialiseGraph);
+        
+        $(document).trigger("poll");
     }
 
     $(document).ready(configure);
