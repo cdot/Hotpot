@@ -1,8 +1,27 @@
+/*
+lilac: #9285f1
+brownish: #959070
+lightgrey: #a6a6a6
+darkgrey: #4a4849
+whitish: #dfdced
+*/
 body {
-    background-color: #393939;
+    background-color: white;
     font-family: Helvetica,Arial,sans-serif;
-    font-size: 4vmin;
+    font-size: 5vmin;
+    color: #4a4849/* darkgrey*/;
+    line-height: 1.5;
+}
+
+h1 {
+    background-color: #9285f1/*lilac*/;
     color: white;
+    padding: 1.7vmin;
+    margin: 0;
+}
+
+table {
+    width: 100%;
 }
 
 .template {
@@ -10,7 +29,12 @@ body {
 }
 
 button {
-    font-size: 4vmin;
+    font-size: 6vmin;
+    padding: 1vmin;
+    -webkit-border-radius: 2vmin;
+    -moz-border-radius: 2vmin;
+    color: black;
+    background-color: #dfdced/*whiteish*/
 }
 
 tr.state_button_row td {
@@ -23,7 +47,7 @@ tr.state_button_row td {
 
 /* The canvas used to show graphs */
 #graph_canvas {
-    width: 100%;
+    width: 300px;
 }
 
 /* Overlay over the temperature canvas */
