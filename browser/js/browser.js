@@ -238,11 +238,9 @@
             clearTimeout(poller);
             poller = undefined;
         }
-        $.get(
+        $.getJSON(
             "/ajax/state",
-            function(raw) {
-                var data;
-                eval("data=" + raw);
+            function(data) {
                 $("#comms_error").html("");
                 $(".showif").hide(); // hide optional content
                 populate($("#data"), data);
@@ -301,14 +299,7 @@
             g.update();
         }
 
-        $.post(
-            "/ajax/log",
-            JSON.stringify(params),
-            function(raw) {
-                var data;
-                eval("data=" + raw);
-                fillGraph(data);
-            })
+        $.getJSON("/ajax/log", JSON.stringify(params), fillGraph)
             .fail(function(jqXHR, textStatus, errorThrown) {
                 console.log("Could not contact server  for logs: "
                             + errorThrown);
