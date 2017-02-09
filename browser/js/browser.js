@@ -63,6 +63,31 @@
             str = '0' + str;
         return str;
     }
+
+    function datime(value) {
+        var date = new Date(Math.round(value));
+        var day = date.getDate();
+        var month = date.getMonth() + 1;
+        var year = date.getFullYear();
+        var hours = date.getHours();
+        var mins = date.getMinutes();
+        return day + "/" + month + "/" + year + " "
+            + hours + ":" + zeroExtend(mins, 2);
+    }
+
+    function duration(value) {
+        value = value / 1000;
+        var secs = value % 60;
+        value = Math.floor(value / 60);
+        var mins = value % 60;
+        var hours = Math.floor(value / 60);
+        var v = (hours > 0 ? hours + "h " : "")
+            + (mins > 0 ? mins + "m ": "")
+            + (secs > 0 ? secs + "s" : "");
+        if (v === "")
+            v = "<1s";
+        return v;
+    }
     
     /**
      * Set the value of a typed field from a data value
@@ -94,25 +119,9 @@
             else
                 v = typeof value;
         } else if (t === "datime") {
-            var date = new Date(Math.round(value));
-            var day = date.getDate();
-            var month = date.getMonth() + 1;
-            var year = date.getFullYear();
-            var hours = date.getHours();
-            var mins = date.getMinutes();
-            v = day + "/" + month + "/" + year + " "
-                + hours + ":" + zeroExtend(mins, 2);
+             v = datime(value);
         } else if (t === "duration") {
-            value = value / 1000;
-            var secs = value % 60;
-            value = Math.floor(value / 60);
-            var mins = value % 60;
-            var hours = Math.floor(value / 60);
-            v = (hours > 0 ? hours + "h " : "")
-                + (mins > 0 ? mins + "m ": "")
-                + (secs > 0 ? secs + "s" : "");
-            if (v === "")
-                v = "<1s";
+            v = duration(value);
         } else if (t === "intbool") {
             v = (value + 0 === 0 ? "OFF" : "ON");
         } else if (t === "date") {
@@ -304,10 +313,10 @@
             var options = trace_options[na];
             options.min =
                 {
-                    x: Date.now() - graph_width
+                    t: Date.now() - graph_width
                 };
             options.max = {
-                x: Date.now()
+                t: Date.now()
             };
             
             var trace = g.addTrace(na, options);
@@ -323,9 +332,10 @@
         function fillGraph(data) {
             $canvas.autoscale_graph({
                 render_label: function(axis, trd) {
-                    if (axis === "x")
-                        return new Date(trd).toString();
-                    return (Math.round(trd * 10) / 10).toString();
+                    if (axis === "t")
+                        return datime(trd);
+                    else
+                        return (Math.round(trd * 10) / 10).toString();
                 }
             });
             
