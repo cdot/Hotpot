@@ -512,7 +512,7 @@ Graph.prototype.handleMouse = function(e, targ) {
     var options = this.options;
     var th = options.font_height;
 
-    if (p.s > $canvas.height() - th) {
+    if (p.x > $canvas.height() - th) {
         $("#tip_canvas").hide();
         return;
     }
@@ -525,7 +525,7 @@ Graph.prototype.handleMouse = function(e, targ) {
     }
     if (!l)
         return;
-    var text = " " + tn + ": " + options.render_label("t", l.t) + ","
+    var text = " " + tn + ": " + options.render_label("t", l.t) + "\n"
         + options.render_label("s", l.s);
 
     var $tipCanvas = $("#tip_canvas");
