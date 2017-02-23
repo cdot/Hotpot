@@ -237,10 +237,17 @@ MetOffice.prototype.findNearestLocation = function(loc) {
 MetOffice.prototype.buildLog = function(data) {
     "use strict";
 
+    if (!data.SiteRep) return;
+    if (!data.SiteRep.Wx) return;
+    if (!data.SiteRep.Wx.Param) return;
+    
     var lu = data.SiteRep.Wx.Param;
     var s2c = { "$": "$" }, i, j, k;
     for (i in lu)
         s2c[lu[i].name] = lu[i].$;
+
+    if (!data.SiteRep.DV) return;
+    if (!data.SiteRep.DV.Location) return;
 
     var periods = data.SiteRep.DV.Location.Period;
     var rebased = false;
