@@ -166,6 +166,9 @@ Config.getSerialisable = function(config) {
  *   $skip - skip deeper checking of this item
  *   $array_of - object is an array of elements, each of which has
  *   this spec.
+ *   $file - the item is a filename, the data gives the mode. The file
+ *   need not exist unless the pseudo-mode 'e' is given.
+ *
  * For example,
  *
  *   thermostat: {
@@ -227,21 +230,35 @@ Config.check = function(context, config, index, spec) {
             }
         }
     } else if (spec.$type === "string" && typeof spec.$file !== "undefined") {
+        var fnm = Utils.expandEnvVars(config);
         var mode = Fs.constants.F_OK;
+
         if (spec.$file.indexOf("r") >= 0)
             mode = mode | Fs.constants.R_OK;
-        if (spec.$file.indexOf("w") >= 0)
-            mode = mode | Fs.constants.W_OK;
+
         if (spec.$file.indexOf("x") >= 0)
             mode = mode | Fs.constants.X_OK;
-        Fs.access(
-            Utils.expandEnvVars(config), mode,
-            function(err) {
-                if (err)
-                    throw "Bad config: " + context + " " + config
-                    + spec.$file + " check failed: "
-                    + err;
-            });
+
+        if (spec.$file.indexOf("e") >= 0 && !Fs.existsSync(fnm)) {
+            throw "Bad config: " + context + " " + config
+                  + " does not exist";
+        }
+
+        if (spec.$file.indexOf("w") >= 0) {
+            mode = mode | Fs.constants.W_OK;
+
+        if (Fs.existsSync(fnm)) {
+            Fs.access(fnm, mode,
+                function(err) {
+                    if (err)
+                        throw "Bad config: " + context + " " + config
+                        + spec.$file + " check failed: "
+                        + err;
+                });
+            }
+	} else if (spec.$file.indexOf("w") >= 0) {
+            Fs.writeFileSync(fnm, "", { mode: mode });
+        }
     }
 };
 
