@@ -259,9 +259,11 @@
         }
 
         // Mark elements that may no longer be required. The
-        // amrk will be removed as we process those that are to
+        // mark will be removed as we process those that are to
         // be kept.
-        $obj.find("[data-path]").each(function() {
+        $obj .find("[data-use-template]")
+            .children()
+            .each(function() {
             $(this).addClass("suspect");
         });
         // Hide conditionally displayed items

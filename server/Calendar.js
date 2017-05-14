@@ -39,38 +39,43 @@ function ScheduledEvent(cal, id, start, end, pin, state) {
     var self = this;
     var now = Time.now();
     if (start > now) {
-        Utils.TRACE(TAG, "Event will start at ", Date, start,
+        Utils.TRACE(TAG, self.id, " will start at ", Date, start,
                    " now is ", Date, now);
         this.event = setTimeout(function() {
             self.start();
         }, start - now);
     } else if (start <= now && end > now) {
-        Utils.TRACE(TAG, "Event has already started");
+        Utils.TRACE(TAG, self.id, " has already started");
         this.start();
     } else {
-        Utils.TRACE(TAG, "Event is already finished");
+        Utils.TRACE(TAG, self.id, " is already finished");
     }
 }
 
 // Cancel this event. Will remove the event from the containing calendar.
 ScheduledEvent.prototype.cancel = function() {
     Utils.TRACE(TAG, this.id, " cancelled");
-    if (typeof this.event !== "undefined")
+    if (typeof this.event !== "undefined") {
         clearTimeout(this.event);
-    if (typeof this.calendar.remove === "function")
+        this.event = undefined;
+    }
+    if (typeof this.calendar.remove === "function") {
         this.calendar.remove(this.id, this.pin);
-    this.event = undefined;
+    }
 };
 
 // Start this event. The calendar trigger will be called.
 ScheduledEvent.prototype.start = function() {
+    var self = this;
+
     Utils.TRACE(TAG, this.id, " starting");
     if (typeof this.calendar.trigger === "function")
         this.calendar.trigger(this.id, this.pin, this.state, this.endms);
-    var self = this;
-    this.event = setTimeout(function() {
+
+    Utils.runAt(function() {
+        Utils.TRACE(TAG, self.id, " finished");
         self.calendar.remove(self.id, self.pin);
-    }, this.endms - Time.now());
+    }, this.endms);
 };
 
 /**
@@ -264,12 +269,12 @@ Calendar.prototype.fillCache = function() {
                                 pin, "=", state);
                     continue;
                 }
-                Utils.TRACE(TAG, "Parsed event ", Date, start, "..",
+                Utils.TRACE(TAG, "Parsed event ", i, " ", Date, start, "..",
                             Date, end, " ",
                             pin, "=", state);
                 self.schedule.push(new ScheduledEvent(
                     self,
-                    self.name + " calendar",
+                    self.name + "_" + i,
                     start, end, pin, state));
             }
         }

@@ -265,10 +265,13 @@ Pin.prototype.getSerialisableState = function() {
     "use strict";
     var self = this;
 
+    self.purgeRequests();
     return this.getStatePromise()
     .then(function(value) {
-        self.purgeRequests();
-        var state = { reason: self.reason };
+        var state = {
+            requests: self.requests,
+            reason: self.reason
+        };
         var ar = self.getActiveRequest();
         if (typeof ar !== "undefined")
             state.request = ar;

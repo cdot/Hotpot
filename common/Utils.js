@@ -150,3 +150,19 @@ Utils.eval = function(code, context) {
         return m.exports;
     }
 };
+
+/**
+ * Like setTimeout, but run at a given date rather than after
+ * a delta. date can be a Date object or a time in ms
+ */
+Utils.runAt = function(func, date) {
+    var now = (new Date()).getTime();
+    var then = typeof date === "object" ? date.getTime() : date;
+    var diff = Math.max((then - now), 0);
+    if (diff > 0x7FFFFFFF) // setTimeout limit is MAX_INT32=(2^31-1)
+        setTimeout(function() {
+            Utils.runAt(func, date);
+        }, 0x7FFFFFFF);
+    else
+        setTimeout(func, diff);
+};

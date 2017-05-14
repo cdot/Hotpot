@@ -253,6 +253,7 @@ Server.prototype.handle = function(spath, params, request, response) {
         promise = Q("");
     } else {
         // Handle file lookup
+        Utils.TRACE(TAG, "GET ", path.join("/"));
         var filepath = Utils.expandEnvVars(this.config.docroot
                                            + "/" + path.join("/"));
         

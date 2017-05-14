@@ -71,8 +71,9 @@ Controller.prototype.initialise = function() {
     Utils.TRACE(TAG, "Initialising Controller");
 
     var self = this;
-
-    self.rule_state = {};
+    self.poll = {
+        timer: undefined
+    };
     
     return Q()
 
@@ -306,7 +307,9 @@ Controller.prototype.getSerialisableState = function() {
     
     var promise = Q();
 
-   Utils.forEach(this, function(block, field) {
+    // Should be able to do this using Q.all, but it doesn't do
+    // what I expect
+    Utils.forEach(this, function(block, field) {
        Utils.forEach(block, function(item, key) {
             if (typeof item.getSerialisableState === "function") {
                 if (typeof state[field] === "undefined")
@@ -508,7 +511,13 @@ Controller.prototype.dispatch = function(path, data) {
     switch (command) {
     case "state": // Return the current system state
         // /state
+        self.pollRules();
         return self.getSerialisableState();
+    case "trace": // Set tracing level
+        // Set trace level
+        Utils.TRACE(TAG, "Set TRACE ", data.trace);
+        Utils.setTRACE(data.trace);
+        break;
     case "log":
         // /log[/{type}[/{name}]]
         if (typeof path[0] === "undefined")
@@ -528,6 +537,7 @@ Controller.prototype.dispatch = function(path, data) {
             until = Date.parse(until);
         this.addRequest(data.pin, data.source,
                         parseInt(data.state), until);
+        self.pollRules();
         break;
     case "restart":
         self.emit("config_refresh");
@@ -548,6 +558,7 @@ Controller.prototype.dispatch = function(path, data) {
         // /refresh_calendars
         for (var cal in this.calendar)
             this.calendar[cal].update(100);
+        self.pollRules();
         break;
     default:
         throw "Unrecognised command " + command;
@@ -562,6 +573,11 @@ Controller.prototype.dispatch = function(path, data) {
 Controller.prototype.pollRules = function() {
     "use strict";
     var self = this;
+
+    if (typeof self.poll.timer !== "undefined") {
+        clearTimeout(self.poll.timer);
+        self.poll.timer = undefined;
+    }
 
     // Test each of the rules
     Utils.forEach(self.rule, function(rule) {
@@ -579,7 +595,8 @@ Controller.prototype.pollRules = function() {
     });
 
     // Queue the next poll
-    Q.delay(RULE_INTERVAL).done(function() {
+    self.poll.timer = setTimeout(function () {
+        self.poll.timer = undefined;
         self.pollRules();
-    });
+    }, RULE_INTERVAL);
 };
