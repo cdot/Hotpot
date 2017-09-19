@@ -45,7 +45,7 @@ function ScheduledEvent(cal, id, start, end, pin, state) {
             self.start();
         }, start - now);
     } else if (start <= now && end > now) {
-        Utils.TRACE(TAG, self.id, " has already started");
+        Utils.TRACE(TAG, self.id, " began in the past");
         this.start();
     } else {
         Utils.TRACE(TAG, self.id, " is already finished");
