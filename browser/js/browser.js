@@ -15,9 +15,9 @@
     var trace_options = {
         "pin:HW": { type: "binary", colour: "yellow" },
         "pin:CH": { type: "binary", colour: "cyan" },
-        "thermostat:HW": { colour: "orange" },
-        "thermostat:CH": { colour: "red" },
-        "weather:MetOffice": {colour: "green" }
+        "thermostat:HW": { type: "continuous", colour: "orange" },
+        "thermostat:CH": { type: "continuous", colour: "red" },
+        "weather:MetOffice": { type: "continuous", colour: "green" }
     };
 
     var poller;
@@ -145,7 +145,7 @@
                 var d = (typeof o.temperature !== "undefined")
                     ? o.temperature : o.state;
                 if (typeof d !== "undefined")
-                    g.addPoint(type + ":" + name, Time.now(), d);
+                    traces[name].addPoint(type + ":" + name, Time.now(), d);
             }
         }
         g.update();
@@ -312,19 +312,27 @@
 
         function createTrace(g, da, na) {
             var basetime = da[0];
-            var options = trace_options[na];
-            options.min =
-                {
+            var options = {
+                legend: na,
+                min: {
                     t: Date.now() - graph_width
-                };
-            options.max = {
-                t: Date.now()
+                },
+                max: {
+                    t: Date.now()
+                },
+                colour: trace_options[na].colour
             };
             
-            var trace = g.addTrace(na, options);
+            var trace;
+            if (trace_options[na].type == "binary")
+                trace = new BinaryTrace(options);
+            else
+                trace = new Trace(options);
             for (var j = 1; j < da.length; j += 2) {
                 trace.addPoint(basetime + da[j], da[j + 1]);
             }
+            traces[na] = trace;
+            g.addTrace(trace);
             // Closing point at same level as last measurement,
             // just in case it was a long time ago
             if (da.length > 1)
@@ -333,11 +341,11 @@
 
         function fillGraph(data) {
             $canvas.autoscale_graph({
-                render_label: function(axis, trd) {
-                    if (axis === "t")
-                        return datime(trd);
-                    else
-                        return (Math.round(trd * 10) / 10).toString();
+                render_tip_t: function(trd) {
+                    return datime(trd);
+                },
+                render_tip_s: function(trd) {
+                    return (Math.round(trd * 10) / 10).toString();
                 }
             });
             

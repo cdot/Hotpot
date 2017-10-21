@@ -50,14 +50,7 @@ tr.state_button_row td {
     width: 300px;
 }
 
-/* Overlay over the temperature canvas */
-#tip_canvas {
-    left:-200px; 
-    top:-200px;
-    width: 200px;
-    height: 200px;
-    color: white;
-    background-color: transparent;
-    display: none;
-    position: absolute;
+/* The canvas used to edit timelines */
+#timeline_canvas {
+    width: 300px;
 }

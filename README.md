@@ -183,3 +183,12 @@ adds continuous monitoring of temperatures and states of the system. Users of th
 # GetIP
 
 GetIP is a program to help with accessing a home server that is hidden behind a DHCP server. See the README.md file in that subdirectory.
+
+# Debugging
+
+cd to $packageroot/server
+node Hotpot.js -d --trace all
+
+This will start a debug mini-web-server listening on port 13196
+
+In a web browser on localhost, load http://localhost:13196/browser.html
