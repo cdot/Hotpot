@@ -7,71 +7,27 @@
 var POINT_RADIUS = 3; // px
 var POINT_RADIUS2 = POINT_RADIUS * POINT_RADIUS;
 
-// Simple 2D vector package, used for intersection calculations
-var Vec = {
-    sub: function(p1, p2) {
-        var res = {};
-        for (var ord in p1)
-            res[ord] = p1[ord] - p2[ord];
-        return res;
-    },
-    
-    add: function(p1, p2) {
-        var res = {};
-        for (var ord in p1)
-            res[ord] = p1[ord] + p2[ord];
-        return res;
-    },
-
-    mul: function(v, d) {
-        var res = {};
-        for (var ord in v)
-            res[ord] = v[ord] * d;
-        return res;
-    },
-    
-    dot: function(a, b) {
-        var res = 0;
-        for (var ord in a)
-            res += a[ord] * b[ord];
-        return res;
-    },
-    
-    mag2: function(v) {
-        var res = 0;
-        for (var ord in v)
-            res += v[ord] * v[ord];
-        return res;
-    },
-    
-    mag: function(v) {
-        return Math.sqrt(Vec.mag2(v));
-    },
-    
-    normalise: function(v, d) {
-        var d = typeof d !== "undefined" ? d : Vec.mag(v);
-        var res = {};
-        for (var ord in v)
-            res[ord] = v[ord] / d;
-        return res;
-    }
-};
+const Vec = require("../common/Vec.js");
+const Timeline = require("../common/Timeline.js");
 
 /**
  * Timeline editor object.
  * @param timeline a Timeline object
  */
-function TimelineEditor(timeline, $canvas) {
+function TimelineEditor(config, $canvas) {
     "use strict";
     var self = this;
 
-    self.timeline = timeline;
+    self.timeline = config.timeline;
+
+    // Editor time range
     self.min_time = timeline.getFirstPoint().time;
     self.max_time = timeline.getLastPoint().time;
     self.time_range = self.max_time - self.min_time;
-    
-    self.min_value = timeline.getMin();
-    self.max_value = timeline.getMax();
+
+    // Editor value range
+    self.min_value = config.min;
+    self.max_value = config.max;
     self.value_range = self.max_value - self.min_value;
     
     self.drag_point = -1;
@@ -245,7 +201,7 @@ TimelineEditor.prototype.handleMouseMove = function(e) {
  */
 TimelineEditor.prototype.overPoint = function(p) {
     "use strict";
-    var min2 = POINT_RADIUS * POINT_RADIUS;
+    var min2 = POINT_RADIUS2;
     var selpt;
     for (var i = 0; i < this.timeline.nPoints(); i++) {
         var pt = this.p2xy(this.timeline.getPoint(i));
@@ -268,7 +224,7 @@ TimelineEditor.prototype.overPoint = function(p) {
  */
 TimelineEditor.prototype.overLine = function(p) {
     "use strict";
-    var min2 = POINT_RADIUS * POINT_RADIUS;
+    var min2 = POINT_RADIUS2;
     
     var sel;
     var p1 = this.p2xy(this.timeline.getPoint(0));

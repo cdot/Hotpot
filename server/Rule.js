@@ -33,8 +33,7 @@ function Rule(name, config) {
     /**
      * Configuration data
      */
-    this.config = config;
-    Config.check("Rule " + name, config, name, Rule.prototype.Config);
+    this.config = Config.check("Rule " + name, config, name, Rule.prototype.Config);
     
     /**
      * Test function

@@ -163,6 +163,7 @@ Config.getSerialisable = function(config) {
  *   $type - type of the datum (as returned by typeof, defaults to "object")
  *   $doc - a documentation string for the datum
  *   $optional - this datum is optional
+ *   $default: default value, if not defined
  *   $skip - skip deeper checking of this item
  *   $array_of - object is an array of elements, each of which has
  *   this spec.
@@ -183,17 +184,22 @@ Config.getSerialisable = function(config) {
  * @param {string} context The context of the check, used in messages only
  * @param {object} config The config under inspection
  * @param {index} The index of the structure in the parent object. This
- * will be a number for an array entry, or a key for a hash.
+ * will be a number for an array entry, or a key for a hash. Only used for error
+ * reporting.
  * @param {object} spec A specification that drives the check of the config.
+ * @return the config (or the default, if one was applied)
  */
 Config.check = function(context, config, index, spec) {
     var i;
     
     if (typeof config === "undefined") {
         if (spec.$optional)
-            return;
-        throw "Bad config: " + context + " not optional at "
+            return config;
+        if (typeof spec.$default === "undefined")
+            throw "Bad config: " + context + " not optional and no default at "
             + Utils.dump(config);
+        else
+            config = spec.$default;
     }
     
     if (spec.$type && typeof config !== spec.$type) {
@@ -207,13 +213,13 @@ Config.check = function(context, config, index, spec) {
     }
 
     if (spec.$skip)
-        return;
+        return config;
     
     if (!spec.$type || spec.$type === "object") {
         if (typeof spec.$array_of !== "undefined") {
             for (var i in config) {
-                Config.check(context + "[" + i + "]",
-                             config[i], i, spec.$array_of);
+                config[i] = Config.check(context + "[" + i + "]",
+                                         config[i], i, spec.$array_of);
             }
         } else {
             for (var i in config) {
@@ -225,7 +231,7 @@ Config.check = function(context, config, index, spec) {
             }
             for (var i in spec) {
                 if (i.charAt(0) !== '$') {
-                    Config.check(context + "." + i, config[i], i, spec[i]);
+                    config[i] = Config.check(context + "." + i, config[i], i, spec[i]);
                 }
             }
         }
@@ -260,6 +266,7 @@ Config.check = function(context, config, index, spec) {
             Fs.writeFileSync(fnm, "", { mode: mode });
         }
     }
+    return config;
 };
 
 Config.help = function(spec, index, preamble) {

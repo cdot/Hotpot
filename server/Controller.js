@@ -16,13 +16,6 @@ const Calendar = require("./Calendar");
 
 const TAG = "Controller";
 
-// Time to wait for the multiposition valve to return to the discharged
-// state, in ms
-const VALVE_RETURN = 8000;
-
-// Frequency at which rules are re-evaluated
-const RULE_INTERVAL = 5000;
-
 /**
  * Controller for a number of pins, thermostats, calendars, weather agents,
  * and the rules that manage the system state based on inputs from all these
@@ -36,8 +29,7 @@ const RULE_INTERVAL = 5000;
  * @class
  */
 function Controller(config) {
-    this.config = config;
-    Config.check("Controller", config, "", Controller.prototype.Config);
+    this.config = Config.check("Controller", config, "", Controller.prototype.Config);
 }
 Util.inherits(Controller, Events);
 module.exports = Controller;
@@ -50,6 +42,16 @@ Controller.prototype.Config = {
     pin: {
         $doc: "Set of Pins",
         $array_of: Pin.prototype.Config
+    },
+    valve_return: {
+        $doc: "Time to wait for the multiposition valve to return to the discharged state, in ms",
+        $type: "number",
+        $default: 8000
+    },
+    rule_interval: {
+        $doc: "Frequency at which rules are re-evaluated, in ms",
+        $type: "number",
+        $default: 5000
     },
     rule: {
         $doc: "Set of Rules",
@@ -212,7 +214,7 @@ Controller.prototype.resetValve = function() {
         Utils.TRACE(TAG, "Reset: HW(1) done");
     })
 
-    .delay(VALVE_RETURN)
+    .delay(self.config.valve_return)
 
     .then(function() {
         Utils.TRACE(TAG, "Reset: delay done");
@@ -407,7 +409,7 @@ Controller.prototype.setPromise = function(channel, new_state, reason) {
         return Q.promise(function() {});
 
     if (this.pending) {
-        return Q.delay(VALVE_RETURN).then(function() {
+        return Q.delay(self.config.valve_return).then(function() {
             return self.setPromise(channel, new_state, reason);
         });
     }
@@ -439,7 +441,7 @@ Controller.prototype.setPromise = function(channel, new_state, reason) {
                 })
                 .then(function() {
                     self.pending = true;
-                    return Q.delay(VALVE_RETURN); // wait for spring
+                    return Q.delay(self.config.valve_return); // wait for spring
                 })
                 .then(function() {
                     self.pending = false;
@@ -598,5 +600,5 @@ Controller.prototype.pollRules = function() {
     self.poll.timer = setTimeout(function () {
         self.poll.timer = undefined;
         self.pollRules();
-    }, RULE_INTERVAL);
+    }, self.config.rule_interval);
 };

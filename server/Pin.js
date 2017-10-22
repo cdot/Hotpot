@@ -47,8 +47,7 @@ const REQUEST_BOOST = 2;
 function Pin(name, config) {
     "use strict";
 
-    this.config = config;
-    Config.check("Pin " + name, config, name, Pin.prototype.Config);
+    this.config = Config.check("Pin " + name, config, name, Pin.prototype.Config);
     
     var self = this;
 

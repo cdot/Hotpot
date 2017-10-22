@@ -49,8 +49,7 @@ function Server(config, dispatch) {
     "use strict";
 
     var self = this;
-    self.config = config;
-    Config.check("Server", config, "", Server.prototype.Config);
+    self.config = Config.check("Server", config, "", Server.prototype.Config);
     self.dispatch = dispatch;
     self.ready = false;
     if (typeof config.auth !== "undefined") {

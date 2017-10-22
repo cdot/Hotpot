@@ -104,8 +104,7 @@ function Calendar(name, config, trigger, remove) {
     // @property {String} name name of the calendar
     this.name = name;
     // Reference to config object
-    this.config = config;
-    Config.check("Calendar " + name, config, name, Calendar.prototype.Config);
+    this.config = Config.check("Calendar " + name, config, name, Calendar.prototype.Config);
     // GoogleAuthClient.OAuth2
     this.oauth2Client = undefined;
     // Current events schedule

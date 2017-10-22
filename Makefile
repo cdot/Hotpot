@@ -21,6 +21,7 @@ SOURCES := \
 	common/Config.js \
 	common/Location.js \
 	common/Time.js \
+	common/Timeline.js \
 	common/Utils.js \
 	browser/js/autoscale_graph.js \
 	browser/js/browser.js \

@@ -6,6 +6,7 @@ const Q = require("q");
 
 const Utils = require("../common/Utils");
 const Config = require("../common/Config");
+const Timeline = require("../common/Timeline");
 const Historian = require("./Historian");
 
 const TAG = "Thermostat";
@@ -45,9 +46,8 @@ function Thermostat(name, config) {
         }
     }
 
-    this.config = config;
-    Config.check("Thermostat " + name, config, name,
-                 Thermostat.prototype.Config);
+    this.config = Config.check(
+        "Thermostat " + name, config, name, Thermostat.prototype.Config);
     
     // Name of the thermostat e.g. "HW"
     this.name = name;
@@ -78,6 +78,7 @@ Thermostat.prototype.Config = {
         $type: "string",
         $doc: "unique ID used to communicate with this thermostat"
     },
+    timeline: Utils.extend(Timeline.prototype.Config, { $optional: true }),
     history: Utils.extend(Historian.prototype.Config, { $optional: true })
 };
 

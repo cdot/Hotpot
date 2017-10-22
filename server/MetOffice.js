@@ -53,8 +53,7 @@ var MetOffice = function(config) {
     "use strict";
     this.url = Url.parse("http://datapoint.metoffice.gov.uk");
     this.name = "MetOffice";
-    this.config = config;
-    Config.check(this.name, config, this.name, MetOffice.prototype.Config);
+    this.config = Config.check(this.name, config, this.name, MetOffice.prototype.Config);
     this.api_key = "?key=" + config.api_key;
     this.log = [];
     var hc = config.history;

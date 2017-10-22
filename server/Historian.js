@@ -27,8 +27,8 @@ function Historian(name, config) {
 
     this.name = name;
     
-    this.config = config;
-    Config.check("Historian " + name, config, name, Historian.prototype.Config);
+    this.config = Config.check(
+        "Historian " + name, config, name, Historian.prototype.Config);
 
     this.timeout = null;
     Utils.TRACE(TAG, "for ", name, " in ", this.path());

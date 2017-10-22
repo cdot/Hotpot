@@ -1,36 +1,46 @@
+/*@preserve Copyright (C) 2017 Crawford Currie http://c-dot.co.uk license MIT*/
+
+/*eslint-env node */
+
+const Vec = require("../common/Vec.js");
+
 /**
- * A timeline is an array of points representing the total span of
- * the timeline. Each point has fields { time, value } where time is
- * a time in milliseconds and value is in the range
+ * A timeline is a config object that represents a continuos graph giving a value
+ * at each point over a time line.
+ * Times are milliseconds and values in the range
  * min_value..max_value (out of range values are NOT clipped).
- * Points are ordered in increasing time. The total period
- * is defined by the time distance between first and last points.
- * Timelines are initialised with start and end points both at value
+ * New Timelines are initialised with a straight line at value
  * (min + max) / 2
- * @param length the length of the timeline
- * @param min the minimum value a time point can take
- * @param max the maximum value a time point can take
-*/
-function Timeline(length, min, max) {
-    if (length <= 0)
+ * @param {Config} config  see Timeline.prototype.Config
+ */
+function Timeline(config) {
+    this.config = Config.check("Timeline ", config, "timeline", Timeline.prototype.Config);
+
+    if (config.length <= 0)
         throw "Bad length";
-    if (min >= max)
-        throw "Reverse or zero value range";
-
-    this.min = min;
-    this.max = max;
-    this.points = [
-        { time: 0, value: (min + max) / 2 },
-        { time: length, value: (min + max) / 2 }
-    ];
+    if (config.length < 2) {
+        config.push({ time: 0, value: (min + max) / 2 });
+        config.push({ time: config.length, value: (min + max) / 2 });
+    }
+    for (var i = 0; i < config.length; i++) {
+        this.push({ time: config[i].time, value: config[i].value });
+    }
 };
+module.exports = Timeline;
 
-Timeline.prototype.getMin = function() {
-    return this.min;
-};
-
-Timeline.prototype.getMax = function() {
-    return this.max;
+Timeline.prototype.Config = {
+    $doc: "Array of time points",
+    $array_of: {
+        $doc: "vertex on a timeline graph",
+        time: {
+            $type: "number",
+            $doc: "time"
+        },
+        value: {
+            $type: "number",
+            $doc: "value at this time"
+        }
+    }
 };
 
 /**
@@ -38,6 +48,8 @@ Timeline.prototype.getMax = function() {
  */
 Timeline.prototype.valueAtTime = function(t) {
     var lp = this.points[0];
+    if (p.time < lp.time)
+        throw "Time is outside timeline";
     for (var i = 0; i < this.points.length; i++) {
         var p = this.points[i];
         if (p.time > t) {
