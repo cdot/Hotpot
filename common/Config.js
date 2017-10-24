@@ -6,7 +6,7 @@ const Fs = require("fs");
 const Q = require("q");
 const readFile = Q.denodeify(Fs.readFile);
 const writeFile = Q.denodeify(Fs.writeFile);
-const serialize = require("serialize-javascript");
+const toJSON = require("serialize-javascript");
 
 const Utils = require("../common/Utils.js");
 
@@ -29,18 +29,26 @@ var Config = {
 Config.load = function(file) {
     return readFile(file)
     .then(function(code) {
-        return Utils.eval(code, file);
+        var cfg = Utils.eval(code, file);
+        cfg._readFrom = file;
+        return cfg;
     });
 };
 
 /**
  * Return a promise to save the configuration to a file
+ * @param file file to write to, or undefined to rewrite the
+ * file the config was read from. Note: Does not rewrite _file
+ * field contents.
  */
 Config.save = function(config, file) {
     "use strict";
 
+    if (typeof file === "undefined")
+        file = this._readFrom;
+    
     return writeFile(Utils.expandEnvVars(file),
-              serialize(config, 2), "utf8")
+              toJSON(config, 2), "utf8")
 
     .catch(function(e) {
         Utils.ERROR(TAG, "ConfigurationManager save failed: ", e.stack);
@@ -87,9 +95,9 @@ Config.updateFileableConfig = function(config, key, value) {
 
 /**
  * Process an immutable config structure and generate a version
- * suitable for transmission via Ajax.
+ * suitable for transmission via Ajax (with expanded _file data)
  */
-Config.getSerialisable = function(config) {
+Config.getSerialisable = function(config, flat) {
 
     var res = (config.toString === Array.prototype.toString)
         ? [] : {};
@@ -98,7 +106,7 @@ Config.getSerialisable = function(config) {
 
     function addSerialPromise(cfg, key) {
         promises = promises.then(function() {
-            return Config.getSerialisable(cfg);
+            return Config.getSerialisable(cfg, flat);
         })
         .then(function(c) {
             res[key] = c;
@@ -119,7 +127,7 @@ Config.getSerialisable = function(config) {
             addSerialPromise(field, key);
         else {
             var match = /(.*)_file$/.exec(key);
-            if (match)
+            if (flat && match)
                 // If the name of the field in the config ends in "_file"
                 // then read the associated file and create the field
                 // (string) value
@@ -191,6 +199,9 @@ Config.getSerialisable = function(config) {
  */
 Config.check = function(context, config, index, spec) {
     var i;
+
+    if (index === "_readFrom")
+        return config;
     
     if (typeof config === "undefined") {
         if (spec.$optional)

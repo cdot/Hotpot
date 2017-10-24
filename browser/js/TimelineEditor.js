@@ -21,8 +21,8 @@ function TimelineEditor(config, $canvas) {
     self.timeline = config.timeline;
 
     // Editor time range
-    self.min_time = timeline.getFirstPoint().time;
-    self.max_time = timeline.getLastPoint().time;
+    self.min_time = timeline.getPoint(0).time;
+    self.max_time = timeline.getPoint(timeline.nPoints() - 1).time;
     self.time_range = self.max_time - self.min_time;
 
     // Editor value range
@@ -123,7 +123,7 @@ TimelineEditor.prototype.handleMouseMove = function(e) {
             tp.time = 0;
             adjust = true;
         } else if (this.drag_point === this.timeline.nPoints() - 1) {
-            tp.time = this.timeline.getLastPoint().time;
+            tp.time = this.timeline.getPoint(timeline.nPoints() - 1).time;
             adjust = true;
         } else {
             var prevtime = this.timeline.getPoint(this.drag_point - 1).time;
@@ -305,7 +305,7 @@ TimelineEditor.prototype.render = function() {
 
     ctx.fillStyle = 'white';
     ctx.strokeStyle = "white";
-    var p = this.p2xy(this.timeline.getFirstPoint());
+    var p = this.p2xy(this.timeline.getPoint(0));
     ctx.moveTo(p.x, p.y);
     ctx.arc(p.x, p.y, POINT_RADIUS, 0, 2 * Math.PI, false);
     ctx.moveTo(p.x, p.y);

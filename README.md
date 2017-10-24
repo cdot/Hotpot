@@ -116,6 +116,7 @@ be used to review temperature logs, and perform simple overrides such as
 boosting temperature. The following URL requests are available:
 
 * `/config` - retrieve the configuration of the controller (JSON)
+* `/reconfig` - write a new config. Doesn't restart the server, just updates the files that store the config
 * `/state` - retrieve the current state of the controller (JSON)
 * `/log/{type}/{name}` - retrieve type `pin`, `thermostat`, or `weather` logs, or all logs if `{type}/{name}` is not given (or all `{type}` logs if `{name}` is not given)
 * `/request?source={name};pin={name};state=[0|1|2];until={epoch}` - set a request on behalf of the given source for the given pin, asking for the given state. The request will (optionally) remain active until the given date.

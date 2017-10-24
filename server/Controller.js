@@ -529,7 +529,14 @@ Controller.prototype.dispatch = function(path, data) {
         return self[path[0]][path[1]].getSerialisableLog(data.since);
     case "config": // Return the config with all _file expanded
         // /config
-        return Config.getSerialisable(this.config);
+        return Config.getSerialisable(this.config, true);
+    case "rawconfig": // Return the config with _file unexpanded
+        // /config
+        return Config.getSerialisable(this.config, false);
+    case "reconfig": // Update the config. This saves the file but
+        // but won't restart the server.
+        // /reconfig
+        return Config.save(data.config);
     case "request":
         // Push a request onto a pin (or all pins). Requests may come
         // from external sources such as mobiles or browsers.

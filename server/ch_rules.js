@@ -2,12 +2,9 @@ function () {
     var self = this;
     return this.pin.CH.getStatePromise()
     .then(function(state) {
-        // Daytime lower limit is lower than morning and evening
-        var lower_bound = Time.between('08:00', '18:00')
-            ? 16 : 17;
-        var upper_bound = Time.between('08:00', '18:00')
-            ? 17 : 18;
-
+        var upper_bound = self.thermostat.CH.getTargetTemperature();
+        var lower_bound = upper_bound - 2;
+        
         if (self.thermostat.CH.temperature > upper_bound) {
             // Warm enough inside, so switch off regardless of other rules
             if (state === 1)
@@ -17,24 +14,6 @@ function () {
             self.pin.CH.purgeRequests(2);
             // setPromise is a NOP if already in the right state
             return self.setPromise("CH", 0, "Warm enough");
-        }
-
-        if (self.thermostat.CH.temperature < 4) {
-            // Chilly. Risk of frost. Switch on regardless of other rules
-            // or requests.
-            if (state === 0)
-                Utils.TRACE("Rules", "CH is ", self.thermostat.CH.temperature,
-                            "°C so turning on");
-            return self.setPromise("CH", 1, "Risk of frost");
-        }
-
-        // See if it's warm enough outside not to bother with heating
-        if (self.weather.MetOffice.get("Feels Like Temperature") > 14) {
-            if (state === 1)
-                Utils.TRACE("CH", "Weather is ",
-                            self.weather("Feels Like Temperature"),
-                            " so CH off");
-            return self.setPromise("CH", 0, "Warm enough outside");
         }
 
         // See if there's any demand from requests
@@ -52,14 +31,6 @@ function () {
                                   "Requested by " + req.source);
         }
 
-        // Consider the time
-        if (Time.between('22:00', '06:40')) { // night
-            if (state === 1)
-                Utils.TRACE("Rules", "out of time band, so CH off");
-            return self.setPromise("CH", 0, "Out of time");
-        }
-
-        // we are in time band
         if (self.thermostat.CH.temperature < lower_bound) {
             if (state === 0)
                 Utils.TRACE("Rules", "CH only ",

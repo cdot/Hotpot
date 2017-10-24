@@ -3,9 +3,11 @@ function () {
     var self = this;
     return this.pin.HW.getStatePromise()
     .then(function(state) {
-        //Utils.TRACE("Rules", "HW ", state, " ", self.thermostat.HW.temperature);
+        var upper_bound = self.thermostat.HW.getTargetTemperature();
+        var lower_bound = upper_bound - 10;
+
         // Check the temperature of the HW thermostat
-        if (self.thermostat.HW.temperature > 43) {
+        if (self.thermostat.HW.temperature > upper_bound) {
             // Hot enough, so switch off regardless of other rules
             if (state === 1)
                 Utils.TRACE("Rules", "HW is ", self.thermostat.HW.temperature,
@@ -28,15 +30,7 @@ function () {
                 "HW", restate, req.source + " requested " + req.state);
         }
 
-        if (Time.between("08:30", "18:00") // day
-            || Time.between("20:00", "06:30")) { // night
-            if (state === 1)
-                Utils.TRACE("Rules", "out of time band, so HW off");
-            return self.setPromise("HW", 0, "Out of time");
-        }
-
-        // we are in time band
-        if (self.thermostat.HW.temperature < 38) {
+        if (self.thermostat.HW.temperature < lower_bound) {
             if (state === 0)
                 Utils.TRACE("Rules", "HW only ",
                             self.thermostat.HW.temperature,

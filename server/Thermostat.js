@@ -55,6 +55,8 @@ function Thermostat(name, config) {
     // Last recorded temperature {float}
     this.temperature = 0;
 
+    this.timeline = new Timeline(this.config.timeline);
+
     // Temperature history, sample on a time schedule
     var hc = config.history;
     var self = this;
@@ -78,7 +80,7 @@ Thermostat.prototype.Config = {
         $type: "string",
         $doc: "unique ID used to communicate with this thermostat"
     },
-    timeline: Utils.extend(Timeline.prototype.Config, { $optional: true }),
+    timeline: Timeline.prototype.Config,
     history: Utils.extend(Historian.prototype.Config, { $optional: true })
 };
 
@@ -171,4 +173,12 @@ Thermostat.prototype.pollTemperature = function() {
                        : self.config.poll_interval);
         }
     });
+};
+
+/**
+ * Get the target temperature specified by the timeline for this thermostat
+ * at the current time/
+ */
+Thermostat.prototype.getTargetTemperature = function() {
+    return this.timeline.valueAtTime(Time.time_of_day());
 };

@@ -165,3 +165,17 @@ Time.before = function(t1) {
     "use strict";
     return (Time.now() < Time.toMs(t1));
 };
+
+/**
+ * Get the current time as an offset in ms from the preceding midnight
+ */
+Time.time_of_day = function() {
+    return Time.now() - Time.midnight().getTime();
+};
+
+/**
+ * Get the given time string as an offset in ms from the preceding midnight
+ */
+Time.toRelMs = function(s) {
+    return Time.toMs(s) - Time.midnight().getTime();
+};
