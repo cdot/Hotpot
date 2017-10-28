@@ -22,6 +22,8 @@
 
     var poller;
 
+    var traces = {};
+    
     function refreshCalendars() {
         $("#refresh_calendars").attr("disabled", "disabled");
         $.get("/ajax/refresh_calendars",
@@ -35,26 +37,21 @@
      * User clicks a requests field
      * @return {boolean} false to terminate event handling
      */
-    function requestState() {
-        var val = parseInt($(this).data("value"));
-        $(this).parents(".templated[data-field]").each(function() {
-            var pin = ($(this).data("field"));
-
-            var params = {
-                // until: , - no timeout
-                source: "Browser",
-                pin: pin,
-                state: val
-            };
+    function requestState(pin, val) {
+        var params = {
+            // until: , - no timeout
+            source: "Browser",
+            pin: pin,
+            state: val
+        };
          
-            // Away from home, set up to report after interval
-            $.post("/ajax/request",
-                   JSON.stringify(params),
-                   function(/*raw*/) {
-                       $(document).trigger("poll");
-                   });
-            return false; // prevent repeated calls
-        });
+        // Away from home, set up to report after interval
+        $.post("/ajax/request",
+               JSON.stringify(params),
+               function(/*raw*/) {
+                   $(document).trigger("poll");
+               });
+        return false; // prevent repeated calls
     }
 
     function zeroExtend(num, len) {
@@ -145,133 +142,37 @@
                 var d = (typeof o.temperature !== "undefined")
                     ? o.temperature : o.state;
                 if (typeof d !== "undefined")
-                    traces[name].addPoint(type + ":" + name, Time.now(), d);
+                    traces[type+":"+name].addPoint(Time.now(), d);
             }
         }
-        g.update();
+        g.render();
     }
 
     /**
      * Update the UI with state information from the structure
      * passed in.
-     * @param $obj the root element
      * @param {object} obj the structure containing the state (as
      * received from /ajax/state)
      */
-    function updateState($obj, obj) {
-
-        /**
-         * Construct new substructure from a template.
-         * @param {string} tmplname name of the template
-         * @param {string} key name of the element in the parent structure
-         * @param {string} keypath path to the element from the root
-         */
-        function constructFromTemplate(tmplname, key, keypath) {
-            var $tmpl = $("[data-define-template='" + tmplname + "']");
-            if (!$tmpl)
-                throw "Template '" + tmplname + "' not found";
-            var $instance = $($tmpl.html());
-            // In case the template doesn't have a single top level, put it
-            // in a div
-            if ($instance.length > 1)
-                $instance = $("<div></div>").append($instance);
-            // Mark it as templated
-            $instance.addClass("templated");
-            // Make paths absolute in the template instance
-            $instance.find("[data-field]").each(
-                function() {
-                    var field = $(this).attr("data-field");
-                    var newpath = keypath + "/" + field;
-                    // SMELL: setting data isn't enough for
-                    // .find(), have to explicitly set the
-                    // attr too.
-                    $(this).attr("data-path", newpath);
-                });
-            $instance
-                .attr("data-path", keypath)
-                .attr("data-field", key)
-                .find(".state_button")
-                .on("click", requestState);
-            return $instance;
-        }
-
-        /**
-         * Update the state on a member of a structure
-         * referred to by a key.
-         * Either find a $element with corresponding absolute path
-         * or, failing that, create a new one using the template
-         * named on the container.
-         * @param {jquery} $cont element that should contain the member
-         * @param {string} contPath path from the root to the container
-         * @param {object} contData the state data for the container
-         * @param {string} memberKey the key in the container we are updating
-         */
-        function updateMember($cont, contPath, contData, memberKey) {
-            var memberPath = contPath + "/" + memberKey;
-            var $member = $cont.find("[data-path='" + memberPath + "']");
-            var memberData = contData[memberKey];
-
-            if ($member.length === 0) {
-                // Don't construct a template for added fields
-                if (memberKey.charAt(0) === "$")
-                    return;
-                // The path doesn't exist in the $cont, create it from template
-                var tmpl = $cont.attr('data-use-template');
-                if (tmpl) {
-                    $member =
-                        constructFromTemplate(tmpl, memberKey, memberPath);
-                    $cont.append($member);
-                } else
-                    console.log("Data has no element or template at "
-                                + memberPath);
-
-            } else if ($member.length !== 1)
-                throw "Same path found on " + $member.length
-                + " elements: " + memberPath;
-            
-            // Make sure data has an index if the child was templated and
-            // the sub-data is an object
-            if (typeof memberData === "object" && $member.is(".templated"))
-                memberData.$index = memberKey;
-            
-            innerUpdateState($member, memberData, memberPath);
-        }
-
-        /**
-         * Recurse through the UI and state data structure, updating
-         * the UI (and creating new / removing redundant parts)
-         * @param {jquery} $thing element being updated
-         * @param {object} data state data for $thing
-         * @param {string} path absolute path from root
-         */
-        function innerUpdateState($thing, data, path) {
-            $thing.removeClass("suspect");
-            if (typeof data === "object") {
-                // There's sub-structure under here. Process each
-                // key.
-                var names = Object.keys(data).sort();
-                for (var i in names) {
-                    updateMember($thing, path, data, names[i]);
-                }
-            } else { // leaf
-                setValue($thing, data);
+    function updateState(obj) {
+        for (var service in { CH: 1, HW: 1 }) {
+            var th = "#thermostat-" + service + "-";
+            var pin = "#pin-" + service + "-";
+            $(th + "temp").text(Math.round(
+                10 * obj.thermostat[service].temperature) / 10);
+            if (obj.pin[service].state === 0) {
+                $(pin + "state").text("OFF");
+                $(pin + "off").css("display", "none");
+                $(pin + "on").css("display", "inline");
+                $(pin + "boost").css("display", "inline");
+            } else {
+                $(pin + "state").text("ON");
+                $(pin + "off").css("display", "inline");
+                $(pin + "on").css("display", "none");
+                $(pin + "boost").css("display", "none");
             }
+            $(pin + "reason").text(obj.pin[service].reason);
         }
-
-        // Mark elements that may no longer be required. The
-        // mark will be removed as we process those that are to
-        // be kept.
-        $obj .find("[data-use-template]")
-            .children()
-            .each(function() {
-            $(this).addClass("suspect");
-        });
-        // Hide conditionally displayed items
-        $obj.find("[data-show-if]").hide();
-        // Recursively update the UI
-        innerUpdateState($obj, obj, "");
-        // Remove elements no longer required
-        $obj.find(".suspect").remove();
     }
 
     /**
@@ -293,7 +194,7 @@
             function(data) {
                 $("#comms_error").html("");
                 $(".showif").hide(); // hide optional content
-                updateState($("#data"), data);
+                updateState(data);
                 updateGraph(data);
                 setPollTimeout();
             })
@@ -355,7 +256,7 @@
                 for (var name in data[type])
                     createTrace(g, data[type][name], type + ":" + name);
             
-            g.update();
+            g.render();
         }
 
         $.getJSON("/ajax/log", JSON.stringify(params), fillGraph)
@@ -369,7 +270,7 @@
         $(".display").hide();
         $("#" + id).show();
         if (id === "graphs")
-            $("#graph_canvas").data("graph").update();
+            $("#graph_canvas").data("graph").render();
     }
     
     /**
@@ -377,7 +278,17 @@
      * and start the polling loop.
      */
     function configure() {
-
+        var states = { off: 0, on: 1, boost: 2 };
+        
+        for (var service in { CH: 1, HW: 1 }) {
+            for (var fn in states) {
+                $("#pin-" + service + "-"+fn).click({
+                    service: service, fn: fn },
+                    function(e) {
+                        requestState(e.data.service, states[e.data.fn]);
+                    });
+            }
+        }
 	$("#refresh_calendars").on("click", refreshCalendars);
 	$("#to-controls").on("click", function() {
             showDisplay("data");
