@@ -1,9 +1,7 @@
 /*@preserve Copyright (C) 2017 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
-
-const Config = require("../common/Config");
-const Vec = require("../common/Vec.js");
+/* Must also work in browser */
 
 /**
  * A timeline is an object that represents a continuous graph
@@ -16,8 +14,10 @@ const Vec = require("../common/Vec.js");
  * @param {Config} config see Timeline.prototype.Config
  */
 function Timeline(config) {
-    this.config = Config.check(
-        "Timeline ", config, "timeline", Timeline.prototype.Config);
+    this.config = (typeof Config === "undefined") ?
+        config :
+        Config.check(
+            "Timeline ", config, "timeline", Timeline.prototype.Config);
 
     if (config.max <= config.min)
         throw "Value range inside out";
@@ -26,27 +26,30 @@ function Timeline(config) {
         throw "Bad period";
     this.period = config.period;
     this.points = [];
-    if (config.points.length === 0) {
+    if (typeof config.points === "undefined" || config.points.length === 0) {
         this.points.push({time: 0, value: (config.min + config.max) / 2});
-        this.setPoint(0);
+        this.points.push({time: this.period,
+                          value: (config.min + config.max) / 2});
     }
     else if (config.points[0].time !== 0) {
-        this.unshift({time: 0, value: config.points[0].value});
-        this.setPoint(0);
+        this.points.unshift({time: 0, value: config.points[0].value});
     }
-    for (var i = 0; i < config.points.length; i++) {
-        this.points.push({time: config.points[i].time,
-                          value: config.points[i].value});
-        this.setPoint(this.points.length - 1);
-    }
-    if (this.points[this.points.length - 1].time < this.period) {
-        this.points.push(
-            {time: this.period,
-             value: config.points[this.points.length - 1].value});
-        this.setPoint(this.points.length - 1);
+    if (typeof config.points !== "undefined") {
+        for (var i = 0; i < config.points.length; i++) {
+            this.points.push({time: config.points[i].time,
+                              value: config.points[i].value});
+            this.setPoint(this.points.length - 1);
+        }
+        if (this.points[this.points.length - 1].time < this.period) {
+            this.points.push(
+                {time: this.period,
+                 value: config.points[this.points.length - 1].value});
+            this.setPoint(this.points.length - 1);
+        }
     }
 };
-module.exports = Timeline;
+if (typeof module !== "undefined")
+    module.exports = Timeline;
 
 Timeline.prototype.Config = {
     min: {

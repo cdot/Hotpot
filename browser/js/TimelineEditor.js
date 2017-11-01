@@ -7,27 +7,28 @@
 var POINT_RADIUS = 3; // px
 var POINT_RADIUS2 = POINT_RADIUS * POINT_RADIUS;
 
-const Vec = require("../common/Vec.js");
-const Timeline = require("../common/Timeline.js");
+const Vec = require("common/Vec.js");
+const Time = require("common/Time.js");
 
 /**
  * Timeline editor object.
  * @param timeline a Timeline object
  */
-function TimelineEditor(config, $canvas) {
+function TimelineEditor(timeline, $canvas) {
     "use strict";
     var self = this;
 
-    self.timeline = config.timeline;
-
+    self.timeline = timeline;
+    $canvas.data("timeline", self);
+    
     // Editor time range
     self.min_time = timeline.getPoint(0).time;
-    self.max_time = timeline.getPoint(timeline.nPoints() - 1).time;
-    self.time_range = self.max_time - self.min_time;
+    self.max_time = self.min_time + timeline.period;
+    self.time_range = timeline.period;
 
     // Editor value range
-    self.min_value = config.min;
-    self.max_value = config.max;
+    self.min_value = timeline.min;
+    self.max_value = timeline.max;
     self.value_range = self.max_value - self.min_value;
     
     self.drag_point = -1;
@@ -66,11 +67,11 @@ function TimelineEditor(config, $canvas) {
         }
     });
 
-    $canvas.on("mouseup", function(e) {
+    $canvas.on("mouseup", function() {
         self.drag_point = -1;
     });
 
-    $canvas.on("mouseout", function(e) {
+    $canvas.on("mouseout", function() {
         self.drag_point = -1;
     });
 
@@ -82,6 +83,7 @@ function TimelineEditor(config, $canvas) {
             if (typeof intercept !== "undefined") {
                 self.timeline.insertBefore(
                     intercept.next, self.xy2p(intercept.point));
+                $canvas.trigger("change");
                 self.render();
             }
         }
@@ -96,6 +98,7 @@ function TimelineEditor(config, $canvas) {
         if (typeof idx !== "undefined" &&
             idx > 0 && idx < self.timeline.nPoints() - 1) {
             self.timeline.remove(idx);
+            $canvas.trigger("change");
             self.render();
         }
     });
@@ -139,6 +142,7 @@ TimelineEditor.prototype.handleMouseMove = function(e) {
         if (adjust)
             canp = this.p2xy(tp);
         this.timeline.setPoint(this.drag_point, tp);
+        this.$canvas.trigger("change");
         this.render();
     }
 
@@ -282,7 +286,6 @@ TimelineEditor.prototype.xy2p = function(p) {
  */
 TimelineEditor.prototype.render = function() {
     "use strict";
-    var options = this.options;
     var ctx = this.ctx;
     var ch = this.$canvas.height();
     var cw = this.$canvas.width();
@@ -301,8 +304,18 @@ TimelineEditor.prototype.render = function() {
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, cw, ch);
 
-    ctx.beginPath();
+    var t = Time.time_of_day();
+    if (t > this.min_time && t < this.max_time) {
+        ctx.beginPath();
+        ctx.strokeStyle = "red";
+        p = this.p2xy({time: t, value: this.min_val});
+        ctx.moveTo(p.x, p.y);
+        p = this.p2xy({time: t, value: this.max_val});
+            ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+    }
 
+    ctx.beginPath();
     ctx.fillStyle = 'white';
     ctx.strokeStyle = "white";
     var p = this.p2xy(this.timeline.getPoint(0));
@@ -316,7 +329,6 @@ TimelineEditor.prototype.render = function() {
         ctx.moveTo(p.x, p.y);
     }
     ctx.stroke();
-  
 };
 
 (function($) {

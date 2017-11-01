@@ -6,19 +6,17 @@
     <link rel="icon" href="browser/images/favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="browser.css">
     <script type="text/javascript" src="node_modules/jquery/dist/jquery.js"></script>
+    <script type="text/javascript" src="browser/js/require.js"></script>
     <script type="text/javascript" src="browser/js/autoscale_graph.js"></script>
-    <script type="text/javascript" src="common/BrowserStubs.js"></script>
-    <script type="text/javascript" src="common/Utils.js"></script>
-    <script type="text/javascript" src="common/Time.js"></script>
-    <script type="text/javascript" src="common/Location.js"></script>
-    <script type="text/javascript" src="browser/js/new_browser.js"></script>
+    <script type="text/javascript" src="browser/js/TimelineEditor.js"></script>
+    <script type="text/javascript" src="browser/js/browser.js"></script>
   </head>
   <body>
     <h1>Hotpot
       <img src="browser/images/hotpot.svg" style="height: 230px; float:right"></h1>
     <div id="comms_error"></div>
 
-    <div id="data" class="display">
+    <div id="display-controls" class="display">
       <div>
         <span data-path="/time" data-type="date"></span>
         <div data-path="/weather" data-use-template="weather"></div>
@@ -32,6 +30,11 @@
         <button id="pin-CH-on">Turn ON</button>
         <button id="pin-CH-off">Turn OFF</button>
         <button id="pin-CH-boost">BOOST</button>
+        <button id="open-CH-timeline">Timeline</button>
+        <div id="CH-timeline">
+          <canvas class="timeline_canvas" id="CH-timeline-canvas"></canvas>
+          <button id="close-CH-timeline">Close</button>
+        </div>
       </div>
       <hr />
       <div>
@@ -42,11 +45,16 @@
         <button id="pin-HW-on">Turn ON</button>
         <button id="pin-HW-off">Turn OFF</button>
         <button id="pin-HW-boost">BOOST</button>
+        <button id="open-HW-timeline">Timeline</button>
+        <div id="HW-timeline">
+          <canvas class="timeline_canvas" id="HW-timeline-canvas"></canvas>
+          <button id="close-HW-timeline">Close</button>
+        </div>
       </div>
       <hr />
       <button id="to-graphs">Graphs</button>
     </div>
-    <div class="display" id="graphs">
+    <div class="display" id="display-graphs">
       <canvas id="graph_canvas"></canvas>
       <canvas id="tip_canvas"></canvas>
       <button id="to-controls" style="float:right">Close</button>

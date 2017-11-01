@@ -58,7 +58,9 @@
         
         $canvas = $("#timeline_canvas");
         var DAY_IN_MS = 24 * 60 * 60 * 1000;
-        var timeline = new Timeline(DAY_IN_MS, 5, 25);
+        var timeline = new Timeline({
+            period: DAY_IN_MS, min: 5, max: 25
+        });
         $canvas.TimelineEditor(timeline);
 
     });

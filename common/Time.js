@@ -12,8 +12,7 @@ var Time = {
     now: Date.now
 };
 
-if (typeof module !== "undefined") // browserify
-    module.exports = Time;
+module.exports = Time;
  
 /**
  * Convert a variety f types to a Date

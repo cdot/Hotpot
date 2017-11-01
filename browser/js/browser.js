@@ -5,9 +5,13 @@
 /**
  * Main module for managing the browser interface to a hotpot server.
  */
+const Utils = require("common/Utils.js");
+//const Time = require("common/Time.js");
+const Timeline = require("common/Timeline.js");
+
 (function($) {
     "use strict";
-
+   
     var update_backoff = 10; // seconds
     
     var graph_width = 24 * 60 * 60 * 1000; // milliseconds
@@ -72,66 +76,6 @@
             + hours + ":" + zeroExtend(mins, 2);
     }
 
-    function duration(value) {
-        value = value / 1000;
-        var secs = value % 60;
-        value = Math.floor(value / 60);
-        var mins = value % 60;
-        var hours = Math.floor(value / 60);
-        var v = (hours > 0 ? hours + "h " : "")
-            + (mins > 0 ? mins + "m ": "")
-            + (secs > 0 ? secs + "s" : "");
-        if (v === "")
-            v = "<1s";
-        return v;
-    }
-    
-    /**
-     * Set the value of a typed field from a data value
-     * Only used for non-object data
-     * @param $ui the element to updateState
-     * @param value the value to updateState it with
-     */
-    function setValue($ui, value) {
-        var t = $ui.data("type"), v;
-        if (typeof t === "undefined")
-            t = "string";
-
-        if (typeof value !== "undefined" && value !== null) {
-            // Only show if they have a value
-            $ui .parents("[data-show-if]")
-                .filter(function() {
-                    return $(this).attr("data-show-if")
-                        .includes($ui.attr("data-field"))
-                })
-                .each(function() {
-                    $(this).show();
-                });
-        }
-
-        // Text / number field
-        if (t === "float") {
-            if (typeof value === "number")
-                v = value.toFixed(2);
-            else
-                v = typeof value;
-        } else if (t === "datime") {
-             v = datime(value);
-        } else if (t === "duration") {
-            v = duration(value);
-        } else if (t === "intbool") {
-            v = (value + 0 === 0 ? "OFF" : "ON");
-        } else if (t === "date") {
-            v = new Date(Math.round(value)).toString();
-            v = v.replace(/\s\S+\s\(.*$/, "");
-        } else
-            v = value.toString();
-        $ui.text(v);
-
-        // tell the graph
-        $ui.trigger("data_change");
-    }
-
     function updateGraph(data) {
         var g = $("#graph_canvas").data("graph");
         if (!g)
@@ -141,7 +85,8 @@
                 var o = data[type][name];
                 var d = (typeof o.temperature !== "undefined")
                     ? o.temperature : o.state;
-                if (typeof d !== "undefined")
+                if (typeof d !== "undefined" &&
+                    typeof traces[type+":"+name] !== "undefined")
                     traces[type+":"+name].addPoint(Time.now(), d);
             }
         }
@@ -206,6 +151,20 @@
             });
     });
 
+    function initialiseTimeline() {
+        var $canvas = $(this);
+        var DAY_IN_MS = 24 * 60 * 60 * 1000;
+        var timeline = new Timeline({
+            period: DAY_IN_MS, min: 5, max: 25
+        });
+        $canvas.TimelineEditor(timeline);
+        $canvas.on("change", function() {
+            // Really don't want to send an update to the server until we're
+            // finished moving.
+            $(this).data("timeline").changed = true;
+        });
+    }
+    
     // Initialise the graph canvas by requesting 
     function initialiseGraph() {
         var $canvas = $(this);
@@ -266,11 +225,26 @@
             });
     }
 
-    function showDisplay(id) {
-        $(".display").hide();
-        $("#" + id).show();
-        if (id === "graphs")
-            $("#graph_canvas").data("graph").render();
+    function openTimeline(e) {
+        var service = e.data;
+        $("#"+service+"-timeline").css("display", "block");
+        var te = $("#"+service+"-timeline-canvas").data("timeline");
+        te.changed = false;
+        te.render();
+        $("#open-"+service+"-timeline").css("display", "none");
+    }
+
+    function closeTimeline(e) {
+        var service = e.data;
+        $("#"+service+"-timeline").css("display", "none");
+        $("#open-"+service+"-timeline").css("display", "inline-block");
+        // Update the timeline on the server here if it
+        // has changed
+        var te = $("#"+service+"-timeline-canvas").data("timeline");
+        if (te.changed) {
+            var timeline = te.timeline;
+            console.log("Send timeline update to server");
+        }
     }
     
     /**
@@ -287,14 +261,22 @@
                     function(e) {
                         requestState(e.data.service, states[e.data.fn]);
                     });
+                $("#"+service+"-timeline").css("display", "none");
+                $("#open-"+service+"-timeline").click(service, openTimeline);
+                $("#close-"+service+"-timeline").click(service, closeTimeline);
             }
         }
+        $(".timeline_canvas").each(initialiseTimeline);
+        
 	$("#refresh_calendars").on("click", refreshCalendars);
 	$("#to-controls").on("click", function() {
-            showDisplay("data");
+            $(".display").hide();
+            $("#display-controls").show();
         });
 	$("#to-graphs").on("click", function() {
-            showDisplay("graphs");
+            $(".display").hide();
+            $("#display-graphs").show();
+            $("#graph_canvas").data("graph").render();
         });
         $("#graph_canvas").each(initialiseGraph);
         

@@ -10,8 +10,7 @@ var Utils = {
     trace: ""
 };
 
-if (typeof module !== "undefined")
-    module.exports = Utils;
+module.exports = Utils;
 
 /**
  * Expand environment variables in the data string

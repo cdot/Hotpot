@@ -4,6 +4,7 @@
 
 const Fs = require("fs");
 const Q = require("q");
+
 const readFile = Q.denodeify(Fs.readFile);
 const writeFile = Q.denodeify(Fs.writeFile);
 const toJSON = require("serialize-javascript");
