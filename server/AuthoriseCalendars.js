@@ -34,7 +34,7 @@ if (typeof cliopt.config === "undefined")
     cliopt.config = "./hotpot.cfg";
 
 function configureCalendar(credentials) {
-    var cfn = Utils.expandEnvVars(credentials.auth_cache);
+    var cfn = Utils.expandEnvVars("" + credentials.auth_cache);
     Fs.stat(cfn, function(e, stats) {
         if (e) {
             authorise(credentials);

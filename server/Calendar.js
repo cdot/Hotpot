@@ -82,6 +82,30 @@ ScheduledEvent.prototype.start = function() {
  * Get active events from a Google calendar.
  * @param {string} name name of the calendar
  * @param {Config} config see Calendar.prototype.Config
+ * @class
+ */
+function Calendar(name, config) {
+    "use strict";
+    // @property {String} name name of the calendar
+    this.name = name;
+    // Reference to config object
+    this.config = config;
+    // GoogleAuthClient.OAuth2
+    this.oauth2Client = undefined;
+    // Current events schedule
+    this.schedule = [];
+    // Trigger function called when an event starts
+    this.trigger = null;
+    // Function called when an event is removed
+    this.remove = null;
+    // current timeout, as returned by setTimeout
+    this.timeoutId = undefined;
+    // @property {string} last_update last time the calendars were updated
+    this.last_update = undefined;
+}
+module.exports = Calendar;
+
+/**
  * @param {function} trigger callback triggered when an event starts
  * (or after an update and the event has already started).
  * ```
@@ -93,34 +117,23 @@ ScheduledEvent.prototype.start = function() {
  * * `until` when the event ends (epoch ms)
  * @param {function} remove callback invoked when a scheduled event is removed.
  * ```
+ */
+Calendar.prototype.setTrigger = function(trigger) {
+    this.trigger = trigger;
+};
+
+/*
  * remove(String id, String pin)
  * ```
  * * `id` id of the event being removed
  * * `pin` pin the event appies to
- * @class
  */
-function Calendar(name, config, trigger, remove) {
-    "use strict";
-    // @property {String} name name of the calendar
-    this.name = name;
-    // Reference to config object
-    this.config = Config.check("Calendar " + name, config, name, Calendar.prototype.Config);
-    // GoogleAuthClient.OAuth2
-    this.oauth2Client = undefined;
-    // Current events schedule
-    this.schedule = [];
-    // Trigger function called when an event starts
-    this.trigger = trigger;
-    // Function called when an event is removed
+Calendar.prototype.setRemove = function(remove) {
     this.remove = remove;
-    // current timeout, as returned by setTimeout
-    this.timeoutId = undefined;
-    // @property {string} last_update last time the calendars were updated
-    this.last_update = undefined;
-}
-module.exports = Calendar;
+};
 
 Calendar.prototype.Config = {
+    $type: Calendar,
     id: {
         $doc: "calendar id, as used by Google",
         $type: "string"
@@ -142,7 +155,8 @@ Calendar.prototype.Config = {
     },
     auth_cache: {
         $doc: "File containing cached oauth authentication",
-        $type: "string", $file: "r"
+        $type: Config.File,
+        $mode: "r"
     },
     require_prefix: {
         $doc: "set true if a 'hotpot:' prefix is required in the calendar",
@@ -170,7 +184,7 @@ Calendar.prototype.authorise = function() {
 
     var self = this;
 
-    return readFile(Utils.expandEnvVars(self.config.auth_cache))
+    return readFile(Utils.expandEnvVars("" + self.config.auth_cache))
 
     .then(function(token) {
         var clientSecret = self.config.secrets.client_secret;

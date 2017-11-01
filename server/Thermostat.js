@@ -5,7 +5,6 @@
 const Q = require("q");
 
 const Utils = require("../common/Utils");
-const Config = require("../common/Config");
 const Timeline = require("../common/Timeline");
 const Historian = require("./Historian");
 
@@ -46,16 +45,13 @@ function Thermostat(name, config) {
         }
     }
 
-    this.config = Config.check(
-        "Thermostat " + name, config, name, Thermostat.prototype.Config);
+    this.config = config;
     
     // Name of the thermostat e.g. "HW"
     this.name = name;
 
     // Last recorded temperature {float}
     this.temperature = 0;
-
-    this.timeline = new Timeline(this.config.timeline);
 
     // Temperature history, sample on a time schedule
     var hc = config.history;
@@ -76,6 +72,7 @@ function Thermostat(name, config) {
 }
 
 Thermostat.prototype.Config = {
+    $type: Thermostat,
     id: {
         $type: "string",
         $doc: "unique ID used to communicate with this thermostat"
@@ -180,5 +177,5 @@ Thermostat.prototype.pollTemperature = function() {
  * at the current time/
  */
 Thermostat.prototype.getTargetTemperature = function() {
-    return this.timeline.valueAtTime(Time.time_of_day());
+    return this.config.timeline.valueAtTime(Time.time_of_day());
 };

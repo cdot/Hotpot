@@ -147,7 +147,7 @@ function finish(ip) {
     current.path = config.target.path;
     Utils.LOG("New target ", current);
 
-    readFile(Utils.expandEnvVars(config.template))
+    readFile(Utils.expandEnvVars("" + config.template))
     .then(function(buf) {
         var html = buf.toString();
         for (var k in current) {

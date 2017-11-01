@@ -33,7 +33,7 @@ function Rule(name, config) {
     /**
      * Configuration data
      */
-    this.config = Config.check("Rule " + name, config, name, Rule.prototype.Config);
+    this.config = config;
     
     /**
      * Test function
@@ -45,10 +45,11 @@ function Rule(name, config) {
 module.exports = Rule;
 
 Rule.prototype.Config = {
+    $type: Rule,
     test_file: {
         $doc: "File to read the rule function from",
-        $type: "string",
-        $file: "r"
+        $type: Config.File,
+        $mode: "r"
     }
 };
 
@@ -77,7 +78,7 @@ Rule.prototype.setTest = function(fn, source) {
     if (typeof fn !== "function") {
         // Compile the function
         try {
-            fn = Utils.eval(fn, source);
+            fn = Utils.eval(fn, "" + source);
         } catch (e) {
             if (e instanceof SyntaxError)
                 Utils.ERROR(TAG, "Syntax error in '" + this.name

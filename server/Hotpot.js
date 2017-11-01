@@ -54,15 +54,14 @@ HOTPOT_DEBUG = undefined;
 
     var config, controller, server;
 
-    Config.load(cliopt.config)
+    Config.load(cliopt.config, {
+        server: Server.prototype.Config,
+        controller: Controller.prototype.Config
+    })
 
     .then(function(cfg) {
         if (cliopt.confhelp) {
-            Utils.LOG(TAG, " ", Config.help(
-                {
-                    server: Server.prototype.Config,
-                    controller: Controller.prototype.Config
-                }));
+            Utils.LOG(TAG, " ", Config.help(Controller.prototype.Config));
             eval("process.exit(1)");
         }
         return cfg;
@@ -70,14 +69,12 @@ HOTPOT_DEBUG = undefined;
 
     .then(function(cfg) {
         config = cfg;
-        controller = new Controller(config.controller);
-        server = new Server(config.server, 
-                            function(path, params) {
-                                return controller.dispatch(path, params);
-                            });
-    })
-
-    .then(function() {
+        controller = config.controller;
+        server = config.server;
+        server.setDispatch(
+            function(path, params) {
+                return controller.dispatch(path, params);
+            });
         return controller.initialise()
         .then(function() {
             var loc = new Location(config.server.location);
@@ -99,11 +96,6 @@ HOTPOT_DEBUG = undefined;
                 .done(function() {
                     Utils.TRACE(TAG, cliopt.config, " updated");
                 });
-            });
-        controller.on(
-            "config_refresh",
-            function() {
-                controller.reconfigure(config.controller);
             });
     })
 

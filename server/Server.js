@@ -33,24 +33,13 @@ const TAG = "Server";
  *   * `user` username of authorised user
  *   * `pass` password
  *   * `realm` authentication realm
- * @param {function} (optional) dispatch function for handling ajax requests
- * ```
- * dispatch(Array path, Object params) => Promise
- * ```
- * where `path` is an array of path elements parsed from the URL and `params`
- * is an object mapping parameter names to values. The return value is a
- * promise that resolves to an object (or undefined, or null) that will be
- * serialised to form the body of the response.
- * The object must be JSON-ifiable. Without a dispatch function, the server
- * will be a simple file server.
  * @class
  */
-function Server(config, dispatch) {
+function Server(id, config) {
     "use strict";
 
     var self = this;
-    self.config = Config.check("Server", config, "", Server.prototype.Config);
-    self.dispatch = dispatch;
+    self.config = config;
     self.ready = false;
     if (typeof config.auth !== "undefined") {
         self.authenticate = function(request) {
@@ -65,16 +54,35 @@ function Server(config, dispatch) {
 }
 module.exports = Server;
 
+/**
+ * @param {function} (optional) dispatch function for handling ajax requests
+ * ```
+ * dispatch(Array path, Object params) => Promise
+ * ```
+ * where `path` is an array of path elements parsed from the URL and `params`
+ * is an object mapping parameter names to values. The return value is a
+ * promise that resolves to an object (or undefined, or null) that will be
+ * serialised to form the body of the response.
+ * The object must be JSON-ifiable. Without a dispatch function, the server
+ * will be a simple file server.
+ */
+Server.prototype.setDispatch = function(dispatch) {
+    this.dispatch = dispatch;
+};
+
 Server.prototype.Config = {
+    $type: Server,
     $doc: "HTTP(S) server",
     port: {
         $doc: "Port to run the server on",
-        $type: "number"
+        $type: "number",
+        $min: 0,
+        $max: 65536
     },
     docroot: {
         $doc: "Absolute file path to server documents",
-        $type: "string",
-        $file: "dr"
+        $type: Config.File,
+        $mode: "dr"
     },
     location: {
         $doc: "Where in the world the server is located",
@@ -98,8 +106,8 @@ Server.prototype.Config = {
         cert_file: {
             $doc: "Path to a file containing the SSL certificate",
             $optional: true,
-            $type: "string",
-            $file: "r"
+            $type: Config.File,
+            $mode: "r"
         },
         key: {
             $type: "string",
@@ -109,8 +117,8 @@ Server.prototype.Config = {
         key_file: {
             $optional: true,
             $doc: "Path to a file containing SSL key",
-            $type: "string",
-            $file: "r"
+            $type: Config.File,
+            $mode: "r"
         }
     },
     auth: {

@@ -7,7 +7,6 @@ const Q = require("q");
 const readFile = Q.denodeify(Fs.readFile);
 const writeFile = Q.denodeify(Fs.writeFile);
 const Utils = require("../common/Utils");
-const Config = require("../common/Config");
 const Historian = require("./Historian");
 
 const TAG = "Pin";
@@ -47,7 +46,7 @@ const REQUEST_BOOST = 2;
 function Pin(name, config) {
     "use strict";
 
-    this.config = Config.check("Pin " + name, config, name, Pin.prototype.Config);
+    this.config = config;
     
     var self = this;
 
@@ -89,6 +88,7 @@ function Pin(name, config) {
 }
 
 Pin.prototype.Config = {
+    $type: Pin,
     gpio: {
         $type: "number",
         $doc: "the number of the gpio pin"

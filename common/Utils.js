@@ -19,6 +19,7 @@ module.exports = Utils;
  */
 Utils.expandEnvVars = function(data) {
     if (typeof data !== "string") {
+        debugger;
         throw "Cannot expand " + (typeof data);
     }
     data = data.replace(/^~/, "$HOME");

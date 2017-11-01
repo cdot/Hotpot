@@ -27,8 +27,7 @@ function Historian(name, config) {
 
     this.name = name;
     
-    this.config = Config.check(
-        "Historian " + name, config, name, Historian.prototype.Config);
+    this.config = config;
 
     this.timeout = null;
     Utils.TRACE(TAG, "for ", name, " in ", this.path());
@@ -36,10 +35,11 @@ function Historian(name, config) {
 module.exports = Historian;
 
 Historian.prototype.Config = {
+    $type: Historian,
     file: {
         $doc: "Full path to the log file",
-        $type: "string",
-        $file: "w"
+        $type: Config.File,
+        $mode: "w"
     },
     unordered: {
         $doc: "Set if sample events may be added out of order",
@@ -65,7 +65,7 @@ Historian.prototype.Config = {
  */
 Historian.prototype.path = function() {
     "use strict";
-    return Utils.expandEnvVars(this.config.file);
+    return Utils.expandEnvVars("" + this.config.file);
 };
 
 /**

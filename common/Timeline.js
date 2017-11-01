@@ -14,11 +14,7 @@
  * @param {Config} config see Timeline.prototype.Config
  */
 function Timeline(config) {
-    this.config = (typeof Config === "undefined") ?
-        config :
-        Config.check(
-            "Timeline ", config, "timeline", Timeline.prototype.Config);
-
+    this.config = config;
     if (config.max <= config.min)
         throw "Value range inside out";
     this.min = config.min; this.max = config.max;
@@ -52,6 +48,7 @@ if (typeof module !== "undefined")
     module.exports = Timeline;
 
 Timeline.prototype.Config = {
+    $type: Timeline,
     min: {
         $doc: "minimum value",
         $type: "number",

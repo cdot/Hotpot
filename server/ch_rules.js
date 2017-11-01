@@ -1,23 +1,26 @@
-function () {
+function (thermostats, pins) {
     var self = this;
-    return this.pin.CH.getStatePromise()
+    var thermostat = thermostats.CH;
+    var pin = pins.CH;
+    
+    return pin.getStatePromise()
     .then(function(state) {
-        var upper_bound = self.thermostat.CH.getTargetTemperature();
+        var upper_bound = thermostat.getTargetTemperature();
         var lower_bound = upper_bound - 2;
         
-        if (self.thermostat.CH.temperature > upper_bound) {
+        if (thermostat.temperature > upper_bound) {
             // Warm enough inside, so switch off regardless of other rules
             if (state === 1)
-                Utils.TRACE("Rules", "CH is ", self.thermostat.CH.temperature,
+                Utils.TRACE("Rules", "CH is ", thermostat.temperature,
                             "°C so turning off");
             // Cancel any boost requests
-            self.pin.CH.purgeRequests(2);
+            pin.purgeRequests(2);
             // setPromise is a NOP if already in the right state
             return self.setPromise("CH", 0, "Warm enough");
         }
 
         // See if there's any demand from requests
-        var req = self.pin.CH.getActiveRequest();
+        var req = pin.getActiveRequest();
         if (req) {
             var restate;
             if (req.state === 0 || req.state === 3)
@@ -31,10 +34,10 @@ function () {
                                   "Requested by " + req.source);
         }
 
-        if (self.thermostat.CH.temperature < lower_bound) {
+        if (thermostat.temperature < lower_bound) {
             if (state === 0)
                 Utils.TRACE("Rules", "CH only ",
-                            self.thermostat.CH.temperature,
+                            thermostat.temperature,
                             "°C, so on");
             return self.setPromise("CH", 1, "Too cold");
         }

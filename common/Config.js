@@ -27,10 +27,11 @@ var Config = {
  * @return {Promise} promise that returns the loaded configuration
  * @public
  */
-Config.load = function(file) {
+Config.load = function(file, spec) {
     return readFile(file)
     .then(function(code) {
         var cfg = Utils.eval(code, file);
+        cfg = Config.check("", cfg, "", spec);
         cfg._readFrom = file;
         return cfg;
     });
@@ -65,7 +66,7 @@ Config.fileableConfig = function(config, key) {
     if (typeof config[key] !== "undefined")
         return Q.fcall(function() { return config[key]; });
     else if (typeof config[key + "_file"] !== "undefined")
-        return readFile(Utils.expandEnvVars(config[key + "_file"]));
+        return readFile(Utils.expandEnvVars(""  +config[key + "_file"]));
     else
         return Q.fcall(function() { return undefined; });
 };
@@ -82,7 +83,7 @@ Config.fileableConfig = function(config, key) {
  */
 Config.updateFileableConfig = function(config, key, value) {
     if (typeof config[key + "_file"] !== "undefined")
-       return writeFile(Utils.expandEnvVars(config[key + "_file"]),
+       return writeFile(Utils.expandEnvVars("" + config[key + "_file"]),
                         value, "utf8")
         .then(function() {
             Utils.TRACE(TAG, "Updated ", key, "_file");
@@ -92,6 +93,17 @@ Config.updateFileableConfig = function(config, key, value) {
         config[key] = value;
         return Q(true);
     }
+};
+
+/**
+ * Update the config with a partial or full config in data.
+ * The structure in data must be a sparse version of the data
+ * in config.
+ * @param config config to update
+ * @param data structure to update from
+ * @return boolean indicating if any update was required
+ */
+Config.update = function(config, data) {
 };
 
 /**
@@ -116,7 +128,7 @@ Config.getSerialisable = function(config, flat) {
 
     function addFilePromise(cfg, key) {
         promises = promises.then(function() {
-            return readFile(Utils.expandEnvVars(cfg[key + "_file"]));
+            return readFile(Utils.expandEnvVars("" + cfg[key + "_file"]));
         })
         .then(function(val) {
             res[key] = val.toString();
@@ -203,7 +215,7 @@ Config.check = function(context, config, index, spec) {
 
     if (index === "_readFrom")
         return config;
-    
+    //console.log("Process " + context);    
     if (typeof config === "undefined") {
         if (spec.$optional)
             return config;
@@ -213,26 +225,41 @@ Config.check = function(context, config, index, spec) {
         else
             config = spec.$default;
     }
-    
-    if (spec.$type && typeof config !== spec.$type) {
-        throw "Bad config: " + context + " wanted " + spec.$type + " for "
-            + index + " but got " + Utils.dump(config);
-    }
-    
-    if (!spec.$type && typeof config !== "object") {
-        throw "Bad config: " + context + " expected object at "
-            + Utils.dump(config);
-    }
 
     if (spec.$skip)
         return config;
     
-    if (!spec.$type || spec.$type === "object") {
-        if (typeof spec.$array_of !== "undefined") {
-            for (var i in config) {
-                config[i] = Config.check(context + "[" + i + "]",
-                                         config[i], i, spec.$array_of);
+    if (typeof spec.$array_of === "object") {
+        for (var i in config) {
+            config[i] = Config.check(context + "[" + i + "]",
+                                     config[i], i, spec.$array_of);
+        }
+    } else if (typeof spec.$type === "string") {
+        // Should check validity of data type
+        if (typeof config !== spec.$type)
+            throw "Bad config: " + context + " wanted " + spec.$type + " for "
+            + index + " but got " + Utils.dump(config);
+        if (spec.$type === "number") {
+            if (typeof spec.$min === "number" && config < spec.$min) {
+                throw "Bad config: " + context +
+                    " min " + spec.$min + " for " +
+                    index + " but got " + config;
             }
+            if (typeof spec.$max === "number" && config > spec.$max) {
+                throw "Bad config: " + context + " max " + spec.$max + " for "
+                    + index + " but got " + config;
+            }
+        }
+        //console.log("Checked "+spec.$type+": "+config);
+    } else {
+        // otherwise object or function
+        for (var i in spec) {
+            if (i.charAt(0) !== '$') {
+                config[i] = Config.check(context + "." + i, config[i], i, spec[i]);
+            }
+        }
+        if (typeof spec.$type === "function") {
+            config = new spec.$type(index, config, spec);
         } else {
             for (var i in config) {
                 if (!spec[i])
@@ -241,41 +268,6 @@ Config.check = function(context, config, index, spec) {
                     + Utils.dump(config)
                     + "\n" + Utils.dump(spec);
             }
-            for (var i in spec) {
-                if (i.charAt(0) !== '$') {
-                    config[i] = Config.check(context + "." + i, config[i], i, spec[i]);
-                }
-            }
-        }
-    } else if (spec.$type === "string" && typeof spec.$file !== "undefined") {
-        var fnm = Utils.expandEnvVars(config);
-        var mode = Fs.constants.F_OK;
-
-        if (spec.$file.indexOf("r") >= 0)
-            mode = mode | Fs.constants.R_OK;
-
-        if (spec.$file.indexOf("x") >= 0)
-            mode = mode | Fs.constants.X_OK;
-
-        if (spec.$file.indexOf("e") >= 0 && !Fs.existsSync(fnm)) {
-            throw "Bad config: " + context + " " + config
-                  + " does not exist";
-        }
-
-        if (spec.$file.indexOf("w") >= 0) {
-            mode = mode | Fs.constants.W_OK;
-
-        if (Fs.existsSync(fnm)) {
-            Fs.access(fnm, mode,
-                function(err) {
-                    if (err)
-                        throw "Bad config: " + context + " " + config
-                        + spec.$file + " check failed: "
-                        + err;
-                });
-            }
-	} else if (spec.$file.indexOf("w") >= 0) {
-            Fs.writeFileSync(fnm, "", { mode: mode });
         }
     }
     return config;
@@ -310,6 +302,46 @@ Config.help = function(spec, index, preamble) {
      
     return help;
 }
+
+/**
+ * Special class for handling files
+ */
+Config.File = function(field, config, spec) {
+    this.filename = config;
+    var fnm = Utils.expandEnvVars(config);
+    var mode = Fs.constants.F_OK;
+
+    if (spec.$mode.indexOf("r") >= 0)
+        mode = mode | Fs.constants.R_OK;
+
+    if (spec.$mode.indexOf("x") >= 0)
+        mode = mode | Fs.constants.X_OK;
+
+    if (spec.$mode.indexOf("e") >= 0 && !Fs.existsSync(fnm)) {
+        throw "Bad config: " + config + " does not exist";
+    }
+
+    if (spec.$mode.indexOf("w") >= 0) {
+        mode = mode | Fs.constants.W_OK;
+
+        if (Fs.existsSync(fnm)) {
+            Fs.access(fnm, mode,
+                      function(err) {
+                          if (err)
+                              throw "Bad config: " + config
+                              + spec.$mode + " check failed: "
+                              + err;
+                      });
+        }
+    } else if (spec.$mode.indexOf("w") >= 0) {
+        // Just make sure we can write, and clear down the file
+        Fs.writeFileSync(fnm, "", { mode: mode });
+    }
+};
+
+Config.File.prototype.toString = function() {
+    return this.filename;
+};
 
 module.exports = Config;
 

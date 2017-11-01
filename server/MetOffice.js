@@ -13,7 +13,6 @@ const Location = require("../common/Location.js");
 const Time = require("../common/Time.js");
 
 const Utils = require("../common/Utils");
-const Config = require("../common/Config");
 const Historian = require("./Historian");
 
 /** @private */
@@ -49,11 +48,11 @@ const IS_NUMBER = [
  * @param {Config} config configuration
  * @class
  */
-var MetOffice = function(config) {
+var MetOffice = function(id, config) {
     "use strict";
     this.url = Url.parse("http://datapoint.metoffice.gov.uk");
     this.name = "MetOffice";
-    this.config = Config.check(this.name, config, this.name, MetOffice.prototype.Config);
+    this.config = config;
     this.api_key = "?key=" + config.api_key;
     this.log = [];
     var hc = config.history;
@@ -64,6 +63,7 @@ var MetOffice = function(config) {
 };
 
 MetOffice.prototype.Config = {
+    $type: MetOffice,
     api_key: {
         $type: "string",
         $doc: "API key for requests to the Met Office website"
