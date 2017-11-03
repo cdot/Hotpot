@@ -41,12 +41,12 @@ const REQUEST_BOOST = 2;
  * can be used to expire the request at a given time.
  * @class
  * @param {string} name name of the pin e.g. HW
- * @param {Config} config see Pin.prototype.Config
+ * @param {object} proto see Pin.Model
  */
-function Pin(name, config) {
+function Pin(name, proto) {
     "use strict";
 
-    this.config = config;
+    Utils.extend(this, proto);
     
     var self = this;
 
@@ -64,36 +64,25 @@ function Pin(name, config) {
     self.reason = "";
     
     if (typeof HOTPOT_DEBUG !== "undefined")
-        HOTPOT_DEBUG.mapPin(self.config.gpio, self.name);
+        HOTPOT_DEBUG.mapPin(self.gpio, self.name);
 
-    self.value_path = GPIO_PATH + "gpio" + self.config.gpio + "/value";
+    self.value_path = GPIO_PATH + "gpio" + self.gpio + "/value";
 
     /** @property {object} requests List of requests for this pin
      * (see #addRequest) */
     self.requests = [];
 
     Utils.TRACE(TAG, "'", self.name,
-                  "' constructed on gpio ", self.config.gpio);
-
-    /** @property { object} historian Historian object that records state
-     * for this pin */
-    var hc = config.history;
-    if (typeof hc !== "undefined") {
-        var Historian = require("./Historian");
-        self.historian = new Historian(self.name + "_pin", {
-            file: hc.file
-        });
-    } else
-        Utils.TRACE(TAG, self.name, " has no historian");
+                  "' constructed on gpio ", self.gpio);
 }
 
-Pin.prototype.Config = {
+Pin.Model = {
     $type: Pin,
     gpio: {
         $type: "number",
         $doc: "the number of the gpio pin"
     },
-    history: Utils.extend(Historian.prototype.Config, { $optional: true })
+    history: Utils.extend({ $optional: true }, Historian.Model)
 };
 
 /**
@@ -129,8 +118,8 @@ Pin.prototype.initialise = function() {
 
     // Try and export the pin
     function exportPin() {
-        var m = EXPORT_PATH + "=" + self.config.gpio;
-        return writeFile(EXPORT_PATH, self.config.gpio, "utf8")
+        var m = EXPORT_PATH + "=" + self.gpio;
+        return writeFile(EXPORT_PATH, self.gpio, "utf8")
             .then(function() {
                 Utils.TRACE(TAG, m, " OK for ", self.name);
                 // Use a timeout to give it time to get set up
@@ -143,7 +132,7 @@ Pin.prototype.initialise = function() {
 
     // The pin is known to be exported, set the direction
     function setDirection() {
-        var path = GPIO_PATH + "gpio" + self.config.gpio + "/direction";
+        var path = GPIO_PATH + "gpio" + self.gpio + "/direction";
         return writeFile(path, "out")
             .then(function() {
                 Utils.TRACE(TAG, path, "=out OK for ", self.name);
@@ -158,7 +147,7 @@ Pin.prototype.initialise = function() {
     // If we don't set the pin active_low, then writing a 1 to value
     // sets the pin low, and vice-versa. Ho hum.
     function setActive() {
-        var path = GPIO_PATH + "gpio" + self.config.gpio + "/active_low";
+        var path = GPIO_PATH + "gpio" + self.gpio + "/active_low";
         return writeFile(path, 1)
             .then(writeCheck)
             .catch(function(e) {
@@ -172,8 +161,8 @@ Pin.prototype.initialise = function() {
             .then(function() {
                 Utils.TRACE(TAG, self.value_path, " writeCheck OK for ",
                               self.name);
-                if (self.historian)
-                    self.historian.record(0);
+                if (self.history)
+                    self.history.record(0);
             })
             .catch(function(e) {
                 return fallBackToDebug(
@@ -183,12 +172,12 @@ Pin.prototype.initialise = function() {
 
     // Something went wrong, but still use a file
     function fallBackToDebug(err) {
-        Utils.ERROR(TAG, self.name, ":", self.config.gpio,
+        Utils.ERROR(TAG, self.name, ":", self.gpio,
                     " setup failed: ", err);
         if (typeof HOTPOT_DEBUG === "undefined")
             throw "Pin setup failed";
         Utils.ERROR(TAG, "Falling back to debug for ", self.name);
-        self.value_path = HOTPOT_DEBUG.pin_path + self.config.gpio;
+        self.value_path = HOTPOT_DEBUG.pin_path + self.gpio;
         return writeCheck();
     }
 
@@ -223,9 +212,9 @@ Pin.prototype.set = function(state, reason) {
 
     self.reason = reason;
     var promise = writeFile(self.value_path, state, "UTF8");
-    if (self.historian)
+    if (self.history)
         promise = promise.then(function() {
-            return self.historian.record(state);
+            return self.history.record(state);
         });
     return promise;
 };
@@ -285,9 +274,9 @@ Pin.prototype.getSerialisableState = function() {
  */
 Pin.prototype.getSerialisableLog = function(since) {
     "use strict";
-    if (!this.historian)
+    if (!this.history)
         return Q();
-    return this.historian.getSerialisableHistory(since);
+    return this.history.getSerialisableHistory(since);
 };
 
 /**

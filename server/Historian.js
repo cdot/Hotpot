@@ -9,7 +9,7 @@ const appendFile = Q.denodeify(fs.appendFile);
 
 const Time = require("../common/Time.js");
 const Utils = require("../common/Utils.js");
-const Config = require("../common/Config");
+const DataModel = require("../common/DataModel");
 
 const TAG = "Historian";
 
@@ -17,28 +17,28 @@ const TAG = "Historian";
  * Logger. Can either log according to a time interval using a sampling
  * callback, or only on demand.
  * @param {string} name identifier
- * @param config {Config} see Historian.prototype.Config
+ * @param {object} proto see Historian.Model
  * If `sample` is not given, or `start()` is not called, sampling is only by
  * calling `record()`
  * @class
  */
-function Historian(name, config) {
+function Historian(name, proto) {
     "use strict";
+
+    Utils.extend(this, proto);
 
     this.name = name;
     
-    this.config = config;
-
     this.timeout = null;
     Utils.TRACE(TAG, "for ", name, " in ", this.path());
 }
 module.exports = Historian;
 
-Historian.prototype.Config = {
+Historian.Model = {
     $type: Historian,
     file: {
         $doc: "Full path to the log file",
-        $type: Config.File,
+        $type: DataModel.File,
         $mode: "w"
     },
     unordered: {
@@ -65,7 +65,7 @@ Historian.prototype.Config = {
  */
 Historian.prototype.path = function() {
     "use strict";
-    return Utils.expandEnvVars("" + this.config.file);
+    return Utils.expandEnvVars(this.file);
 };
 
 /**
@@ -108,7 +108,7 @@ Historian.prototype.loadFromFile = function() {
                 report.push(point);
             }
         }
-        if (self.config.unordered && report.length > 1) {
+        if (self.unordered && report.length > 1) {
             // Sort samples by time. If two samples occur at the same
             // time, keep the most recently added.
             var doomed = report;
@@ -177,19 +177,19 @@ Historian.prototype.getSerialisableHistory = function(since) {
 Historian.prototype.start = function(quiet) {
     "use strict";
 
-    if (typeof this.config.sample !== "function")
+    var sample = this.sample;
+
+    if (typeof sample !== "function")
         throw "Cannot start Historian; sample() not defined";
 
-    if (typeof this.config.interval === "undefined")
+    if (typeof this.interval === "undefined")
         throw "Cannot start Historian; interval not defined";
-
-    var sample = this.config.sample();
 
     var self = this;
     function repoll() {
         self.timeout = setTimeout(function() {
             self.start(true);
-        }, self.config.interval);
+        }, self.interval);
     }
 
     // Don't record if this sample has the same value as the last
@@ -234,10 +234,10 @@ Historian.prototype.record = function(sample, time) {
     // If we've skipped recording an interval since the last
     // recorded sample, pop in a checkpoint
     if (typeof this.last_time !== "undefined"
-        && time > this.last_time + 5 * this.config.interval / 4)
+        && time > this.last_time + 5 * this.interval / 4)
         promise = appendFile(
             this.path(),
-            (time - this.config.interval) + "," + this.last_sample + "\n");
+            (time - this.interval) + "," + this.last_sample + "\n");
     else
         promise = Q();
 

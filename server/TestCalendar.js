@@ -5,7 +5,7 @@ const Getopt = require("node-getopt");
 const Q = require("q");
 
 const Utils = require("../common/Utils.js");
-const Config = require("../common/Config.js");
+const DataModel = require("../common/DataModel.js");
 
 const Calendar = require("./Calendar.js");
 
@@ -61,7 +61,7 @@ function listCalendars(calendar, config) {
         });
 }
 
-Config.load(cliopt.config)
+DataModel.loadData(cliopt.config)
     .done(function(config) {
         if (!cliopt.calendar) {
             for (cliopt.calendar in config.controller.calendar)

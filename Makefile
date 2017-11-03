@@ -17,7 +17,7 @@ SOURCES := \
 	server/Rule.js \
 	server/Server.js \
 	server/Thermostat.js \
-	common/Config.js \
+	common/DataModel.js \
 	common/Location.js \
 	common/Time.js \
 	common/Timeline.js \
@@ -40,9 +40,12 @@ lint: $(subst .js,.esl,$(SOURCES))
 doc: $(ALL_SOURCES)
 	jsdoc -c jsdoc_config.json -d=doc $(SOURCES)
 
+test:
+	find . -name test -type d -exec mocha \{\}/*.js \;
+
 # Clean up
 clean:
-	find . -name '*~' -exec rm \{\} \;
-	find . -name '*.min.js' -exec rm \{\} \;
-	find . -name '*.esl' -exec rm \{\} \;
+	find . -name node_modules -prune -o -name '*~' -exec rm \{\} \;
+	find . -name node_modules -prune -o -name '*.min.js' -exec rm \{\} \;
+	find . -name node_modules -prune -o -name '*.esl' -exec rm \{\} \;
 	rm -rf doc

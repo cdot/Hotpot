@@ -8,7 +8,7 @@ const readFile = Q.denodeify(Fs.readFile);
 
 const Utils = require("../common/Utils.js");
 const Time = require("../common/Time.js");
-const Config = require("../common/Config.js");
+const DataModel = require("../common/DataModel.js");
 
 // MS in an hour
 const HOURS = 60 * 60 * 1000;
@@ -81,15 +81,14 @@ ScheduledEvent.prototype.start = function() {
 /**
  * Get active events from a Google calendar.
  * @param {string} name name of the calendar
- * @param {Config} config see Calendar.prototype.Config
+ * @param {object} proto see Calendar.Model
  * @class
  */
-function Calendar(name, config) {
+function Calendar(name, proto) {
     "use strict";
+    Utils.extend(this, proto);
     // @property {String} name name of the calendar
     this.name = name;
-    // Reference to config object
-    this.config = config;
     // GoogleAuthClient.OAuth2
     this.oauth2Client = undefined;
     // Current events schedule
@@ -132,7 +131,7 @@ Calendar.prototype.setRemove = function(remove) {
     this.remove = remove;
 };
 
-Calendar.prototype.Config = {
+Calendar.Model = {
     $type: Calendar,
     id: {
         $doc: "calendar id, as used by Google",
@@ -155,7 +154,7 @@ Calendar.prototype.Config = {
     },
     auth_cache: {
         $doc: "File containing cached oauth authentication",
-        $type: Config.File,
+        $type: DataModel.File,
         $mode: "r"
     },
     require_prefix: {
@@ -184,12 +183,12 @@ Calendar.prototype.authorise = function() {
 
     var self = this;
 
-    return readFile(Utils.expandEnvVars("" + self.config.auth_cache))
+    return readFile(Utils.expandEnvVars(self.auth_cache))
 
     .then(function(token) {
-        var clientSecret = self.config.secrets.client_secret;
-        var clientId = self.config.secrets.client_id;
-        var redirectUrl = self.config.secrets.redirect_uris[0];
+        var clientSecret = self.secrets.client_secret;
+        var clientId = self.secrets.client_id;
+        var redirectUrl = self.secrets.redirect_uris[0];
         var googleAuth = require("google-auth-library");
         var auth = new googleAuth();
         self.oauth2Client = new auth.OAuth2(
@@ -218,19 +217,19 @@ Calendar.prototype.fillCache = function() {
         // manually :-(
         var params = {
             auth: self.oauth2Client,
-            calendarId: self.config.id,
+            calendarId: self.id,
             // For reasons undocumented by google, if timeMin and
             // timeMax are the same time it returns no events. So
             // we need to offset them.
             timeMin: (new Date()).toISOString(),
-            timeMax: (new Date(now + self.config.cache_length * HOURS))
+            timeMax: (new Date(now + self.cache_length * HOURS))
                 .toISOString(),
             // Expand recurring events
             singleEvents: true
         };
         
         // If a prefix is required, add a query
-        if (self.config.require_prefix)
+        if (self.require_prefix)
             params.q = "Hotpot:";
         
         return Q.Promise(function(ok, fail) {
@@ -250,7 +249,7 @@ Calendar.prototype.fillCache = function() {
         self.clearSchedule();
         var events = response.items;
         var re = new RegExp(
-            (self.config.require_prefix ? "HOTPOT:\\s*" : "")
+            (self.require_prefix ? "HOTPOT:\\s*" : "")
                 + "([A-Z]+)[=\\s]+(0|1|2|on|off|away|boost)", "ig");
         Utils.TRACE(TAG, "'" + self.name + "' has "
                     + events.length + " events");
@@ -349,7 +348,7 @@ Calendar.prototype.update = function(after) {
         self.fillCache().then(
             function() {
                 self.timeoutId = undefined;
-                self.update(self.config.update_period * HOURS);
+                self.update(self.update_period * HOURS);
             },
             function(err) {
                 // Report, but don't propagate, the error

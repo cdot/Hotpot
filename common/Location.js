@@ -11,18 +11,30 @@ const DEFAULT_LONGITUDE = 0;
 const MIN_DEG = 0.00005; // 5 metres in degrees at 55N
 
 /**
- * Location object, compatible with google.maps.LatLng
- * @param lat latitude, or another Location object to copy, or undefined
- * for default location (55N0W)
- * @param lng longitude, or undefined if lat is an object
+ * Location object, compatible with google.maps.LatLng. This function has
+ * four possible constructor signatures:
+ * 1. Location(lat, lng) where both lat and lng are numbers
+ * 2. Location(object) where object has latitude and longitude fields
+ * 3. Location(name, data, {DataModel} spec)
+ * 4. Location() for a default Location 55N 0W
+ * @param p1 (1.) {number} latitude number, (2.) {object} to get
+ * lat(itude) and long(itude) fields from (3.) {string} name (4.) undefined.
+ * @param p2 (1.) {number} longitude, (2.) undefined, (3.) {object}
+ ( (4.) undefined
  * @class
  */
 function Location(lat, lng) {
     "use strict";
-    if (typeof lat === "undefined") {
+    if (typeof lng === "object") {
+        // Constructor (3.)
+        lat = lng.latitude;
+        lng = lng.longitude;
+    } else if (typeof lat === "undefined") {
+        // Constructoir (4.)
         lat = DEFAULT_LATITUDE;
         lng = DEFAULT_LONGITUDE;
     } else if (typeof lng === "undefined") {
+        // Constructor (2.)
         if (typeof lat.lng !== "undefined") {
             lng = lat.lng;
             lat = lat.lat;
@@ -32,12 +44,24 @@ function Location(lat, lng) {
         } else {
             throw "Cannot initialise a Location from this object";
         }
-    }
+    } // else Constructor (1.)
     this.lat = lat;
     this.lng = lng;
 }
-if (typeof module !== "undefined")
-    module.exports = Location;
+
+Location.Model = {
+    $type: Location,
+    latitude: {
+        $doc: "Decimal latitude",
+        $type: "number"
+    },
+    longitude: {
+        $doc: "Decimal longitude",
+        $type: "number"
+    }
+};
+
+module.exports = Location;
 
 /**
  * Return the crow-flies distance between two locations,

@@ -14,8 +14,8 @@ const googleAuth = require("google-auth-library");
 const readline = require("readline");
 
 const Utils = require("../common/Utils.js");
-
-const Config = require("../common/Config.js");
+Time = require("../common/Time.js");
+const DataModel = require("../common/DataModel.js");
 
 const HELP = "Hotpot Google Calendar Authorisation\n"
     + "This program will cache the access token required to access "
@@ -34,7 +34,7 @@ if (typeof cliopt.config === "undefined")
     cliopt.config = "./hotpot.cfg";
 
 function configureCalendar(credentials) {
-    var cfn = Utils.expandEnvVars("" + credentials.auth_cache);
+    var cfn = Utils.expandEnvVars(credentials.auth_cache);
     Fs.stat(cfn, function(e, stats) {
         if (e) {
             authorise(credentials);
@@ -102,7 +102,7 @@ function authorise(credentials) {
     });
 }
 
-Config.load(cliopt.config)
+DataModel.loadData(cliopt.config, { $skip: true })
 
 .done(function(config) {
     for (var cal in config.controller.calendar) {

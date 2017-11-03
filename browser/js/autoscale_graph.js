@@ -9,8 +9,8 @@ const OUT_MAX_T = OUT_MIN_T << 1;
 /**
  * Construct a new trace line
  * Trace axes are "t" (for time) and "s" (for sample)
- * @param {Config} options 
- * @param {string}
+ * @param {object} options 
+ * ```
  * {
  *  legend: legend for the trace
  *  min: Point, optional bottom/left of axis in S-T coords
@@ -21,6 +21,7 @@ const OUT_MAX_T = OUT_MIN_T << 1;
  *   s: "flex"
  *  }
  * }
+ * ```
  * Out-of-range
  * "slide" will maintain a constant range. Assumes new data always added 
  * "flex" will expand the range at either end

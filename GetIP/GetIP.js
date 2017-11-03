@@ -13,7 +13,7 @@ const Fs = require("fs");
 const readFile = Q.denodeify(Fs.readFile);
 
 const Utils = require("../common/Utils");
-const Config = require("../common/Config.js");
+const DataModel = require("../common/DataModel.js");
 
 function Url(e) {
     for (var i in e)
@@ -53,7 +53,7 @@ if (cliopt.debug)
 
 var config, current = {};
 
-Config.load(cliopt.config)
+DataModel.loadData(cliopt.config, { $skip: true })
 .done(function(cfg) {
     config = cfg;
     step1();
@@ -147,7 +147,7 @@ function finish(ip) {
     current.path = config.target.path;
     Utils.LOG("New target ", current);
 
-    readFile(Utils.expandEnvVars("" + config.template))
+    readFile(Utils.expandEnvVars(config.template))
     .then(function(buf) {
         var html = buf.toString();
         for (var k in current) {

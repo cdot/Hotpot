@@ -18,11 +18,7 @@ module.exports = Utils;
  * @return {String} data string with env vars expanded
  */
 Utils.expandEnvVars = function(data) {
-    if (typeof data !== "string") {
-        debugger;
-        throw "Cannot expand " + (typeof data);
-    }
-    data = data.replace(/^~/, "$HOME");
+    data = ("" + data).replace(/^~/, "$HOME");
     return data.replace(
             /(\$[A-Z]+)/g, function(match) {
                 var v = match.substring(1);
@@ -59,6 +55,8 @@ Utils.dump = function(data) {
             }
             // Store value in our collection
             cache.push(value);
+        } else if (typeof value === "function") {
+            value = value.name;
         }
         return value;
     }, 2);
@@ -72,16 +70,11 @@ Utils.joinArgs = function(args, start) {
     if (typeof start === "undefined")
         start = 0;
     for (var i = start; i < args.length; i++) {
-        if (typeof args[i] === "object"
-            && args[i] !== null
-            && (args[i].toString === Object.prototype.toString
-                || args[i].toString === Array.prototype.toString))
+        if (typeof args[i] === "object" && args[i] !== null) {
             mess += Utils.dump(args[i]);
-        else if (typeof args[i] === "function") {
-            mess += new args[i](args[i + 1]);
-            i += 1;
-        } else
+        } else {
             mess += args[i];
+        }
     }
     return mess;
 };
@@ -144,8 +137,6 @@ Utils.eval = function(code, context) {
     } else {
         var Module = require("module");
         var m = new Module();
-        if (typeof context === "undefined")
-            context = "eval";
         m._compile("module.exports=\n" + code + "\n;", context);
         return m.exports;
     }

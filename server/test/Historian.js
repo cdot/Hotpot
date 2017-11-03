@@ -74,10 +74,7 @@ describe('Historian', function() {
         } catch (e) {
         }
 
-        beforeEach(function(done) {
-            h.done = done;
-            h.start();
-        });
+        h.start(false);
 
         it('Supports polling', function() {
             return h.getSerialisableHistory()
@@ -87,10 +84,10 @@ describe('Historian', function() {
                 var now = new Date();
                 now.setHours(0, 0, 0);
                 assert.equal(d.toString(), now.toString());
-                var t = report[1] - h.config.interval;
+                var t = report[1] - h.interval;
                 var c = 0;
                 for (var i = 1; i < report.length; i += 2, c++) {
-                    assert(report[i] >= t + h.config.interval);
+                    assert(report[i] >= t + h.interval);
                     assert.equal(report[i + 1], c);
                     t = report[i];
                 }

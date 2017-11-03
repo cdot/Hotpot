@@ -15,7 +15,7 @@ const Q = require("q");
 
 const Location = require("../common/Location.js");
 const Utils = require("../common/Utils.js");
-const Config = require("../common/Config.js");
+const DataModel = require("../common/DataModel.js");
 
 const Server = require("./Server.js");
 const Controller = require("./Controller.js");
@@ -54,14 +54,14 @@ HOTPOT_DEBUG = undefined;
 
     var config, controller, server;
 
-    Config.load(cliopt.config, {
-        server: Server.prototype.Config,
-        controller: Controller.prototype.Config
+    DataModel.loadData(cliopt.config, {
+        server: Server.Model,
+        controller: Controller.Model
     })
 
     .then(function(cfg) {
         if (cliopt.confhelp) {
-            Utils.LOG(TAG, " ", Config.help(Controller.prototype.Config));
+            Utils.LOG(TAG, " ", DataModel.help(Controller.Model));
             eval("process.exit(1)");
         }
         return cfg;
@@ -77,7 +77,7 @@ HOTPOT_DEBUG = undefined;
             });
         return controller.initialise()
         .then(function() {
-            var loc = new Location(config.server.location);
+            var loc = new Location(server.location);
             controller.setLocation(loc);
         });
     })
@@ -92,7 +92,7 @@ HOTPOT_DEBUG = undefined;
         controller.on(
             "config_change",
             function() {
-                Config.save(config, cliopt.config)
+                DataModel.saveData(config, cliopt.config)
                 .done(function() {
                     Utils.TRACE(TAG, cliopt.config, " updated");
                 });

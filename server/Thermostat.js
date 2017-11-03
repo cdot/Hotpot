@@ -22,10 +22,10 @@ var ds18x20;
  * object.
  * @class
  * @param name {String} name by which the caller identifies the thermostat
- * @param config configuration for the thermostat - see
- * Thermostat.prototype.Config
+ * @param proto configuration for the thermostat - see
+ * Thermostat.Model
  */
-function Thermostat(name, config) {
+function Thermostat(name, proto) {
     "use strict";
 
     if (!ds18x20) {
@@ -45,7 +45,7 @@ function Thermostat(name, config) {
         }
     }
 
-    this.config = config;
+    Utils.extend(this, proto);
     
     // Name of the thermostat e.g. "HW"
     this.name = name;
@@ -54,31 +54,29 @@ function Thermostat(name, config) {
     this.temperature = 0;
 
     // Temperature history, sample on a time schedule
-    var hc = config.history;
     var self = this;
+    var hc = this.history;
     if (typeof hc !== "undefined") {
-        var Historian = require("./Historian.js");
         if (typeof hc.interval === "undefined")
             hc.interval = 300; // 5 minutes
         hc.sample = function() {
             // Only log temperatures to one decimal place
             return Math.round(self.temperature * 10) / 10;
         };
-        this.historian = new Historian(self.name, hc);
     }
 
     if (typeof HOTPOT_DEBUG !== "undefined")
-        HOTPOT_DEBUG.mapThermostat(config.id, name);
+        HOTPOT_DEBUG.mapThermostat(this.id, name);
 }
 
-Thermostat.prototype.Config = {
+Thermostat.Model = {
     $type: Thermostat,
     id: {
         $type: "string",
         $doc: "unique ID used to communicate with this thermostat"
     },
-    timeline: Timeline.prototype.Config,
-    history: Utils.extend(Historian.prototype.Config, { $optional: true })
+    timeline: Timeline.Model,
+    history: Utils.extend({ $optional: true }, Historian.Model)
 };
 
 /**
@@ -89,7 +87,7 @@ Thermostat.prototype.initialise = function() {
     var self = this;
 
     return Q.Promise(function(resolve, reject) {
-        ds18x20.get(self.config.id, function(err, temp) {
+        ds18x20.get(self.id, function(err, temp) {
             if (err !== null) {
                 Utils.ERROR(TAG, "d218x20 error: ", err);
                 reject(err);
@@ -101,8 +99,8 @@ Thermostat.prototype.initialise = function() {
                 // Start the polling loop
                 self.pollTemperature();
                 // Start the historian
-                if (self.historian)
-                    self.historian.start();
+                if (self.history)
+                    self.history.start();
                 Utils.TRACE(TAG, "'", self.name, "' intialised");
                 resolve();
             }
@@ -140,9 +138,9 @@ Thermostat.prototype.getSerialisableState = function() {
  */
 Thermostat.prototype.getSerialisableLog = function(since) {
     "use strict";
-    if (!this.historian)
+    if (!this.history)
         return Q();
-    return this.historian.getSerialisableHistory(since);
+    return this.history.getSerialisableHistory(since);
 };
 
 /**
@@ -156,7 +154,7 @@ Thermostat.prototype.pollTemperature = function() {
 
     var self = this;
 
-    ds18x20.get(this.config.id, function(err, temp) {
+    ds18x20.get(this.id, function(err, temp) {
         if (err !== null) {
             Utils.ERROR(TAG, "d218x20 error: ", err);
         } else {
@@ -165,9 +163,9 @@ Thermostat.prototype.pollTemperature = function() {
                 self.temperature = temp;
             setTimeout(function() {
                 self.pollTemperature();
-            }, typeof self.config.poll_interval === "undefined"
+            }, typeof self.poll_interval === "undefined"
                        ? DEFAULT_POLL_INTERVAL
-                       : self.config.poll_interval);
+                       : self.poll_interval);
         }
     });
 };
@@ -177,5 +175,5 @@ Thermostat.prototype.pollTemperature = function() {
  * at the current time/
  */
 Thermostat.prototype.getTargetTemperature = function() {
-    return this.config.timeline.valueAtTime(Time.time_of_day());
+    return this.timeline.valueAtTime(Time.time_of_day());
 };

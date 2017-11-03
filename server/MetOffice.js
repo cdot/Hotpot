@@ -45,30 +45,24 @@ const IS_NUMBER = [
  * weather information from the UK Met Office 3 hourly forecast updates.
  * It then performs a simple interpolation to guess the current weather at
  * the server location.
- * @param {Config} config configuration
+ * @param {object} proto prototype
  * @class
  */
-var MetOffice = function(id, config) {
+var MetOffice = function(id, proto) {
     "use strict";
+    Utils.extend(this, proto);
     this.url = Url.parse("http://datapoint.metoffice.gov.uk");
     this.name = "MetOffice";
-    this.config = config;
-    this.api_key = "?key=" + config.api_key;
     this.log = [];
-    var hc = config.history;
-    if (typeof hc !== "undefined") {
-        hc.unordered = true;
-        this.historian = new Historian(this.name, hc);
-    }
 };
 
-MetOffice.prototype.Config = {
+MetOffice.Model = {
     $type: MetOffice,
     api_key: {
         $type: "string",
         $doc: "API key for requests to the Met Office website"
     },
-    history: Utils.extend(Historian.prototype.Config, { $optional: true })
+    history: Utils.extend({ $optional: true }, Historian.Model)
 };
 
 /**
@@ -126,9 +120,9 @@ MetOffice.prototype.getSerialisableState = function() {
  */
 MetOffice.prototype.getSerialisableLog = function(since) {
     "use strict";
-    if (!this.historian)
+    if (!this.history)
         return Q();
-    return this.historian.getSerialisableHistory(since)
+    return this.history.getSerialisableHistory(since)
     .then(function(h) {
         // Clip to the current time
         var before = -1, after = -1;
@@ -194,7 +188,7 @@ MetOffice.prototype.findNearestLocation = function(loc) {
 
     var self = this;
 
-    var path = USUAL_PATH + "sitelist" + this.api_key;
+    var path = USUAL_PATH + "sitelist?key=" + this.api_key;
     var options = {
         protocol: this.url.protocol,
         hostname: this.url.hostname,
@@ -268,8 +262,8 @@ MetOffice.prototype.buildLog = function(data) {
             }
             // Convert baseline from minutes into epoch ms
             report.$ = baseline + report.$ * 60 * 1000;
-            if (this.historian)
-                this.historian.record(report.Temperature, report.$);
+            if (this.history)
+                this.history.record(report.Temperature, report.$);
             if (!rebased) {
                 // Delete log entries after the time of the current report
                 for (k = 0; k < this.log.length; k++) {
@@ -304,7 +298,8 @@ MetOffice.prototype.getWeather = function() {
         protocol: this.url.protocol,
         hostname: this.url.hostname,
         port: this.url.port,
-        path: USUAL_PATH + this.location_id + this.api_key + "&res=3hourly"
+        path: USUAL_PATH + this.location_id + "?key=" +
+            this.api_key + "&res=3hourly"
     };
 
     return Q.Promise(function(fulfill, fail) {

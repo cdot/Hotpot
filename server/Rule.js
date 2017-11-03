@@ -4,7 +4,7 @@
 
 const TAG = "Rule";
 
-const Config = require("../common/Config");
+const DataModel = require("../common/DataModel");
 
 // We need this to be gloabl (outside the scope of the node module)
 // so the module can't be strict
@@ -22,6 +22,8 @@ Utils = require("../common/Utils.js");
 function Rule(name, config) {
     "use strict";
 
+    Utils.extend(this, config);
+
     this.index = undefined;
     /**
      * Name of the rule
@@ -29,11 +31,6 @@ function Rule(name, config) {
      * @public
      */
     this.name = name;
-
-    /**
-     * Configuration data
-     */
-    this.config = config;
     
     /**
      * Test function
@@ -44,13 +41,12 @@ function Rule(name, config) {
 }
 module.exports = Rule;
 
-Rule.prototype.Config = {
+Rule.Model = {
     $type: Rule,
-    test_file: {
-        $doc: "File to read the rule function from",
-        $type: Config.File,
+    test: Utils.extend({}, DataModel.TextOrFile.Model, {
+        $doc: "Rule function (Text or File)",
         $mode: "r"
-    }
+    })
 };
 
 /**
@@ -60,9 +56,9 @@ Rule.prototype.Config = {
 Rule.prototype.initialise = function() {
     var self = this;
 
-    return Config.fileableConfig(self.config, "test")
+    return this.test.read()
     .then(function(fn) {
-        self.setTest(fn, self.config.test_file);
+        self.setTest(fn);
         Utils.TRACE(TAG, self.name, " initialised");
     });
 };
@@ -72,13 +68,13 @@ Rule.prototype.initialise = function() {
  * @param {function} fn the function (may be a string)
  * @private
  */
-Rule.prototype.setTest = function(fn, source) {
+Rule.prototype.setTest = function(fn) {
     "use strict";
 
     if (typeof fn !== "function") {
         // Compile the function
         try {
-            fn = Utils.eval(fn, "" + source);
+            fn = Utils.eval(fn);
         } catch (e) {
             if (e instanceof SyntaxError)
                 Utils.ERROR(TAG, "Syntax error in '" + this.name

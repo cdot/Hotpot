@@ -11,43 +11,41 @@
  * {min}..{max} (out of range values are validated).
  * New Timelines are initialised with a straight line at value
  * (min + max) / 2
- * @param {Config} config see Timeline.prototype.Config
+ * @param proto see Timeline.Model
  */
-function Timeline(config) {
-    this.config = config;
-    if (config.max <= config.min)
+function Timeline(id, proto) {
+    Utils.extend(this, proto);
+    if (this.max <= this.min)
         throw "Value range inside out";
-    this.min = config.min; this.max = config.max;
-    if (config.period <= 0)
+    if (this.period <= 0)
         throw "Bad period";
-    this.period = config.period;
-    this.points = [];
-    if (typeof config.points === "undefined" || config.points.length === 0) {
-        this.points.push({time: 0, value: (config.min + config.max) / 2});
-        this.points.push({time: this.period,
-                          value: (config.min + config.max) / 2});
-    }
-    else if (config.points[0].time !== 0) {
-        this.points.unshift({time: 0, value: config.points[0].value});
-    }
-    if (typeof config.points !== "undefined") {
-        for (var i = 0; i < config.points.length; i++) {
-            this.points.push({time: config.points[i].time,
-                              value: config.points[i].value});
-            this.setPoint(this.points.length - 1);
-        }
-        if (this.points[this.points.length - 1].time < this.period) {
-            this.points.push(
-                {time: this.period,
-                 value: config.points[this.points.length - 1].value});
-            this.setPoint(this.points.length - 1);
-        }
-    }
-};
-if (typeof module !== "undefined")
-    module.exports = Timeline;
+    
+    if (typeof this.points === "undefined")
+        this.points = [];
 
-Timeline.prototype.Config = {
+    // Use setPoint to validate points passed
+    for (var i = 1; i < this.points.length; i++) {
+        this.setPoint(i);
+    }
+
+    // Add missing points to extremes
+    if (this.points.length === 0) {
+        this.points.push({time: 0, value: (this.min + this.max) / 2});
+        this.points.push({time: this.period,
+                          value: (this.min + this.max) / 2});
+    }
+    if (this.points[0].time !== 0)
+        this.points.unshift({time: 0, value: this.points[0].value});
+    
+    if (this.points[this.points.length - 1].time < this.period)
+        this.points.push(
+            {time: this.period,
+             value: this.points[this.points.length - 1].value});
+};
+
+module.exports = Timeline;
+
+Timeline.Model = {
     $type: Timeline,
     min: {
         $doc: "minimum value",

@@ -10,7 +10,8 @@ const serialize = require("serialize-javascript");
 const Url = require("url");
 
 const Utils = require("../common/Utils.js");
-const Config = require("../common/Config.js");
+const DataModel = require("../common/DataModel.js");
+const Location = require("../common/Location.js");
 
 const TAG = "Server";
 
@@ -21,34 +22,24 @@ const TAG = "Server";
  * requests. The predefined root path `/ajax` is used to decide when to
  * route requests to a dispatcher function. Otherwise requests are
  * handled as files relative to the defined `docroot`.
- * @param {Config} config see configuration object
- * * `docroot`: path to the document root, may contain env vars
- * * `ssl` optional SSL configuration. Will create an HTTP server otherwise.
- *   * `key`: text of the SSL key OR
- *   * `key_file`: name of a file containing the SSL key
- *   * `cert`: text of the certificate OR
- *   * `cert_file`: name of a file containing the SSL certificate
- * * `port`: port to serve on (required)
- * * `auth` optional basic auth configuration.
- *   * `user` username of authorised user
- *   * `pass` password
- *   * `realm` authentication realm
+ * @param proto see Server.Model
  * @class
  */
-function Server(id, config) {
+function Server(id, proto) {
     "use strict";
 
+    Utils.extend(this, proto);
+
     var self = this;
-    self.config = config;
     self.ready = false;
-    if (typeof config.auth !== "undefined") {
+    if (typeof this.auth !== "undefined") {
         self.authenticate = function(request) {
             var BasicAuth = require("basic-auth");
             var credentials = BasicAuth(request);
             if (typeof credentials === "undefined")
                 return false;
-            return (credentials.name === self.config.auth.user
-                    && credentials.pass === self.config.auth.pass);
+            return (credentials.name === self.auth.user
+                    && credentials.pass === self.auth.pass);
         };
     }
 }
@@ -70,7 +61,7 @@ Server.prototype.setDispatch = function(dispatch) {
     this.dispatch = dispatch;
 };
 
-Server.prototype.Config = {
+Server.Model = {
     $type: Server,
     $doc: "HTTP(S) server",
     port: {
@@ -81,45 +72,24 @@ Server.prototype.Config = {
     },
     docroot: {
         $doc: "Absolute file path to server documents",
-        $type: Config.File,
+        $type: DataModel.File,
         $mode: "dr"
     },
     location: {
-        $doc: "Where in the world the server is located",
-        latitude: {
-            $doc: "Decimal latitude",
-            $type: "number"
-        },
-        longitude: {
-            $doc: "Decimal longitude",
-            $type: "number"
-        }
+        $type: Location,
+        $doc: "Where in the world the server is located"
     },
     ssl: {
         $doc: "SSL configuration",
         $optional: true,
-        cert: {
-            $type: "string",
-            $optional: true,
-            $doc: "Text of SSL certificate"
-        },
-        cert_file: {
-            $doc: "Path to a file containing the SSL certificate",
-            $optional: true,
-            $type: Config.File,
-            $mode: "r"
-        },
-        key: {
-            $type: "string",
-            $optional: true,
-            $doc: "Text of SSL key"
-        },
-        key_file: {
-            $optional: true,
-            $doc: "Path to a file containing SSL key",
-            $type: Config.File,
-            $mode: "r"
-        }
+        cert: Utils.extend({},
+                           DataModel.TextOrFile.Model,
+                           { $doc: "SSL certificate (filename or text)",
+                             $mode: "r" }),
+        key: Utils.extend({},
+                          DataModel.TextOrFile.Model,
+                          { $doc: "SSL key (filename or text)",
+                            $mode: "r" })
     },
     auth: {
         $doc: "Basic auth to access the server",
@@ -144,7 +114,6 @@ Server.prototype.Config = {
  */
 Server.prototype.start = function() {
     var self = this;
-    var config = self.config;
 
     var handler = function(request, response) {
         if (typeof self.authenticate !== "undefined") {
@@ -152,7 +121,7 @@ Server.prototype.start = function() {
                 Utils.TRACE(TAG, "Authentication failed ", request.url);
                 response.statusCode = 401;
                 response.setHeader('WWW-Authenticate', 'Basic realm="'
-                                   + config.auth.realm + '"');
+                                   + this.auth.realm + '"');
                 response.end('Access denied');
                 return;
             }
@@ -168,14 +137,13 @@ Server.prototype.start = function() {
 
     var promise = Q();
 
-    var ssl_cfg = config.ssl;
-    if (typeof ssl_cfg !== "undefined") {
+    if (typeof this.ssl !== "undefined") {
         var options = {};
 
         promise = promise
 
         .then(function() {
-            return Config.fileableConfig(ssl_cfg, "key");
+            return self.ssl.key.read();
         })
 
         .then(function(k) {
@@ -184,24 +152,24 @@ Server.prototype.start = function() {
         })
 
         .then(function() {
-            return Config.fileableConfig(ssl_cfg, "cert");
+            return self.ssl.cert.read();
         })
 
         .then(function(c) {
             options.cert = c;
             Utils.TRACE(TAG, "SSL certificate loaded");
-            if (typeof self.config.auth !== "undefined")
+            if (typeof self.auth !== "undefined")
                 Utils.TRACE(TAG, "Requires authentication");
-            Utils.TRACE(TAG, "HTTPS starting on port ", self.config.port);
+            Utils.TRACE(TAG, "HTTPS starting on port ", self.port);
         })
 
         .then(function() {
             return require("https").createServer(options, handler);
         });
     } else {
-        if (typeof self.config.auth !== "undefined")
+        if (typeof self.auth !== "undefined")
             Utils.TRACE(TAG, "Requires authentication");
-        Utils.TRACE(TAG, "HTTP starting on port ", self.config.port);
+        Utils.TRACE(TAG, "HTTP starting on port ", self.port);
         promise = promise
         .then(function() {
             return require("http").createServer(handler);
@@ -212,7 +180,7 @@ Server.prototype.start = function() {
 
     .then(function(httpot) {
         self.ready = true;
-        httpot.listen(self.config.port);
+        httpot.listen(self.port);
     });
 };
 
@@ -261,7 +229,7 @@ Server.prototype.handle = function(spath, params, request, response) {
     } else {
         // Handle file lookup
         Utils.TRACE(TAG, "GET ", path.join("/"));
-        var filepath = Utils.expandEnvVars(this.config.docroot
+        var filepath = Utils.expandEnvVars(this.docroot
                                            + "/" + path.join("/"));
         
         var m = /\.([A-Z0-9]+)$/i.exec(filepath);

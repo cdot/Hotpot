@@ -7,7 +7,7 @@ const Events = require("events").EventEmitter;
 const Q = require("q");
 
 const Utils = require("../common/Utils.js");
-const Config = require("../common/Config.js");
+const DataModel = require("../common/DataModel.js");
 
 const Thermostat = require("./Thermostat.js");
 const Pin = require("./Pin.js");
@@ -20,29 +20,24 @@ const TAG = "Controller";
  * Controller for a number of pins, thermostats, calendars, weather agents,
  * and the rules that manage the system state based on inputs from all these
  * elements.
- * @param {Config} config Config object
- * * `pin`: object mapping pin names to Pin configurations
- * * `thermostat`: object mapping thermostat names to Thermostat configurations
- * * `rule`: array of Rule configurations
- * * `calendar`: object mapping calendar names to Calendar configurations
- * * `weather`: object mapping weather agent names to their configurations
+ * @param {object} proto prototype object
  * @class
  */
-function Controller(id, config) {
-    this.config = config;
+function Controller(id, proto) {
+    Utils.extend(this, proto);
 }
 Util.inherits(Controller, Events);
 module.exports = Controller;
 
-Controller.prototype.Config = {
+Controller.Model = {
     $type: Controller,
     thermostat: {
         $doc: "Set of Thermostats",
-        $array_of: Thermostat.prototype.Config
+        $array_of: Thermostat.Model
     },
     pin: {
         $doc: "Set of Pins",
-        $array_of: Pin.prototype.Config
+        $array_of: Pin.Model
     },
     valve_return: {
         $doc: "Time to wait for the multiposition valve to return to the discharged state, in ms",
@@ -56,11 +51,11 @@ Controller.prototype.Config = {
     },
     rule: {
         $doc: "Set of Rules",
-        $array_of: Rule.prototype.Config
+        $array_of: Rule.Model
     },
     calendar: {
         $doc: "Set of Calendars",
-        $array_of: Calendar.prototype.Config
+        $array_of: Calendar.Model
     },
     weather: {
         $doc: "Array of weather agents",
@@ -121,9 +116,9 @@ Controller.prototype.createWeatherAgents = function() {
     self.weather = {};
     var promise = Q();
 
-    if (Object.keys(this.config.weather).length > 0) {
+    if (Object.keys(this.weather).length > 0) {
         Utils.TRACE(TAG, "Creating weather agents");
-        Utils.forEach(this.config.weather, function(config, name) {
+        Utils.forEach(this.weather, function(config, name) {
             var WeatherAgent = require("./" + name + ".js");
             self.weather[name] = new WeatherAgent(name, config);
             promise = promise.then(function() {
@@ -147,7 +142,7 @@ Controller.prototype.initialiseCalendars = function() {
     Utils.TRACE(TAG, "Initialising Calendars");
 
     var self = this;
-    Utils.forEach(this.config.calendar, function(cal) {
+    Utils.forEach(this.calendar, function(cal) {
         cal.setTrigger(
             function(id, pin, state, until) {
                 self.addRequest(pin, id, state, until);
@@ -176,7 +171,7 @@ Controller.prototype.initialisePins = function() {
 
     Utils.TRACE(TAG, "Initialising Pins");
     var promise = Q();
-    Utils.forEach(self.config.pin, function(pin) {
+    Utils.forEach(self.pin, function(pin) {
         promise = promise.then(function() {
             return pin.initialise();
         });
@@ -190,14 +185,14 @@ Controller.prototype.initialisePins = function() {
  * @private
  */
 Controller.prototype.resetValve = function() {
-    var pins = this.config.pin;
+    var pins = this.pin;
     var promise = pins.HW.set(1, "Reset")
 
     .then(function() {
         Utils.TRACE(TAG, "Reset: HW(1) done");
     })
 
-    .delay(this.config.valve_return)
+    .delay(this.valve_return)
 
     .then(function() {
         Utils.TRACE(TAG, "Reset: delay done");
@@ -231,7 +226,7 @@ Controller.prototype.initialiseThermostats = function() {
 
     Utils.TRACE(TAG, "Initialising Thermostats");
     
-    Utils.forEach(this.config.thermostat, function(th) {
+    Utils.forEach(this.thermostat, function(th) {
         promise = promise.then(function() {
             return th.initialise();
         });
@@ -253,7 +248,7 @@ Controller.prototype.initialiseRules = function() {
     var promise = Q();
 
     Utils.TRACE(TAG, "Initialising Rules");
-    Utils.forEach(this.config.rule, function(rule) {
+    Utils.forEach(this.rule, function(rule) {
         promise = promise.then(function() {
             return rule.initialise();
         });
@@ -379,14 +374,14 @@ Controller.prototype.getSerialisableLog = function(since) {
 Controller.prototype.setPromise = function(channel, new_state, reason) {
     "use strict";
     var self = this;
-    var pins = self.config.pin;
+    var pins = self.pin;
     
     // Duck race condition during initialisation
     if (pins[channel] === "undefined")
         return Q.promise(function() {});
 
     if (this.pending) {
-        return Q.delay(self.config.valve_return).then(function() {
+        return Q.delay(self.valve_return).then(function() {
             return self.setPromise(channel, new_state, reason);
         });
     }
@@ -414,11 +409,11 @@ Controller.prototype.setPromise = function(channel, new_state, reason) {
                 // timeout, turn the CH on.
                 return pins.CH.set(0, reason) // switch off CH
                 .then(function() {
-                    return self.config,pin.HW.set(1, reason); // switch on HW
+                    return pins.HW.set(1, reason); // switch on HW
                 })
                 .then(function() {
                     self.pending = true;
-                    return Q.delay(self.config.valve_return); // wait for spring
+                    return Q.delay(self.valve_return); // wait for spring
                 })
                 .then(function() {
                     self.pending = false;
@@ -447,12 +442,12 @@ Controller.prototype.addRequest = function(pin, source, state, until) {
         until: until
     };
     Utils.TRACE(TAG, "Add request ", pin, " ", req);
-    var pins = this.config.pin;
+    var pins = this.pin;
     if (pin === "ALL") {
         Utils.forEach(pins, function(p) {
             p.addRequest(req);
         });
-    } else if (typeof this.config,pin[pin] !== "undefined")
+    } else if (typeof pins[pin] !== "undefined")
         pins[pin].addRequest(req);
     else
         Utils.ERROR(TAG, "Cannot addRequest; No such pin '" + pin + "'");
@@ -466,7 +461,7 @@ Controller.prototype.addRequest = function(pin, source, state, until) {
  */
 Controller.prototype.removeRequests = function(pin, source) {
     Utils.TRACE(TAG, "Remove request ", pin, " ", source);
-    var pins = this.config.pin;
+    var pins = this.pin;
     if (pin === "ALL") {
         Utils.forEach(pins, function(p) {
             p.purgeRequests(undefined, source);
@@ -506,11 +501,11 @@ Controller.prototype.dispatch = function(path, data) {
         if (typeof path[1] === "undefined")
             return self.getSetLogs(self[path[0]], data.since);
         return self[path[0]][path[1]].getSerialisableLog(data.since);
-    case "config": // Return the config with all _file expanded
+    case "config": // Return the config
         // /config
-        return Config.getSerialisable(this.config, true);
+        return DataModel.getSerialisable(this, Controller.Model);
     case "reconfig": // Update the config.
-        Config.update(this.config, data.config);
+        DataModel.update(this, data, Controller.Model);
         self.emit("config_change");
         break;
     case "request":
@@ -562,13 +557,13 @@ Controller.prototype.pollRules = function() {
     }
 
     // Test each of the rules
-    Utils.forEach(self.config.rule, function(rule) {
+    Utils.forEach(self.rule, function(rule) {
         if (typeof rule.testfn !== "function") {
             Utils.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
             return true;
         }
 
-        rule.testfn.call(self, self.config.thermostat, self.config.pin)
+        rule.testfn.call(self, self.thermostat, self.pin)
         .catch(function(e) {
             if (typeof e.stack !== "undefined")
                 Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
@@ -580,5 +575,5 @@ Controller.prototype.pollRules = function() {
     self.poll.timer = setTimeout(function () {
         self.poll.timer = undefined;
         self.pollRules();
-    }, self.config.rule_interval);
+    }, self.rule_interval);
 };
