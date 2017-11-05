@@ -70,26 +70,24 @@ Server.Model = {
         $min: 0,
         $max: 65536
     },
-    docroot: {
-        $doc: "Absolute file path to server documents",
-        $type: DataModel.File,
-        $mode: "dr"
-    },
-    location: {
-        $type: Location,
-        $doc: "Where in the world the server is located"
-    },
+    docroot: Utils.extend(
+        {}, DataModel.File.Model,
+        { $doc: "Absolute file path to server documents",
+          $mode: "dr" }),
+    location: Utils.extend(
+        {}, Location.Model,
+        { $doc: "Where in the world the server is located" }),
     ssl: {
         $doc: "SSL configuration",
         $optional: true,
-        cert: Utils.extend({},
-                           DataModel.TextOrFile.Model,
-                           { $doc: "SSL certificate (filename or text)",
-                             $mode: "r" }),
-        key: Utils.extend({},
-                          DataModel.TextOrFile.Model,
-                          { $doc: "SSL key (filename or text)",
-                            $mode: "r" })
+        cert: Utils.extend(
+            {}, DataModel.TextOrFile.Model,
+            { $doc: "SSL certificate (filename or text)",
+              $mode: "r" }),
+        key: Utils.extend(
+            {}, DataModel.TextOrFile.Model,
+            { $doc: "SSL key (filename or text)",
+              $mode: "r" })
     },
     auth: {
         $doc: "Basic auth to access the server",

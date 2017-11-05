@@ -83,6 +83,14 @@ var helpModelString = [
     " }",
     "}" ].join("\n");
 
+var simpleArrayModel = {
+    array: { $array_of: "string" }
+};
+
+var simpleArrayProto = {
+    array: [ "a", "b", "c" ]
+};
+
 describe('DataModel', function() {
 
     it("Should simple-serialise", function() {
@@ -132,6 +140,15 @@ describe('DataModel', function() {
         return DataModel.getSerialisable(data, complexModel)
             .then(function(s) {
                 assert.deepEqual(s, complexProto);
+            });
+    });
+
+    it("Should array-serialise", function() {
+        
+        var data = DataModel.remodel("", simpleArrayProto, simpleArrayModel);
+        return DataModel.getSerialisable(data, simpleArrayModel)
+            .then(function(s) {
+                assert.deepEqual(s, simpleArrayProto);
             });
     });
 

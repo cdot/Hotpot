@@ -23,7 +23,8 @@ const MIN_DEG = 0.00005; // 5 metres in degrees at 55N
  ( (4.) undefined
  * @class
  */
-function Location(lat, lng) {
+function Location(lat, lng,model) {
+    debugger;
     "use strict";
     if (typeof lng === "object") {
         // Constructor (3.)
@@ -42,7 +43,7 @@ function Location(lat, lng) {
             lng = lat.longitude;
             lat = lat.latitude;
         } else {
-            throw "Cannot initialise a Location from this object";
+            throw "Cannot initialise a Location from " + Utils.dump(lat);
         }
     } // else Constructor (1.)
     this.lat = lat;

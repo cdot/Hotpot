@@ -12,8 +12,13 @@
  * post-processed under the guidance of the spec, to validate the
  * structure and instantiate class members.
  *
- * The data model is a recursive description of the data. Keywords,
- * starting with $, are used to control the checking and expansion.
+ * The data model is a recursive description of the data. The data can
+ * contain simple Javascript types (number, string etc), objects, and
+ * arrays. Function and SYmbol objects are not supported.
+ *
+ * Keywords in the model, starting with $, are used to control the
+ * checking and expansion, while other simple names are used for fields
+ * in the modelled data.
  *
  * For example, we might want to load a simple data structure which
  * can have a single field, "id:", which must have a string value.
@@ -37,7 +42,7 @@
  *   $type - type of the datum (as returned by typeof, defaults to "object")
  *   $doc - a documentation string for the datum
  *   $optional - this datum is optional
- *   $default: default value, if not defined
+ *   $default: default value, if not defined and not $optional
  *   $skip - skip deeper checking of this item
  *   $array_of - object is an associative array of elements, each of
  *   which has the given spec. the key type is not specified (it can be
@@ -75,6 +80,10 @@
  * ```
  * and the key value in the final structure is replaced with the created
  * object.
+ *
+ * Note that currently $type must be undefined if $array_of is defined.
+ * A future extension may be to use $type to template objects that subclass
+ * array - this is left open.
  * 
  * Classes may want to decorate the spec with other $keys.
  * for example, the DataModel.File class uses the $mode key to specify
@@ -193,7 +202,7 @@ DataModel.getSerialisable = function(data, model, context) {
     // If this is a simple object type, just return the data
     var $type = (typeof model.$type === "undefined") ? "object" : model.$type;
     if (typeof data !== $type) {
-        throw "Internal error; expected " + Utils.dump(model.$type) +
+        throw "Internal error; expected " + $type +
             " but got " + (typeof data) + " at " + context;
         return Q(data);
     }
@@ -243,7 +252,7 @@ DataModel.getSerialisable = function(data, model, context) {
 
 /**
  * @private
- * Apply the given model to the given data structure, checking data
+ * Test the given model against the given data structure, checking data
  * against the model and constructing objects as required.
  * @param {object} data The data being loaded
  * @param {index} The index of the structure in the parent object. This
@@ -275,7 +284,13 @@ DataModel.remodel = function(index, data, model, context) {
     if (model.$skip)
         return data;
 
-    if (typeof model.$array_of === "object") {
+    // Currently cannot have both $array_of and $type
+    if (typeof model.$array_of !== "undefined" &&
+        typeof model.$type !== "undefined")
+        throw "Broken model: cannot have $array_of and $type";
+
+    // Arrays are integer-indexed
+    if (typeof model.$array_of !== "undefined") {
         var rebuilt = [];
         for (var i in data) {
             rebuilt[i] = DataModel.remodel(
@@ -284,6 +299,7 @@ DataModel.remodel = function(index, data, model, context) {
         return rebuilt;
     }
 
+    // Simple type e.g. $type: "number"
     if (typeof model.$type === "string") {
         // Should check validity of data type
         if (typeof data !== model.$type)
@@ -305,18 +321,24 @@ DataModel.remodel = function(index, data, model, context) {
         return data;
     }
 
-    // otherwise object or function
     var rebuilt;
     if (typeof data === "object") {
+        // Rebuild the sub-structure for this object. The rebuilt object
+        // will either be placed in the result or passed to a constructor.
+        
+        // Note that fieds not listed in the model are not copied
+        // into rebuilt.
         rebuilt = {};
         for (var i in model) {
             if (i.charAt(0) !== '$') {
-                rebuilt[i] = DataModel.remodel(i, data[i], model[i], context + "." + i);
+                rebuilt[i] = DataModel.remodel(
+                    i, data[i], model[i], context + "." + i);
                 //Utils.LOG("Rebuilt ",data[i]," to ",rebuilt[i]);
             }
         }
-    } else
+    } else // simple object
         rebuilt = data;
+    
     if (typeof model.$type === "function") {
         //Utils.LOG("Instantiate ",index,"  ",rebuilt);
         rebuilt = new model.$type(index, rebuilt, model);
@@ -324,13 +346,52 @@ DataModel.remodel = function(index, data, model, context) {
         // make sure the data doesn' carry any hidden payload
         for (var i in data) {
             if (!model[i])
-                throw "Bad data: " + context + " unexpected field '"
-                + i + "' at "
-                + Utils.dump(data)
-                + "\n" + Utils.dump(model);
+                throw "Bad data: " + Utils.dump(data) +
+                " unexpected for field '" + i + "' at "
+                + context;
         }
     }
     return rebuilt;
+};
+
+/**
+ * Replace an entire subtree in a path, remodelling the subtree in accordance
+ * with a data model.
+ * @param {string or array} path the path to the root of the subtree to
+ * replace. The path is either a '/'-separated string, or an array of
+ * path indices.
+ * @param {object} subtree the subtree data to import. The subtree will
+ * be remodelled according to the requirements of the model.
+ * @param {object} data the modelled data that we are updating.
+ * @param model {object} the model that dictates the structure of the data
+ */
+DataModel.update = function(path, subtree,  data, model) {
+    if (typeof path === "string") {
+        path = path.split('/');
+        if (path.length > 0 && !path[0])
+            path.shift();
+        return DataModel.update(path, subtree, data, model);
+    }
+    // March down the data and the model and find the node where
+    // the subtree is rooted
+    var node = data;
+    while (path.length > 0) {
+        var index = path.shift();
+        so_far += "." + index;
+        if (typeof model === "string")
+            throw "Bad update at " + so_far + " expected " + model;
+        if (typeof model.$array_of !== "undefined") {
+            if (typeof data !== "object")
+                throw "Bad update at " + so_far + " not an array";
+            data = data[index];
+            model = model.$array_of;
+        } else if (typeof model.$type !== "string") {
+            if (typeof data !== "object")
+                throw "Bad update at " + so_far + " not an object";
+            data = data[index];
+            model = model.$type;
+        }
+    }
 };
 
 /**
@@ -395,7 +456,7 @@ DataModel.help = function(model, index) {
  * @param filename the file name
  * @param {object} model the model for this file
  */
-DataModel.File = function(index, filename, model) {
+function File(index, filename, model) {
     this.data = filename;
     if (typeof model !== "undefined") {
         // Got a model to check against. This should always be the case
@@ -435,7 +496,9 @@ DataModel.File = function(index, filename, model) {
     }
 };
 
-DataModel.File.Model = {
+DataModel.File = File;
+
+File.Model = {
     $type: DataModel.File,
     $doc: "Filename"
 };
@@ -444,7 +507,7 @@ DataModel.File.Model = {
  * Generate a simple string representation of this object suitable
  * for use in debugging and in serialisation
  */
-DataModel.File.prototype.toString = function() {
+File.prototype.toString = function() {
     return this.data;
 };
 
@@ -452,20 +515,21 @@ DataModel.File.prototype.toString = function() {
  * Promise to write a new value to the file
  * @param value new data to write to the file
  */
-DataModel.File.prototype.write = function(value) {
-    return writeFile(Utils.expandEnvVars(this.data), value, "utf8");
+File.prototype.write = function(value) {
+    return writeFilePromise(Utils.expandEnvVars(this.data), value, "utf8");
 };
 
 /**
  * Promise to read the file
  */
-DataModel.File.prototype.read = function() {
-    return readFile(Utils.expandEnvVars(this.data));
+File.prototype.read = function() {
+    return readFilePromise(Utils.expandEnvVars(this.data));
 };
 
-DataModel.File.prototype.getSerialisable = function() {
+File.prototype.getSerialisable = function() {
     return Q(this.data);
 };
+
 
 /**
  * Subclass of DataModel.File representing a datum that can either
@@ -483,6 +547,7 @@ function TextOrFile(index, data, model) {
     this.is_file = Fs.existsSync(Utils.expandEnvVars(data));
 };
 TextOrFile.prototype = new DataModel.File();
+DataModel.TextOrFile = TextOrFile;
 
 TextOrFile.Model = {
     $type: DataModel.TextOrFile,
@@ -513,7 +578,5 @@ TextOrFile.prototype.write = function(value) {
         return Q(true);
     }
 };
-
-DataModel.TextOrFile = TextOrFile;
 
 module.exports = DataModel;
