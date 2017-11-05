@@ -12,29 +12,22 @@ const MIN_DEG = 0.00005; // 5 metres in degrees at 55N
 
 /**
  * Location object, compatible with google.maps.LatLng. This function has
- * four possible constructor signatures:
+ * three possible constructor signatures:
  * 1. Location(lat, lng) where both lat and lng are numbers
  * 2. Location(object) where object has latitude and longitude fields
- * 3. Location(name, data, {DataModel} spec)
- * 4. Location() for a default Location 55N 0W
+ * 3. Location() for a default Location 55N 0W
  * @param p1 (1.) {number} latitude number, (2.) {object} to get
- * lat(itude) and long(itude) fields from (3.) {string} name (4.) undefined.
- * @param p2 (1.) {number} longitude, (2.) undefined, (3.) {object}
- ( (4.) undefined
+ * lat(itude) and long(itude) fields from (3.) undefined.
+ * @param p2 (1.) {number} longitude, (2.) undefined, (3.) undefined
  * @class
  */
-function Location(lat, lng,model) {
-    debugger;
+function Location(lat, lng) {
     "use strict";
-    if (typeof lng === "object") {
+    if (typeof lat === "undefined") {
         // Constructor (3.)
-        lat = lng.latitude;
-        lng = lng.longitude;
-    } else if (typeof lat === "undefined") {
-        // Constructoir (4.)
         lat = DEFAULT_LATITUDE;
         lng = DEFAULT_LONGITUDE;
-    } else if (typeof lng === "undefined") {
+    } else if (typeof lat === "object") {
         // Constructor (2.)
         if (typeof lat.lng !== "undefined") {
             lng = lat.lng;

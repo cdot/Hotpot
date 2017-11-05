@@ -84,7 +84,7 @@ ScheduledEvent.prototype.start = function() {
  * @param {object} proto see Calendar.Model
  * @class
  */
-function Calendar(name, proto) {
+function Calendar(proto, name) {
     "use strict";
     Utils.extend(this, proto);
     // @property {String} name name of the calendar

@@ -22,7 +22,7 @@ const TAG = "Historian";
  * calling `record()`
  * @class
  */
-function Historian(name, proto) {
+function Historian(proto, name) {
     "use strict";
 
     Utils.extend(this, proto);

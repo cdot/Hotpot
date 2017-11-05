@@ -19,7 +19,7 @@ Utils = require("../common/Utils.js");
  * @protected
  * @class
  */
-function Rule(name, config) {
+function Rule(config, name) {
     "use strict";
 
     Utils.extend(this, config);

@@ -43,7 +43,7 @@ const REQUEST_BOOST = 2;
  * @param {string} name name of the pin e.g. HW
  * @param {object} proto see Pin.Model
  */
-function Pin(name, proto) {
+function Pin(proto, name) {
     "use strict";
 
     Utils.extend(this, proto);

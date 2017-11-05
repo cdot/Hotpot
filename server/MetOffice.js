@@ -48,7 +48,7 @@ const IS_NUMBER = [
  * @param {object} proto prototype
  * @class
  */
-var MetOffice = function(id, proto) {
+var MetOffice = function(proto) {
     "use strict";
     Utils.extend(this, proto);
     this.url = Url.parse("http://datapoint.metoffice.gov.uk");

@@ -23,7 +23,7 @@ const TAG = "Controller";
  * @param {object} proto prototype object
  * @class
  */
-function Controller(id, proto) {
+function Controller(proto) {
     Utils.extend(this, proto);
 }
 Util.inherits(Controller, Events);
@@ -504,7 +504,7 @@ Controller.prototype.dispatch = function(path, data) {
     case "config": // Return the config
         // /config
         return DataModel.getSerialisable(this, Controller.Model);
-    case "reconfig": // Update the config.
+    case "update": // Update the config.
         DataModel.update(this, data, Controller.Model);
         self.emit("config_change");
         break;

@@ -25,7 +25,7 @@ const TAG = "Server";
  * @param proto see Server.Model
  * @class
  */
-function Server(id, proto) {
+function Server(proto) {
     "use strict";
 
     Utils.extend(this, proto);

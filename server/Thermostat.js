@@ -25,7 +25,7 @@ var ds18x20;
  * @param proto configuration for the thermostat - see
  * Thermostat.Model
  */
-function Thermostat(name, proto) {
+function Thermostat(proto, name) {
     "use strict";
 
     if (!ds18x20) {

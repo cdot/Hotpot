@@ -8,16 +8,17 @@ const DataModel = require('../DataModel');
 const Utils = require('../Utils');
 
 const mainfile = "/tmp/blah";
-const subfile = "/tmp/blahblah";
 
+// Test with built-in types
 var simpleModel = {
-    pugh: { $type: "string", $doc: "hugh" },
-    barney: { $type: "number", $min: 0, $max: 100 },
+    pugh: { $type: String, $doc: "hugh" },
+    barney: { $type: Number },
     cuthbert: {
         $doc: "mcgrew",
-        dibble: { $type: "string", $doc: "grubb" },
-        bob: { $type: "string", $doc: "builder", $optional: true }
-    }
+        dibble: { $type: String, $doc: "grubb" },
+        bob: { $type: String, $doc: "builder", $optional: true }
+    },
+    array: { $array_of: String }
 };
 
 var simpleProto = {
@@ -25,103 +26,174 @@ var simpleProto = {
     barney: 99,
     cuthbert: {
         dibble: "grubb"
-    }
+    },
+    array: [ "a", "b", "c" ]
 };
 
-var illegalProto1 = {
-    pugh: "hugh",
-    barney: 101,
-    cuthbert: {
-        dibble: "grubb"
-    }
-};
-
-var illegalProto2 = {
+var simpleProtoBad = {
     pugh: "hugh",
     barney: 7,
     cuthbert: {
         // dibble is missing
-    }
+    } // array is missing
 };
 
-var complexModel = {
-    fnaar: { $type: DataModel.TextOrFile, $doc: "fnarr" },
-    phoar: { $type: DataModel.TextOrFile, $doc: "cor" },
+// A model containing builtIns objects
+var builtInsModel = {
+    fnaar: { $type: DataModel.File, $doc: "fnarr" },
+    phoar: { $type: DataModel.TextOrFile, $doc: "cor", $optional: true }
 };
 
-var complexProto = {
-    fnaar: mainfile,
+var builtInsProto = {
+    fnaar: "/",
     phoar: "flab a dab\nsnooty\nwhoops a daisy\nclump\nratfink"
 };
 
-var complexSerial = {
-    windy: "miller"
+var builtInsProtoBad = {
+    // fnaar is missing
+    phoar: builtInsProto.phoar
 };
 
-var complexSerialUpdated = {
-    windy: "pops"
+var builtInsDump = {
+    fnaar: {
+        data: builtInsProto.fnaar
+    },
+    phoar: {
+        data: builtInsProto.phoar,
+        is_file: false
+    }
 };
 
 var helpModel = {
     simple: simpleModel,
-    complex: complexModel
+    builtIns: builtInsModel
 };
 
 var helpModelString = [
     "{",
     " simple: {",
-    "  pugh: {string} hugh",
-    "  barney: {number}",
+    "  pugh: <String> hugh",
+    "  barney: <Number>",
     "  cuthbert: mcgrew {",
-    "   dibble: {string} grubb",
-    "   bob: (optional) {string} builder",
+    "   dibble: <String> grubb",
+    "   bob: (optional) <String> builder",
     "  }",
+    "  array: [",
+    "   <String>",
+    "  ]",
     " }",
-    " complex: {",
-    "  fnaar: {TextOrFile} fnarr",
-    "  phoar: {TextOrFile} cor",
+    " builtIns: {",
+    "  fnaar: <File> fnarr",
+    "  phoar: (optional) <TextOrFile> cor",
     " }",
     "}" ].join("\n");
 
-var simpleArrayModel = {
-    array: { $array_of: "string" }
+function Toad(data, index, model) {
+    this.update(data);
 };
 
-var simpleArrayProto = {
-    array: [ "a", "b", "c" ]
+Toad.Model = {
+    data: {
+        x: { $type: Number },
+        y: { $type: Boolean }
+    }
 };
+
+Toad.prototype.getSerialisable = function(data, model) {
+    return Q("Smeg");
+};
+
+Toad.prototype.update = function(data) {
+    assert.equal(typeof data, "object");
+    assert.equal(typeof data.data, "object");
+    assert.equal(typeof data.data.x, "number");
+    assert.equal(typeof data.data.y, "boolean");
+    this.data = data.data;
+};
+
+Toad.prototype.croak = function(x, y) {
+    assert.equal(x, this.data.x);
+    assert.equal(y, this.data.y);
+};
+
+var toadyModel = {
+    a: { $type: String },
+    b: { $type: Toad }
+};
+
+var toadyProto = {
+    a: "A",
+    b: { data: { x: 1, y: true } }
+};
+
+var toadySerial = {
+    a: "A",
+    b: "Smeg"
+}
 
 describe('DataModel', function() {
+    it("remodel-simple", function() {
+        var remodeled = DataModel.remodel('', simpleProto, simpleModel);
+        assert.equal(Utils.dump(remodeled), Utils.dump(simpleProto));
+    });
 
-    it("Should simple-serialise", function() {
+    it("remodel-bad-simple", function() {
+        try {
+            DataModel.remodel('', simpleProtoBad, simpleModel);
+        } catch(s) {
+            assert.equal(s, "remodel: not optional and no default at cuthbert.dibble");
+            return;
+        }
+        assert(false, "Failed");
+    });
+
+    it("remodel-builtIns", function() {
+        var remodeled = DataModel.remodel("", builtInsProto, builtInsModel);
+        //Utils.LOG(remodeled, builtInsDump);
+        //assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
+        assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
+    });
+
+    it("remodel-bad-builtIns", function() {
+        try {
+            DataModel.remodel("", builtInsProtoBad, builtInsModel);
+        } catch(s) {
+            assert.equal(s, "remodel: not optional and no default at fnaar");
+            return;
+        }
+        assert(false, "Failed");
+    });
+
+    it("remodel-toady", function() {
+        var remodeled = DataModel.remodel("", toadyProto, toadyModel);
+        assert.equal(Utils.dump(remodeled), Utils.dump(toadyProto));
+        remodeled.b.croak(1, true);
+    });
+
+    it("serialise-simple", function() {
         return DataModel.getSerialisable(simpleProto, simpleModel)
             .then(function(s) {
-                assert.deepEqual(s, simpleProto);
+                assert.equal(Utils.dump(s), Utils.dump(simpleProto));
             });
     });
 
-    it("Should illegal1-serialise", function() {
-        try {
-            DataModel.remodel('', illegalProto1, simpleModel);
-        } catch(s) {
-            assert.equal(s, "Bad data: .barney max 100 for barney but got 101");
-            return;
-        }
-        assert(false, "Failed");
+    it("serialise-builtIns", function() {
+        var data = DataModel.remodel("", builtInsProto, builtInsModel);
+        return DataModel.getSerialisable(data, builtInsModel)
+            .then(function(s) {
+                assert.equal(Utils.dump(s), Utils.dump(builtInsProto));
+            });
     });
 
-    it("Should illegal2-serialise", function() {
-        try {
-            DataModel.remodel("", illegalProto2, simpleModel)
-        } catch(s) {
-            assert.equal(
-                s, "Bad data: .cuthbert.dibble not optional and no default");
-            return;
-        }
-        assert(false, "Failed");
+    it("serialise-toady", function() {
+        var data = DataModel.remodel("", toadyProto, toadyModel);
+        return DataModel.getSerialisable(data, toadyModel)
+            .then(function(s) {
+                assert.equal(Utils.dump(s), Utils.dump(toadySerial));
+            });
     });
 
-    it("Should simple save-load", function() {
+    it("saveload-simple", function() {
         return DataModel.saveData(simpleProto, simpleModel, mainfile)
             .then(function() {
                 return DataModel.loadData(mainfile, simpleModel);
@@ -133,27 +205,44 @@ describe('DataModel', function() {
                 return Q(config);
             });
     });
-
-    it("Should complex-serialise", function() {
-        
-        var data = DataModel.remodel("", complexProto, complexModel);
-        return DataModel.getSerialisable(data, complexModel)
-            .then(function(s) {
-                assert.deepEqual(s, complexProto);
+    it("saveload-builtIns", function() {
+        return DataModel.saveData(builtInsProto, builtInsModel, mainfile)
+            .then(function() {
+                return DataModel.loadData(mainfile, builtInsModel);
+            })
+            .then(function(config) {
+                assert.equal(config._readfrom, mainfile);
+                delete config._readfrom;
+                assert.equal(Utils.dump(config), Utils.dump(builtInsDump));
+                return Q(config);
             });
     });
 
-    it("Should array-serialise", function() {
-        
-        var data = DataModel.remodel("", simpleArrayProto, simpleArrayModel);
-        return DataModel.getSerialisable(data, simpleArrayModel)
-            .then(function(s) {
-                assert.deepEqual(s, simpleArrayProto);
-            });
+    it("update-simple", function() {
+        var remodeled = DataModel.remodel('', simpleProto, simpleModel);
+        DataModel.update("/cuthbert/bob", "digger", remodeled, simpleModel);
+        assert.equal("digger", remodeled.cuthbert.bob);
+        DataModel.update("/array/1", "d", remodeled, simpleModel);
+        assert.equal(remodeled.array[1], "d");
     });
-
-    it("Should help", function() {
+    
+    it("update-toady", function() {
+        var remodeled = DataModel.remodel('', toadyProto, toadyModel);
+        DataModel.update("/b", {data:{x:99,y:false}}, remodeled, toadyModel);
+        assert.equal(Utils.dump(remodeled), Utils.dump(
+            {  "a": "A",
+               "b": {
+                   "data": {
+                       "x": 99,
+                       "y": false
+                   }
+               }
+            }));
+        remodeled.b.croak(99, false);
+    });
+    
+    it("help", function() {
         assert.equal(DataModel.help(helpModel), helpModelString);
-    })
+    });
 });
 

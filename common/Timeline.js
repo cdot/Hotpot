@@ -13,7 +13,7 @@
  * (min + max) / 2
  * @param proto see Timeline.Model
  */
-function Timeline(id, proto) {
+function Timeline(proto) {
     Utils.extend(this, proto);
     if (this.max <= this.min)
         throw "Value range inside out";

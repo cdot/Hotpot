@@ -53,6 +53,8 @@ Utils.dump = function(data) {
                 // Circular reference found, discard key
                 return "circular";
             }
+            if (value.prototype && value.prototype.constructor)
+                value = "<" + value.prototype.constructor.name + ">" + value;
             // Store value in our collection
             cache.push(value);
         } else if (typeof value === "function") {
@@ -77,6 +79,10 @@ Utils.joinArgs = function(args, start) {
         }
     }
     return mess;
+};
+
+Utils.report = function() {
+    return Utils.joinArgs(arguments);
 };
 
 /**

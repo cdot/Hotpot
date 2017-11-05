@@ -59,7 +59,7 @@ HOTPOT_DEBUG = undefined;
         controller: Controller.Model
     })
 
-    .then(function(cfg) {
+        .then(function(cfg) {
         if (cliopt.confhelp) {
             Utils.LOG(TAG, " ", DataModel.help(Controller.Model));
             eval("process.exit(1)");
