@@ -35,27 +35,27 @@ function Historian(proto, name) {
 module.exports = Historian;
 
 Historian.Model = {
-    $type: Historian,
+    $class: Historian,
     file: {
         $doc: "Full path to the log file",
-        $type: DataModel.File,
+        $class: DataModel.File,
         $mode: "w"
     },
     unordered: {
         $doc: "Set if sample events may be added out of order",
         $optional: true,
-        $type: "boolean"
+        $class: "boolean"
     },
     interval: {
         $doc: "Sample frequency in ms, required if `start()` is called",
         $optional: true,
-        $type: "number"
+        $class: "number"
     },
     sample: {
         // Function returning a sample. Called every `interval` when
         // `start()` is called. Set in code, cannot be set in the config.
         $optional: true,
-        $type: "function"
+        $class: "function"
     }
 };
 

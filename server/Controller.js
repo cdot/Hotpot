@@ -30,7 +30,7 @@ Util.inherits(Controller, Events);
 module.exports = Controller;
 
 Controller.Model = {
-    $type: Controller,
+    $class: Controller,
     thermostat: {
         $doc: "Set of Thermostats",
         $array_of: Thermostat.Model
@@ -41,12 +41,12 @@ Controller.Model = {
     },
     valve_return: {
         $doc: "Time to wait for the multiposition valve to return to the discharged state, in ms",
-        $type: "number",
+        $class: "number",
         $default: 8000
     },
     rule_interval: {
         $doc: "Frequency at which rules are re-evaluated, in ms",
-        $type: "number",
+        $class: "number",
         $default: 5000
     },
     rule: {
@@ -472,6 +472,33 @@ Controller.prototype.removeRequests = function(pin, source) {
         Utils.ERROR(TAG, "Cannot addRequest; No such pin '" + pin + "'");
 };
 
+Controller.prototype.followPath = function(path, fn) {
+    var thing = this;
+    var model = Controller.Model;
+    var parent;
+    var key;
+    
+    var i = 0;
+    while (i < path.length) {
+        parent = thing;
+        key = path[i];
+        thing = thing[key];
+        model = model[key];
+        i++;
+        if (typeof model.$array_of !== "undefined") {
+            if (i !== path.length) {
+                if (typeof thing[path[i]] === "undefined")
+                    throw Utils.report("Bad index ", path[i], " in ", path);
+                parent = thing;
+                key = path[i++];
+                thing = thing[key];
+            }
+            model = model.$array_of;
+        }
+    }
+    return fn(thing, model, parent, key);
+};
+
 /**
  * Command handler for ajax commands, suitable for calling by a Server.
  * @params {array} path the url path components
@@ -501,12 +528,23 @@ Controller.prototype.dispatch = function(path, data) {
         if (typeof path[1] === "undefined")
             return self.getSetLogs(self[path[0]], data.since);
         return self[path[0]][path[1]].getSerialisableLog(data.since);
-    case "config": // Return the config
-        // /config
-        return DataModel.getSerialisable(this, Controller.Model);
-    case "update": // Update the config.
-        DataModel.update(this, data, Controller.Model);
-        self.emit("config_change");
+    case "getconfig":
+        // /getconfig/path/to/config/node
+        return this.followPath(path, function(data, model) {
+            return DataModel.getSerialisable(data, model);
+        });
+    case "setconfig":
+        // /setconfig/path/to/config/node, data is new setting
+        this.followPath(path, function(item, model, parent, key) {
+            if (typeof parent === "undefined" ||
+                typeof key === "undefined" ||
+                typeof item === "undefined")
+                throw Utils.report("Cannot update ", path,
+                                   " insufficient context");
+            parent[key] = DataModel.remodel(key, data.value, model, path); 
+            //Utils.TRACE(TAG, "Set ", path.join('.'), " = ", parent[key]);
+            self.emit("config_change");
+        });
         break;
     case "request":
         // Push a request onto a pin (or all pins). Requests may come
@@ -519,7 +557,7 @@ Controller.prototype.dispatch = function(path, data) {
                         parseInt(data.state), until);
         self.pollRules();
         break;
-    case "set":
+    case "settime":
         var tim = data.value;
         if (path[0] === "time") {
             if (!tim || tim === "")

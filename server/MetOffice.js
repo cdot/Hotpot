@@ -57,9 +57,9 @@ var MetOffice = function(proto) {
 };
 
 MetOffice.Model = {
-    $type: MetOffice,
+    $class: MetOffice,
     api_key: {
-        $type: "string",
+        $class: "string",
         $doc: "API key for requests to the Met Office website"
     },
     history: Utils.extend({ $optional: true }, Historian.Model)

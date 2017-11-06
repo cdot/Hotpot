@@ -62,11 +62,11 @@ Server.prototype.setDispatch = function(dispatch) {
 };
 
 Server.Model = {
-    $type: Server,
+    $class: Server,
     $doc: "HTTP(S) server",
     port: {
         $doc: "Port to run the server on",
-        $type: "number",
+        $class: "number",
         $min: 0,
         $max: 65536
     },
@@ -94,15 +94,15 @@ Server.Model = {
         $optional: true,
         user: {
             $doc: "Username",
-            $type: "string"
+            $class: "string"
         },
         pass: {
             $doc: "Password",
-            $type: "string"
+            $class: "string"
         },
         realm: {
             $doc: "Authentication realm",
-            $type: "string"
+            $class: "string"
         }
     }
 };
@@ -119,7 +119,7 @@ Server.prototype.start = function() {
                 Utils.TRACE(TAG, "Authentication failed ", request.url);
                 response.statusCode = 401;
                 response.setHeader('WWW-Authenticate', 'Basic realm="'
-                                   + this.auth.realm + '"');
+                                   + self.auth.realm + '"');
                 response.end('Access denied');
                 return;
             }

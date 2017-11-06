@@ -12,6 +12,58 @@ var Utils = {
 
 module.exports = Utils;
 
+const TOSTRING_TYPES = [
+    "Boolean",
+    "Number",
+    "Date",
+    "String",
+    "RegExp"
+];
+
+const STANDARD_TYPES = [
+    "Function",
+    "Symbol",
+    "Error",
+    "EvalError",
+    "InternalError",
+    "RangeError",
+    "ReferenceError",
+    "SyntaxError",
+    "TypeError",
+    "URIError",
+    "Math",
+    "Array",
+    "Int8Array",
+    "Uint8Array",
+    "Uint8ClampedArray",
+    "Int16Array",
+    "Uint16Array",
+    "Int32Array",
+    "Uint32Array",
+    "Float32Array",
+    "Float64Array",
+    "Map",
+    "Set",
+    "WeakMap",
+    "WeakSet",
+    "ArrayBuffer",
+    "SharedArrayBuffer ",
+    "Atomics ",
+    "DataView",
+    "JSON",
+    "Promise",
+    "Generator",
+    "GeneratorFunction",
+    "AsyncFunction",
+    "Reflect",
+    "Proxy",
+    "Intl",
+    "Intl.Collator",
+    "Intl.DateTimeFormat",
+    "Intl.NumberFormat",
+    "Timeout"
+];
+
 /**
  * Expand environment variables in the data string
  * @param {String} data string containing env var references
@@ -44,24 +96,57 @@ Utils.extend = function() {
  * @param {object} data thing to dump
  * @return {string} dump of data
  */
-Utils.dump = function(data) {
+Utils.dump = function(data, cache) {
     "use strict";
-    var cache = [];
-    return JSON.stringify(data, function(key, value) {
-        if (typeof value === "object" && value !== null) {
-            if (cache.indexOf(value) !== -1) {
-                // Circular reference found, discard key
-                return "circular";
-            }
-            if (value.prototype && value.prototype.constructor)
-                value = "<" + value.prototype.constructor.name + ">" + value;
-            // Store value in our collection
-            cache.push(value);
-        } else if (typeof value === "function") {
-            value = value.name;
+    function indent(s) {
+        return " " + s.replace(/\n/g, "\n ");
+    }
+    if (typeof cache == "undefined")
+        cache = [];
+    
+    if (cache.indexOf(data) >= 0)
+        return "LOOP";
+    
+    if (typeof data === "function")
+        return "<" + data.name + ">";
+
+    if (typeof data === "string")
+        return '"' + data + '"';
+
+    if (typeof data !== "object" || data === null)
+        return data;
+    
+    var s = "";
+    var ob = "{";
+    var cb = "}";
+
+    if (typeof data.constructor !== "undefined") {
+        if (data.constructor.name === "Array") {
+            ob = "[";
+            cb = "]";
+        } else if (data.constructor.name === "String") {
+            return '"' + data + '"';
+        } else if (TOSTRING_TYPES.indexOf(data.constructor.name) >= 0) {
+            // Use toString
+            return data;
+        } else if (STANDARD_TYPES.indexOf(data.constructor.name) >= 0) {
+            // Use <typed>toString
+            return "<" + data.constructor.name + ">" + data;
+        } else if (data.constructor.name !== "Object") {
+            s += "<" + data.constructor.name + ">";
         }
-        return value;
-    }, 2);
+    }
+
+    cache.push(data);
+    s += ob;
+    var values = [];
+    for (var i in data) {
+        var val = Utils.dump(data[i], cache);
+        if (ob === "{")
+            val = i + ": " + val;
+        values.push(indent(val))
+    }
+    return s + "\n" + values.join(",\n") + "\n" + cb;
 };
 
 /**

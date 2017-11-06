@@ -77,9 +77,9 @@ function Pin(proto, name) {
 }
 
 Pin.Model = {
-    $type: Pin,
+    $class: Pin,
     gpio: {
-        $type: "number",
+        $class: "number",
         $doc: "the number of the gpio pin"
     },
     history: Utils.extend({ $optional: true }, Historian.Model)

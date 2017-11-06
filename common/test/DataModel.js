@@ -11,12 +11,12 @@ const mainfile = "/tmp/blah";
 
 // Test with built-in types
 var simpleModel = {
-    pugh: { $type: String, $doc: "hugh" },
-    barney: { $type: Number },
+    pugh: { $class: String, $doc: "hugh" },
+    barney: { $class: Number },
     cuthbert: {
         $doc: "mcgrew",
-        dibble: { $type: String, $doc: "grubb" },
-        bob: { $type: String, $doc: "builder", $optional: true }
+        dibble: { $class: String, $doc: "grubb" },
+        bob: { $class: String, $doc: "builder", $optional: true }
     },
     array: { $array_of: String }
 };
@@ -40,8 +40,8 @@ var simpleProtoBad = {
 
 // A model containing builtIns objects
 var builtInsModel = {
-    fnaar: { $type: DataModel.File, $doc: "fnarr" },
-    phoar: { $type: DataModel.TextOrFile, $doc: "cor", $optional: true }
+    fnaar: { $class: DataModel.File, $doc: "fnarr" },
+    phoar: { $class: DataModel.TextOrFile, $doc: "cor", $optional: true }
 };
 
 var builtInsProto = {
@@ -55,13 +55,8 @@ var builtInsProtoBad = {
 };
 
 var builtInsDump = {
-    fnaar: {
-        data: builtInsProto.fnaar
-    },
-    phoar: {
-        data: builtInsProto.phoar,
-        is_file: false
-    }
+    fnaar: new DataModel.File(builtInsProto.fnaar),
+    phoar: new DataModel.TextOrFile(builtInsProto.phoar)
 };
 
 var helpModel = {
@@ -89,26 +84,19 @@ var helpModelString = [
     "}" ].join("\n");
 
 function Toad(data, index, model) {
-    this.update(data);
-};
+    Utils.extend(this, data);
+}
 
 Toad.Model = {
+    $class: Toad,
     data: {
-        x: { $type: Number },
-        y: { $type: Boolean }
+        x: { $class: Number },
+        y: { $class: Boolean }
     }
 };
 
 Toad.prototype.getSerialisable = function(data, model) {
     return Q("Smeg");
-};
-
-Toad.prototype.update = function(data) {
-    assert.equal(typeof data, "object");
-    assert.equal(typeof data.data, "object");
-    assert.equal(typeof data.data.x, "number");
-    assert.equal(typeof data.data.y, "boolean");
-    this.data = data.data;
 };
 
 Toad.prototype.croak = function(x, y) {
@@ -117,19 +105,42 @@ Toad.prototype.croak = function(x, y) {
 };
 
 var toadyModel = {
-    a: { $type: String },
-    b: { $type: Toad }
+    a: { $class: String },
+    b: Toad.Model,
+    c: { $array_of: Toad.Model }
 };
 
 var toadyProto = {
     a: "A",
-    b: { data: { x: 1, y: true } }
+    b: { data: { x: 1, y: true } },
+    c: [{ data: { x: 2, y: true } },{ data: { x: 3, y: true } }]
+};
+
+var toadyDump = {
+    a: "A",
+    b: new Toad({ data: { x: 1, y: true } }),
+    c: [new Toad({ data: { x: 2, y: true } }),
+        new Toad({ data: { x: 3, y: true } })]
 };
 
 var toadySerial = {
     a: "A",
-    b: "Smeg"
+    b: "Smeg",
+    c: [ "Smeg", "Smeg" ]
 }
+
+function Amphibian(data, index, model) {
+    Utils.extend(this, data);
+}
+
+Amphibian.Model = {
+    $class: Amphibian,
+    toad: { $array_of: Toad.Model }
+};
+
+amphibianProto = {
+    toad: [{ data: { x: 4, y: false } }]
+};
 
 describe('DataModel', function() {
     it("remodel-simple", function() {
@@ -166,8 +177,17 @@ describe('DataModel', function() {
 
     it("remodel-toady", function() {
         var remodeled = DataModel.remodel("", toadyProto, toadyModel);
-        assert.equal(Utils.dump(remodeled), Utils.dump(toadyProto));
+        assert.equal(Utils.dump(remodeled), Utils.dump(toadyDump));
         remodeled.b.croak(1, true);
+        remodeled.c[0].croak(2, true);
+        remodeled.c[1].croak(3, true);
+    });
+
+    it("remodel-amphibian", function() {
+        var remodeled = DataModel.remodel("", amphibianProto, Amphibian.Model);
+        assert.equal(remodeled.constructor.name, "Amphibian");
+        assert.equal(remodeled.toad.constructor.name, "Array");
+        assert.equal(remodeled.toad[0].constructor.name, "Toad");
     });
 
     it("serialise-simple", function() {
@@ -216,29 +236,6 @@ describe('DataModel', function() {
                 assert.equal(Utils.dump(config), Utils.dump(builtInsDump));
                 return Q(config);
             });
-    });
-
-    it("update-simple", function() {
-        var remodeled = DataModel.remodel('', simpleProto, simpleModel);
-        DataModel.update("/cuthbert/bob", "digger", remodeled, simpleModel);
-        assert.equal("digger", remodeled.cuthbert.bob);
-        DataModel.update("/array/1", "d", remodeled, simpleModel);
-        assert.equal(remodeled.array[1], "d");
-    });
-    
-    it("update-toady", function() {
-        var remodeled = DataModel.remodel('', toadyProto, toadyModel);
-        DataModel.update("/b", {data:{x:99,y:false}}, remodeled, toadyModel);
-        assert.equal(Utils.dump(remodeled), Utils.dump(
-            {  "a": "A",
-               "b": {
-                   "data": {
-                       "x": 99,
-                       "y": false
-                   }
-               }
-            }));
-        remodeled.b.croak(99, false);
     });
     
     it("help", function() {

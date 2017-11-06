@@ -155,7 +155,7 @@ const Timeline = require("common/Timeline.js");
         var $canvas = $(this);
         var DAY_IN_MS = 24 * 60 * 60 * 1000;
         var timeline = new Timeline({
-            period: DAY_IN_MS, min: 5, max: 25
+            period: DAY_IN_MS, min: 0, max: 25
         });
         $canvas.TimelineEditor(timeline);
         $canvas.on("change", function() {
@@ -227,11 +227,15 @@ const Timeline = require("common/Timeline.js");
 
     function openTimeline(e) {
         var service = e.data;
-        $("#"+service+"-timeline").css("display", "block");
         var te = $("#"+service+"-timeline-canvas").data("timeline");
-        te.changed = false;
-        te.render();
         $("#open-"+service+"-timeline").css("display", "none");
+        $.getJSON("/ajax/getconfig/thermostat/"+service+
+                  "/timeline", function(tl) {
+                      $("#"+service+"-timeline").css("display", "block");
+                      te.timeline.points = tl.points;
+                      te.changed = false;
+                      te.render();
+                  });
     }
 
     function closeTimeline(e) {
@@ -244,6 +248,12 @@ const Timeline = require("common/Timeline.js");
         if (te.changed) {
             var timeline = te.timeline;
             console.log("Send timeline update to server");
+            $.post("/ajax/setconfig/thermostat/" + service +
+                   "/timeline",
+                   JSON.stringify({ value: timeline }),
+                   function(/*raw*/) {
+                       $(document).trigger("poll");
+                   });
         }
     }
     
@@ -262,9 +272,9 @@ const Timeline = require("common/Timeline.js");
                         requestState(e.data.service, states[e.data.fn]);
                     });
                 $("#"+service+"-timeline").css("display", "none");
-                $("#open-"+service+"-timeline").click(service, openTimeline);
-                $("#close-"+service+"-timeline").click(service, closeTimeline);
             }
+            $("#open-"+service+"-timeline").click(service, openTimeline);
+            $("#close-"+service+"-timeline").click(service, closeTimeline);
         }
         $(".timeline_canvas").each(initialiseTimeline);
         

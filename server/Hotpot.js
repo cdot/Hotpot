@@ -24,6 +24,11 @@ const TAG = "Hotpot";
 
 HOTPOT_DEBUG = undefined;
 
+const MODEL = {
+    server: Server.Model,
+    controller: Controller.Model
+};
+
 (function() {
     var cliopt = getopt.create([
         [ "h", "help", "Show this help" ],
@@ -54,10 +59,7 @@ HOTPOT_DEBUG = undefined;
 
     var config, controller, server;
 
-    DataModel.loadData(cliopt.config, {
-        server: Server.Model,
-        controller: Controller.Model
-    })
+    DataModel.loadData(cliopt.config, MODEL)
 
         .then(function(cfg) {
         if (cliopt.confhelp) {
@@ -92,7 +94,7 @@ HOTPOT_DEBUG = undefined;
         controller.on(
             "config_change",
             function() {
-                DataModel.saveData(config, cliopt.config)
+                DataModel.saveData(config, MODEL, cliopt.config)
                 .done(function() {
                     Utils.TRACE(TAG, cliopt.config, " updated");
                 });

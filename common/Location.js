@@ -44,14 +44,14 @@ function Location(lat, lng) {
 }
 
 Location.Model = {
-    $type: Location,
+    $class: Location,
     latitude: {
         $doc: "Decimal latitude",
-        $type: "number"
+        $class: "number"
     },
     longitude: {
         $doc: "Decimal longitude",
-        $type: "number"
+        $class: "number"
     }
 };
 

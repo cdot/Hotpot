@@ -15,6 +15,7 @@
  */
 function Timeline(proto) {
     Utils.extend(this, proto);
+
     if (this.max <= this.min)
         throw "Value range inside out";
     if (this.period <= 0)
@@ -29,12 +30,12 @@ function Timeline(proto) {
     }
 
     // Add missing points to extremes
-    if (this.points.length === 0) {
+    if (this.points.length == 0) {
         this.points.push({time: 0, value: (this.min + this.max) / 2});
         this.points.push({time: this.period,
                           value: (this.min + this.max) / 2});
     }
-    if (this.points[0].time !== 0)
+    if (this.points[0].time != 0)
         this.points.unshift({time: 0, value: this.points[0].value});
     
     if (this.points[this.points.length - 1].time < this.period)
@@ -46,20 +47,20 @@ function Timeline(proto) {
 module.exports = Timeline;
 
 Timeline.Model = {
-    $type: Timeline,
+    $class: Timeline,
     min: {
         $doc: "minimum value",
-        $type: "number",
+        $class: Number,
         $default: 0
     },
     max: {
         $doc: "maximum value",
-        $type: "number",
+        $class: Number,
         $default: 30
     },
     period: {
         $doc: "period of timeline in ms",
-        $type: "number",
+        $class: Number,
         $default: 24 * 60 * 60 * 1000 // one day in ms
     },
     points: {
@@ -67,11 +68,11 @@ Timeline.Model = {
         $array_of: {
             $doc: "vertex on a timeline graph",
             time: {
-                $type: "number",
+                $class: Number,
                 $doc: "time"
             },
             value: {
-                $type: "number",
+                $class: Number,
                 $doc: "value at this time"
             }
         }

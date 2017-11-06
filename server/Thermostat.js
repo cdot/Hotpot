@@ -70,9 +70,9 @@ function Thermostat(proto, name) {
 }
 
 Thermostat.Model = {
-    $type: Thermostat,
+    $class: Thermostat,
     id: {
-        $type: "string",
+        $class: "string",
         $doc: "unique ID used to communicate with this thermostat"
     },
     timeline: Timeline.Model,

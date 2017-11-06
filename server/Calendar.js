@@ -132,43 +132,43 @@ Calendar.prototype.setRemove = function(remove) {
 };
 
 Calendar.Model = {
-    $type: Calendar,
+    $class: Calendar,
     id: {
         $doc: "calendar id, as used by Google",
-        $type: "string"
+        $class: "string"
     },
     secrets: {
         $doc: "secrets used by google OAuth",
         client_id:  {
             $doc: "see README.md",
-            $type: "string"
+            $class: "string"
         },
         client_secret:  {
             $doc: "see README.md",
-            $type: "string"
+            $class: "string"
         },
         redirect_uris: {
             $doc: "see README.md",
-            $array_of: { $type: "string" }
+            $array_of: { $class: "string" }
         }
     },
     auth_cache: {
         $doc: "File containing cached oauth authentication",
-        $type: DataModel.File,
+        $class: DataModel.File,
         $mode: "r"
     },
     require_prefix: {
         $doc: "set true if a 'hotpot:' prefix is required in the calendar",
-        $type: "boolean",
+        $class: "boolean",
         $optional: true
     },
     update_period: {
         $doc: "Delay between calendar reads, in hours",
-        $type: "number"
+        $class: "number"
     },
     cache_length: {
         $doc: "Period of calendar entries to cache, in hours",
-        $type: "number"
+        $class: "number"
     }
 };
 

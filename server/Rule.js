@@ -42,7 +42,7 @@ function Rule(config, name) {
 module.exports = Rule;
 
 Rule.Model = {
-    $type: Rule,
+    $class: Rule,
     test: Utils.extend({}, DataModel.TextOrFile.Model, {
         $doc: "Rule function (Text or File)",
         $mode: "r"
