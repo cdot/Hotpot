@@ -166,15 +166,14 @@ Historian.prototype.getSerialisableHistory = function(since) {
 /**
  * Start the history polling loop.
  * Records are written according to the interval set in the config.
- * Requires the `sample` and `interval` options to be given.
+ * Requires the `interval` option to be given.
+ * @param {function} sample sampling function (required)
  */
-Historian.prototype.start = function(quiet) {
+Historian.prototype.start = function(sample) {
     "use strict";
 
-    var sample = this.sample;
-
     if (typeof sample !== "function")
-        throw "Cannot start Historian; sample() not defined";
+        throw "Cannot start Historian; sample not a function";
 
     if (typeof this.interval === "undefined")
         throw "Cannot start Historian; interval not defined";
@@ -182,21 +181,18 @@ Historian.prototype.start = function(quiet) {
     var self = this;
     function repoll() {
         self.timeout = setTimeout(function() {
-            self.start(true);
+            self.start(sample);
         }, self.interval);
     }
 
     // Don't record if this sample has the same value as the last
-    if (typeof sample !== "number"
-        || sample === this.last_sample) {
+    var datum = sample();
+    if (typeof datum !== "number" || datum === this.last_sample) {
         repoll();
         return;
     }
 
-    if (!quiet)
-        Utils.TRACE(TAG, this.name, " started");
-
-    this.record(sample)
+    this.record(datum)
     .then(repoll);
 };
 

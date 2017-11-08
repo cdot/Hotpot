@@ -29,6 +29,11 @@ SOURCES := \
 	browser/js/edit_in_place.js \
 	browser/js/TimelineEditor.js
 
+FIND := find . \
+	-name node_modules -prune \
+	-o -name android -prune \
+	-o -name
+
 %.esl : %.js
 	eslint --no-ignore $^
 	touch $*.esl
@@ -41,11 +46,11 @@ doc: $(ALL_SOURCES)
 	jsdoc -c jsdoc_config.json -d=doc $(SOURCES)
 
 test:
-	find . -name test -type d -exec mocha \{\}/*.js \;
+	$(FIND) browser -prune -o -name test -type d -exec mocha \{\}/*.js \;
 
 # Clean up
 clean:
-	find . -name node_modules -prune -o -name '*~' -exec rm \{\} \;
-	find . -name node_modules -prune -o -name '*.min.js' -exec rm \{\} \;
-	find . -name node_modules -prune -o -name '*.esl' -exec rm \{\} \;
+	$(FIND) '*~' -exec rm \{\} \;
+	$(FIND) '*.min.js' -exec rm \{\} \;
+	$(FIND) '*.esl' -exec rm \{\} \;
 	rm -rf doc

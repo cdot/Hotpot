@@ -7,15 +7,15 @@ describe('Location', function() {
     describe('#Location()', function() {
         it('should handle numbers', function() {
             l1 = new Location(53, -2);
-            assert.equal(53, l1.lat);
-            assert.equal(-2, l1.lng);
+            assert.equal(53, l1.latitude);
+            assert.equal(-2, l1.longitude);
         });
         it('should handle another location', function() {
             l2 = new Location(l1);
-            assert.equal(53, l1.lat);
-            assert.equal(-2, l1.lng);
-            assert.equal(53, l2.lat);
-            assert.equal(-2, l2.lng);
+            assert.equal(53, l1.latitude);
+            assert.equal(-2, l1.longitude);
+            assert.equal(53, l2.latitude);
+            assert.equal(-2, l2.longitude);
         });
     });
     describe('#equals()', function() {
@@ -25,20 +25,20 @@ describe('Location', function() {
             assert(l2.equals(l1));
         });
         it('should handle almost the same location', function() {
-            l2 = new Location(l1.lat + 0.00004, l1.lng - 0.00004);
+            l2 = new Location(l1.latitude + 0.00004, l1.longitude - 0.00004);
             assert(l2.equals(l1));
-            l2 = new Location(l1.lat + 0.00006, l1.lng - 0.00006);
+            l2 = new Location(l1.latitude + 0.00006, l1.longitude - 0.00006);
             assert(!l2.equals(l1));
         });
     });
     describe('#haversine()', function() {
         l1 = new Location(53, -2);
         it('should handle almost the same location', function() {
-            l2 = new Location(l1.lat + 0.00004, l1.lng - 0.00004);
+            l2 = new Location(l1.latitude + 0.00004, l1.longitude - 0.00004);
             assert.equal(5, Math.round(l1.haversine(l2)));
         });
         it('should handle almost the same location 2', function() {
-            l2 = new Location(l1.lat + 0.00006, l1.lng - 0.00006);
+            l2 = new Location(l1.latitude + 0.00006, l1.longitude - 0.00006);
             assert.equal(8, Math.round(l1.haversine(l2)));
         });
         it('should handle a distant location', function() {
@@ -49,7 +49,7 @@ describe('Location', function() {
     describe('#toString()', function() {
         l1 = new Location(53, -2);
         it('should stringify cleanly', function() {
-            assert.equal("53,-2", l1.toString());
+            assert.equal("(53,-2)", l1.toString());
         });
     });
 });

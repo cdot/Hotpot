@@ -11,10 +11,10 @@ Q.longStackSupport = true;
 
 describe('Historian', function() {
     describe('unordered', function() {
-        var h = new Historian("test", {
+        var h = new Historian({
             unordered: true,
             file: "/tmp/unordered_historian.log"
-        });
+        }, "test1");
 
         try {
             Fs.unlinkSync(h.path());
@@ -57,24 +57,23 @@ describe('Historian', function() {
     describe('sampled', function() {
         var nsamples = 0;
 
-        var h = new Historian("test2", {
+        var h = new Historian({
             file: "/tmp/sampled_historian.log",
-            interval: 50,
-            sample: function() {
-                if (nsamples === 7) {
-                    h.stop();
-                    h.done();
-                }
-                return nsamples++;
-            }
-        });
+            interval: 50
+        }, "test2");
 
         try {
             Fs.unlinkSync(h.path());
         } catch (e) {
         }
 
-        h.start(false);
+        h.start(function() {
+            if (nsamples === 7) {
+                h.stop();
+                h.done();
+            }
+            return nsamples++;
+        });
 
         it('Supports polling', function() {
             return h.getSerialisableHistory()

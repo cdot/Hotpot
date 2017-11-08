@@ -100,7 +100,9 @@ Thermostat.prototype.initialise = function() {
                 self.pollTemperature();
                 // Start the historian
                 if (self.history)
-                    self.history.start();
+                    self.history.start(function() {
+                        return self.temperature;
+                    });
                 Utils.TRACE(TAG, "'", self.name, "' intialised");
                 resolve();
             }
