@@ -12,12 +12,12 @@
             },
             lock_t: true
         });
-        
+
         var g = $canvas.data("graph"); // get graph object
         var graph_width = 20 * 1000; // 1h in milliseconds
 
         var stop_after = Date.now() + 1.3 * graph_width;
-        
+
         var binary = new BinaryTrace({
             legend: "binary",
             colour: "yellow",
@@ -25,7 +25,7 @@
             max: { t: Date.now() + graph_width }
         });
         g.addTrace(binary);
-        
+
         var continuous = new Trace({
             legend: "continuous",
             colour: "orange",
@@ -33,7 +33,7 @@
             max: { t: Date.now() + graph_width, s: 1 }
         });
         g.addTrace(continuous);
-        
+
         var onoff = 1;
         var rad = 0;
         function cont_pulse() {
@@ -55,7 +55,7 @@
 
         bin_pulse();
         cont_pulse();
-        
+
         $canvas = $("#timeline_canvas");
         var DAY_IN_MS = 24 * 60 * 60 * 1000;
         var timeline = new Timeline({

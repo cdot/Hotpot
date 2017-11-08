@@ -20,7 +20,7 @@ function Timeline(proto) {
         throw "Value range inside out";
     if (this.period <= 0)
         throw "Bad period";
-    
+
     if (typeof this.points === "undefined")
         this.points = [];
 
@@ -37,7 +37,7 @@ function Timeline(proto) {
     }
     if (this.points[0].time != 0)
         this.points.unshift({time: 0, value: this.points[0].value});
-    
+
     if (this.points[this.points.length - 1].time < this.period)
         this.points.push(
             {time: this.period,
@@ -150,9 +150,10 @@ Timeline.prototype.nPoints = function() {
  */
 Timeline.prototype.getPoint = function(i) {
     if (i < 0 || i >= this.points.length)
-        throw "Out of range";
+        throw Utils.report("Timeline.getPoint(", i,") not in 0..",
+                           this.points.length);
     return this.points[i];
-    
+
 };
 
 /**
@@ -174,7 +175,46 @@ Timeline.prototype.setPoint = function(i, p) {
     if (i > 0 && p.time <= this.points[i - 1].time)
         throw "Bad time order";
     if (p.value < this.min || p.value > this.max)
-        throw "Out of range";
+        throw Utils.report("Timeline.setPoint ", i, ",", p,
+                           " out of range ", this);
     this.points[i].time = p.time;
     this.points[i].value = p.value;
+};
+
+/**
+ * Set a point, constraining the new location to be in range both in
+ * value and between the points either side of it.
+ * @param idx the index of the point to set
+ * @param tp a point object giving the (time,value) to set. Will be
+ * rewritten to the constrained point.
+ */
+Timeline.prototype.setPointConstrained = function(idx, tp) {
+    // Clip
+    if (tp.value < this.min)   tp.value = this.min;
+    if (tp.value > this.max)   tp.value = this.max;
+    if (tp.time < 0)           tp.time = 0;
+    if (tp.time > this.period) tp.time = this.period;
+
+    // Constrain first and last points
+    if (idx === 0)
+        tp.time = 0;
+    else {
+        var prevtime = this.points[idx - 1].time;
+        if (tp.time <= prevtime) tp.time = prevtime + 1;
+    }
+
+    if (idx === this.points.length - 1)
+        tp.time = this.period;
+    else {
+        var nexttime = this.points[idx + 1].time;
+        if (tp.time >= nexttime) tp.time = nexttime - 1;
+    }
+
+    var cp = this.points[idx];
+    if (tp.time == cp.time || tp.value == cp.value)
+        return false;
+
+    cp.time = tp.time;
+    cp.value = tp.value;
+    return true;
 };

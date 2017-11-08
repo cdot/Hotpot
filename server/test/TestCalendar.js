@@ -4,10 +4,17 @@
 const Getopt = require("node-getopt");
 const Q = require("q");
 
-const Utils = require("../common/Utils.js");
-const DataModel = require("../common/DataModel.js");
+const Utils = require("../../common/Utils.js");
+const DataModel = require("../../common/DataModel.js");
 
-const Calendar = require("./Calendar.js");
+const Controller = require("../Controller.js");
+const Calendar = require("../Calendar.js");
+Controller.Model.thermostat = { $skip: true };
+Controller.Model.pin = { $skip: true };
+const HOTPOT_MODEL = {
+    server: { $skip: true },
+    controller: Controller.Model
+};
 
 var getopt = new Getopt([
     [ "h", "help", "Show this help" ],
@@ -21,32 +28,27 @@ var getopt = new Getopt([
 var cliopt = getopt.options;
 
 if (typeof cliopt.config === "undefined")
-    cliopt.config = "./hotpot.cfg";
+    cliopt.config = "./simulated_hotpot.cfg";
 
 Q.longStackSupport = true;
 
-//Utils.setTRACE("all");
+Utils.setTRACE("all");
 
-function showCalendar(calendar, config) {
-    config.controller.calendar[calendar].id = "primary";
-    var cal = new Calendar(calendar, config.controller.calendar[calendar]);
+function showCalendar(cal) {
     cal
         .authorise()
         .then(function() {
             return cal.fillCache();
         })
         .then(function() {
-            console.log(Utils.dump(cal));
+            Utils.LOG(cal.schedule);
         })
         .catch(function(e) {
             console.error(e.stack);
         });
 }
 
-function listCalendars(calendar, config) {
-    var cfg = config.controller.calendar[calendar];
-
-    var cal = new Calendar(calendar, cfg);
+function listCalendars(cal) {
     cal.authorise()
         .then(function() {
             return cal.listCalendars();
@@ -61,15 +63,22 @@ function listCalendars(calendar, config) {
         });
 }
 
-DataModel.loadData(cliopt.config)
+DataModel.loadData(cliopt.config, HOTPOT_MODEL)
     .done(function(config) {
         if (!cliopt.calendar) {
             for (cliopt.calendar in config.controller.calendar)
                 break;
-            console.log("Using calendar '" + cliopt.calendar + "'");
         }
+        var cfg = config.controller.calendar[cliopt.calendar];
+
+        if (!cfg)
+            throw Utils.report("No calendar ", clipopt.calendar, " in config");
+        console.log("Using calendar '" + cliopt.calendar + "'");
+
+        var cal = new Calendar(cfg, cliopt.calendar);
+
         if (cliopt.list)
-            listCalendars(cliopt.calendar, config);
+            listCalendars(cal);
         else
-            showCalendar(cliopt.calendar, config);
+            showCalendar(cal);
     });

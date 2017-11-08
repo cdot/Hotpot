@@ -47,7 +47,7 @@ function Pin(proto, name) {
     "use strict";
 
     Utils.extend(this, proto);
-    
+
     var self = this;
 
     /**
@@ -62,7 +62,7 @@ function Pin(proto, name) {
      * @public
      */
     self.reason = "";
-    
+
     if (typeof HOTPOT_DEBUG !== "undefined")
         HOTPOT_DEBUG.mapPin(self.gpio, self.name);
 
@@ -79,7 +79,7 @@ function Pin(proto, name) {
 Pin.Model = {
     $class: Pin,
     gpio: {
-        $class: "number",
+        $class: Number,
         $doc: "the number of the gpio pin"
     },
     history: Utils.extend({ $optional: true }, Historian.Model)
@@ -318,7 +318,7 @@ Pin.prototype.purgeRequests = function(state, source) {
  * override requests for higher states.
  * @param {Pin.Request} request the request, see Pin.Request in the class
  * description
- */ 
+ */
 Pin.prototype.addRequest = function(request) {
     Utils.TRACE(TAG, this.name + " add request ", request);
     this.purgeRequests(undefined, request.source);
@@ -335,7 +335,7 @@ Pin.prototype.getActiveRequest = function() {
 
     var active_req;
     this.purgeRequests();
-    for (var i = 0; i < this.requests.length; i++) { 
+    for (var i = 0; i < this.requests.length; i++) {
         if (typeof active_req === "undefined") {
             active_req = this.requests[i];
             if (active_req.state === 0)

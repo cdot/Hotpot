@@ -15,7 +15,7 @@ var Vec = {
             res[ord] = p1[ord] - p2[ord];
         return res;
     },
-    
+
     add: function(p1, p2) {
         var res = {};
         for (var ord in p1)
@@ -29,25 +29,25 @@ var Vec = {
             res[ord] = v[ord] * d;
         return res;
     },
-    
+
     dot: function(a, b) {
         var res = 0;
         for (var ord in a)
             res += a[ord] * b[ord];
         return res;
     },
-    
+
     mag2: function(v) {
         var res = 0;
         for (var ord in v)
             res += v[ord] * v[ord];
         return res;
     },
-    
+
     mag: function(v) {
         return Math.sqrt(Vec.mag2(v));
     },
-    
+
     normalise: function(v, d) {
         var d = typeof d !== "undefined" ? d : Vec.mag(v);
         var res = {};

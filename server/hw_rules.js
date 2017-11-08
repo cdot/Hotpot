@@ -3,7 +3,7 @@ function (thermostats, pins) {
     var self = this;
     var thermostat = thermostats.HW;
     var pin = pins.HW;
-    
+
     return pin.getStatePromise()
     .then(function(state) {
         var upper_bound = thermostat.getTargetTemperature();

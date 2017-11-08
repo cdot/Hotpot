@@ -88,7 +88,7 @@ function update(data) {
                         resolve();
                 });
     });
-}    
+}
 
 function httpGET(url, nofollow) {
     "use strict";
@@ -264,13 +264,13 @@ function step3(second) {
             didnt_work(config.netgear_router.url + " had no IP address");
             reject();
         });
-    }, didnt_work)        
+    }, didnt_work)
     .finally(function() {
         httpGET(config.netgear_router.logout_url)
         .catch(function(e) {
             if (!/status: 401/.test(e))
                 Utils.TRACE("Problem logging out of netgear router ", e);
-        });       
+        });
     });
 }
 

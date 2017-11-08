@@ -10,6 +10,8 @@ const DEFAULT_LONGITUDE = 0;
 
 const MIN_DEG = 0.00005; // 5 metres in degrees at 55N
 
+const Utils = require('./Utils');
+
 /**
  * Location object, compatible with google.maps.LatLng. This function has
  * three possible constructor signatures:
@@ -39,19 +41,19 @@ function Location(lat, lng) {
             throw "Cannot initialise a Location from " + Utils.dump(lat);
         }
     } // else Constructor (1.)
-    this.lat = lat;
-    this.lng = lng;
+    this.latitude = lat;
+    this.longitude = lng;
 }
 
 Location.Model = {
     $class: Location,
     latitude: {
         $doc: "Decimal latitude",
-        $class: "number"
+        $class: Number
     },
     longitude: {
         $doc: "Decimal longitude",
-        $class: "number"
+        $class: Number
     }
 };
 
@@ -73,17 +75,17 @@ Location.prototype.haversine = function(p2) {
     function toRadians(x) {
         return x * Math.PI / 180;
     }
-    var lat1 = toRadians(this.lat);
-    var lat2 = toRadians(p2.lat);
-    var dLat = toRadians(p2.lat - this.lat);
-    var dLong = toRadians(p2.lng - this.lng);
-    
+    var lat1 = toRadians(this.latitude);
+    var lat2 = toRadians(p2.latitude);
+    var dLat = toRadians(p2.latitude - this.latitude);
+    var dLong = toRadians(p2.longitude - this.longitude);
+
     var a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(lat1) * Math.cos(lat2) *
         Math.sin(dLong / 2) * Math.sin(dLong / 2);
     var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    
+
     return EARTH_RADIUS * c;
 };
 
@@ -92,7 +94,7 @@ Location.prototype.haversine = function(p2) {
  */
 Location.prototype.toString = function() {
     "use strict";
-    return this.lat + "," + this.lng;
+    return Utils.report('(', this.latitude, ",", this.longitude, ')');
 };
 
 /**
@@ -102,6 +104,6 @@ Location.prototype.toString = function() {
  */
 Location.prototype.equals = function(p2) {
     "use strict";
-    return Math.abs((this.lat - p2.lat)) < MIN_DEG
-        && Math.abs((this.lng - p2.lng)) < MIN_DEG;
+    return Math.abs((this.latitude - p2.latitude)) < MIN_DEG
+        && Math.abs((this.longitude - p2.longitude)) < MIN_DEG;
 };

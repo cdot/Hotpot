@@ -24,7 +24,7 @@ const TAG = "Hotpot";
 
 HOTPOT_DEBUG = undefined;
 
-const MODEL = {
+const HOTPOT_MODEL = {
     server: Server.Model,
     controller: Controller.Model
 };
@@ -41,14 +41,14 @@ const MODEL = {
         .setHelp(DESCRIPTION + "[[OPTIONS]]")
         .parseSystem()
         .options;
-                 
+
     if (typeof cliopt.config === "undefined")
         cliopt.config = "./hotpot.cfg";
 
     if (typeof cliopt.debug !== "undefined") {
         // Development only
         Q.longStackSupport = true;
-        var TestSupport = require("./TestSupport.js");
+        var TestSupport = require("./test/TestSupport.js");
         HOTPOT_DEBUG = new TestSupport();
     }
 
@@ -59,7 +59,7 @@ const MODEL = {
 
     var config, controller, server;
 
-    DataModel.loadData(cliopt.config, MODEL)
+    DataModel.loadData(cliopt.config, HOTPOT_MODEL)
 
         .then(function(cfg) {
         if (cliopt.confhelp) {
@@ -94,7 +94,7 @@ const MODEL = {
         controller.on(
             "config_change",
             function() {
-                DataModel.saveData(config, MODEL, cliopt.config)
+                DataModel.saveData(config, HOTPOT_MODEL, cliopt.config)
                 .done(function() {
                     Utils.TRACE(TAG, cliopt.config, " updated");
                 });

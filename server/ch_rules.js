@@ -2,12 +2,12 @@ function (thermostats, pins) {
     var self = this;
     var thermostat = thermostats.CH;
     var pin = pins.CH;
-    
+
     return pin.getStatePromise()
     .then(function(state) {
         var upper_bound = thermostat.getTargetTemperature();
         var lower_bound = upper_bound - 2;
-        
+
         if (thermostat.temperature > upper_bound) {
             // Warm enough inside, so switch off regardless of other rules
             if (state === 1)

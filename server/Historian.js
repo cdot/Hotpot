@@ -28,7 +28,7 @@ function Historian(proto, name) {
     Utils.extend(this, proto);
 
     this.name = name;
-    
+
     this.timeout = null;
     Utils.TRACE(TAG, "for ", name, " in ", this.path());
 }
@@ -44,18 +44,12 @@ Historian.Model = {
     unordered: {
         $doc: "Set if sample events may be added out of order",
         $optional: true,
-        $class: "boolean"
+        $class: Boolean
     },
     interval: {
         $doc: "Sample frequency in ms, required if `start()` is called",
         $optional: true,
-        $class: "number"
-    },
-    sample: {
-        // Function returning a sample. Called every `interval` when
-        // `start()` is called. Set in code, cannot be set in the config.
-        $optional: true,
-        $class: "function"
+        $class: Number
     }
 };
 

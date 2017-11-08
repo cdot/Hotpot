@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2017 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -30,7 +30,7 @@
  * this is modelled as follows:
  * ```
  * {
- *   id: { $class: "string", $doc: "unique id" }
+ *   id: { $class: String, $doc: "unique id" }
  * }
  * ```
  * names that don't start with $ are field names that are expected to
@@ -44,15 +44,16 @@
  *   $optional - this datum is optional
  *   $default: default value, if not defined and not $optional
  *   $skip - skip deeper checking of this item
- *   $array_of - object is an associative array of elements, each of
- *   which has the given spec. the key type is not specified (it can be
- *   any valid js key type)
+ *   $map_of - object is an associative array of elements, each of
+ *   which has this model.
+ *   $array_of - true if object is an integer-index list of elements, each
+ *   of which has this model.
  *
  * for example,
  * ```
  *   ids: {
  *     $doc: "set of ids",
- *     $array_of: { id: { $class: "string" } }
+ *     $map_of: { id: { $class: String } }
  *   }
  * ```
  * specifies an array an array of simple objects, e.g.
@@ -84,7 +85,7 @@
  * Note that currently $class must be undefined if $array_of is defined.
  * A future extension may be to use $class to template objects that subclass
  * array - this is left open.
- * 
+ *
  * Classes may want to decorate the spec with other $keys.
  * for example, the DataModel.File class uses the $mode key to specify
  * the modes that will be used with a file (see DataModel.File below)
@@ -95,17 +96,17 @@
  * ```
  * function Thing(key, model, spec) { ... }
  *
- * Thing.spec = {
+ * Thing.Model = {
  *    $class: Thing,
  *    ...
  * };
  * ```
- * this can then be referred to in another spec e.g
+ * this can then be referred to in another model e.g
  * ```
  * things: {
- *    $array_of: Thing.spec,
+ *    $array_of: Thing.Model,
  *    $doc: "list of things"
- * } 
+ * }
  * ```
  * Note that "undefined" is not regarded as a useful value. If the
  * value of a field is undefined, the key for that field will be dropped.
@@ -115,61 +116,196 @@ const Q = require("q");
 
 const readFilePromise = Q.denodeify(Fs.readFile);
 const writeFilePromise = Q.denodeify(Fs.writeFile);
-const tojson = require("serialize-javascript");
 
 const Utils = require("../common/Utils.js");
 
-const tag = "DataModel";
+const TAG = "DataModel";
 
 /**
  * functions involved in managing modelled data
  * @namespace
  */
 var DataModel = {
+    private_key: {
+        $map_of: true,
+        $array_of: true,
+        $checked: true,
+        $class: true,
+        $default: true,
+        $doc: true,
+        $optional: true,
+        $skip: true
+    },
+    builtin_types: [
+        Boolean,
+        Number,
+        Date,
+        String,
+        RegExp
+    ],
 };
 
 /**
- * Promise to load data that observes the given data model
- * from a file.
- * @param file the file to load from
- * @param {object} model the data model to check against
- * @return {promise} promise that returns the loaded data
- * @public
+ * @private
+ * Check the model for correct construction
+ * @param model the model to check
+ * @param context undefined or an array
  */
-DataModel.loadData = function(file, model) {
-    return readFilePromise(file)
-    .then(function(code) {
-        var data = Utils.eval(code, file);
-        data = DataModel.remodel("", data, model);
-        data._readfrom = file;
+DataModel.check = function(model, context) {
+    if (model.$checked)
+        return;
+
+    if (typeof context === "undefined")
+        context = [];
+
+    if (typeof model !== "object")
+        throw Utils.report(TAG, ".check: Illegal model type ", model,
+                           " at ", context.join('.'));
+
+    //Utils.LOG("check <",context.join('.'),"> {");
+
+    var is_base = false;
+    if (typeof model.$class === "function") {
+        if (DataModel.builtin_types.indexOf(model.$class) >= 0) {
+            // Internal fields not supported
+            is_base = true;
+        }
+        // Currently cannot have both $array_of and $class
+        if (typeof model.$array_of !== "undefined")
+            throw Utils.report(TAG, ".check: cannot have $array_of and $class");
+    } else if (typeof model.$class !== "undefined") {
+        throw Utils.report(TAG, "/check: $class is ",
+                           typeof model.$class, " at ", context.join('.'));
+    }
+
+    model.$checked = true;
+
+    if (!model.$skip) {
+        if (typeof model.$array_of !== "undefined") {
+            if (typeof model.$map_of !== "undefined")
+                throw Utils.report(
+                    TAG, ".check: cannot have $array_of and $map_of");
+            DataModel.check(model.$array_of, context.concat("[]"));
+        } else if (typeof model.$map_of !== "undefined")
+            DataModel.check(model.$map_of, context.concat("{}"));
+        else {
+            for (var i in model) {
+                if (i.charAt(0) !== '$') {
+                    if (is_base)
+                        throw Utils.report(
+                            TAG, ".check: $class ",
+                            model.$class.name, " has field ", i, " at ",
+                            context.join('.'));
+                    DataModel.check(model[i], context.concat(i));
+                }
+            }
+        }
+    }
+    //Utils.LOG("} <",context.join('.'),">");
+};
+
+/**
+ * Test the given model against the given data structure, checking data
+ * against the model and constructing objects as required.
+ * @param {object} data The data being loaded
+ * @param {index} The index of the structure in the parent object. This
+ * will be a number for an array entry, or a key for a hash, and is used
+ * to pass to constructors for named objects.
+ * @param {object} model the model
+ * @param {string} context The context of the check, used in messages only
+ * @return the data (or the default, if one was applied)
+ */
+DataModel.remodel = function(index, data, model, context) {
+    var i;
+
+    DataModel.check(model);
+
+    if (index === "_readFrom")
         return data;
-    });
-};
 
-/**
- * Promise to save that part of the data as is specified by the model
- * to a file
- * @param {object} data the data to save
- * @param {object} model the data model
- * @param file file to write to, or undefined to rewrite the
- * file the data was read from.
- * @return {promise} promise that returns after saving
- */
-DataModel.saveData = function(data, model, file) {
-    "use strict";
+    if (typeof context === "undefined")
+        context = [];
 
-    if (typeof file === "undefined")
-        file = this._readfrom;
-    
-    return DataModel.getSerialisable(data, model).then(function(data) {
-        return writeFilePromise(
-            Utils.expandEnvVars(file),
-            tojson(data, 2), "utf8");
-    })
+    //Utils.LOG("Remodel ", context.join('.'));
 
-    .catch(function(e) {
-        Utils.ERROR(tag, "save failed: ", e.stack);
-    });
+    // Got a data definition
+    if (typeof data === "undefined") {
+        if (model.$optional)
+            return data;
+        if (typeof model.$default === "undefined")
+            throw Utils.report(TAG, ".remodel: not optional and no default at ",
+                               context.join('.'));
+        else
+            data = model.$default;
+    }
+
+    if (model.$skip)
+        return data;
+
+    if (typeof model.$map_of !== "undefined") {
+        // Object with keys that don't have to match the model,
+        // and values that can be undefined
+        var rebuilt = {};
+        for (var i in data) {
+            rebuilt[i] = DataModel.remodel(
+                i, data[i], model.$map_of, context.concat(i));
+        }
+        return rebuilt;
+    } else if (typeof model.$array_of !== "undefined") {
+        var rebuilt = [];
+
+        for (var i in data) {
+            // undefined is allowed in array data
+            rebuilt[i] = DataModel.remodel(
+                i, data[i], model.$array_of, context.concat(i));
+        }
+        return rebuilt;
+    }
+
+    if (DataModel.builtin_types.indexOf(model.$class) >= 0)
+        return data;
+
+    // Not a base type, so the model describes what has to be passed
+    // to the constructor (if there is one)
+    var rebuilt = data;
+
+    if (typeof data === "object") {
+        // Rebuild the sub-structure for this object. The rebuilt object
+        // will either be placed in the result or passed to a constructor.
+
+        // Note that fieds not listed in the model are not copied
+        // into rebuilt.
+        rebuilt = {};
+        for (var i in model) {
+            if (!DataModel.private_key[i]) {
+                var datum = DataModel.remodel(
+                    i, data[i], model[i],
+                    context.concat(i));
+                if (typeof datum !== "undefined")
+                    // undefined is skipped in objects
+                    rebuilt[i] = datum;
+                //Utils.LOG("Rebuilt ",data[i]," to ",rebuilt[i]);
+            }
+        }
+        // Make sure the data doesn't carry any hidden payload
+        for (var i in data) {
+            if (!model[i])
+                throw Utils.report(
+                    TAG, ".remodel: Hidden payload ", i, " in ", data,
+                    " at ", context.join('.'));
+        }
+    }
+
+    if (typeof model.$class === "function") {
+        //Utils.LOG("Instantiate ", model.$class.name, " ", index," on ", rebuilt);
+        // Have to pass index first for building native types such
+        // as String, Number, Date
+        // Could call remodel, this is fractionally quicker
+        rebuilt = new model.$class(rebuilt, index, model);
+        //Utils.LOG("Gives ",res);
+    }
+
+    return rebuilt;
 };
 
 /**
@@ -180,6 +316,8 @@ DataModel.saveData = function(data, model, file) {
  * @param {object{ model data model to follow
  */
 DataModel.getSerialisable = function(data, model, context) {
+    DataModel.check(model);
+
     // context is an internal parameter used for generating
     // meaningful errors
     if (typeof context === "undefined")
@@ -188,36 +326,34 @@ DataModel.getSerialisable = function(data, model, context) {
     if (typeof data === "undefined") {
         if (typeof model !== "undefined" && model.$optional)
             return Q();
-        throw Utils.report("getSerialisable: non-optional at ",
+        throw Utils.report(TAG, ".getSerialisable: non-optional at ",
                            context.join('.'));
     }
 
     //Utils.LOG("Serialise ", data, " using ",model);
-    if (typeof model === "function") {
-        if (typeof data === "object") {
-            if (typeof data.getSerialisable === "function") {
-                // objects can override getSerialisable
-                // Could also use model.prototype.getSerialisable
-                return data.getSerialisable(model);
-            }
+    if (typeof model === "function")
+        throw "WTF this shouldn't happen";
+
+    if (model.$skip) {
+        if (typeof data === "object" &&
+            typeof data.getSerialisable === "function") {
+            // objects can override getSerialisable
+            // Could also use model.prototype.getSerialisable
+            return data.getSerialisable(context);
         }
+        return Q(data);
     }
 
     if (typeof data !== "object")
         return Q(data);
 
-    // Model defines data as an object or array
-    if (typeof model !== "object")
-       throw Utils.report("getSerialisable: Illegal model type ",
-                          model, " at ", context.join('.'));
-    
     var promises = Q();
     var serialisable;
-    
+
     if (typeof model.$array_of !== "undefined") {
         // Serialise all entries in the object, it's an array
         if (typeof data !== "object")
-            throw Utils.report("getSerialisable: array expected at ",
+            throw Utils.report(TAG, ".getSerialisable: array expected at ",
                                context.join('.'), data);
         serialisable = [];
         Utils.forEach(data, function(entry, index) {
@@ -234,29 +370,47 @@ DataModel.getSerialisable = function(data, model, context) {
             return serialisable;
         });
 
+    } else if (typeof model.$map_of !== "undefined") {
+        if (typeof data !== "object")
+            throw Utils.report(TAG, ".getSerialisable: map expected at ",
+                               context.join('.'), data);
+        serialisable = {};
+        Utils.forEach(data, function(entry, index) {
+            promises = promises.then(function() {
+                return DataModel.getSerialisable(
+                    entry, model.$map_of,
+                    context.concat(index));
+            })
+            .then(function(c) {
+                serialisable[index] = c;
+            });
+        });
+        return promises.then(function() {
+            return serialisable;
+        });
+
     } else if (typeof model.$class === "function" &&
                typeof data.getSerialisable === "function") {
         // objects can override getSerialisable
         // Could also use model.prototype.getSerialisable
         return data.getSerialisable(model);
-    } else if (model.$class === Number ||
-               model.$class === String ||
-               model.$class === Boolean) {
+    } else if (DataModel.builtin_types.indexOf(model.$class) >= 0) {
         return Q(data);
     }
 
+    serialisable = {};
     // Only serialise fields described in the model. All other fields
     // in the object are ignored.
-    serialisable = {};
     Utils.forEach(model, function(fieldmodel, key) {
-        if (key.charAt(0) == '$')
+        if (DataModel.private_key[key])
             return;
-        promises = promises.then(function() {
-            var promise = DataModel.getSerialisable(
-                data[key], fieldmodel,
-                context.concat(key));
-            return promise
-        })
+        promises = promises
+            .then(function() {
+                var promise = DataModel.getSerialisable(
+                    data[key], fieldmodel,
+                    context.concat(key));
+                return promise
+            })
             .then(function(c) {
                 if (typeof c !== "undefined") {
                     serialisable[key] = c;
@@ -270,107 +424,104 @@ DataModel.getSerialisable = function(data, model, context) {
 };
 
 /**
- * @private
- * Test the given model against the given data structure, checking data
- * against the model and constructing objects as required.
- * @param {object} data The data being loaded
- * @param {index} The index of the structure in the parent object. This
- * will be a number for an array entry, or a key for a hash, and is used
- * to pass to constructors for named objects.
- * @param {object} model the model
- * @param {string} context The context of the check, used in messages only
- * @return the data (or the default, if one was applied)
+ * Follow the path from the root to the node at the end of the path,
+ * and call a function on the the root of the subtree there and the
+ * model that describes it. Will throw if the path does not describe a
+ * node with a corresponding model.
+ * @param {object} root the root of the tree
+ * @param {object} model the root of the model that describes the tree
+ * @param {String or Array} path either a path expresses as a /-separated
+ * string or an already-split array of path components.
+ * @param {function} fn (node, subtreemodel, parentnode, key)
+ * where node is the root of the subtree, nodemodel is the model for the
+ * subtree, parentnode is the node that contains the subtree and key is
+ * the key for the subtree in the parent. parentnode and key will be
+ * undefined if the path is empty.
+ * @return the result of the call to fn
  */
-DataModel.remodel = function(index, data, model, context) {
-    var i;
-    if (index === "_readFrom")
-        return data;
+DataModel.at = function(root, model, path, fn) {
+    if (typeof path === "string") {
+        // Convert string path to array of path components
+        path = path.split(/\/+/);
+        while (path.length > 0 && path[0].length == 0)
+            path.shift();
+    }
 
-    if (typeof context === "undefined")
-        context = [];
+    DataModel.check(model);
 
-    //Utils.LOG("Remodel ", context.join('.'));
+    var node = root;
+    var node_model = model;
+    var parent;
+    var key;
 
-    if (typeof model === "function")
-        return new model(data, index, model);
-
-    var rebuilt = data;
-    if (typeof model !== "object")
-        throw Utils.report("remodel: Illegal model type ", model,
-                           " at ", context.join('.'));
-    
-    // Got a data definition
-    if (typeof data === "undefined") {
-        if (model.$optional)
-            return data;
-        if (typeof model.$default === "undefined")
-            throw Utils.report("remodel: not optional and no default at ",
-                               context.join('.'));
+    // Walk down the node and model trees
+    var i = 0;
+    while (i < path.length) {
+        if (typeof node === "undefined")
+            throw Utils.report(
+                TAG, ".at: no node at ", path, "[", i, "]");
+        if (typeof node_model === "undefined")
+            throw Utils.report(
+                TAG, ".at: no model at ", path, "[", i, "]");
+        parent = node;
+        key = path[i++];
+        node = node[key];
+        if (typeof node_model.$array_of !== "undefined")
+            node_model = node_model.$array_of;
+        else if (typeof node_model.$map_of !== "undefined")
+            node_model = node_model.$map_of;
         else
-            data = model.$default;
+            node_model = node_model[key];
     }
-    
-    if (model.$skip)
+    if (i < path.length)
+        throw Utils.report(TAG, ".at: could not find ", path);
+    return fn(node, node_model, parent, key);
+};
+
+/**
+ * Promise to load data that observes the given data model
+ * from a file.
+ * @param file the file to load from
+ * @param {object} model the data model to check against
+ * @return {promise} promise that returns the loaded data
+ * @public
+ */
+DataModel.loadData = function(file, model) {
+    "use strict";
+
+    DataModel.check(model);
+
+    return readFilePromise(file)
+    .then(function(code) {
+        var data = Utils.eval(code, file);
+        data = DataModel.remodel("", data, model);
+        data._readFrom = file;
         return data;
+    });
+};
 
-    if (typeof model.$array_of !== "undefined") {
-        // Currently cannot have both $array_of and $class
-        if (typeof model.$class !== "undefined")
-            throw "remodel: Broken model, cannot have $array_of and $class";
+/**
+ * Promise to save that part of the data as is specified by the model
+ * to a file
+ * @param {object} data the data to save
+ * @param {object} model the data model
+ * @param file file to write to, or undefined to rewrite the
+ * file the data was read from.
+ * @return {promise} promise that returns after saving
+ */
+DataModel.saveData = function(data, model, file) {
+    "use strict";
 
-        // Arrays are integer-indexed
-        var rebuilt = [];
-        for (var i in data) {
-            // undefined is allowed in array data
-            rebuilt[i] = DataModel.remodel(
-                i, data[i], model.$array_of,
-                context.concat(i));
-        }
-        return rebuilt;
-    }
- 
-    if (typeof data === "object") {
-        // Rebuild the sub-structure for this object. The rebuilt object
-        // will either be placed in the result or passed to a constructor.
+    DataModel.check(model);
 
-        // Note that fieds not listed in the model are not copied
-        // into rebuilt.
-        rebuilt = {};
-        for (var i in model) {
-            if (i.charAt(0) !== '$') {
-                var datum = DataModel.remodel(
-                    i, data[i], model[i],
-                    context.concat(i));
-                if (typeof datum !== "undefined")
-                    // undefined is skipped in objects
-                    rebuilt[i] = datum;
-                //Utils.LOG("Rebuilt ",data[i]," to ",rebuilt[i]);
-            }
-        }
-    }
-    
-    if (typeof model.$class === "function") {
-        //Utils.LOG("Instantiate ", model.$class.name, " ", index," on ", rebuilt);
-        // Have to pass index first for building native types such
-        // as String, Number, Date
-        // Could call remodel, this is fractionally quicker
-        var res = new model.$class(rebuilt, index, model);
-        //Utils.LOG("Gives ",res);
-        return res;
-    }
+    if (typeof file === "undefined")
+        file = this._readFrom;
 
-    // Should never get here for an array
-    // Test: make sure the data doesn't carry any hidden payload
-    if (typeof data === "object") {
-        for (var i in data) {
-            if (!model[i])
-                throw Utils.report(
-                    "remodel: Hidden payload ", i, " in ", data,
-                    " at ", context.join('.'));
-        }
-    }
-
-    return rebuilt;
+    return DataModel.getSerialisable(data, model).then(function(remod) {
+        return writeFilePromise(
+            Utils.expandEnvVars(file),
+            JSON.stringify(remod, null, 2), "utf8");
+    });
 };
 
 /**
@@ -378,11 +529,13 @@ DataModel.remodel = function(index, data, model, context) {
  * @param {object} model the data model to generate help for
  */
 DataModel.help = function(model, index) {
+    DataModel.check(model);
+
     // index is used for formatting and is not visible to callers
     function shift_right(s) {
         return s.replace(/\n/g, "\n ");
     }
-    
+
     var docstring = [];
 
     if (index)
@@ -390,7 +543,7 @@ DataModel.help = function(model, index) {
 
     if (typeof model === "function")
         return "<" + model.name + ">";
-    
+
     if (model.$optional)
         docstring.push("(optional)");
     if (typeof model.$class !== "undefined") {
@@ -401,7 +554,7 @@ DataModel.help = function(model, index) {
         else
             docstring.push(model.$class); // wtf?
     }
-    
+
     if (typeof model.$doc === "string")
         docstring.push(model.$doc);
 
@@ -410,6 +563,10 @@ DataModel.help = function(model, index) {
             docstring.push('[\n');
             docstring.push(shift_right(DataModel.help(model.$array_of)));
             docstring.push("\n]");
+        } else if (typeof model.$map_of !== "undefined") {
+            docstring.push('{*\n');
+            docstring.push(shift_right(DataModel.help(model.$map_of)));
+            docstring.push("\n*}");
         } else {
             docstring.push("{\n");
             var sub = [];

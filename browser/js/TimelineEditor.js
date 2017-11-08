@@ -20,19 +20,10 @@ function TimelineEditor(timeline, $canvas) {
 
     self.timeline = timeline;
     $canvas.data("timeline", self);
-    
-    // Editor time range
-    self.min_time = timeline.getPoint(0).time;
-    self.max_time = self.min_time + timeline.period;
-    self.time_range = timeline.period;
 
     // Editor value range
-    self.min_value = timeline.min;
-    self.max_value = timeline.max;
-    self.value_range = self.max_value - self.min_value;
-    
     self.drag_point = -1;
-    
+
     self.$canvas = $canvas;
     self.ctx = $canvas[0].getContext("2d");
 
@@ -51,35 +42,39 @@ function TimelineEditor(timeline, $canvas) {
                   y: e.pageY - self.$canvas.offset().top }
         }
     }
-    
+
     $canvas.on("mousemove", function(e) {
         self.handleMouseMove(e, getTarget(e));
     });
 
+    $canvas.on("mousemove", function(e) {
+        self.handleTipCanvas(e, getTarget(e));
+    });
+
     $canvas.on("mousedown", function(e) {
-        var pt = { x: e.pageX - self.$canvas.offset().left,
-                   y: e.pageY - self.$canvas.offset().top }
-        var selpt = self.overPoint(pt);
+        var selpt = self.overPoint(self.e2xy(e));
         if (typeof selpt !== "undefined") {
             self.drag_point = selpt;
+            self.render();
         } else {
-            self.drag_point = -1;
+            endDrag();
         }
     });
 
-    $canvas.on("mouseup", function() {
-        self.drag_point = -1;
-    });
+    function endDrag() {
+        if (self.drag_point >= 0) {
+            self.drag_point = -1;
+            self.render();
+        }
+    }
 
-    $canvas.on("mouseout", function() {
-        self.drag_point = -1;
-    });
+    $canvas.on("mouseup", endDrag);
+    $canvas.on("mouseout", endDrag);
 
     $canvas.on("click", function(e) {
-        var pt = { x: e.pageX - self.$canvas.offset().left,
-                   y: e.pageY - self.$canvas.offset().top }
-        if (typeof self.overPoint(pt) === "undefined") {
-            var intercept = self.overLine(pt);
+        var xy = self.e2xy(e);
+        if (typeof self.overPoint(xy) === "undefined") {
+            var intercept = self.overLine(xy);
             if (typeof intercept !== "undefined") {
                 self.timeline.insertBefore(
                     intercept.next, self.xy2p(intercept.point));
@@ -90,11 +85,9 @@ function TimelineEditor(timeline, $canvas) {
         // else do nothing if we are over a point - may be a pending double
         // which will delete the point.
     });
-    
+
     $canvas.on("dblclick", function(e) {
-        var pt = { x: e.pageX - self.$canvas.offset().left,
-                   y: e.pageY - self.$canvas.offset().top }
-        var idx = self.overPoint(pt);
+        var idx = self.overPoint(self.e2xy(e));
         if (typeof idx !== "undefined" &&
             idx > 0 && idx < self.timeline.nPoints() - 1) {
             self.timeline.remove(idx);
@@ -102,49 +95,47 @@ function TimelineEditor(timeline, $canvas) {
             self.render();
         }
     });
-    
+
     $canvas.hover(
-        function() {
+        function(e) {
             self.$tip_canvas.show();
         },
         function() {
             self.$tip_canvas.hide();
         });
-    
+
     this.render();
 }
 
+TimelineEditor.prototype.e2xy = function(e) {
+    return { x: e.pageX - this.$canvas.offset().left,
+             y: e.pageY - this.$canvas.offset().top };
+};
+
 TimelineEditor.prototype.handleMouseMove = function(e) {
     "use strict";
-    var canp = { x: e.pageX - this.$canvas.offset().left,
-                 y: e.pageY - this.$canvas.offset().top };
-    var tp = this.xy2p(canp);
+
+    var xy = this.e2xy(e);
+
+    // Handle being over a point
+    if (this.drag_point >= 0 || typeof this.overPoint(xy) !== "undefined")
+        // Change to hand cursor
+        this.$canvas.css( 'cursor', 'pointer' );
+    else
+        this.$canvas.css( 'cursor', 'default' );
+
+    // Handle drag
     if (e.buttons !== 0 && this.drag_point >= 0) {
-        // Handle drag
-        var adjust = false;
-        if (this.drag_point === 0) {
-            tp.time = 0;
-            adjust = true;
-        } else if (this.drag_point === this.timeline.nPoints() - 1) {
-            tp.time = this.timeline.getPoint(timeline.nPoints() - 1).time;
-            adjust = true;
-        } else {
-            var prevtime = this.timeline.getPoint(this.drag_point - 1).time;
-            var nexttime = this.timeline.getPoint(this.drag_point + 1).time;
-            if (tp.time <= prevtime) {
-                tp.time = prevtime + 1;
-                adjust = true;
-            } else if (tp.time >= nexttime) {
-                tp.time = nexttime - 1;
-                adjust = true;
-            }
+        var tp = this.xy2p(xy);
+        if (this.timeline.setPointConstrained(this.drag_point, tp)) {
+            this.$canvas.trigger("change");
+            this.render();
         }
-        if (adjust)
-            canp = this.p2xy(tp);
-        this.timeline.setPoint(this.drag_point, tp);
-        this.$canvas.trigger("change");
-        this.render();
     }
+};
+
+TimelineEditor.prototype.handleTipCanvas = function(e) {
+    "use strict";
 
     function zeroExtend(num, len) {
         var str = "" + num;
@@ -152,7 +143,7 @@ TimelineEditor.prototype.handleMouseMove = function(e) {
             str = '0' + str;
         return str;
     };
-    
+
     function hms(t) {
         t = t / 1000;
         var s = t % 60;
@@ -163,38 +154,38 @@ TimelineEditor.prototype.handleMouseMove = function(e) {
             ':' + zeroExtend(s, 2);
     };
 
+    var xy = this.e2xy(e);
+    var tp = this.xy2p(xy);
 
     var text = "  " + hms(tp.time) + " : "
         + this.timeline.valueAtTime(tp.time).toPrecision(4);
-    
+
     var tipCtx = this.$tip_canvas[0].getContext("2d");
     var tw = tipCtx.measureText(text).width;
     var th = 10;
-    
+
     // CSS just stretches the content
     tipCtx.canvas.width = tw;
     tipCtx.canvas.height = th;
 
-    tipCtx.fillStyle = "green";
+    tipCtx.fillStyle = "yellow";
     tipCtx.fillRect(0, 0, tw, th);
 
-    tipCtx.fillStyle = "white";
-    tipCtx.strokeStyle = "white";
+    tipCtx.fillStyle = "black";
     tipCtx.font = th + "px sans-serif";
 
     // Move the tip to the left if too near right edge
-    if (canp.x + tw > this.$canvas.width())
-        canp.x -= tw + 2; // plus a bit to clear the cursor
+    if (xy.x + tw > this.$canvas.width())
+        xy.x -= tw + 2; // plus a bit to clear the cursor
 
     this.$tip_canvas.css({
-        left: (canp.x + this.$canvas.offset().left) + "px",
-        top: (canp.y + this.$canvas.offset().top) + "px",
+        left: (xy.x + this.$canvas.offset().left) + "px",
+        top: (xy.y + this.$canvas.offset().top) + "px",
         width: tw,
         height: th
     });
     tipCtx.textBaseline = "top";
     tipCtx.fillText(text, 0, 0);
-    this.$tip_canvas.show();
 };
 
 /**
@@ -205,6 +196,7 @@ TimelineEditor.prototype.handleMouseMove = function(e) {
  */
 TimelineEditor.prototype.overPoint = function(p) {
     "use strict";
+
     var min2 = POINT_RADIUS2;
     var selpt;
     for (var i = 0; i < this.timeline.nPoints(); i++) {
@@ -222,14 +214,15 @@ TimelineEditor.prototype.overPoint = function(p) {
 /**
  * Determine if point p is within a minimum range of an existing line.
  * Done in canvas space.
- * @param p a point on the canvas
+ * @param p a point on the canvas (or an event in the canvas)
  * @return the index of the point at the end of the line it's over,
  * or undefined
  */
 TimelineEditor.prototype.overLine = function(p) {
     "use strict";
+
     var min2 = POINT_RADIUS2;
-    
+
     var sel;
     var p1 = this.p2xy(this.timeline.getPoint(0));
     for (var i = 1; i < this.timeline.nPoints(); i++) {
@@ -263,9 +256,10 @@ TimelineEditor.prototype.overLine = function(p) {
 TimelineEditor.prototype.p2xy = function(p) {
     "use strict";
     return {
-        x: ((p.time - this.min_time) * this.$canvas.width()) / this.time_range,
+        x: (p.time * this.$canvas.width()) / this.timeline.period,
         y: this.$canvas.height() *
-            (1 - (p.value - this.min_value) / this.value_range)
+            (1 - (p.value - this.timeline.min) /
+             (this.timeline.max - this.timeline.min))
     };
 };
 
@@ -275,8 +269,8 @@ TimelineEditor.prototype.p2xy = function(p) {
 TimelineEditor.prototype.xy2p = function(p) {
     "use strict";
     return {
-        time: this.min_time + this.time_range * p.x / this.$canvas.width(),
-        value: this.min_value + this.value_range *
+        time: this.timeline.period * p.x / this.$canvas.width(),
+        value: this.timeline.min + (this.timeline.max - this.timeline.min) *
             (this.$canvas.height() - p.y) / this.$canvas.height()
     };
 };
@@ -289,7 +283,7 @@ TimelineEditor.prototype.render = function() {
     var ctx = this.ctx;
     var ch = this.$canvas.height();
     var cw = this.$canvas.width();
-    
+
     if (this.$canvas.height() === 0 || this.timeline.nPoints() === 0)
         return;
 
@@ -305,12 +299,12 @@ TimelineEditor.prototype.render = function() {
     ctx.fillRect(0, 0, cw, ch);
 
     var t = Time.time_of_day();
-    if (t > this.min_time && t < this.max_time) {
+    if (t > 0 && t < this.timeline.period) {
         ctx.beginPath();
         ctx.strokeStyle = "red";
-        p = this.p2xy({time: t, value: this.min_val});
+        p = this.p2xy({time: t, value: this.timeline.min});
         ctx.moveTo(p.x, p.y);
-        p = this.p2xy({time: t, value: this.max_val});
+        p = this.p2xy({time: t, value: this.timeline.max});
             ctx.lineTo(p.x, p.y);
         ctx.stroke();
     }
@@ -329,6 +323,15 @@ TimelineEditor.prototype.render = function() {
         ctx.moveTo(p.x, p.y);
     }
     ctx.stroke();
+
+    if (this.drag_point >= 0) {
+        var p = this.p2xy(this.timeline.getPoint(this.drag_point));
+        ctx.beginPath();
+        ctx.fillStyle = 'red';
+        ctx.moveTo(p.x, p.y);
+        ctx.arc(p.x, p.y, POINT_RADIUS, 0, 2 * Math.PI, false);
+        ctx.fill()
+    }
 };
 
 (function($) {

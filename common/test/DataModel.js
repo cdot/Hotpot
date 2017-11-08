@@ -1,3 +1,5 @@
+/*@preserve Copyright (C) 2017 Crawford Currie http://c-dot.co.uk license MIT*/
+
 /*eslint-env node, mocha */
 const Q = require("q");
 const Fs = require("fs");
@@ -18,7 +20,7 @@ var simpleModel = {
         dibble: { $class: String, $doc: "grubb" },
         bob: { $class: String, $doc: "builder", $optional: true }
     },
-    array: { $array_of: String }
+    array: { $array_of: { $class: String } }
 };
 
 var simpleProto = {
@@ -107,26 +109,26 @@ Toad.prototype.croak = function(x, y) {
 var toadyModel = {
     a: { $class: String },
     b: Toad.Model,
-    c: { $array_of: Toad.Model }
+    c: { $map_of: Toad.Model }
 };
 
 var toadyProto = {
     a: "A",
     b: { data: { x: 1, y: true } },
-    c: [{ data: { x: 2, y: true } },{ data: { x: 3, y: true } }]
+    c: {one: { data: { x: 2, y: true } }, two: { data: { x: 3, y: true } }}
 };
 
 var toadyDump = {
     a: "A",
     b: new Toad({ data: { x: 1, y: true } }),
-    c: [new Toad({ data: { x: 2, y: true } }),
-        new Toad({ data: { x: 3, y: true } })]
+    c: { one: new Toad({ data: { x: 2, y: true } }),
+         two: new Toad({ data: { x: 3, y: true } }) }
 };
 
 var toadySerial = {
     a: "A",
     b: "Smeg",
-    c: [ "Smeg", "Smeg" ]
+    c: { one: "Smeg", two: "Smeg" }
 }
 
 function Amphibian(data, index, model) {
@@ -152,7 +154,7 @@ describe('DataModel', function() {
         try {
             DataModel.remodel('', simpleProtoBad, simpleModel);
         } catch(s) {
-            assert.equal(s, "remodel: not optional and no default at cuthbert.dibble");
+            assert.equal(s, "DataModel.remodel: not optional and no default at cuthbert.dibble");
             return;
         }
         assert(false, "Failed");
@@ -169,7 +171,7 @@ describe('DataModel', function() {
         try {
             DataModel.remodel("", builtInsProtoBad, builtInsModel);
         } catch(s) {
-            assert.equal(s, "remodel: not optional and no default at fnaar");
+            assert.equal(s, "DataModel.remodel: not optional and no default at fnaar");
             return;
         }
         assert(false, "Failed");
@@ -179,8 +181,8 @@ describe('DataModel', function() {
         var remodeled = DataModel.remodel("", toadyProto, toadyModel);
         assert.equal(Utils.dump(remodeled), Utils.dump(toadyDump));
         remodeled.b.croak(1, true);
-        remodeled.c[0].croak(2, true);
-        remodeled.c[1].croak(3, true);
+        remodeled.c.one.croak(2, true);
+        remodeled.c.two.croak(3, true);
     });
 
     it("remodel-amphibian", function() {
@@ -231,15 +233,49 @@ describe('DataModel', function() {
                 return DataModel.loadData(mainfile, builtInsModel);
             })
             .then(function(config) {
-                assert.equal(config._readfrom, mainfile);
-                delete config._readfrom;
+                assert.equal(config._readFrom, mainfile);
+                delete config._readFrom;
                 assert.equal(Utils.dump(config), Utils.dump(builtInsDump));
                 return Q(config);
             });
     });
-    
+
+    it("at-simple", function() {
+        var remodeled = DataModel.remodel('', simpleProto, simpleModel);
+        DataModel.at(
+            remodeled, simpleModel, "/cuthbert/bob",
+            function(node, model, parent, key) {
+                assert(node === remodeled.cuthbert.bob);
+                assert(model === simpleModel.cuthbert.bob);
+                assert(parent === remodeled.cuthbert);
+                assert.equal(key, "bob");
+            });
+        try {
+            DataModel.at(
+                remodeled, simpleModel, "cuthbert/array",
+                function(node, model, parent, key) {
+                    assert(false, "Should never be called");
+                });
+            assert(false, "Should fail");
+        } catch (e) {
+        };
+        DataModel.at(remodeled, simpleModel, "array/1",
+             function(node, model, parent, key) {
+                 assert(node === remodeled.array[1]);
+                 assert(model === simpleModel.array.$array_of);
+                 assert(parent === remodeled.array);
+                 assert.equal(key, 1);
+             });
+        DataModel.at(remodeled, simpleModel, "array",
+             function(node, model, parent, key) {
+                 assert(node === remodeled.array);
+                 assert(model === simpleModel.array);
+                 assert(parent === remodeled);
+                 assert.equal(key, "array");
+             });
+    });
+
     it("help", function() {
         assert.equal(DataModel.help(helpModel), helpModelString);
     });
 });
-

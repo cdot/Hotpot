@@ -9,7 +9,7 @@ const OUT_MAX_T = OUT_MIN_T << 1;
 /**
  * Construct a new trace line
  * Trace axes are "t" (for time) and "s" (for sample)
- * @param {object} options 
+ * @param {object} options
  * ```
  * {
  *  legend: legend for the trace
@@ -23,7 +23,7 @@ const OUT_MAX_T = OUT_MIN_T << 1;
  * }
  * ```
  * Out-of-range
- * "slide" will maintain a constant range. Assumes new data always added 
+ * "slide" will maintain a constant range. Assumes new data always added
  * "flex" will expand the range at either end
  * @class
  */
@@ -134,7 +134,7 @@ Trace.prototype.clip = function() {
         lp = this.points.shift();
     if (lp)
         this.points.unshift(lp);
-    
+
     // First point encountered above t = 0
 //    if (lp && this.points.length > 0)
 //        this.clipLine(lp, this.points[0]);
@@ -177,13 +177,13 @@ Trace.prototype.setViewport = function(vpt) {
  */
 Trace.prototype.st2xy = function(stp) {
     "use strict";
-    
+
     // Normalise to range 0..1
     var norm_s =  (stp.s - this.options.min.s)
         / (this.options.max.s - this.options.min.s);
     var norm_t = (stp.t - this.options.min.t)
         / (this.options.max.t - this.options.min.t);
-    
+
     // Map to viewport
     return {
         x: this.viewport.x + this.viewport.dx * norm_t,
@@ -204,14 +204,14 @@ Trace.prototype.xy2st = function(p) {
         || p.x > this.viewport.x + this.viewport.dx
         || p.y > this.viewport.y + this.viewport.dy)
         return undefined;
-    
+
     var norm_y = (this.viewport.y + this.viewport.dy - p.y)
         / this.viewport.dy;
     var norm_x = (this.viewport.x + this.viewport.dx - p.x)
         / this.viewport.dx;
     var dt = this.options.max.t - this.options.min.t;
     var ds = this.options.max.s - this.options.min.s;
-    
+
     return {
         t: this.options.min.t + dt * norm_x,
         s: this.options.min.s + ds * norm_y
@@ -265,7 +265,7 @@ Trace.prototype.render = function(ctx, lock_t) {
 
     if (this.points.length < 2)
         return;
-    
+
     // Current
     ctx.beginPath();
 
@@ -280,7 +280,7 @@ Trace.prototype.render = function(ctx, lock_t) {
         p = this.st2xy({ s: this.points[len - 1].s, t: lock_t });
         this.nextPoint(p, ctx);
     }
-        
+
     ctx.stroke();
 };
 
@@ -291,7 +291,7 @@ Trace.prototype.firstPoint = function(p, ctx) {
 Trace.prototype.nextPoint = function(p, ctx) {
     ctx.lineTo(p.x, p.y);
 };
-    
+
 /**
  * Render the legend at (x, y) and return the width of the label
  * @param {number} x coordinate
@@ -312,7 +312,7 @@ Trace.prototype.firstPoint = function(p, ctx) {
 Trace.prototype.nextPoint = function(p, ctx) {
     ctx.lineTo(p.x, p.y);
 };
-    
+
 /**
  * Render the legend at (x, y) and return the width of the label
  * @param {number} x coordinate
@@ -344,7 +344,7 @@ BinaryTrace.prototype.addPoint = function(t, s) {
     "use strict";
     if (this.points.length > 0) {
         var lp = this.points[this.points.length - 1];
-        
+
         this.points.push({ t: t, s: lp.s });
     }
     this.points.push({ t: t, s: s });
@@ -380,13 +380,13 @@ function Graph(options, $canvas) {
     self.$tip_canvas.css("position", "absolute");
     self.$tip_canvas.css("background-color", "transparent");
     self.$tip_canvas.css("color", "white");
-    
+
     self.options = $.extend({
         background_col: "black",
         text_col: "white",
         font_height: 10 // px
     }, options);
-   
+
     $canvas.on("mousemove", function(e) {
         var targ;
         if (!e)
@@ -454,7 +454,7 @@ Graph.prototype.render = function() {
         trh = $canvas.width() / this.traces.length;
         w = $canvas.height() - this.options.font_height;
     }
-    
+
     var troff = 0;
     for (i in this.traces) {
         var tit = this.traces[i];
@@ -519,7 +519,7 @@ Graph.prototype.handleMouse = function(e, targ) {
         this.$tip_canvas.hide();
         return;
     }
-        
+
     var l, tn;
     for (tn in this.traces) {
         l = this.traces[tn].xy2st(p);

@@ -26,7 +26,7 @@
             },
             area: false
         }, options);
-        
+
         var data = $elf.data("editable");
         if (typeof data === "string") {
             try {

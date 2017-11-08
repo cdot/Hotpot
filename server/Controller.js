@@ -3,7 +3,7 @@
 /*eslint-env node */
 
 const Util = require("util");
-const Events = require("events").EventEmitter;  
+const Events = require("events").EventEmitter;
 const Q = require("q");
 
 const Utils = require("../common/Utils.js");
@@ -33,34 +33,34 @@ Controller.Model = {
     $class: Controller,
     thermostat: {
         $doc: "Set of Thermostats",
-        $array_of: Thermostat.Model
+        $map_of: Thermostat.Model
     },
     pin: {
         $doc: "Set of Pins",
-        $array_of: Pin.Model
+        $map_of: Pin.Model
     },
     valve_return: {
         $doc: "Time to wait for the multiposition valve to return to the discharged state, in ms",
-        $class: "number",
+        $class: Number,
         $default: 8000
     },
     rule_interval: {
         $doc: "Frequency at which rules are re-evaluated, in ms",
-        $class: "number",
+        $class: Number,
         $default: 5000
     },
     rule: {
         $doc: "Set of Rules",
-        $array_of: Rule.Model
+        $map_of: Rule.Model
     },
     calendar: {
         $doc: "Set of Calendars",
-        $array_of: Calendar.Model
+        $map_of: Calendar.Model
     },
     weather: {
         $doc: "Array of weather agents",
         // We don't know what class the agents are yet
-        $array_of: { $skip: true }
+        $map_of: { $skip: true }
     }
 };
 
@@ -72,7 +72,7 @@ Controller.prototype.initialise = function() {
     self.poll = {
         timer: undefined
     };
-    
+
     return Q()
 
     .then(function() {
@@ -113,14 +113,12 @@ Controller.prototype.initialise = function() {
  */
 Controller.prototype.createWeatherAgents = function() {
     var self = this;
-    self.weather = {};
     var promise = Q();
-
     if (Object.keys(this.weather).length > 0) {
         Utils.TRACE(TAG, "Creating weather agents");
         Utils.forEach(this.weather, function(config, name) {
             var WeatherAgent = require("./" + name + ".js");
-            self.weather[name] = new WeatherAgent(name, config);
+            self.weather[name] = new WeatherAgent(config);
             promise = promise.then(function() {
                 return self.weather[name].initialise();
             });
@@ -225,7 +223,7 @@ Controller.prototype.initialiseThermostats = function() {
     var promise = Q();
 
     Utils.TRACE(TAG, "Initialising Thermostats");
-    
+
     Utils.forEach(this.thermostat, function(th) {
         promise = promise.then(function() {
             return th.initialise();
@@ -277,7 +275,7 @@ Controller.prototype.getSerialisableState = function() {
     var state = {
 	time: Time.now() // local time
     };
-    
+
     var promise = Q();
 
     // Should be able to do this using Q.all, but it doesn't do
@@ -296,7 +294,7 @@ Controller.prototype.getSerialisableState = function() {
             }
         });
     });
- 
+
     return promise.then(function() {
         return state;
     });
@@ -375,7 +373,7 @@ Controller.prototype.setPromise = function(channel, new_state, reason) {
     "use strict";
     var self = this;
     var pins = self.pin;
-    
+
     // Duck race condition during initialisation
     if (pins[channel] === "undefined")
         return Q.promise(function() {});
@@ -472,33 +470,6 @@ Controller.prototype.removeRequests = function(pin, source) {
         Utils.ERROR(TAG, "Cannot addRequest; No such pin '" + pin + "'");
 };
 
-Controller.prototype.followPath = function(path, fn) {
-    var thing = this;
-    var model = Controller.Model;
-    var parent;
-    var key;
-    
-    var i = 0;
-    while (i < path.length) {
-        parent = thing;
-        key = path[i];
-        thing = thing[key];
-        model = model[key];
-        i++;
-        if (typeof model.$array_of !== "undefined") {
-            if (i !== path.length) {
-                if (typeof thing[path[i]] === "undefined")
-                    throw Utils.report("Bad index ", path[i], " in ", path);
-                parent = thing;
-                key = path[i++];
-                thing = thing[key];
-            }
-            model = model.$array_of;
-        }
-    }
-    return fn(thing, model, parent, key);
-};
-
 /**
  * Command handler for ajax commands, suitable for calling by a Server.
  * @params {array} path the url path components
@@ -530,21 +501,25 @@ Controller.prototype.dispatch = function(path, data) {
         return self[path[0]][path[1]].getSerialisableLog(data.since);
     case "getconfig":
         // /getconfig/path/to/config/node
-        return this.followPath(path, function(data, model) {
-            return DataModel.getSerialisable(data, model);
-        });
+        return DataModel.at(
+            this, Controller.Model, path,
+            function(data, model) {
+                return DataModel.getSerialisable(data, model);
+            });
     case "setconfig":
-        // /setconfig/path/to/config/node, data is new setting
-        this.followPath(path, function(item, model, parent, key) {
-            if (typeof parent === "undefined" ||
-                typeof key === "undefined" ||
-                typeof item === "undefined")
-                throw Utils.report("Cannot update ", path,
-                                   " insufficient context");
-            parent[key] = DataModel.remodel(key, data.value, model, path); 
-            //Utils.TRACE(TAG, "Set ", path.join('.'), " = ", parent[key]);
-            self.emit("config_change");
-        });
+        // /setconfig/path/to/config/node, data.value is new setting
+        DataModel.at(
+            this, Controller.Model, path,
+            function(item, model, parent, key) {
+                if (typeof parent === "undefined" ||
+                    typeof key === "undefined" ||
+                    typeof item === "undefined")
+                    throw Utils.report("Cannot update ", path,
+                                       " insufficient context");
+                parent[key] = DataModel.remodel(key, data.value, model, path);
+                //Utils.TRACE(TAG, "Set ", path.join('.'), " = ", parent[key]);
+                self.emit("config_change");
+            });
         break;
     case "request":
         // Push a request onto a pin (or all pins). Requests may come

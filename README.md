@@ -147,7 +147,7 @@ calendar: {
   }
 }
 ```
-Paste the copied fields from `client_secret` into the `secrets` object. The `primary` id will access your main calendar. The `node TestCalendars.js` command-line program can be used to list all the available calendars.
+Paste the copied fields from `client_secret` into the `secrets` object. The `primary` id will access your main calendar. The `node TestCalendars.js` command-line program in the `test` subdirectory can be used to list all the available calendars.
 
 `cd` to the `server` subdirectory and run the command-line program `node AuthoriseCalendar.js` and follow the instructions. Note that this requires an existing `hotpot.cfg`.
 
@@ -188,7 +188,7 @@ GetIP is a program to help with accessing a home server that is hidden behind a 
 # Debugging
 
 cd to $packageroot/server
-node Hotpot.js -d --trace all
+node Hotpot.js -d --trace all -c test/simulated_hotpot.cfg
 
 This will start a debug mini-web-server listening on port 13196
 

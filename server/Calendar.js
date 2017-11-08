@@ -35,7 +35,7 @@ function ScheduledEvent(cal, id, start, end, pin, state) {
     this.startms = start;
     // End of the event, in epoch ms
     this.endms = end;
-    
+
     var self = this;
     var now = Time.now();
     if (start > now) {
@@ -135,21 +135,21 @@ Calendar.Model = {
     $class: Calendar,
     id: {
         $doc: "calendar id, as used by Google",
-        $class: "string"
+        $class: String
     },
     secrets: {
         $doc: "secrets used by google OAuth",
         client_id:  {
             $doc: "see README.md",
-            $class: "string"
+            $class: String
         },
         client_secret:  {
             $doc: "see README.md",
-            $class: "string"
+            $class: String
         },
         redirect_uris: {
             $doc: "see README.md",
-            $array_of: { $class: "string" }
+            $array_of: { $class: String }
         }
     },
     auth_cache: {
@@ -159,16 +159,16 @@ Calendar.Model = {
     },
     require_prefix: {
         $doc: "set true if a 'hotpot:' prefix is required in the calendar",
-        $class: "boolean",
+        $class: Boolean,
         $optional: true
     },
     update_period: {
         $doc: "Delay between calendar reads, in hours",
-        $class: "number"
+        $class: Number
     },
     cache_length: {
         $doc: "Period of calendar entries to cache, in hours",
-        $class: "number"
+        $class: Number
     }
 };
 
@@ -227,11 +227,11 @@ Calendar.prototype.fillCache = function() {
             // Expand recurring events
             singleEvents: true
         };
-        
+
         // If a prefix is required, add a query
         if (self.require_prefix)
             params.q = "Hotpot:";
-        
+
         return Q.Promise(function(ok, fail) {
             calendar.events.list(
                 params,
@@ -301,7 +301,7 @@ Calendar.prototype.fillCache = function() {
 
 /**
  * The serialisable state of a calendar is the current (or next) active
- * event in the calendar for each unique pin in the calendar. 
+ * event in the calendar for each unique pin in the calendar.
  */
 Calendar.prototype.getSerialisableState = function() {
     var state = {};

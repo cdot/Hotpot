@@ -6,7 +6,6 @@
 // it, and it "just works".
 
 const Q = require("q");
-const serialize = require("serialize-javascript");
 const Url = require("url");
 
 const Utils = require("../common/Utils.js");
@@ -66,9 +65,7 @@ Server.Model = {
     $doc: "HTTP(S) server",
     port: {
         $doc: "Port to run the server on",
-        $class: "number",
-        $min: 0,
-        $max: 65536
+        $class: Number
     },
     docroot: Utils.extend(
         {}, DataModel.File.Model,
@@ -94,15 +91,15 @@ Server.Model = {
         $optional: true,
         user: {
             $doc: "Username",
-            $class: "string"
+            $class: String
         },
         pass: {
             $doc: "Password",
-            $class: "string"
+            $class: String
         },
         realm: {
             $doc: "Authentication realm",
-            $class: "string"
+            $class: String
         }
     }
 };
@@ -178,8 +175,13 @@ Server.prototype.start = function() {
 
     .then(function(httpot) {
         self.ready = true;
+        self.http = httpot;
         httpot.listen(self.port);
     });
+};
+
+Server.prototype.stop = function() {
+    this.http.close();
 };
 
 /**
@@ -219,7 +221,7 @@ Server.prototype.handle = function(spath, params, request, response) {
 
         .then(function(reply) {
             var s = (typeof reply !== "undefined" && reply !== null)
-                ? serialize(reply) : "";
+                ? JSON.stringify(reply) : "";
             return s;
         });
     } else if (path.join("") === "") {
@@ -229,7 +231,7 @@ Server.prototype.handle = function(spath, params, request, response) {
         Utils.TRACE(TAG, "GET ", path.join("/"));
         var filepath = Utils.expandEnvVars(this.docroot
                                            + "/" + path.join("/"));
-        
+
         var m = /\.([A-Z0-9]+)$/i.exec(filepath);
         if (m) {
             var Mime = require("mime-types");

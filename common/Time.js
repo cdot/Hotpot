@@ -13,7 +13,7 @@ var Time = {
 };
 
 module.exports = Time;
- 
+
 /**
  * Convert a variety f types to a Date
  */

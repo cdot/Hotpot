@@ -90,7 +90,7 @@ Utils.extend = function() {
         Utils.extend = require("extend");
     return Utils.extend.apply(this, arguments);
 }
-    
+
 /**
  * Debugging support for dumping a circular structure
  * @param {object} data thing to dump
@@ -103,10 +103,11 @@ Utils.dump = function(data, cache) {
     }
     if (typeof cache == "undefined")
         cache = [];
-    
+
     if (cache.indexOf(data) >= 0)
         return "LOOP";
-    
+    cache.push(data);
+
     if (typeof data === "function")
         return "<" + data.name + ">";
 
@@ -115,7 +116,7 @@ Utils.dump = function(data, cache) {
 
     if (typeof data !== "object" || data === null)
         return data;
-    
+
     var s = "";
     var ob = "{";
     var cb = "}";
@@ -136,17 +137,21 @@ Utils.dump = function(data, cache) {
             s += "<" + data.constructor.name + ">";
         }
     }
-
-    cache.push(data);
-    s += ob;
-    var values = [];
-    for (var i in data) {
-        var val = Utils.dump(data[i], cache);
-        if (ob === "{")
-            val = i + ": " + val;
-        values.push(indent(val))
+    if (data.toString !== Object.prototype.toString &&
+        data.toString !== Array.prototype.toString) {
+        s += data.toString();
+    } else {
+        s += ob;
+        var values = [];
+        for (var i in data) {
+            var val = Utils.dump(data[i], cache);
+            if (ob === "{")
+                val = i + ": " + val;
+            values.push(indent(val))
+        }
+        s += "\n" + values.join(",\n") + "\n" + cb;
     }
-    return s + "\n" + values.join(",\n") + "\n" + cb;
+    return s;
 };
 
 /**
@@ -200,8 +205,7 @@ Utils.LOG = function() {
  * Produce a tagged error message.
  */
 Utils.ERROR = function() {
-    var tag = arguments[0];
-    console.error("*" + tag + "*", Utils.joinArgs(arguments, 1));
+    console.error(Utils.report("*", arguments[0], "*", Utils.joinArgs(arguments, 1)));
 };
 
 /**

@@ -46,7 +46,7 @@ function Thermostat(proto, name) {
     }
 
     Utils.extend(this, proto);
-    
+
     // Name of the thermostat e.g. "HW"
     this.name = name;
 
@@ -72,7 +72,7 @@ function Thermostat(proto, name) {
 Thermostat.Model = {
     $class: Thermostat,
     id: {
-        $class: "string",
+        $class: String,
         $doc: "unique ID used to communicate with this thermostat"
     },
     timeline: Timeline.Model,

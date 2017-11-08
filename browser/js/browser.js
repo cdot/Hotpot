@@ -11,9 +11,9 @@ const Timeline = require("common/Timeline.js");
 
 (function($) {
     "use strict";
-   
+
     var update_backoff = 10; // seconds
-    
+
     var graph_width = 24 * 60 * 60 * 1000; // milliseconds
 
     var trace_options = {
@@ -27,7 +27,7 @@ const Timeline = require("common/Timeline.js");
     var poller;
 
     var traces = {};
-    
+
     function refreshCalendars() {
         $("#refresh_calendars").attr("disabled", "disabled");
         $.get("/ajax/refresh_calendars",
@@ -48,7 +48,7 @@ const Timeline = require("common/Timeline.js");
             pin: pin,
             state: val
         };
-         
+
         // Away from home, set up to report after interval
         $.post("/ajax/request",
                JSON.stringify(params),
@@ -129,7 +129,7 @@ const Timeline = require("common/Timeline.js");
                 $(document).trigger("poll");
             }, update_backoff * 1000)
         }
-        
+
         if (poller) {
             clearTimeout(poller);
             poller = undefined;
@@ -164,8 +164,8 @@ const Timeline = require("common/Timeline.js");
             $(this).data("timeline").changed = true;
         });
     }
-    
-    // Initialise the graph canvas by requesting 
+
+    // Initialise the graph canvas by requesting
     function initialiseGraph() {
         var $canvas = $(this);
         var params = { since: Date.now() - graph_width };
@@ -182,7 +182,7 @@ const Timeline = require("common/Timeline.js");
                 },
                 colour: trace_options[na].colour
             };
-            
+
             var trace;
             if (trace_options[na].type == "binary")
                 trace = new BinaryTrace(options);
@@ -208,13 +208,13 @@ const Timeline = require("common/Timeline.js");
                     return (Math.round(trd * 10) / 10).toString();
                 }
             });
-            
+
             var g = $canvas.data("graph");
-            
+
             for (var type in data)
                 for (var name in data[type])
                     createTrace(g, data[type][name], type + ":" + name);
-            
+
             g.render();
         }
 
@@ -232,6 +232,8 @@ const Timeline = require("common/Timeline.js");
         $.getJSON("/ajax/getconfig/thermostat/"+service+
                   "/timeline", function(tl) {
                       $("#"+service+"-timeline").css("display", "block");
+                      te.timeline.min = tl.min;
+                      te.timeline.max = tl.max;
                       te.timeline.points = tl.points;
                       te.changed = false;
                       te.render();
@@ -256,14 +258,14 @@ const Timeline = require("common/Timeline.js");
                    });
         }
     }
-    
+
     /**
      * Add handlers and fire initial events to configure the graphs
      * and start the polling loop.
      */
     function configure() {
         var states = { off: 0, on: 1, boost: 2 };
-        
+
         for (var service in { CH: 1, HW: 1 }) {
             for (var fn in states) {
                 $("#pin-" + service + "-"+fn).click({
@@ -277,7 +279,7 @@ const Timeline = require("common/Timeline.js");
             $("#close-"+service+"-timeline").click(service, closeTimeline);
         }
         $(".timeline_canvas").each(initialiseTimeline);
-        
+
 	$("#refresh_calendars").on("click", refreshCalendars);
 	$("#to-controls").on("click", function() {
             $(".display").hide();
@@ -289,7 +291,7 @@ const Timeline = require("common/Timeline.js");
             $("#graph_canvas").data("graph").render();
         });
         $("#graph_canvas").each(initialiseGraph);
-        
+
         $(document).trigger("poll");
     }
 

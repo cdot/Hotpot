@@ -75,7 +75,7 @@ function authorise(credentials) {
     var rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
-    });    
+    });
     rl.question("Enter the code here: ", function(code) {
         rl.close();
         oauth2Client.getToken(code, function(err, token) {

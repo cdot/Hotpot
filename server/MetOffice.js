@@ -9,10 +9,11 @@ const Q = require("q");
 const Http = require("follow-redirects").http;
 const Url = require("url");
 
-const Location = require("../common/Location.js");
-const Time = require("../common/Time.js");
+const Location = require("../common/Location");
+const Time = require("../common/Time");
 
 const Utils = require("../common/Utils");
+const DataModel = require("../common/DataModel");
 const Historian = require("./Historian");
 
 /** @private */
@@ -50,6 +51,9 @@ const IS_NUMBER = [
  */
 var MetOffice = function(proto) {
     "use strict";
+    proto.history = DataModel.remodel(
+        'history', proto.history, Historian.Model,
+        ['Metoffice', 'history']);
     Utils.extend(this, proto);
     this.url = Url.parse("http://datapoint.metoffice.gov.uk");
     this.name = "MetOffice";
@@ -59,7 +63,7 @@ var MetOffice = function(proto) {
 MetOffice.Model = {
     $class: MetOffice,
     api_key: {
-        $class: "string",
+        $class: String,
         $doc: "API key for requests to the Met Office website"
     },
     history: Utils.extend({ $optional: true }, Historian.Model)
@@ -98,6 +102,22 @@ MetOffice.prototype.stop = function() {
         delete this.timeout;
         Utils.TRACE(TAG, "Stopped");
     }
+};
+
+/**
+ * Promise to get serialisable configuration. See common/DataModel
+ */
+MetOffice.prototype.getSerialisable = function(context) {
+    var self = this;
+    return DataModel.getSerialisable(
+        this.history, Historian.Model, context.concat('history'))
+
+        .then(function(h) {
+            return {
+                api_key: self.api_key,
+                history: h
+            }
+        });
 };
 
 /**
@@ -233,7 +253,7 @@ MetOffice.prototype.buildLog = function(data) {
     if (!data.SiteRep) return;
     if (!data.SiteRep.Wx) return;
     if (!data.SiteRep.Wx.Param) return;
-    
+
     var lu = data.SiteRep.Wx.Param;
     var s2c = { "$": "$" }, i, j, k;
     for (i in lu)

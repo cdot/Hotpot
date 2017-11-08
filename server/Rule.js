@@ -31,7 +31,7 @@ function Rule(config, name) {
      * @public
      */
     this.name = name;
-    
+
     /**
      * Test function
      * @type {function}
