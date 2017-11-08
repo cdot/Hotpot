@@ -16,7 +16,7 @@
       <img src="browser/images/hotpot.svg" style="height: 230px; float:right"></h1>
     <div id="comms_error"></div>
 
-    <div id="display-controls" class="display">
+    <div id="controls" class="display">
       <div>
         <span data-path="/time" data-type="date"></span>
         <div data-path="/weather" data-use-template="weather"></div>
@@ -24,12 +24,16 @@
       <hr />    
       <div>
         Central Heating
-        <span id="thermostat-CH-temp"></span> °C
-        <span id="pin-CH-state"></span>,
+        <span id="thermostat-CH-temp"></span>
+        <span id="thermostat-CH-diff"></span>
+        <span id="thermostat-CH-target"></span>°C
+        <span id="pin-CH-state"></span>
         <span id="pin-CH-reason"></span>
-        <button id="pin-CH-on">Turn ON</button>
-        <button id="pin-CH-off">Turn OFF</button>
+        <div id="pin-CH-requests">
+        </div>
         <button id="pin-CH-boost">BOOST</button>
+<!--        <button id="pin-CH-on">Request ON</button>-->
+        <button id="pin-CH-off">OFF</button>
         <button id="open-CH-timeline">Timeline</button>
         <div id="CH-timeline">
           <canvas class="timeline_canvas" id="CH-timeline-canvas"></canvas>
@@ -39,12 +43,16 @@
       <hr />
       <div>
         Hot Water
-        <span id="thermostat-HW-temp"></span> °C
-        <span id="pin-HW-state"></span>,
+        <span id="thermostat-HW-temp"></span>
+        <span id="thermostat-HW-diff"></span>
+        <span id="thermostat-HW-target"></span>°C
+        <span id="pin-HW-state"></span>
         <span id="pin-HW-reason"></span>
-        <button id="pin-HW-on">Turn ON</button>
-        <button id="pin-HW-off">Turn OFF</button>
+        <div id="pin-HW-requests">
+        </div>
         <button id="pin-HW-boost">BOOST</button>
+<!--        <button id="pin-HW-on">Request ON</button>-->
+        <button id="pin-HW-off">OFF</button>
         <button id="open-HW-timeline">Timeline</button>
         <div id="HW-timeline">
           <canvas class="timeline_canvas" id="HW-timeline-canvas"></canvas>
@@ -52,12 +60,20 @@
         </div>
       </div>
       <hr />
-      <button id="to-graphs">Graphs</button>
+      <button class="switcher" data-to="graphs">Graphs</button>
+      <button class="switcher" data-to="help">Help</button>
     </div>
-    <div class="display" id="display-graphs">
+    <div class="display" id="graphs">
       <canvas id="graph_canvas"></canvas>
       <canvas id="tip_canvas"></canvas>
-      <button id="to-controls" style="float:right">Close</button>
+      <button class="switcher" data-to="controls">Close</button>
     </div>
+    <div class="display" id="help">
+      <h1>Requests</h1>
+      <p>BOOST will turn the service on until the temperature hits the maximum for the
+      service; it will then revert to following the timeline.</p>
+      <p>OFF will turn the service off. It won't come on again until the request is cancelled.</p>
+<!--      <p>ON will keep the temperature at the timeline until the request is cancelled.</p>-->
+      <button class="switcher" data-to="controls">Close</button>
   </body>
 </html>

@@ -41,7 +41,11 @@ tr.state_button_row td {
     width: 25%;
 }
 
-#display-graphs {
+.switcher {
+    float:right;
+}
+
+#graphs, #help {
     display: none;
 }
 
@@ -50,7 +54,7 @@ tr.state_button_row td {
     width: 300px;
 }
 
-/* The canvas used to edit timelines */
-#timeline_canvas {
+/* The canvases used to edit timelines */
+.timeline_canvas {
     width: 300px;
 }

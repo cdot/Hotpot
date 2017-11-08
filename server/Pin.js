@@ -18,11 +18,6 @@ var GPIO_PATH = "/sys/class/gpio/";
 const EXPORT_PATH = GPIO_PATH + "export";
 const UNEXPORT_PATH = GPIO_PATH + "unexport";
 
-// Request types
-const REQUEST_OFF = 0;
-const REQUEST_ON = 1;
-const REQUEST_BOOST = 2;
-
 /**
  * A Pin is the interface to a RPi GPIO pin. A pin maintains a state,
  *  history, and one or more Pin.Requests. These are used to record a
@@ -48,32 +43,37 @@ function Pin(proto, name) {
 
     Utils.extend(this, proto);
 
-    var self = this;
-
     /**
      * @property {string} name Name of the pin e.g. HW
      * @public
      */
-    self.name = name;
+    this.name = name;
+
+    // Request types
+    this.STATE_NAMES = [
+        "OFF",  // 0
+        "ON",   // 1
+        "BOOST" // 2
+    ];
 
     /**
      * @property {string} reason Descriptive reason the pin is currently in
      * the state it is.
      * @public
      */
-    self.reason = "";
+    this.reason = "";
 
     if (typeof HOTPOT_DEBUG !== "undefined")
-        HOTPOT_DEBUG.mapPin(self.gpio, self.name);
+        HOTPOT_DEBUG.mapPin(this.gpio, this.name);
 
-    self.value_path = GPIO_PATH + "gpio" + self.gpio + "/value";
+    this.value_path = GPIO_PATH + "gpio" + this.gpio + "/value";
 
     /** @property {object} requests List of requests for this pin
      * (see #addRequest) */
-    self.requests = [];
+    this.requests = [];
 
-    Utils.TRACE(TAG, "'", self.name,
-                  "' constructed on gpio ", self.gpio);
+    Utils.TRACE(TAG, "'", this.name,
+                  "' constructed on gpio ", this.gpio);
 }
 
 Pin.Model = {
@@ -200,17 +200,15 @@ Pin.prototype.DESTROY = function() {
  * Set the pin state. Don't use this on a Y-plan system, use
  * {@link Controller.Controller#setPromise|Controller.setPromise} instead.
  * @param {integer} state of the pin
-* @param {String} reason Reason the pin is being set
  * @return {Promise} a promise to set the pin state
  * @public
  */
-Pin.prototype.set = function(state, reason) {
+Pin.prototype.set = function(state) {
     "use strict";
     var self = this;
 
     Utils.TRACE(TAG, self.value_path, " = ", (state === 1 ? "ON" : "OFF"));
 
-    self.reason = reason;
     var promise = writeFile(self.value_path, state, "UTF8");
     if (self.history)
         promise = promise.then(function() {
@@ -291,11 +289,11 @@ Pin.prototype.purgeRequests = function(state, source) {
     for (var i = 0; i < reqs.length;) {
         var r = reqs[i];
         if ((typeof source !== "undefined" && r.source === source)
-            // state === REQUEST_BOOST requests will be purged by rules
+            // state === BOOST requests will be purged by rules
             || (typeof state !== "undefined" && r.state === state)
-            || (r.state === REQUEST_ON && r.until <= Time.nowSeconds())
+            || (r.state === 1 && r.until <= Time.nowSeconds())
             // OFF requests are only timed out if r.until is > 0
-            || (r.state === REQUEST_OFF
+            || (r.state === 0
                 && r.until > 0 && r.until <= Time.now())) {
             // BOOST requests are explicitly expired by rules
             Utils.TRACE(TAG, "Purge request ", r);

@@ -367,9 +367,8 @@ Controller.prototype.getSerialisableLog = function(since) {
  * that must be respected.
  * @param {String} channel e.g. "HW" or "CH"
  * @param {number} state 1 (on) or 0 (off)
- * @param {String} reason reason for the state
  */
-Controller.prototype.setPromise = function(channel, new_state, reason) {
+Controller.prototype.setPromise = function(channel, new_state) {
     "use strict";
     var self = this;
     var pins = self.pin;
@@ -380,7 +379,7 @@ Controller.prototype.setPromise = function(channel, new_state, reason) {
 
     if (this.pending) {
         return Q.delay(self.valve_return).then(function() {
-            return self.setPromise(channel, new_state, reason);
+            return self.setPromise(channel, new_state);
         });
     }
 
@@ -405,9 +404,9 @@ Controller.prototype.setPromise = function(channel, new_state, reason) {
                 // the grey wire.
                 // This allows the spring to fully return. Then after a
                 // timeout, turn the CH on.
-                return pins.CH.set(0, reason) // switch off CH
+                return pins.CH.set(0) // switch off CH
                 .then(function() {
-                    return pins.HW.set(1, reason); // switch on HW
+                    return pins.HW.set(1); // switch on HW
                 })
                 .then(function() {
                     self.pending = true;
@@ -415,13 +414,13 @@ Controller.prototype.setPromise = function(channel, new_state, reason) {
                 })
                 .then(function() {
                     self.pending = false;
-                    return pins.CH.set(0, reason); // switch off CH
+                    return pins.CH.set(0); // switch off CH
                 });
             }
         }
         // Otherwise this is a simple state transition, just
         // promise to set the appropriate pin
-        return pins[channel].set(new_state, reason);
+        return pins[channel].set(new_state);
     });
 };
 

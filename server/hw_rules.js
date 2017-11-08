@@ -6,39 +6,57 @@ function (thermostats, pins) {
 
     return pin.getStatePromise()
     .then(function(state) {
-        var upper_bound = thermostat.getTargetTemperature();
-        var lower_bound = upper_bound - 10;
-
-        // Check the temperature of the HW thermostat
-        if (thermostat.temperature > upper_bound) {
+        // Keep HW below 40C regardless
+        if (thermostat.temperature > thermostat.getMaximumTemperature()) {
             // Hot enough, so switch off regardless of other rules
-            if (state === 1)
-                Utils.TRACE("Rules", "HW is ", thermostat.temperature,
+            if (state === 1) {
+                Utils.TRACE("Rules", "HW is overheating ", thermostat.temperature,
                             "°C so turning off");
+                pin.reason = "Overheat";
+            }
             // Purge boost requests (state 2)
             pin.purgeRequests(2);
             // Use setPromise rather than pins.set() because setPromise
             // handles the interaction between HW and CH in Y-plan systems
-            return self.setPromise("HW", 0, "Hot enough");
+            return self.setPromise("HW", 0);
         }
-
+        
         // See if there's any request from a mobile device or calendar
         var req = pin.getActiveRequest();
         if (req) {
             var restate = req.state === 0 ? 0 : 1;
-            if (restate !== state)
+            if (restate !== state) {
                 Utils.TRACE("Rules", "active request for HW, ", req.state,
                             " from ", req.source);
-            return self.setPromise(
-                "HW", restate, req.source + " requested " + req.state);
+                pin.reason = req.source + " requested " +
+                    pin.STATE_NAMES[req.state];
+            }
+            return self.setPromise("HW", restate);
         }
 
-        if (thermostat.temperature < lower_bound) {
-            if (state === 0)
+        // Otherwise respect the timeline
+        var target = thermostat.getTargetTemperature();
+        if (thermostat.temperature > target) {
+            // Hot enough, so switch off regardless of other rules
+            if (state === 1) {
+                Utils.TRACE("Rules", "HW is ", thermostat.temperature,
+                            "°C so turning off");
+                pin.reason = "Hot enough";
+            }
+            // Use setPromise rather than pins.set() because setPromise
+            // handles the interaction between HW and CH in Y-plan systems
+            return self.setPromise("HW", 0);
+        }
+
+        // Stay within 5 degrees of the target
+        if (thermostat.temperature < target - 5) {
+            if (state === 0) {
                 Utils.TRACE("Rules", "HW only ",
                             thermostat.temperature,
                             "°C, so on");
-            return self.setPromise("HW", 1, "Too cold");
+                pin.reason = "Too cold";
+            }
+            return self.setPromise("HW", 1);
         }
     });
 }

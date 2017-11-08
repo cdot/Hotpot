@@ -12,6 +12,9 @@ const Timeline = require("common/Timeline.js");
 (function($) {
     "use strict";
 
+    var requests = { off: 0, on: 1, boost: 2 };
+    var state_name = [ "OFF", "ON", "BOOST" ];
+
     var update_backoff = 10; // seconds
 
     var graph_width = 24 * 60 * 60 * 1000; // milliseconds
@@ -38,13 +41,14 @@ const Timeline = require("common/Timeline.js");
     }
 
     /**
-     * User clicks a requests field
+     * User clicks a request button
      * @return {boolean} false to terminate event handling
      */
-    function requestState(pin, val) {
+    function requestState(pin, val, source) {
+        if (typeof source === "undefined") source = "Browser";
         var params = {
             // until: , - no timeout
-            source: "Browser",
+            source: source,
             pin: pin,
             state: val
         };
@@ -103,20 +107,51 @@ const Timeline = require("common/Timeline.js");
         for (var service in { CH: 1, HW: 1 }) {
             var th = "#thermostat-" + service + "-";
             var pin = "#pin-" + service + "-";
-            $(th + "temp").text(Math.round(
-                10 * obj.thermostat[service].temperature) / 10);
-            if (obj.pin[service].state === 0) {
-                $(pin + "state").text("OFF");
-                $(pin + "off").css("display", "none");
-                $(pin + "on").css("display", "inline");
-                $(pin + "boost").css("display", "inline");
-            } else {
-                $(pin + "state").text("ON");
-                $(pin + "off").css("display", "inline");
-                $(pin + "on").css("display", "none");
-                $(pin + "boost").css("display", "none");
-            }
+            var tcur = Math.round(
+                10 * obj.thermostat[service].temperature) / 10;
+            var ttgt = Math.round(
+                10 * obj.thermostat[service].target) / 10;
+            if (tcur > ttgt)
+                $(th + "diff").text(">=");
+            else if (tcur < ttgt)
+                $(th + "diff").text("<");
+            else
+                $(th + "diff").text("=");
+            $(th + "temp").text(tcur);
+            $(th + "target").text(ttgt);
+            var ptext = (obj.pin[service].state === 0) ? "OFF" : "ON";
+            $(pin + "state").text(ptext);
             $(pin + "reason").text(obj.pin[service].reason);
+            $(pin + "requests").empty();
+            var browser_requesting;
+            for (var i = 0; i < obj.pin[service].requests.length; i++) {
+                var req = obj.pin[service].requests[i];
+                if (req.source === "Browser")
+                    browser_requesting = req;
+                var $div = $("<div></div>");
+                $div.append("<span>" + req.source + " is requesting " +
+                            state_name[req.state] + " </span>");
+                var $butt = $("<button>Clear</button>")
+                $div.append($butt);
+                $butt.click(
+                    { service: service, source: req.source },
+                    function (e) {
+                        requestState(e.data.service, -1, e.data.source);
+                        $div.remove();
+                    });
+                $(pin + "requests").append($div);
+            }
+            for (var butt in requests)
+                $(pin + butt).css("display", "inline");
+            var reqstate;
+            if (typeof browser_requesting !== "undefined") {
+                if (browser_requesting.state == 0)
+                    $(pin + "off").css("display", "none");
+                else if (browser_requesting.state == 1)
+                    $(pin + "on").css("display", "none");
+                else if (browser_requesting.state == 2)
+                    $(pin + "boost").css("display", "none");
+            }
         }
     }
 
@@ -264,14 +299,12 @@ const Timeline = require("common/Timeline.js");
      * and start the polling loop.
      */
     function configure() {
-        var states = { off: 0, on: 1, boost: 2 };
-
         for (var service in { CH: 1, HW: 1 }) {
-            for (var fn in states) {
-                $("#pin-" + service + "-"+fn).click({
-                    service: service, fn: fn },
+            for (var fn in requests) {
+                $("#pin-" + service + "-"+fn).click(
+                    { service: service, fn: fn },
                     function(e) {
-                        requestState(e.data.service, states[e.data.fn]);
+                        requestState(e.data.service, requests[e.data.fn]);
                     });
                 $("#"+service+"-timeline").css("display", "none");
             }
@@ -281,13 +314,10 @@ const Timeline = require("common/Timeline.js");
         $(".timeline_canvas").each(initialiseTimeline);
 
 	$("#refresh_calendars").on("click", refreshCalendars);
-	$("#to-controls").on("click", function() {
+
+	$(".switcher").on("click", function() {
             $(".display").hide();
-            $("#display-controls").show();
-        });
-	$("#to-graphs").on("click", function() {
-            $(".display").hide();
-            $("#display-graphs").show();
+            $("#" + $(this).data("to")).show();
             $("#graph_canvas").data("graph").render();
         });
         $("#graph_canvas").each(initialiseGraph);

@@ -5,18 +5,16 @@ function (thermostats, pins) {
 
     return pin.getStatePromise()
     .then(function(state) {
-        var upper_bound = thermostat.getTargetTemperature();
-        var lower_bound = upper_bound - 2;
-
-        if (thermostat.temperature > upper_bound) {
-            // Warm enough inside, so switch off regardless of other rules
-            if (state === 1)
-                Utils.TRACE("Rules", "CH is ", thermostat.temperature,
+        if (thermostat.temperature > thermostat.getMaximumTemperature()) {
+            if (state === 1) {
+                Utils.TRACE("Rules", "CH is overheating ", thermostat.temperature,
                             "°C so turning off");
+                pin.reason = "Overheat";
+            }
             // Cancel any boost requests
             pin.purgeRequests(2);
             // setPromise is a NOP if already in the right state
-            return self.setPromise("CH", 0, "Warm enough");
+            return self.setPromise("CH", 0);
         }
 
         // See if there's any demand from requests
@@ -27,19 +25,36 @@ function (thermostats, pins) {
                 restate = 0;
             else
                 restate = 1;
-            if (restate !== state)
+            if (restate !== state) {
                 Utils.TRACE("Rules", "active request for CH, ", req.state,
                             " from ", req.source);
-            return self.setPromise("CH", restate,
-                                  "Requested by " + req.source);
+                pin.reason = req.source + " requested " +
+                    pin.STATE_NAMES[req.state];
+            }
+            return self.setPromise("CH", restate);
         }
 
-        if (thermostat.temperature < lower_bound) {
-            if (state === 0)
+        // Otherwise respect the timeline
+        var target = thermostat.getTargetTemperature();
+        if (thermostat.temperature > target) {
+            // Warm enough inside, so switch off even if 
+            if (state === 1) {
+                Utils.TRACE("Rules", "CH is ", thermostat.temperature,
+                            "°C so turning off");
+                pin.reason = "Warm enough";
+            }
+            // setPromise is a NOP if already in the right state
+            return self.setPromise("CH", 0);
+            
+        }
+        if (thermostat.temperature < target - 1) {
+            if (state === 0) {
                 Utils.TRACE("Rules", "CH only ",
                             thermostat.temperature,
                             "°C, so on");
-            return self.setPromise("CH", 1, "Too cold");
+                pin.reason = "Too cold";
+            }
+            return self.setPromise("CH", 1);
         }
     });
 }

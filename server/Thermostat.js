@@ -120,7 +120,8 @@ module.exports = Thermostat;
 Thermostat.prototype.getSerialisableState = function() {
     "use strict";
     var data = {
-        temperature: this.temperature
+        temperature: this.temperature,
+        target: this.getTargetTemperature()
     };
     return Q.fcall(function() {
         return data;
@@ -178,4 +179,12 @@ Thermostat.prototype.pollTemperature = function() {
  */
 Thermostat.prototype.getTargetTemperature = function() {
     return this.timeline.valueAtTime(Time.time_of_day());
+};
+
+/**
+ * Get the maximum temperature allowed by the timeline for this thermostat
+ * at the current time/
+ */
+Thermostat.prototype.getMaximumTemperature = function() {
+    return this.timeline.max;
 };
