@@ -3,10 +3,13 @@
 /*eslint-env node */
 /* Must also work in browser */
 
+"use strict";
+
 const Utils = require('./Utils');
 const Time = require('./Time');
 
 function Timepoint(proto) {
+
     Utils.extend(this, proto);
 
     if (typeof this.time === "undefined") {
@@ -37,7 +40,7 @@ Timepoint.Model = {
     }
 };
 
-Timepoint.prototype.getSerialisable = function(context) {
+Timepoint.prototype.getSerialisable = function() {
     var Q = require("q");
     return Q({ times: Time.unparse(this.time), value: this.value });
 };

@@ -5,7 +5,7 @@
 /**
  * Main module for managing the browser interface to a hotpot server.
  */
-const Utils = require("common/Utils.js");
+//const Utils = require("common/Utils.js");
 //const Time = require("common/Time.js");
 const Timeline = require("common/Timeline.js");
 const DataModel = require("common/DataModel.js");
@@ -124,6 +124,10 @@ const DataModel = require("common/DataModel.js");
             $(pin + "state").text(ptext);
             $(pin + "reason").text(obj.pin[service].reason);
             $(pin + "requests").empty();
+            function buttClick(e) {
+                requestState(e.data.service, -1, e.data.source);
+                e.$div.remove();
+            }
             var browser_requesting;
             for (var i = 0; i < obj.pin[service].requests.length; i++) {
                 var req = obj.pin[service].requests[i];
@@ -135,16 +139,12 @@ const DataModel = require("common/DataModel.js");
                 var $butt = $("<button>Clear</button>")
                 $div.append($butt);
                 $butt.click(
-                    { service: service, source: req.source },
-                    function (e) {
-                        requestState(e.data.service, -1, e.data.source);
-                        $div.remove();
-                    });
+                    { service: service, source: req.source, $div: $div },
+                    buttClick);
                 $(pin + "requests").append($div);
             }
             for (var butt in requests)
                 $(pin + butt).css("display", "inline");
-            var reqstate;
             if (typeof browser_requesting !== "undefined") {
                 if (browser_requesting.state == 0)
                     $(pin + "off").css("display", "none");

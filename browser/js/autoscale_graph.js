@@ -505,7 +505,7 @@ Graph.prototype.render = function() {
 /**
  * Mouse hovering over graph
  */
-Graph.prototype.handleMouse = function(e, targ) {
+Graph.prototype.handleMouse = function(e) {
     var $canvas = this.$canvas;
     var targ_left = $canvas.offset().left;
     var targ_top = $canvas.offset().top;

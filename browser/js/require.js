@@ -7,37 +7,35 @@
 
 var GRequired = {};
 var module;
+var require_path = [];
 
-RELATIVE_TO = [];
-
-function require(m) {
+function require(ident) {
     "use strict";
-    // Resolve m so it is relative to the invoking module
-    //console.log("require " + m);
-    var path = m.split("/");
-    m = path.pop();
-    if (!/\.js$/.test(m))
-        m = m + ".js";
-    if (typeof GRequired[m] === "undefined") {
-        //console.log("real-require " + path.join('/') + "/ " +  m);
-        path = RELATIVE_TO.concat(path);
-        path.push(m);
-        var url = path.join('/');
+    // Resolve ident so it is relative to the invoking module
+    //console.log("require " + ident);
+    var path = ident.split("/");
+    ident = path.pop();
+    if (!/\.js$/.test(ident))
+        ident = ident + ".js";
+    if (typeof GRequired[ident] === "undefined") {
+        //console.log("real-require " + path.join('/') + "/ " +  ident);
+        path = require_path.concat(path);
+        var url = path.concat(ident).join('/');
         //console.log("get " + url);
         $.ajax({
             async: false, // deprecated!
             url: url,
             dataType: 'text',
             'success': function (data) {
-                var saved = RELATIVE_TO;
-                RELATIVE_TO = path;
+                var saved = require_path;
+                require_path = path;
                 //console.log("eval in " + path.join('/'));
                 var module = {};
                 var fn = eval("'use strict';" + data);
-                RELATIVE_TO = saved;
-                GRequired[m] = module.exports;
+                require_path = saved;
+                GRequired[ident] = module.exports;
             }
         });
     }
-    return GRequired[m];
+    return GRequired[ident];
 }
