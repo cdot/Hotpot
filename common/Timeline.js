@@ -3,6 +3,45 @@
 /*eslint-env node */
 /* Must also work in browser */
 
+const Utils = require('./Utils');
+const Time = require('./Time');
+
+function Timepoint(proto) {
+    Utils.extend(this, proto);
+
+    if (typeof this.time === "undefined") {
+        if (typeof this.times === "undefined")
+            throw Utils.report("Timepoint must have time or times");
+        this.time = Time.parse(this.times);
+        delete this.times;
+    } else if (typeof this.times !== "undefined")
+        throw Utils.report("Timepoint must have time or times, not both");
+}
+
+Timepoint.Model = {
+    $class: Timepoint,
+    $doc: "vertex on a timeline graph",
+    time: {
+        $class: Number,
+        $optional: true, // Must have time or times, constructor enforces
+        $doc: "time"
+    },
+    times: {
+        $class: String,
+        $optional: true, // Must have time or times, constructor enforces
+        $doc: "time string"
+    },
+    value: {
+        $class: Number,
+        $doc: "value at this time"
+    }
+};
+
+Timepoint.prototype.getSerialisable = function(context) {
+    var Q = require("q");
+    return Q({ times: Time.unparse(this.time), value: this.value });
+};
+
 /**
  * A timeline is an object that represents a continuous graph
  * giving a value at each point over a time line. The timeline starts
@@ -12,8 +51,10 @@
  * New Timelines are initialised with a straight line at value
  * (min + max) / 2
  * @param proto see Timeline.Model
+ * @class
  */
 function Timeline(proto) {
+
     Utils.extend(this, proto);
 
     if (this.max <= this.min)
@@ -25,36 +66,23 @@ function Timeline(proto) {
         this.points = [];
 
     // Use setPoint to validate points passed
-    for (var i = 1; i < this.points.length; i++) {
+    for (var i = 1; i < this.points.length; i++)
         this.setPoint(i);
-    }
 
-    // Add missing points to extremes
-    if (this.points.length == 0) {
-        this.points.push({time: 0, value: (this.min + this.max) / 2});
-        this.points.push({time: this.period,
-                          value: (this.min + this.max) / 2});
-    }
-    if (this.points[0].time != 0)
-        this.points.unshift({time: 0, value: this.points[0].value});
-
-    if (this.points[this.points.length - 1].time < this.period)
-        this.points.push(
-            {time: this.period,
-             value: this.points[this.points.length - 1].value});
-};
+    this.fixExtremes();
+}
 
 module.exports = Timeline;
 
 Timeline.Model = {
     $class: Timeline,
     min: {
-        $doc: "minimum value",
+        $doc: "minimum possible value",
         $class: Number,
         $default: 0
     },
     max: {
-        $doc: "maximum value",
+        $doc: "maximum possible value",
         $class: Number,
         $default: 30
     },
@@ -65,26 +93,36 @@ Timeline.Model = {
     },
     points: {
         $doc: "Array of time points",
-        $array_of: {
-            $doc: "vertex on a timeline graph",
-            time: {
-                $class: Number,
-                $doc: "time"
-            },
-            value: {
-                $class: Number,
-                $doc: "value at this time"
-            }
-        }
+        $array_of: Timepoint.Model
     }
+};
+
+// Private function to add extreme points if needed
+Timeline.prototype.fixExtremes = function() {
+    // Add missing points to extremes
+    if (this.points.length == 0) {
+        this.points.push(new Timepoint({
+            time: 0, value: (this.min + this.max) / 2}));
+        this.points.push(new Timepoint({
+            time: this.period - 1, value: (this.min + this.max) / 2}));
+    }
+    if (this.points[0].time != 0)
+        this.points.unshift(new Timepoint({
+            time: 0, value: this.points[0].value}));
+
+    if (this.points[this.points.length - 1].time < this.period - 1)
+        this.points.push(new Timepoint({
+            time: this.period - 1,
+            value: this.points[this.points.length - 1].value}));
 };
 
 /**
  * Get the index of the point that follows the given time.
  * @param t the time to test
+ * @return the index of the point
  */
-Timeline.prototype.getNextPoint = function(t) {
-    if (t < 0 || t > this.period)
+Timeline.prototype.getPointAfter = function(t) {
+    if (t < 0 || t >= this.period)
         throw "Time is outside timeline";
     for (var i = 1; i < this.points.length - 1; i++) {
         if (this.points[i].time > t)
@@ -94,11 +132,25 @@ Timeline.prototype.getNextPoint = function(t) {
 };
 
 /**
+ * Get the maximum value at any time
+ * @return {float} the maximum value
+ */
+Timeline.prototype.getMaxValue = function() {
+    var max = this.points[0].value;
+    for (var i = 1; i < this.points.length; i++) {
+        if (this.points[i].value > max)
+            max = this.points[i].value;
+    }
+    return max;
+};
+
+/**
  * Get the value at the given time
  * @param t the time, must be in range of the timeline
+ * @return{float}the value at time t
  */
 Timeline.prototype.valueAtTime = function(t) {
-    var i = this.getNextPoint(t);
+    var i = this.getPointAfter(t);
     var lp = this.points[i - 1];
     var p = this.points[i];
     // Interpolate between last point and this point
@@ -109,14 +161,15 @@ Timeline.prototype.valueAtTime = function(t) {
 /**
  * Insert a point before the point at the given index
  * @param index index of the point to add before (must be > 0)
- * @param point the {time: value:} point to add
+ * @param point the (time: value:) point to add
  */
 Timeline.prototype.insertBefore = function(index, point) {
     if (index <= 0)
         throw "Can't insert before 0 point";
     if (index >= this.points.length)
         throw "index beyond end";
-    this.points.splice(index, 0, { time: point.time, value: point.value });
+    this.points.splice(index, 0, new Timepoint({
+        time: point.time, value: point.value }));
     // Use setPoint to validate it
     try {
         this.setPoint(index);
@@ -168,7 +221,7 @@ Timeline.prototype.setPoint = function(i, p) {
         throw "Not a point";
     if (typeof p === "undefined")
         p = this.points[i];
-    if (p.time < 0 || p.time > this.period)
+    if (p.time < 0 || p.time >= this.period)
         throw "Time " + p.time + " outside period 0.." + this.period;
     if (i < this.points.length - 1 && p.time >= this.points[i + 1].time)
         throw "Bad time order";
@@ -190,10 +243,10 @@ Timeline.prototype.setPoint = function(i, p) {
  */
 Timeline.prototype.setPointConstrained = function(idx, tp) {
     // Clip
-    if (tp.value < this.min)   tp.value = this.min;
-    if (tp.value > this.max)   tp.value = this.max;
-    if (tp.time < 0)           tp.time = 0;
-    if (tp.time > this.period) tp.time = this.period;
+    if (tp.value < this.min)    tp.value = this.min;
+    if (tp.value > this.max)    tp.value = this.max;
+    if (tp.time < 0)            tp.time = 0;
+    if (tp.time >= this.period) tp.time = this.period - 1;
 
     // Constrain first and last points
     if (idx === 0)
@@ -204,7 +257,7 @@ Timeline.prototype.setPointConstrained = function(idx, tp) {
     }
 
     if (idx === this.points.length - 1)
-        tp.time = this.period;
+        tp.time = this.period - 1;
     else {
         var nexttime = this.points[idx + 1].time;
         if (tp.time >= nexttime) tp.time = nexttime - 1;
@@ -218,3 +271,4 @@ Timeline.prototype.setPointConstrained = function(idx, tp) {
     cp.value = tp.value;
     return true;
 };
+

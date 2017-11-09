@@ -2,6 +2,12 @@
 
 /*eslint-env node */
 
+// Note that Q and Fs are only required when they are required, so this
+// module can be used in a browser.
+const Utils = require("../common/Utils.js");
+
+const TAG = "DataModel";
+
 /**
  * This module provides a way to deserialise a datastructure from
  * JSON data which contains only initialisation data for the
@@ -33,12 +39,14 @@
  *   id: { $class: String, $doc: "unique id" }
  * }
  * ```
- * names that don't start with $ are field names that are expected to
- * be found in the config data.
+ * Names that don't start with $ (such as `id` in the example) are
+ * keys that are expected to be found in the data. The model maps these
+ * to the epected type of the data.
  *
- * keywords in the spec define the type of the datum ($class)
+ * $keywords in the example define the type of the datum ($class)
  * and a block of documentation ($doc).
- * keywords exist to modify the spec:
+ *
+ * Keywords include:
  *   $class - type of the datum (as returned by typeof, defaults to "object")
  *   $doc - a documentation string for the datum
  *   $optional - this datum is optional
@@ -110,19 +118,6 @@
  * ```
  * Note that "undefined" is not regarded as a useful value. If the
  * value of a field is undefined, the key for that field will be dropped.
- */
-const Fs = require("fs");
-const Q = require("q");
-
-const readFilePromise = Q.denodeify(Fs.readFile);
-const writeFilePromise = Q.denodeify(Fs.writeFile);
-
-const Utils = require("../common/Utils.js");
-
-const TAG = "DataModel";
-
-/**
- * functions involved in managing modelled data
  * @namespace
  */
 var DataModel = {
@@ -146,10 +141,10 @@ var DataModel = {
 };
 
 /**
- * @private
  * Check the model for correct construction
  * @param model the model to check
  * @param context undefined or an array
+ * @private
  */
 DataModel.check = function(model, context) {
     if (model.$checked)
@@ -318,21 +313,22 @@ DataModel.remodel = function(index, data, model, context) {
 DataModel.getSerialisable = function(data, model, context) {
     DataModel.check(model);
 
+    var Q = require("q");
+
     // context is an internal parameter used for generating
     // meaningful errors
     if (typeof context === "undefined")
         context = [];
 
     if (typeof data === "undefined") {
-        if (typeof model !== "undefined" && model.$optional)
+        if (typeof model !== "undefined" && model.$optional) {
             return Q();
+        }
         throw Utils.report(TAG, ".getSerialisable: non-optional at ",
                            context.join('.'));
     }
 
     //Utils.LOG("Serialise ", data, " using ",model);
-    if (typeof model === "function")
-        throw "WTF this shouldn't happen";
 
     if (model.$skip) {
         if (typeof data === "object" &&
@@ -430,7 +426,7 @@ DataModel.getSerialisable = function(data, model, context) {
  * node with a corresponding model.
  * @param {object} root the root of the tree
  * @param {object} model the root of the model that describes the tree
- * @param {String or Array} path either a path expresses as a /-separated
+ * @param path either a path expresses as a /-separated
  * string or an already-split array of path components.
  * @param {function} fn (node, subtreemodel, parentnode, key)
  * where node is the root of the subtree, nodemodel is the model for the
@@ -491,6 +487,10 @@ DataModel.loadData = function(file, model) {
 
     DataModel.check(model);
 
+    var Q = require("q");
+    var Fs = require("fs");
+    var readFilePromise = Q.denodeify(Fs.readFile);
+
     return readFilePromise(file)
     .then(function(code) {
         var data = Utils.eval(code, file);
@@ -516,6 +516,10 @@ DataModel.saveData = function(data, model, file) {
 
     if (typeof file === "undefined")
         file = this._readFrom;
+
+    var Q = require("q");
+    var Fs = require("fs");
+    var writeFilePromise = Q.denodeify(Fs.writeFile);
 
     return DataModel.getSerialisable(data, model).then(function(remod) {
         return writeFilePromise(
@@ -584,7 +588,7 @@ DataModel.help = function(model, index) {
 /* Inner classes, helpers for file operations */
 
 /**
- * Inner class for handling filenames specified in serialisable data.
+ * DataModel inner class for handling filenames specified in serialisable data.
  * The constructor uses the $mode (default "r") specified in the
  * model to verify the status of the target file. This supports the
  * following modes:
@@ -595,6 +599,7 @@ DataModel.help = function(model, index) {
  * @param filename the file name
  * @param index the name passed to the constructor by DataModel
  * @param {object} model the model for this file
+ * @class
  */
 function File(filename, index, model) {
     this.data = filename;
@@ -605,6 +610,7 @@ function File(filename, index, model) {
         var $mode = model.$mode;
         if (typeof $mode === "undefined")
             $mode = "r";
+        var Fs = require("fs");
         var mode = Fs.constants.F_OK;
 
         if ($mode.indexOf("r") >= 0)
@@ -656,6 +662,9 @@ File.prototype.toString = function() {
  * @param value new data to write to the file
  */
 File.prototype.write = function(value) {
+    var Q = require("q");
+    var Fs = require("fs");
+    var writeFilePromise = Q.denodeify(Fs.writeFile);
     return writeFilePromise(Utils.expandEnvVars(this.data), value, "utf8");
 };
 
@@ -663,10 +672,14 @@ File.prototype.write = function(value) {
  * Promise to read the file
  */
 File.prototype.read = function() {
+    var Q = require("q");
+    var Fs = require("fs");
+    var readFilePromise = Q.denodeify(Fs.readFile);
     return readFilePromise(Utils.expandEnvVars(this.data));
 };
 
 File.prototype.getSerialisable = function() {
+    var Q = require("q");
     return Q(this.data);
 };
 
@@ -680,9 +693,11 @@ File.prototype.getSerialisable = function() {
  * @param data either a file name or raw data
  * @param index the name passed to the constructor by DataModel
  * @param {object} model the model for the datum
+ * @class
  */
 function TextOrFile(data, index, model) {
     DataModel.File.call(this, data, index, model);
+    var Fs = require("fs");
     this.is_file = Fs.existsSync(Utils.expandEnvVars(data));
 };
 TextOrFile.prototype = new DataModel.File();
@@ -701,6 +716,7 @@ TextOrFile.prototype.read = function() {
         return DataModel.File.prototype.read.call(this);
     else {
         var data = this.data;
+        var Q = require("q");
         return Q.fcall(function() { return data; });
     }
 };
@@ -714,6 +730,7 @@ TextOrFile.prototype.write = function(value) {
         return DataModel.File.prototype.write.call(this, value);
     else {
         this.data = value;
+        var Q = require("q");
         return Q(true);
     }
 };

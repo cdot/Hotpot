@@ -1,7 +1,7 @@
-function (thermostats, pins) {
+function () {
     var self = this;
-    var thermostat = thermostats.CH;
-    var pin = pins.CH;
+    var thermostat = self.thermostat.CH;
+    var pin = self.pin.CH;
 
     return pin.getStatePromise()
     .then(function(state) {

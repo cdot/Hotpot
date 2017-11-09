@@ -5,7 +5,9 @@
 const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
 /**
- * Functions for comparing times around the current time.
+ * Functions for handling times within the current 24 hour period.
+ * Use Time.now() rather than Date.now() so that tests can be written
+ * that change the current date/time.
  * @namespace
  */
 var Time = {
@@ -13,51 +15,6 @@ var Time = {
 };
 
 module.exports = Time;
-
-/**
- * Convert a variety f types to a Date
- */
-Time.toDate = function(d) {
-    switch (typeof d) {
-    case "string":
-        return Time.parse(d);
-    case "number":
-        return new Date(d);
-    case "object":
-        return d;
-    }
-    throw "Unconvertible date type " + (typeof d);
-};
-
-/**
- * Convert a variety f types to a number of ms
- * @private
- */
-Time.toMs = function(d) {
-    switch (typeof d) {
-    case "string":
-        return Time.parse(d).getTime();
-    case "number":
-        return d;
-    case "object":
-        return d.getTime();
-    }
-    throw "Unconvertible date type " + (typeof d);
-};
-
-/**
- * Unit test support. Force now to a specific time for the duration
- * of a function call.
- */
-Time.for_now = function(now, scope) {
-    if (typeof now === "object")
-        now = now.getTime();
-    Time.now = function() {
-        return now;
-    };
-    scope();
-    Time.now = Date.now;
-};
 
 /**
  * Debug support. Force now to a specific time until unset.
@@ -77,34 +34,33 @@ Time.unforce = function() {
 };
 
 /**
- * Get midnight, today, as a Date
- * @return {Date} date object representing midnight
+ * Get midnight, today, as a number of ms since the epoch
+ * @return {number} midnight as number of ms since epoch
  */
 Time.midnight = function() {
     "use strict";
     var d = new Date(Time.now());
     d.setHours(0, 0, 0, 0);
-    return d;
+    return d.getTime();
 };
 
 /**
- * Parse a server local time HH[:MM[:SS]] string to a Date offset from midnight.
+ * Parse a server local time HH[:MM[:SS]] string to a number of ms offset
+ * from midnight.
  * Times must be in the range 00:00:00..23:59:59
  * @param {string} s time string
- * @return {Date} the date
+ * @return {number} number of ms since midnight
  */
 Time.parse = function(str) {
     "use strict";
-    var hms = str.split(/:/);
-    var h = hms.shift();
-    var m = hms.shift() || 0;
-    var s = hms.shift() || 0;
-    var d = new Date(Time.now());
+    var hms = str.split(":");
+    var h = Number.parseInt(hms.shift());
+    var m = Number.parseInt(hms.shift() || "0");
+    var s = Number.parseFloat(hms.shift() || "0");
     // Set according to local time
-    if (h > 23 || m > 59 || s > 59 || h < 0 || m < 0 || s < 0)
+    if (h > 23 || m > 59 || s >= 60 || h < 0 || m < 0 || s < 0)
         throw "Time out of range 00:00:00..23:59:59";
-    d.setHours(h, m, s, 0);
-    return d;
+    return (((h * 60) + m) * 60 + s) * 1000;
 };
 
 /**
@@ -117,64 +73,36 @@ Time.nowSeconds = function() {
 };
 
 /**
- * Determine if current time is between two times.
- * t1 is always taken to be in the current 24 hour period (i.e. to be
- * a time relative to midnight today.
- * @param {Date} t1 time, also accepts a string or a number (ms)
- * @param {Date} t2 time, also accepts a string or a number (ms)
- * @return boolean
- */
-Time.between = function(t1, t2) {
-    "use strict";
-    var now = Time.now();
-    t1 = Time.toMs(t1);
-    t2 = Time.toMs(t2);
-
-    if (t1 > t2) {
-        // e.g. 22:00..02:00, check 12:00..02:00 tomorrow
-        if (now < t2)
-            return true;
-        // Now check t1..midnight tonight
-        t2 = Time.midnight().getTime() + ONE_DAY;
-    }
-    // Now all within current 24 hour period, t1 < t2
-    return (t1 <= now && now < t2);
-};
-
-/**
- * Determine if the given time was in the past
- * If no day/date is given, assumes the current 24 hour period
- * @return true if the current time is after the given time
- * @param {Date} t1 time, also accepts a string or a number (ms)
- * @return boolean
- */
-Time.after = function(t1) {
-    "use strict";
-    return (Time.toMs(t1) < Time.now());
-};
-
-/**
- * Determine if the given time is in the future
- * If no day/date is given, assumes the current 24 hour period
- * @return true if the current time is before the given time
- * @param {Date} t1 time, also accepts a string or a number (ms)
- * @return boolean
- */
-Time.before = function(t1) {
-    "use strict";
-    return (Time.now() < Time.toMs(t1));
-};
-
-/**
  * Get the current time as an offset in ms from the preceding midnight
  */
 Time.time_of_day = function() {
-    return Time.now() - Time.midnight().getTime();
+    return Time.now() - Time.midnight();
 };
 
 /**
- * Get the given time string as an offset in ms from the preceding midnight
+ * Generate a string that gives the given number of ms since midnight as
+ * a time string suitable for use with Time.parse
+ * @param {number} number of ms since midnight
+ * @result {string} string representation
  */
-Time.toRelMs = function(s) {
-    return Time.toMs(s) - Time.midnight().getTime();
+Time.unparse = function(t) {
+    function pad(n, w) {
+        var s = "" + n;
+        while (s.length < w)
+            s = "0" + s;
+        return s;
+    }
+    if (t < 0 || t > ONE_DAY)
+        throw "Time.unparse time out of range";
+    var ms = Math.trunc(t % 1000);
+    t = Math.trunc(t / 1000);
+    var s = Math.trunc(t % 60);
+    t = Math.trunc(t / 60);
+    var m = Math.trunc(t % 60);
+    var h = Math.trunc(t / 60);
+    var ts = pad(h, 2) + ":" + pad(m, 2) + ":" + pad(s, 2);
+    if (ms > 0)
+        ts += "." + pad(ms, 3);
+    return ts;
 };
+

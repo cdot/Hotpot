@@ -15,16 +15,13 @@ Utils = require("../common/Utils.js");
 /**
  * A rule governing when/if a function is to be turned on/off based on the
  * state of one or more thermostats.
+ * @param {object} proto object that configures this object
  * @param {string} name name of the rule
- * @protected
  * @class
  */
-function Rule(config, name) {
+function Rule(proto, name) {
     "use strict";
 
-    Utils.extend(this, config);
-
-    this.index = undefined;
     /**
      * Name of the rule
      * @type {string}
@@ -33,11 +30,13 @@ function Rule(config, name) {
     this.name = name;
 
     /**
-     * Test function
+     * Test function. () where `this` is the Controller, 
      * @type {function}
      * @public
      */
-    this.testfn = undefined;
+    this.test = undefined;
+
+    Utils.extend(this, proto);
 }
 module.exports = Rule;
 
@@ -50,52 +49,35 @@ Rule.Model = {
 };
 
 /**
- * Promise to initialise a new rule, possibly reading rule function
- * from external file.
+ * Promise to initialise a new rule.
  */
 Rule.prototype.initialise = function() {
     var self = this;
 
     return this.test.read()
     .then(function(fn) {
-        self.setTest(fn);
+        if (typeof fn !== "function") {
+            // Compile the function
+            try {
+                fn = Utils.eval(fn);
+            } catch (e) {
+                if (e instanceof SyntaxError)
+                    Utils.ERROR(TAG, "Syntax error in '" + self.name
+                                + "': " + e.stack);
+                else
+                    Utils.ERROR(TAG, "'" + self.name
+                                + "' compilation failed: " + e.stack);
+            }
+            if (typeof self.testfn !== "undefined"
+                && self.testfn === fn) {
+                Utils.TRACE(TAG, self.name, " unchanged");
+                return;
+            }
+        }
+        self.testfn = fn;
         Utils.TRACE(TAG, self.name, " initialised");
     });
 };
 
-/**
- * Set the test function for this rule
- * @param {function} fn the function (may be a string)
- * @private
- */
-Rule.prototype.setTest = function(fn) {
-    "use strict";
 
-    if (typeof fn !== "function") {
-        // Compile the function
-        try {
-            fn = Utils.eval(fn);
-        } catch (e) {
-            if (e instanceof SyntaxError)
-                Utils.ERROR(TAG, "Syntax error in '" + this.name
-                              + "': " + e.stack);
-            else
-                Utils.ERROR(TAG, "'" + this.name
-                              + "' compilation failed: " + e.stack);
-        }
-        if (typeof this.testfn !== "undefined"
-            && this.testfn.toString() === fn.toString()) {
-            Utils.TRACE(TAG, this.name, " unchanged");
-            return;
-        }
-    }
-    this.testfn = fn;
-};
-
-Rule.prototype.getConfiguration = function() {
-    return {
-        name: this.name,
-        test: this.testfn.toString()
-    };
-};
 

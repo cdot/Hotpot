@@ -327,7 +327,9 @@ Trace.prototype.renderLegend = function(x, y, ctx) {
 };
 
 /**
-* Trace for a binary signal (0, 1 values at either extreme of the range)
+ * Subclass of Trace for a binary signal (0, 1 values at either extreme
+ * of the range)
+ * @class
  */
 function BinaryTrace(options) {
     options.min.s = 0;

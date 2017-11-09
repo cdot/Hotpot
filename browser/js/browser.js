@@ -8,6 +8,7 @@
 const Utils = require("common/Utils.js");
 //const Time = require("common/Time.js");
 const Timeline = require("common/Timeline.js");
+const DataModel = require("common/DataModel.js");
 
 (function($) {
     "use strict";
@@ -267,9 +268,8 @@ const Timeline = require("common/Timeline.js");
         $.getJSON("/ajax/getconfig/thermostat/"+service+
                   "/timeline", function(tl) {
                       $("#"+service+"-timeline").css("display", "block");
-                      te.timeline.min = tl.min;
-                      te.timeline.max = tl.max;
-                      te.timeline.points = tl.points;
+                      te.timeline = DataModel.remodel(
+                          service, tl, Timeline.Model);
                       te.changed = false;
                       te.render();
                   });
@@ -287,6 +287,7 @@ const Timeline = require("common/Timeline.js");
             console.log("Send timeline update to server");
             $.post("/ajax/setconfig/thermostat/" + service +
                    "/timeline",
+                   // Can't use getSerialisable because it uses Q promises
                    JSON.stringify({ value: timeline }),
                    function(/*raw*/) {
                        $(document).trigger("poll");

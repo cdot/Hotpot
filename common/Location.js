@@ -13,8 +13,7 @@ const MIN_DEG = 0.00005; // 5 metres in degrees at 55N
 const Utils = require('./Utils');
 
 /**
- * Location object, compatible with google.maps.LatLng. This function has
- * three possible constructor signatures:
+ * Location object. This function has three possible constructor signatures:
  * 1. Location(lat, lng) where both lat and lng are numbers
  * 2. Location(object) where object has latitude and longitude fields
  * 3. Location() for a default Location 55N 0W

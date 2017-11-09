@@ -183,8 +183,8 @@ Thermostat.prototype.getTargetTemperature = function() {
 
 /**
  * Get the maximum temperature allowed by the timeline for this thermostat
- * at the current time/
+ * at any time.
  */
 Thermostat.prototype.getMaximumTemperature = function() {
-    return this.timeline.max;
+    return this.timeline.getMaxValue();
 };

@@ -1,21 +1,20 @@
 /*eslint-env node, mocha */
 var assert = require('chai').assert;
 
+const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 var Time = require('../Time.js');
 describe('Time', function() {
     describe('#midnight()', function() {
-        assert(Time.midnight().getTime() ===
-            Date.parse(new Date().toLocaleDateString()));
-        it('should return a date', function() {
-            assert(Time.midnight() instanceof Date);
-        });
         it('should give a time of 00:00', function() {
-            assert.equal(0, Time.midnight().getHours());
-            assert.equal(0, Time.midnight().getMinutes());
-            assert.equal(0, Time.midnight().getSeconds());
+            assert.equal(Date.parse(new Date().toLocaleDateString()),
+                    Time.midnight());
+            var d = new Date(Time.midnight());
+            assert.equal(0, d.getHours());
+            assert.equal(0, d.getMinutes());
+            assert.equal(0, d.getSeconds());
         });
         it('should be before the current time', function() {
-            assert(Time.midnight() <= new Date());
+            assert(Time.midnight() <= Time.now());
         });
     });
 
@@ -23,35 +22,32 @@ describe('Time', function() {
         var today;
         it('should parse h, h:m, and h:m:s', function() {
             today = Time.parse('0');
-            assert.equal(Time.midnight().toISOString(), today.toISOString());
+            assert.equal(0, today);
             today = Time.parse('00:0');
-            assert.equal(Time.midnight().toISOString(), today.toISOString());
+            assert.equal(0, today);
             today = Time.parse('0:00:00');
-            assert.equal(Time.midnight().toISOString(), today.toISOString());
+            assert.equal(0, today);
         });
-        it('should parse 00:00 to midnight just past', function() {
-            var t0 = new Date();
-            t0.setHours(0, 0, 0, 0);
-            var t1 = Time.parse('00:00');
-            assert.equal(t1.getTime(), t0.getTime());
-        });
-        it('should parse 00:01 to just past midnight', function() {
-            var t0 = new Date();
-            t0.setHours(0, 1, 0, 0);
+        it('should parse small mins', function() {
             var t1 = Time.parse('00:01');
-            assert.equal(t1.getTime(), t0.getTime());
+            assert.equal(60000, t1);
         });
-        it('should parse 0:0:1 to just past midnight', function() {
-            var t0 = new Date();
-            t0.setHours(0, 0, 1, 0);
+        it('should parse small ms', function() {
+            var t1 = Time.parse('00:00:00.001');
+            assert.equal(1, t1);
+        });
+        it('should parse single digits', function() {
             var t1 = Time.parse('0:0:1');
-            assert.equal(t1.getTime(), t0.getTime());
+            assert.equal(t1, 1000);
         });
-        it('should parse 23:59:59 to one second before midnight', function() {
-            var t0 = new Date();
-            t0.setHours(23, 59, 59, 0);
+        it('should parse large secs', function() {
             var t1 = Time.parse('23:59:59');
-            assert.equal(t1.getTime(), t0.getTime());
+            assert.equal((((23*60)+59)*60+59)*1000,ONE_DAY-1000);
+            assert.equal(t1, ONE_DAY - 1000);
+        });
+        it('should parse large ms', function() {
+            var t1 = Time.parse('23:59:59.999');
+            assert.equal(t1, ONE_DAY - 1);
         });
         it('should throw on bad times', function() {
             try {
@@ -72,78 +68,38 @@ describe('Time', function() {
         });
     });
 
-    describe('#before()', function() {
-        it('should pass 08:00 before 12:00', function() {
-            Time.for_now(Time.parse("08:00"), function() {
-                assert(Time.before("12:00"));
-            });
+    describe('#unparse()', function() {
+        it("should unparse 00:00:00.001", function() {
+            assert.equal(Time.unparse(1), "00:00:00.001");
         });
-        it('should fail 12:00:00 before 12:00', function() {
-            Time.for_now(Time.parse("12:00:00"), function() {
-                assert(!Time.before("12:00"));
-            });
+        it("should unparse 00:00:00", function() {
+            assert.equal(Time.unparse(0), "00:00:00");
         });
-        it('should pass 11:59:59 before 12:00', function() {
-            Time.for_now(Time.parse("11:59:59"), function() {
-                assert(Time.before("12:00"));
-            });
+        it("should unparse 00:01", function() {
+            assert.equal(Time.unparse(60 * 60 * 1000), "01:00:00");
         });
-        it('should fail 12:00:01 before 12:00', function() {
-            Time.for_now(Time.parse("12:00:01"), function() {
-                assert(!Time.before("12:00"));
-            });
+        it("should unparse 00:01", function() {
+            assert.equal(Time.unparse(60 * 1000), "00:01:00");
         });
-    });
-
-    describe('#after()', function() {
-        it('should fail 08:00 after 12:00', function() {
-            Time.for_now(Time.parse("08:00"), function() {
-                assert(!Time.after("12:00"));
-            });
+        it("should unparse 00:01:01", function() {
+            assert.equal(Time.unparse(61 * 1000), "00:01:01");
         });
-        it('should pass 12:00:01 after 12:00', function() {
-            Time.for_now(Time.parse("12:00:01"), function() {
-                assert(Time.after("12:00"));
-            });
+        it("should unparse 23:59:59.999", function() {
+            assert.equal(Time.unparse(ONE_DAY-1), "23:59:59.999");
         });
-    });
-
-    describe('#between()', function() {
-
-        it('should pass 08:00 < 12:00 < 20:00', function() {
-            Time.for_now(Time.parse("12:00"), function() {
-                assert(Time.between("08:00", "20:00"));
-            });
+        it("should check upper end of range", function() {
+            try {
+                Time.unparse(ONE_DAY + 1);
+                assert(false);
+            } catch (e) {
+            }
         });
-
-        it('should fail 20:00 < 12:00 < 08:00', function() {
-            Time.for_now(Time.parse("12:00"), function() {
-                assert(!Time.between("20:00", "08:00"));
-            });
-        });
-
-        it('should pass 22:00 < 00:00 < 02:00', function() {
-            Time.for_now(Time.midnight(), function() {
-                assert(Time.between("22:00", "02:00"));
-            });
-        });
-
-        it('should fail 02:00 < 00:00 < 22:00', function() {
-            Time.for_now(Time.midnight(), function() {
-                assert(!Time.between("02:00", "22:00"));
-            });
-        });
-
-        it('should pass 22:00 < 01:00 < 02:00', function() {
-            Time.for_now(Time.parse("01:00"), function() {
-                assert(Time.between("22:00", "02:00"));
-            });
-        });
-
-        it('should pass 22:00 < 23:00 < 02:00', function() {
-            Time.for_now(Time.parse("23:00"), function() {
-                assert(Time.between("22:00", "02:00"));
-            });
+        it("should check lower end of range", function() {
+            try {
+                Time.unparse(-1);
+                assert(false);
+            } catch (e) {
+            }
         });
     });
 });

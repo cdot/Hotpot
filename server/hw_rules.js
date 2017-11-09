@@ -1,12 +1,10 @@
-function (thermostats, pins) {
-    // Get the current state of the HW pin
+function () {
     var self = this;
-    var thermostat = thermostats.HW;
-    var pin = pins.HW;
+    var thermostat = self.thermostat.HW;
+    var pin = self.pin.HW;
 
     return pin.getStatePromise()
     .then(function(state) {
-        // Keep HW below 40C regardless
         if (thermostat.temperature > thermostat.getMaximumTemperature()) {
             // Hot enough, so switch off regardless of other rules
             if (state === 1) {

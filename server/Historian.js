@@ -54,8 +54,8 @@ Historian.Model = {
 };
 
 /**
- * @private
  * Get the expanded file name
+ * @private
  */
 Historian.prototype.path = function() {
     "use strict";
