@@ -24,9 +24,7 @@ SOURCES := \
 	common/Utils.js \
 	common/Vec.js \
 	browser/js/require.js \
-	browser/js/autoscale_graph.js \
 	browser/js/browser.js \
-	browser/js/edit_in_place.js \
 	browser/js/TimelineEditor.js
 
 FIND := find . \

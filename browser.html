@@ -4,15 +4,15 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>HotPot remote monitor</title>
     <link rel="icon" href="browser/images/favicon.ico" type="image/x-icon" />
-    <link rel="stylesheet" href="browser.css">
+    <link rel="stylesheet" href="browser/styles.css">
     <script type="text/javascript" src="node_modules/jquery/dist/jquery.js"></script>
     <script type="text/javascript" src="browser/js/require.js"></script>
     <script type="text/javascript" src="browser/js/autoscale_graph.js"></script>
     <script type="text/javascript" src="browser/js/TimelineEditor.js"></script>
     <script type="text/javascript" src="browser/js/browser.js"></script>
   </head>
-  <body>
-    <h1>Hotpot
+  <body class="body-bg body-fg fonts">
+    <h1 class="banner banner-bg banner-fg">Hotpot
       <img src="browser/images/hotpot.svg" style="height: 230px; float:right"></h1>
     <div id="comms_error"></div>
 
@@ -21,7 +21,6 @@
         <span data-path="/time" data-type="date"></span>
         <div data-path="/weather" data-use-template="weather"></div>
       </div>
-      <hr />    
       <div>
         Central Heating
         <span id="thermostat-CH-temp"></span>
@@ -36,11 +35,11 @@
         <button id="pin-CH-off">OFF</button>
         <button id="open-CH-timeline">Timeline</button>
         <div id="CH-timeline">
-          <canvas class="timeline_canvas" id="CH-timeline-canvas"></canvas>
-          <button id="close-CH-timeline">Close</button>
+          <canvas class="timeline_canvas" data-service="CH" id="CH-timeline-canvas"></canvas>
+          <button id="save-CH-timeline">Save</button>
+          <button id="cancel-CH-timeline">Cancel</button>
         </div>
       </div>
-      <hr />
       <div>
         Hot Water
         <span id="thermostat-HW-temp"></span>
@@ -55,11 +54,11 @@
         <button id="pin-HW-off">OFF</button>
         <button id="open-HW-timeline">Timeline</button>
         <div id="HW-timeline">
-          <canvas class="timeline_canvas" id="HW-timeline-canvas"></canvas>
-          <button id="close-HW-timeline">Close</button>
+          <canvas class="timeline_canvas"  data-service="HW" id="HW-timeline-canvas"></canvas>
+          <button id="save-HW-timeline">Save</button>
+          <button id="cancel-HW-timeline">Cancel</button>
         </div>
       </div>
-      <hr />
       <button class="switcher" data-to="graphs">Graphs</button>
       <button class="switcher" data-to="help">Help</button>
     </div>
@@ -69,10 +68,10 @@
       <button class="switcher" data-to="controls">Close</button>
     </div>
     <div class="display" id="help">
-      <h1>Requests</h1>
       <p>BOOST will turn the service on until the temperature hits the maximum for the
       service; it will then revert to following the timeline.</p>
       <p>OFF will turn the service off. It won't come on again until the request is cancelled.</p>
+      <p>Timeline will open a graphical timeline editor</p>
 <!--      <p>ON will keep the temperature at the timeline until the request is cancelled.</p>-->
       <button class="switcher" data-to="controls">Close</button>
   </body>

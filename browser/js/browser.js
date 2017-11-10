@@ -18,16 +18,6 @@ const DataModel = require("common/DataModel.js");
 
     var update_backoff = 10; // seconds
 
-    var graph_width = 24 * 60 * 60 * 1000; // milliseconds
-
-    var trace_options = {
-        "pin:HW": { type: "binary", colour: "yellow" },
-        "pin:CH": { type: "binary", colour: "cyan" },
-        "thermostat:HW": { type: "continuous", colour: "orange" },
-        "thermostat:CH": { type: "continuous", colour: "red" },
-        "weather:MetOffice": { type: "continuous", colour: "green" }
-    };
-
     var poller;
 
     var traces = {};
@@ -63,39 +53,18 @@ const DataModel = require("common/DataModel.js");
         return false; // prevent repeated calls
     }
 
-    function zeroExtend(num, len) {
-        var str = "" + num;
-        while (str.length < len)
-            str = '0' + str;
-        return str;
-    }
-
-    function datime(value) {
-        var date = new Date(Math.round(value));
-        var day = date.getDate();
-        var month = date.getMonth() + 1;
-        var year = date.getFullYear();
-        var hours = date.getHours();
-        var mins = date.getMinutes();
-        return day + "/" + month + "/" + year + " "
-            + hours + ":" + zeroExtend(mins, 2);
-    }
-
-    function updateGraph(data) {
-        var g = $("#graph_canvas").data("graph");
-        if (!g)
-            return; // not ready yet
-        for (var type in data) {
-            for (var name in data[type]) {
+    function updateTraces(data) {
+        for (var type in data) { // thermostat
+            for (var name in data[type]) { // HW
                 var o = data[type][name];
                 var d = (typeof o.temperature !== "undefined")
                     ? o.temperature : o.state;
-                if (typeof d !== "undefined" &&
-                    typeof traces[type+":"+name] !== "undefined")
-                    traces[type+":"+name].addPoint(Time.now(), d);
+                if (typeof traces[type+"-"+name] === "undefined")
+                    traces[type+"-"+name] = [];
+                if (typeof d !== "undefined")
+                    traces[type+"-"+name].push({time: data.time, value: d});
             }
         }
-        g.render();
     }
 
     /**
@@ -110,6 +79,9 @@ const DataModel = require("common/DataModel.js");
             var pin = "#pin-" + service + "-";
             var tcur = Math.round(
                 10 * obj.thermostat[service].temperature) / 10;
+            var te = $("#" + service + "-timeline-canvas").data("timeline_editor");
+            if (te)
+                te.setCrosshairs(Time.time_of_day(), tcur);
             var ttgt = Math.round(
                 10 * obj.thermostat[service].target) / 10;
             if (tcur > ttgt)
@@ -175,8 +147,11 @@ const DataModel = require("common/DataModel.js");
             function(data) {
                 $("#comms_error").html("");
                 $(".showif").hide(); // hide optional content
+                updateTraces(data);
                 updateState(data);
-                updateGraph(data);
+                var g = $("#graph_canvas").data("graph");
+                if (g)
+                    g.render();
                 setPollTimeout();
             })
             .fail(function(jqXHR, status, err) {
@@ -187,6 +162,91 @@ const DataModel = require("common/DataModel.js");
             });
     });
 
+    function loadTraces(data) {
+        for (var type in data) {
+            for (var name in data[type]) {
+                var trace = [];
+                var tdata = data[type][name];
+                var offset = tdata.shift();
+                for (var i = 0; i < tdata.length; i += 2) {
+                    trace.push({time: offset + tdata[i],
+                                value: tdata[i + 1]});
+                }
+                traces[type + "-" + name] = trace;
+            }
+        }
+    }
+
+    function renderTrace(te, trace, style1, style2, is_binary) {
+        var ctx = te.ctx;
+        var base = is_binary ? te.timeline.max / 10 : 0;
+        var binary = is_binary ? te.timeline.max / 10 : 1;
+        
+        // Draw from current time back to 0
+        ctx.strokeStyle = style1;
+        ctx.beginPath();
+        var midnight = Time.midnight();
+        var i = trace.length - 1;
+        var first = true;
+        var now = trace[i].time;
+        var lp;
+        console.log("Last trace at " + new Date(now));
+        console.log("Cur time " + new Date());
+        while (i >= 0 && trace[i].time > midnight) {           
+            var tp = { time: trace[i].time - midnight,
+                       value: base + trace[i].value * binary };
+            var p = te.p2xy(tp);
+            if (first) {
+                ctx.moveTo(p.x, p.y);
+                first = false;
+            } else {
+                if (is_binary && lp && tp.value != lp.value) {
+                    var lp = te.p2xy(lp);
+                    ctx.lineTo(lp.x, lp.y);
+                }
+                ctx.lineTo(p.x, p.y);
+            }
+            lp = tp;
+            i--;
+        }
+        ctx.stroke();
+
+        // Draw from midnight back to same time yesterday
+        ctx.strokeStyle = style2;
+        ctx.beginPath();
+        first = true;
+        var stop = now - 24 * 60 * 60 * 1000;
+        midnight -= 24 * 60 * 60 * 1000;
+        lp = undefined;
+        while (i >= 0 && trace[i].time > stop) {           
+            var tp = { time: trace[i].time - midnight,
+                       value: base + trace[i].value * binary };
+            var p = te.p2xy(tp);
+            if (first) {
+                ctx.moveTo(p.x, p.y);
+                first = false;
+            } else
+                if (is_binary && lp && tp.value != lp.value) {
+                    var lp = te.p2xy(lp);
+                    ctx.lineTo(lp.x, lp.y);
+                }
+            i--;
+            lp = tp;
+        }
+        ctx.stroke();
+    }
+    
+    function renderTraces() {
+        var $canvas = $(this);
+        var service = $canvas.data("service");
+        var te = $("#" + service + "-timeline-canvas").data("timeline_editor");
+        
+        renderTrace(te,
+            traces["thermostat-" + service], "#00AA00", "#006600", false)
+        renderTrace(te,
+            traces["pin-" + service], "#AA0000", "#660000", true)
+    }
+    
     function initialiseTimeline() {
         var $canvas = $(this);
         var DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -197,73 +257,14 @@ const DataModel = require("common/DataModel.js");
         $canvas.on("change", function() {
             // Really don't want to send an update to the server until we're
             // finished moving.
-            $(this).data("timeline").changed = true;
+            $(this).changed = true;
         });
-    }
-
-    // Initialise the graph canvas by requesting
-    function initialiseGraph() {
-        var $canvas = $(this);
-        var params = { since: Date.now() - graph_width };
-
-        function createTrace(g, da, na) {
-            var basetime = da[0];
-            var options = {
-                legend: na,
-                min: {
-                    t: Date.now() - graph_width
-                },
-                max: {
-                    t: Date.now()
-                },
-                colour: trace_options[na].colour
-            };
-
-            var trace;
-            if (trace_options[na].type == "binary")
-                trace = new BinaryTrace(options);
-            else
-                trace = new Trace(options);
-            for (var j = 1; j < da.length; j += 2) {
-                trace.addPoint(basetime + da[j], da[j + 1]);
-            }
-            traces[na] = trace;
-            g.addTrace(trace);
-            // Closing point at same level as last measurement,
-            // just in case it was a long time ago
-            if (da.length > 1)
-                trace.addPoint(Time.now(), da[da.length - 1]);
-        }
-
-        function fillGraph(data) {
-            $canvas.autoscale_graph({
-                render_tip_t: function(trd) {
-                    return datime(trd);
-                },
-                render_tip_s: function(trd) {
-                    return (Math.round(trd * 10) / 10).toString();
-                }
-            });
-
-            var g = $canvas.data("graph");
-
-            for (var type in data)
-                for (var name in data[type])
-                    createTrace(g, data[type][name], type + ":" + name);
-
-            g.render();
-        }
-
-        $.getJSON("/ajax/log", JSON.stringify(params), fillGraph)
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                console.log("Could not contact server  for logs: "
-                            + errorThrown);
-            });
+        $canvas.on("rendered", renderTraces);
     }
 
     function openTimeline(e) {
         var service = e.data;
-        var te = $("#"+service+"-timeline-canvas").data("timeline");
+        var te = $("#"+service+"-timeline-canvas").data("timeline_editor");
         $("#open-"+service+"-timeline").css("display", "none");
         $.getJSON("/ajax/getconfig/thermostat/"+service+
                   "/timeline", function(tl) {
@@ -281,11 +282,15 @@ const DataModel = require("common/DataModel.js");
         $("#open-"+service+"-timeline").css("display", "inline-block");
         // Update the timeline on the server here if it
         // has changed
-        var te = $("#"+service+"-timeline-canvas").data("timeline");
+    };
+
+    function saveTimeline(e) {
+        closeTimeline();
+        var te = $("#"+service+"-timeline-canvas").data("timeline_editor");
         if (te.changed) {
             var timeline = te.timeline;
             console.log("Send timeline update to server");
-            $.post("/ajax/setconfig/thermostat/" + service +
+            $.post("/ajax/setconfig/thermostat/" + e.data +
                    "/timeline",
                    // Can't use getSerialisable because it uses Q promises
                    JSON.stringify({ value: timeline }),
@@ -310,7 +315,8 @@ const DataModel = require("common/DataModel.js");
                 $("#"+service+"-timeline").css("display", "none");
             }
             $("#open-"+service+"-timeline").click(service, openTimeline);
-            $("#close-"+service+"-timeline").click(service, closeTimeline);
+            $("#save-"+service+"-timeline").click(service, saveTimeline);
+            $("#cancel-"+service+"-timeline").click(service, closeTimeline);
         }
         $(".timeline_canvas").each(initialiseTimeline);
 
@@ -321,7 +327,14 @@ const DataModel = require("common/DataModel.js");
             $("#" + $(this).data("to")).show();
             $("#graph_canvas").data("graph").render();
         });
-        $("#graph_canvas").each(initialiseGraph);
+
+        // Get the last 24 hours of logs
+        var params = { since: Date.now() - 24 * 60 * 60 };
+        $.getJSON("/ajax/log", JSON.stringify(params), loadTraces)
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                console.log("Could not contact server  for logs: "
+                            + errorThrown);
+            });
 
         $(document).trigger("poll");
     }

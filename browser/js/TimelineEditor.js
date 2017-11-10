@@ -19,7 +19,6 @@ function TimelineEditor(timeline, $canvas) {
     var self = this;
 
     self.timeline = timeline;
-    $canvas.data("timeline", self);
 
     // Editor value range
     self.drag_point = -1;
@@ -55,7 +54,7 @@ function TimelineEditor(timeline, $canvas) {
         var selpt = self.overPoint(self.e2xy(e));
         if (typeof selpt !== "undefined") {
             self.drag_point = selpt;
-            self.render();
+            $canvas.trigger("render");
         } else {
             endDrag();
         }
@@ -64,7 +63,7 @@ function TimelineEditor(timeline, $canvas) {
     function endDrag() {
         if (self.drag_point >= 0) {
             self.drag_point = -1;
-            self.render();
+            $canvas.trigger("change");
         }
     }
 
@@ -79,7 +78,6 @@ function TimelineEditor(timeline, $canvas) {
                 self.timeline.insertBefore(
                     intercept.next, self.xy2p(intercept.point));
                 $canvas.trigger("change");
-                self.render();
             }
         }
         // else do nothing if we are over a point - may be a pending double
@@ -92,19 +90,36 @@ function TimelineEditor(timeline, $canvas) {
             idx > 0 && idx < self.timeline.nPoints() - 1) {
             self.timeline.remove(idx);
             $canvas.trigger("change");
-            self.render();
         }
     });
 
     $canvas.hover(
-        function(e) {
+        function() {
             self.$tip_canvas.show();
         },
         function() {
             self.$tip_canvas.hide();
         });
 
-    this.render();
+    $canvas.on("change", function() {
+        if (self.redrawing)
+            return;
+        self.redrawing = true;
+        self.render();
+        self.redrawing = false;
+    });
+    
+    var resizeTimer;
+
+    // Debounce resizing
+    $canvas.on('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            $canvas.trigger("change");
+        }, 250);
+    });
+    
+    $canvas.trigger("change");
 }
 
 TimelineEditor.prototype.e2xy = function(e) {
@@ -129,7 +144,6 @@ TimelineEditor.prototype.handleMouseMove = function(e) {
         var tp = this.xy2p(xy);
         if (this.timeline.setPointConstrained(this.drag_point, tp)) {
             this.$canvas.trigger("change");
-            this.render();
         }
     }
 };
@@ -137,27 +151,21 @@ TimelineEditor.prototype.handleMouseMove = function(e) {
 TimelineEditor.prototype.handleTipCanvas = function(e) {
     "use strict";
 
-    function zeroExtend(num, len) {
-        var str = "" + num;
-        while (str.length < len)
-            str = '0' + str;
-        return str;
-    };
+    var xy, tp, fg, bg;
 
-    function hms(t) {
-        t = t / 1000;
-        var s = t % 60;
-        t = Math.floor(t / 60);
-        var m = t % 60;
-        var h = Math.floor(t / 60);
-        return zeroExtend(h, 2) + ':' + zeroExtend(m, 2) +
-            ':' + zeroExtend(s, 2);
-    };
+    if (this.drag_point < 0) {
+        xy = this.e2xy(e);
+        tp = this.xy2p(xy);
+        fg = "white";
+    } else {
+        // Dragging, lock to the drag point
+        tp = this.timeline.getPoint(this.drag_point);
+        xy = this.p2xy(tp);
+        fg = "black";
+        bg = "yellow";
+    }
 
-    var xy = this.e2xy(e);
-    var tp = this.xy2p(xy);
-
-    var text = "  " + hms(tp.time) + " : "
+    var text = "  " + Time.unparse(tp.time) + " : "
         + this.timeline.valueAtTime(tp.time).toPrecision(4);
 
     var tipCtx = this.$tip_canvas[0].getContext("2d");
@@ -168,10 +176,12 @@ TimelineEditor.prototype.handleTipCanvas = function(e) {
     tipCtx.canvas.width = tw;
     tipCtx.canvas.height = th;
 
-    tipCtx.fillStyle = "yellow";
-    tipCtx.fillRect(0, 0, tw, th);
+    if (bg) {
+        tipCtx.fillStyle = bg;
+        tipCtx.fillRect(0, 0, tw, th);
+    }
 
-    tipCtx.fillStyle = "black";
+    tipCtx.fillStyle = fg;
     tipCtx.font = th + "px sans-serif";
 
     // Move the tip to the left if too near right edge
@@ -276,39 +286,58 @@ TimelineEditor.prototype.xy2p = function(p) {
 };
 
 /**
+ * Set the crosshairs on the timeline
+ */
+TimelineEditor.prototype.setCrosshairs = function(time, value) {
+    if (typeof this.crosshairs === "undefined" ||
+        this.crosshairs.time != time ||
+        this.crosshairs.value != value) {
+        
+        this.crosshairs = { time: time, value: value };
+        this.$canvas.trigger("change");
+    }
+};
+
+/**
  * Re-render the canvas
  */
 TimelineEditor.prototype.render = function() {
     "use strict";
-    var ctx = this.ctx;
     var ch = this.$canvas.height();
     var cw = this.$canvas.width();
 
-    if (this.$canvas.height() === 0 || this.timeline.nPoints() === 0)
+    if (ch === 0 || cw === 0)
         return;
 
     // Rendering doesn't work unless you force the attrs
-    if (!this.$canvas.data("attrs_set")) {
-        this.$canvas.attr("width", cw);
-        this.$canvas.attr("height", ch);
-        this.$canvas.data("attrs_set", true);
-    }
+    this.$canvas.attr("width", cw);
+    this.$canvas.attr("height", ch);
 
     // Background
+    var ctx = this.ctx;
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, cw, ch);
 
-    var t = Time.time_of_day();
-    if (t > 0 && t < this.timeline.period) {
+    // Crosshairs
+    if (typeof this.crosshairs !== "undefined") {
         ctx.beginPath();
         ctx.strokeStyle = "red";
-        p = this.p2xy({time: t, value: this.timeline.min});
+        
+        p = this.p2xy({time: this.crosshairs.time, value: this.timeline.min});
         ctx.moveTo(p.x, p.y);
-        p = this.p2xy({time: t, value: this.timeline.max});
-            ctx.lineTo(p.x, p.y);
-        ctx.stroke();
+        p = this.p2xy({time: this.crosshairs.time, value: this.timeline.max});
+        ctx.lineTo(p.x, p.y);
+        
+        p = this.p2xy({time: 0, value: this.crosshairs.value});
+        ctx.moveTo(p.x, p.y);
+        p = this.p2xy({time: this.timeline.period,
+                       value: this.crosshairs.value});
+        ctx.lineTo(p.x, p.y);
+        
+        ctx.stroke();      
     }
 
+    // Timeline
     ctx.beginPath();
     ctx.fillStyle = 'white';
     ctx.strokeStyle = "white";
@@ -324,6 +353,7 @@ TimelineEditor.prototype.render = function() {
     }
     ctx.stroke();
 
+    // Drag point
     if (this.drag_point >= 0) {
         var p = this.p2xy(this.timeline.getPoint(this.drag_point));
         ctx.beginPath();
@@ -332,12 +362,14 @@ TimelineEditor.prototype.render = function() {
         ctx.arc(p.x, p.y, POINT_RADIUS, 0, 2 * Math.PI, false);
         ctx.fill()
     }
+    
+    this.$canvas.trigger("rendered");
 };
 
 (function($) {
     "use strict";
 
     $.fn.TimelineEditor = function(timeline) {
-        $(this).data("timeline", new TimelineEditor(timeline, $(this)));
+        $(this).data("timeline_editor", new TimelineEditor(timeline, $(this)));
     };
 })(jQuery);
