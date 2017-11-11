@@ -6,7 +6,7 @@
  */
 
 var GRequired = {};
-var module;
+module = {};
 var require_path = [];
 
 function require(ident) {
@@ -31,6 +31,7 @@ function require(ident) {
                 require_path = path;
                 //console.log("eval in " + path.join('/'));
                 var module = {};
+                var __filename = url;
                 var fn = eval("'use strict';" + data);
                 require_path = saved;
                 GRequired[ident] = module.exports;
