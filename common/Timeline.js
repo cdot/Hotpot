@@ -165,17 +165,18 @@ Timeline.prototype.valueAtTime = function(t) {
  * Insert a point before the point at the given index
  * @param index index of the point to add before (must be > 0)
  * @param point the (time: value:) point to add
+ * @return index of the point added
  */
 Timeline.prototype.insertBefore = function(index, point) {
     if (index <= 0)
         throw "Can't insert before 0 point";
     if (index >= this.points.length)
         throw "index beyond end";
-    this.points.splice(index, 0, new Timepoint({
-        time: point.time, value: point.value }));
+    this.points.splice(index, 0, new Timepoint(point));
     // Use setPoint to validate it
     try {
         this.setPoint(index);
+        return index;
     } catch (e) {
         this.points.splice(index, 1);
         throw e;
@@ -243,6 +244,7 @@ Timeline.prototype.setPoint = function(i, p) {
  * @param idx the index of the point to set
  * @param tp a point object giving the (time,value) to set. Will be
  * rewritten to the constrained point.
+ * @return true if the point was changed
  */
 Timeline.prototype.setPointConstrained = function(idx, tp) {
     // Clip
@@ -267,7 +269,7 @@ Timeline.prototype.setPointConstrained = function(idx, tp) {
     }
 
     var cp = this.points[idx];
-    if (tp.time == cp.time || tp.value == cp.value)
+    if (tp.time == cp.time && tp.value == cp.value)
         return false;
 
     cp.time = tp.time;

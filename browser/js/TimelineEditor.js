@@ -1,99 +1,155 @@
 /*@preserve Copyright (C) 2017 Crawford Currie http://c-dot.co.uk license MIT*/
 
-// Interactive canvas that supports the editing of a timeline. The idea is
-// that the timeline provides a value at any point along it's length. The
-// application is a temperature controller, where the exact temperature
-// required at any given time can be read from the timeline.
-var POINT_RADIUS = 3; // px
+/*eslint-env browser */
+
+/**
+ * Interactive canvas that supports the editing of a timeline. The
+ * idea is that the timeline provides a value at any point along it's
+ * length. The application is a temperature controller, where the
+ * exact temperature required at any given time can be read from the
+ * timeline.
+ *
+ * See https://github.com/benmajor/jQuery-Touch-Events for touch event
+ * support.
+ */
+var POINT_RADIUS = 20; // px
 var POINT_RADIUS2 = POINT_RADIUS * POINT_RADIUS;
 
-const Vec = require("common/Vec.js");
-const Time = require("common/Time.js");
+const Utils = require("../../common/Utils.js");
+const Vec = require("../../common/Vec.js");
+const Time = require("../../common/Time.js");
 
 /**
  * Timeline editor object.
  * @param timeline a Timeline object
  */
-function TimelineEditor(timeline, $canvas) {
+function TimelineEditor(timeline, $container) {
     "use strict";
+
+    this.timeline = timeline;
+
+    this.drag_point = -1;
+    this.selected_point = -1;
+    this.last_tip_point = undefined;
+    this.$container = $container;
+    
+    this.$main_canvas = $("<canvas></canvas>")
+        .css("width", "100%");
+    $container.append(this.$main_canvas);
+
+    this.$tip_canvas = $("<canvas></canvas>")
+        .addClass('overlay')
+        .css("z-index", 5);
+    $container.append(this.$tip_canvas);
+    
+    this.$selection_canvas = $("<canvas></canvas>")
+        .addClass('overlay')
+        .css({
+            width: 2 * POINT_RADIUS,
+            height: 2 * POINT_RADIUS,
+            "z-index": 10});
+    $container.append(this.$selection_canvas);
+    
+    $('.overlay').hide();
+
     var self = this;
 
-    self.timeline = timeline;
-
-    // Editor value range
-    self.drag_point = -1;
-
-    self.$canvas = $canvas;
-    self.ctx = $canvas[0].getContext("2d");
-
-    self.$tip_canvas = $("<canvas></canvas>");
-    $canvas.after(self.$tip_canvas);
-    self.$tip_canvas.css("display", "none");
-    self.$tip_canvas.css("position", "absolute");
-    self.$tip_canvas.css("background-color", "transparent");
-    self.$tip_canvas.css("color", "white");
-    self.$tip_canvas.css("pointer-events", "none");
-
-    function getTarget(e) {
-        return {
-            evt: e,
-            pt: { x: e.pageX - self.$canvas.offset().left,
-                  y: e.pageY - self.$canvas.offset().top }
-        }
-    }
-
-    $canvas.on("mousemove", function(e) {
-        self.handleMouseMove(e, getTarget(e));
+    this.$main_canvas.on("doubletap", function(e) {
+        //Utils.LOG("doubletap");
+        e.preventDefault();
+        self.is_editing = !self.is_editing;
+        self.$main_canvas.trigger("redraw");
     });
-
-    $canvas.on("mousemove", function(e) {
-        self.handleTipCanvas(e, getTarget(e));
-    });
-
-    $canvas.on("mousedown", function(e) {
-        var selpt = self.overPoint(self.e2xy(e));
-        if (typeof selpt !== "undefined") {
-            self.drag_point = selpt;
-            $canvas.trigger("render");
-        } else {
-            endDrag();
-        }
-    });
-
-    function endDrag() {
-        if (self.drag_point >= 0) {
-            self.drag_point = -1;
-            $canvas.trigger("change");
-        }
-    }
-
-    $canvas.on("mouseup", endDrag);
-    $canvas.on("mouseout", endDrag);
-
-    $canvas.on("click", function(e) {
-        var xy = self.e2xy(e);
-        if (typeof self.overPoint(xy) === "undefined") {
-            var intercept = self.overLine(xy);
-            if (typeof intercept !== "undefined") {
-                self.timeline.insertBefore(
-                    intercept.next, self.xy2p(intercept.point));
-                $canvas.trigger("change");
+    
+    // Hold down over a line to add a point and select it
+    this.$main_canvas.on("taphold", function(e, touch) {
+        if (self.is_editing) {
+            e.preventDefault();
+            var xy = touch.startOffset;
+            var selpt = self.overPoint(xy);
+            if (typeof selpt === "undefined") {
+                selpt = self.overLine(tv);
+                if (typeof selpt !== "undefined") {
+                    var tv = self.xy2tv(xy);
+                    selpt = self.timeline.insertBefore(
+                        selpt.next, tv);
+                    self.changed = true;
+                    self.last_tip_point = xy;
+                }
+            } else {
+                // taphold on a point will delete it
+                self.timeline.remove(selpt);
+                self.changed = true;
+                self.drag_point = -1;
+                self.selected_point = 0;
+                self.$container.trigger("selection_changed");
+                self.last_tip_point = xy;
             }
+            self.$selection_canvas.trigger("redraw");
+            self.$main_canvas.trigger("redraw");
+            self.$tip_canvas.trigger("redraw");
         }
-        // else do nothing if we are over a point - may be a pending double
-        // which will delete the point.
+        return false;
     });
 
-    $canvas.on("dblclick", function(e) {
-        var idx = self.overPoint(self.e2xy(e));
-        if (typeof idx !== "undefined" &&
-            idx > 0 && idx < self.timeline.nPoints() - 1) {
-            self.timeline.remove(idx);
-            $canvas.trigger("change");
+    this.$main_canvas.on($.getStartEvent(), function(e) {
+        if (self.is_editing && self.drag_point < 0) {
+            e.preventDefault();
+            var xy = self.e2xy(e);
+            var selpt = self.overPoint(xy);
+            if (!selpt)
+                selpt = -1;
+            //Utils.LOG($.getStartEvent(), xy, " @", selpt);
+            self.$main_canvas.css(
+                'cursor', (selpt ? 'pointer' : 'default'));
+            //Utils.LOG("Start drag ", selpt, xy);
+            self.drag_point = selpt;
+            self.selected_point = selpt;
+            self.$container.trigger("selection_changed");
+            self.$selection_canvas.trigger("redraw");
+            self.last_tip_point = xy;
+            self.$tip_canvas.trigger("redraw");
+            // Don't return false or you'll kill taphold
         }
     });
 
-    $canvas.hover(
+    
+    this.$main_canvas.on($.getMoveEvent(), function(e) {
+        var xy;
+        if (self.is_editing && self.drag_point >= 0) {
+            e.preventDefault();
+            xy = self.e2xy(e);
+            var tv = self.xy2tv(xy);
+            if (self.timeline.setPointConstrained(self.drag_point, tv)) {
+                self.changed = true;
+                self.$container.trigger("selection_changed");
+            }
+            self.$selection_canvas.trigger("redraw");
+            self.last_tip_point = (xy || self.e2xy(e));
+            self.$tip_canvas.trigger("redraw");
+        }
+    });
+    
+    this.$main_canvas.on($.getEndEvent(), function(e) {
+        if (self.is_editing && self.drag_point >= 0) {
+            e.preventDefault();
+            var xy = self.e2xy(e);
+            var tv = self.xy2tv(xy);
+            if (self.timeline.setPointConstrained(self.drag_point, tv)) {
+                self.changed = true;
+            }
+            self.drag_point = -1;
+            self.$container.trigger("selection_changed");
+            self.$main_canvas.css( 'cursor', 'default' );
+            self.$selection_canvas.trigger("redraw");
+            self.last_tip_point = xy;
+            self.$tip_canvas.trigger("redraw");
+            self.$main_canvas.trigger("redraw");
+            return false;
+        }
+    });
+
+    this.$main_canvas.hover(
         function() {
             self.$tip_canvas.show();
         },
@@ -101,72 +157,258 @@ function TimelineEditor(timeline, $canvas) {
             self.$tip_canvas.hide();
         });
 
-    $canvas.on("change", function() {
-        if (self.redrawing)
-            return;
-        self.redrawing = true;
-        self.render();
-        self.redrawing = false;
+    this.$main_canvas.on("redraw", function() {
+        console.log("redraw main");
+        self.drawMainCanvas();
+    });
+    
+    this.$tip_canvas.on("redraw", function() {
+        console.log("redraw tip");
+        self.drawTipCanvas();
+    });
+    
+    this.$selection_canvas.on("redraw", function() {
+        console.log("redraw drag");
+        self.drawSelectionCanvas();
     });
     
     var resizeTimer;
 
     // Debounce resizing
-    $canvas.on('resize', function() {
+    this.$main_canvas.on('resize', function() {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function() {
-            $canvas.trigger("change");
+            $main_canvas.trigger("redraw");
         }, 250);
     });
     
-    $canvas.trigger("change");
+    this.$main_canvas.trigger("redraw");
 }
 
 TimelineEditor.prototype.e2xy = function(e) {
-    return { x: e.pageX - this.$canvas.offset().left,
-             y: e.pageY - this.$canvas.offset().top };
+    if (e.changedTouches)
+        return this.mouse2xy(e.changedTouches[0]);
+    else
+        return this.mouse2xy(e);
 };
 
-TimelineEditor.prototype.handleMouseMove = function(e) {
+TimelineEditor.prototype.mouse2xy = function(e) {
+    return { x: e.pageX - this.$main_canvas.offset().left,
+             y: e.pageY - this.$main_canvas.offset().top };
+};
+
+TimelineEditor.prototype.touch2xy = function(pt) {
+    return { x: pt.x - this.$main_canvas.offset().left,
+             y: pt.y - this.$main_canvas.offset().top };
+};
+
+/**
+ * Determine if point p is within a minimum range of an existing
+ * timeline point.
+ * @param xy a point in the {x: y:} canvas space
+ * @param rad optional minimum range
+ * @return the index of the point it's over, or undefined
+ */
+TimelineEditor.prototype.overPoint = function(xy, rad) {
+    // Done in canvas space to avoid problems with aspect ratios
     "use strict";
 
-    var xy = this.e2xy(e);
+    var min2 = Number.MAX_VALUE;
+    var selected;
+    for (var i = 0; i < this.timeline.nPoints(); i++) {
+        var pt = this.tv2xy(this.timeline.getPoint(i));
+        var d = Vec.sub(xy, pt);
+        var dist2 = Vec.mag2(d);
+        //Utils.LOG("Test ", i, " at ", pt, " dist ", Math.sqrt(dist2));
+        if (dist2 <= min2 || typeof selected === "undefined") {
+            //Utils.LOG("< ", min2);
+            min2 = dist2;
+            selected = i;
+        }
+    }
+    //Utils.LOG("Closest ", selected, " at ",
+    //          this.tv2xy(this.timeline.getPoint(selected)),
+    //          " dist ", Math.sqrt(min2));
+    if (min2 > (typeof rad === "undefined" ? POINT_RADIUS2 : rad * rad))
+        return undefined;
+    return selected;
+};
 
-    // Handle being over a point
-    if (this.drag_point >= 0 || typeof this.overPoint(xy) !== "undefined")
-        // Change to hand cursor
-        this.$canvas.css( 'cursor', 'pointer' );
-    else
-        this.$canvas.css( 'cursor', 'default' );
+/**
+ * Determine if point p is within a minimum range of a line between two
+ * neighbouring points.
+ * Done in canvas space.
+ * @param xy a point on the canvas
+ * @param rad optional minimum range
+ * @return the index of the point at the end of the line it's over,
+ * or undefined
+ */
+TimelineEditor.prototype.overLine = function(xy, rad) {
+    // Done in canvas space to avoid problems with aspect ratios
+    "use strict";
 
-    // Handle drag
-    if (e.buttons !== 0 && this.drag_point >= 0) {
-        var tp = this.xy2p(xy);
-        if (this.timeline.setPointConstrained(this.drag_point, tp)) {
-            this.$canvas.trigger("change");
+    var min2 = Number.MAX_VALUE;
+    var selected;
+    var p1 = this.tv2xy(this.timeline.getPoint(0));
+    for (var i = 1; i < this.timeline.nPoints(); i++) {
+        var p2 = this.tv2xy(this.timeline.getPoint(i));
+        var line = Vec.sub(p2, p1); // p2-p1
+        var lineLen = Vec.mag(line); // |line|
+        var vLine = Vec.normalise(line, lineLen); // (p2-p1) / lineLen
+        var d = Vec.dot(Vec.sub(xy, p1), vLine); // (xy-p1) . vLine
+        var cp;
+        if (d < 0)
+            cp = p1; // before start
+        else if (d > lineLen)
+            cp = p2; // after end
+        else
+            cp = Vec.add(p1, Vec.mul(vLine, d)); // closest point
+        var dist2 = Vec.mag2(Vec.sub(cp, xy));
+        //Utils.LOG("Test ", i, " dist ", Math.sqrt(dist2));
+        if (dist2 < min2 || typeof selected === "undefined") {
+            //Utils.LOG("< ", Math.sqrt(min2));
+            min2 = dist2;
+            selected = { next: i, point: cp };
+        }
+        p1 = p2;
+    }
+    //Utils.LOG("Closest ", selected, " dist ", Math.sqrt(min2));
+    if (min2 > (typeof rad === "undefined" ? POINT_RADIUS2 : rad * rad))
+        return undefined;
+    return selected;
+};
+
+/**
+ * Convert a timeline point to canvas space
+ */
+TimelineEditor.prototype.tv2xy = function(p) {
+    "use strict";
+    return {
+        x: (p.time * this.$main_canvas.width()) / this.timeline.period,
+        y: this.$main_canvas.height() *
+            (1 - (p.value - this.timeline.min) /
+             (this.timeline.max - this.timeline.min))
+    };
+};
+
+/**
+ * Convert a canvas point to timeline space
+ */
+TimelineEditor.prototype.xy2tv = function(p) {
+    "use strict";
+    return {
+        time: this.timeline.period * p.x / this.$main_canvas.width(),
+        value: this.timeline.min + (this.timeline.max - this.timeline.min) *
+            (this.$main_canvas.height() - p.y) / this.$main_canvas.height()
+    };
+};
+
+/**
+ * Set the crosshairs on the timeline
+ */
+TimelineEditor.prototype.setCrosshairs = function(time, value) {
+    if (typeof this.crosshairs === "undefined" ||
+        this.crosshairs.time != time ||
+        this.crosshairs.value != value) {
+        
+        this.crosshairs = { time: time, value: value };
+
+        if (this.drag_point < 0) {
+            // Don't trigger a redraw during dragging
+            this.$main_canvas.trigger("redraw");
         }
     }
 };
 
-TimelineEditor.prototype.handleTipCanvas = function(e) {
+TimelineEditor.prototype.setSelectedPoint = function(pno) {
+    this.is_editing = true;
+    this.selected_point = pno;
+    this.$container.trigger("selection_changed");
+    this.$selection_canvas.trigger("redraw");
+};
+
+TimelineEditor.prototype.setSelectedTime = function(t) {
+    if (this.selected_point < 0)
+        return;
+    var dp = this.timeline.getPoint(this.selected_point);
+    dp = { time: t, value: dp.value };
+    if (this.timeline.setPointConstrained(this.selected_point, dp)) {
+        this.$main_canvas.trigger("redraw");
+        this.$tip_canvas.trigger("redraw");
+        this.$selection_canvas.trigger("redraw");
+    };
+};
+
+TimelineEditor.prototype.setSelectedValue = function(v) {
+    if (this.selected_point < 0)
+        return;
+    var dp = this.timeline.getPoint(this.selected_point);
+    dp = { time: dp.time, value: v };
+    if (this.timeline.setPointConstrained(this.selected_point, dp)) {
+        this.$main_canvas.trigger("redraw");
+        this.$tip_canvas.trigger("redraw");
+        this.$selection_canvas.trigger("redraw");
+    };
+};
+
+TimelineEditor.prototype.drawSelectionCanvas = function() {
+    "use strict";
+    
+    if (this.drag_point < 0 && this.selected_point < 0) {
+        this.$selection_canvas.hide();
+        return;
+    }
+
+    this.$selection_canvas.show();
+    var pCtx = this.$selection_canvas[0].getContext("2d");
+    pCtx.canvas.width = 2 * POINT_RADIUS;
+    pCtx.canvas.height = 2 * POINT_RADIUS;
+    if (this.selected_point >= 0) {
+        var xy = this.tv2xy(this.timeline.getPoint(this.selected_point));
+        this.$selection_canvas.css({
+            left: (xy.x - POINT_RADIUS + this.$main_canvas.offset().left) + "px",
+            top: (xy.y - POINT_RADIUS + this.$main_canvas.offset().top) + "px"
+        });
+        pCtx.fillStyle = '#FFFF0077';
+        pCtx.beginPath();
+        pCtx.arc(POINT_RADIUS, POINT_RADIUS, POINT_RADIUS, 0, 2 * Math.PI, false);
+        pCtx.fill();
+    }
+    if (this.drag_point >= 0) {
+        var xy = this.tv2xy(this.timeline.getPoint(this.drag_point));
+        this.$selection_canvas.css({
+            left: (xy.x - POINT_RADIUS + this.$main_canvas.offset().left) + "px",
+            top: (xy.y - POINT_RADIUS + this.$main_canvas.offset().top) + "px"
+        });
+        pCtx.fillStyle = '#FF000077';
+        pCtx.beginPath();
+        pCtx.arc(POINT_RADIUS, POINT_RADIUS, POINT_RADIUS, 0, 2 * Math.PI, false);
+        pCtx.fill();
+    }
+};
+
+TimelineEditor.prototype.drawTipCanvas = function() {
     "use strict";
 
-    var xy, tp, fg, bg;
+    var tv, fg, bg, xy;
 
     if (this.drag_point < 0) {
-        xy = this.e2xy(e);
-        tp = this.xy2p(xy);
+        if (!self.last_tip_point)
+            return;
+        xy = self.last_ti_point;
+        tv = this.xy2tv(self.last_tip_point);
         fg = "white";
     } else {
         // Dragging, lock to the drag point
-        tp = this.timeline.getPoint(this.drag_point);
-        xy = this.p2xy(tp);
+        tv = this.timeline.getPoint(this.drag_point);
+        xy = this.tv2xy(tv);
         fg = "black";
         bg = "yellow";
     }
 
-    var text = "  " + Time.unparse(tp.time) + " : "
-        + this.timeline.valueAtTime(tp.time).toPrecision(4);
+    var ts = Time.unparse(tv.time);
+    var vs = this.timeline.valueAtTime(tv.time).toPrecision(4);
+    var text = "  " + ts + " : " + vs;
 
     var tipCtx = this.$tip_canvas[0].getContext("2d");
     var tw = tipCtx.measureText(text).width;
@@ -185,136 +427,35 @@ TimelineEditor.prototype.handleTipCanvas = function(e) {
     tipCtx.font = th + "px sans-serif";
 
     // Move the tip to the left if too near right edge
-    if (xy.x + tw > this.$canvas.width())
+    if (xy.x + tw > this.$main_canvas.width())
         xy.x -= tw + 2; // plus a bit to clear the cursor
 
     this.$tip_canvas.css({
-        left: (xy.x + this.$canvas.offset().left) + "px",
-        top: (xy.y + this.$canvas.offset().top) + "px",
+        left: (xy.x + this.$main_canvas.offset().left) + "px",
+        top: (xy.y + this.$main_canvas.offset().top) + "px",
         width: tw,
         height: th
     });
     tipCtx.textBaseline = "top";
+    if (text.indexOf("NaN") >= 0)
+        debugger;
     tipCtx.fillText(text, 0, 0);
 };
 
-/**
- * Determine if point p is within a minimum range of an existing
- * timeline point. Done in canvas space.
- * @param p a point on the canvas
- * @return the index of the point it's over, or undefined
- */
-TimelineEditor.prototype.overPoint = function(p) {
+TimelineEditor.prototype.drawMainCanvas = function() {
     "use strict";
-
-    var min2 = POINT_RADIUS2;
-    var selpt;
-    for (var i = 0; i < this.timeline.nPoints(); i++) {
-        var pt = this.p2xy(this.timeline.getPoint(i));
-        var d = Vec.sub(p, pt);
-        var dist2 = Vec.mag2(d);
-        if (dist2 <= min2) {
-            dist2 = min2;
-            selpt = i;
-        }
-    }
-    return selpt;
-};
-
-/**
- * Determine if point p is within a minimum range of an existing line.
- * Done in canvas space.
- * @param p a point on the canvas (or an event in the canvas)
- * @return the index of the point at the end of the line it's over,
- * or undefined
- */
-TimelineEditor.prototype.overLine = function(p) {
-    "use strict";
-
-    var min2 = POINT_RADIUS2;
-
-    var sel;
-    var p1 = this.p2xy(this.timeline.getPoint(0));
-    for (var i = 1; i < this.timeline.nPoints(); i++) {
-        var p2 = this.p2xy(this.timeline.getPoint(i));
-        var line = Vec.sub(p2, p1);
-        var len = Vec.mag(line);
-        var n = Vec.normalise(line, len);
-        var v = Vec.sub(p, p1);
-        var d = Vec.dot(v, n);
-        var cp;
-        if (d < 0) {
-            cp = p1;
-        } else if (d > len) {
-            cp = p2;
-        } else {
-            cp = Vec.add(p1, Vec.mul(n, d));
-        }
-        var dist2 = Vec.mag2(Vec.sub(cp, p));
-        if (dist2 < min2) {
-            dist2 = min2;
-            sel = { next: i, point: cp };
-        }
-        p1 = p2;
-    }
-    return sel;
-};
-
-/**
- * Convert a timeline point to canvas space
- */
-TimelineEditor.prototype.p2xy = function(p) {
-    "use strict";
-    return {
-        x: (p.time * this.$canvas.width()) / this.timeline.period,
-        y: this.$canvas.height() *
-            (1 - (p.value - this.timeline.min) /
-             (this.timeline.max - this.timeline.min))
-    };
-};
-
-/**
- * Convert a canvas point to timeline space
- */
-TimelineEditor.prototype.xy2p = function(p) {
-    "use strict";
-    return {
-        time: this.timeline.period * p.x / this.$canvas.width(),
-        value: this.timeline.min + (this.timeline.max - this.timeline.min) *
-            (this.$canvas.height() - p.y) / this.$canvas.height()
-    };
-};
-
-/**
- * Set the crosshairs on the timeline
- */
-TimelineEditor.prototype.setCrosshairs = function(time, value) {
-    if (typeof this.crosshairs === "undefined" ||
-        this.crosshairs.time != time ||
-        this.crosshairs.value != value) {
-        
-        this.crosshairs = { time: time, value: value };
-        this.$canvas.trigger("change");
-    }
-};
-
-/**
- * Re-render the canvas
- */
-TimelineEditor.prototype.render = function() {
-    "use strict";
-    var ch = this.$canvas.height();
-    var cw = this.$canvas.width();
+    var ch = this.$main_canvas.height();
+    var cw = this.$main_canvas.width();
 
     if (ch === 0 || cw === 0)
         return;
 
     // Rendering doesn't work unless you force the attrs
-    this.$canvas.attr("width", cw);
-    this.$canvas.attr("height", ch);
+    this.$main_canvas.attr("width", cw);
+    this.$main_canvas.attr("height", ch);
 
     // Background
-    var ctx = this.ctx;
+    var ctx = this.$main_canvas[0].getContext("2d");
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, cw, ch);
 
@@ -323,14 +464,14 @@ TimelineEditor.prototype.render = function() {
         ctx.beginPath();
         ctx.strokeStyle = "red";
         
-        p = this.p2xy({time: this.crosshairs.time, value: this.timeline.min});
+        p = this.tv2xy({time: this.crosshairs.time, value: this.timeline.min});
         ctx.moveTo(p.x, p.y);
-        p = this.p2xy({time: this.crosshairs.time, value: this.timeline.max});
+        p = this.tv2xy({time: this.crosshairs.time, value: this.timeline.max});
         ctx.lineTo(p.x, p.y);
         
-        p = this.p2xy({time: 0, value: this.crosshairs.value});
+        p = this.tv2xy({time: 0, value: this.crosshairs.value});
         ctx.moveTo(p.x, p.y);
-        p = this.p2xy({time: this.timeline.period,
+        p = this.tv2xy({time: this.timeline.period,
                        value: this.crosshairs.value});
         ctx.lineTo(p.x, p.y);
         
@@ -341,35 +482,27 @@ TimelineEditor.prototype.render = function() {
     ctx.beginPath();
     ctx.fillStyle = 'white';
     ctx.strokeStyle = "white";
-    var p = this.p2xy(this.timeline.getPoint(0));
-    ctx.moveTo(p.x, p.y);
-    ctx.arc(p.x, p.y, POINT_RADIUS, 0, 2 * Math.PI, false);
-    ctx.moveTo(p.x, p.y);
-    for (var i = 1; i < this.timeline.nPoints(); i++) {
-        p = this.p2xy(this.timeline.getPoint(i));
-        ctx.lineTo(p.x, p.y);
-        ctx.arc(p.x, p.y, 3, 0, 2 * Math.PI, false);
-        ctx.moveTo(p.x, p.y);
+    for (var i = 0; i < this.timeline.nPoints(); i++) {
+        var p = this.tv2xy(this.timeline.getPoint(i));
+        i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
     }
     ctx.stroke();
 
-    // Drag point
-    if (this.drag_point >= 0) {
-        var p = this.p2xy(this.timeline.getPoint(this.drag_point));
-        ctx.beginPath();
-        ctx.fillStyle = 'red';
-        ctx.moveTo(p.x, p.y);
-        ctx.arc(p.x, p.y, POINT_RADIUS, 0, 2 * Math.PI, false);
-        ctx.fill()
+    if (this.is_editing) {
+        ctx.fillStyle = '#00FF0066';
+        for (var i = 0; i < this.timeline.nPoints(); i++) {
+            var p = this.tv2xy(this.timeline.getPoint(i));
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, POINT_RADIUS, 0, 2 * Math.PI, false);
+            ctx.fill();
+        }
     }
-    
-    this.$canvas.trigger("rendered");
 };
 
 (function($) {
     "use strict";
-
     $.fn.TimelineEditor = function(timeline) {
-        $(this).data("timeline_editor", new TimelineEditor(timeline, $(this)));
+        var te = new TimelineEditor(timeline, $(this));
+        $(this).data("timeline_editor", te);
     };
 })(jQuery);

@@ -2,9 +2,9 @@
 
 /*eslint-env node */
 
-// Note that Q and Fs are only required when they are required, so this
+// Note that Q and Fs are only require()d when they are required, so this
 // module can be used in a browser.
-const Utils = require("../common/Utils.js");
+const Utils = require("./Utils");
 
 const TAG = "DataModel";
 

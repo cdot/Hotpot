@@ -25,6 +25,7 @@ SOURCES := \
 	common/Vec.js \
 	browser/js/require.js \
 	browser/js/browser.js \
+	browser/js/Spinner.js \
 	browser/js/TimelineEditor.js
 
 FIND := find . \

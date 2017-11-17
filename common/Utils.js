@@ -147,7 +147,7 @@ Utils.dump = function(data, cache) {
             var val = Utils.dump(data[i], cache);
             if (ob === "{")
                 val = i + ": " + val;
-            values.push(indent(val))
+            values.push(indent("" + val))
         }
         s += "\n" + values.join(",\n") + "\n" + cb;
     }

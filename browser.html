@@ -4,12 +4,17 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>HotPot remote monitor</title>
     <link rel="icon" href="browser/images/favicon.ico" type="image/x-icon" />
+    <script src="https://use.fontawesome.com/1f1fc84fe3.js"></script>
     <link rel="stylesheet" href="browser/styles.css">
-    <script type="text/javascript" src="node_modules/jquery/dist/jquery.js"></script>
-    <script type="text/javascript" src="browser/js/require.js"></script>
-    <script type="text/javascript" src="browser/js/autoscale_graph.js"></script>
-    <script type="text/javascript" src="browser/js/TimelineEditor.js"></script>
-    <script type="text/javascript" src="browser/js/browser.js"></script>
+    <script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-touch-events/1.0.5/jquery.mobile-events.js"></script>
+    <script type="text/javascript">
+      var require_path = [ 'browser/js' ];
+    </script>
+    <script src="browser/js/require.js"></script>
+    <script src="browser/js/Spinner.js"></script>
+    <script src="browser/js/TimelineEditor.js"></script>
+    <script src="browser/js/browser.js"></script>
   </head>
   <body class="body-bg body-fg fonts">
     <h1 class="banner banner-bg banner-fg">Hotpot
@@ -17,10 +22,6 @@
     <div id="comms_error"></div>
 
     <div id="controls" class="display">
-      <div>
-        <span data-path="/time" data-type="date"></span>
-        <div data-path="/weather" data-use-template="weather"></div>
-      </div>
       <div>
         Central Heating
         <span id="thermostat-CH-temp"></span>
@@ -34,8 +35,15 @@
 <!--        <button id="pin-CH-on">Request ON</button>-->
         <button id="pin-CH-off">OFF</button>
         <button id="open-CH-timeline">Timeline</button>
-        <div id="CH-timeline">
-          <canvas class="timeline_canvas" data-service="CH" id="CH-timeline-canvas"></canvas>
+        <div id="info"></div>
+        <div id="CH-timeline" style="width:100%">
+          <div class="timeline" data-service="CH">
+            <div class="spinner-controls">
+              <input type="text" size="2" class="spinnable" id="CH-point" />
+              Time: <input id="CH-time"/>
+              Temperature: <input id="CH-temperature"/>
+            </div>
+          </div>
           <button id="save-CH-timeline">Save</button>
           <button id="cancel-CH-timeline">Cancel</button>
         </div>
@@ -53,19 +61,20 @@
 <!--        <button id="pin-HW-on">Request ON</button>-->
         <button id="pin-HW-off">OFF</button>
         <button id="open-HW-timeline">Timeline</button>
-        <div id="HW-timeline">
-          <canvas class="timeline_canvas"  data-service="HW" id="HW-timeline-canvas"></canvas>
+        <div id="HW-timeline" style="width:100%">
+          <div class="timeline" data-service="HW">
+            <div class="spinner-controls">
+              <input type="text" size="2" class="spinnable" id="HW-point" />
+              Time: <input type="text" id="HW-time"/>
+              Temperature: <input type="text" id="HW-temperature"/>
+            </div>
+          </div>
           <button id="save-HW-timeline">Save</button>
           <button id="cancel-HW-timeline">Cancel</button>
         </div>
       </div>
-      <button class="switcher" data-to="graphs">Graphs</button>
       <button class="switcher" data-to="help">Help</button>
-    </div>
-    <div class="display" id="graphs">
-      <canvas id="graph_canvas"></canvas>
-      <canvas id="tip_canvas"></canvas>
-      <button class="switcher" data-to="controls">Close</button>
+      <button id="refresh_calendars">Update Calendars</button>
     </div>
     <div class="display" id="help">
       <p>BOOST will turn the service on until the temperature hits the maximum for the

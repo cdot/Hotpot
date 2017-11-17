@@ -5,10 +5,9 @@
 /**
  * Main module for managing the browser interface to a hotpot server.
  */
-//const Utils = require("common/Utils.js");
-//const Time = require("common/Time.js");
-const Timeline = require("common/Timeline.js");
-const DataModel = require("common/DataModel.js");
+//const Time = require("../../common/Time.js");
+const Timeline = require("../../common/Timeline.js");
+const DataModel = require("../../common/DataModel.js");
 
 (function($) {
     "use strict";
@@ -61,8 +60,14 @@ const DataModel = require("common/DataModel.js");
                     ? o.temperature : o.state;
                 if (typeof traces[type+"-"+name] === "undefined")
                     traces[type+"-"+name] = [];
-                if (typeof d !== "undefined")
+                if (typeof d !== "undefined") {
                     traces[type+"-"+name].push({time: data.time, value: d});
+                    var te = $(".timeline[data-service='" + name + "']")
+                        .data("timeline_editor");
+                    if (te)
+                        te.setCrosshairs(data.time, d);
+//                    te.$canvas.trigger("rendered");
+                }
             }
         }
     }
@@ -79,9 +84,6 @@ const DataModel = require("common/DataModel.js");
             var pin = "#pin-" + service + "-";
             var tcur = Math.round(
                 10 * obj.thermostat[service].temperature) / 10;
-            var te = $("#" + service + "-timeline-canvas").data("timeline_editor");
-            if (te)
-                te.setCrosshairs(Time.time_of_day(), tcur);
             var ttgt = Math.round(
                 10 * obj.thermostat[service].target) / 10;
             if (tcur > ttgt)
@@ -178,7 +180,9 @@ const DataModel = require("common/DataModel.js");
     }
 
     function renderTrace(te, trace, style1, style2, is_binary) {
-        var ctx = te.ctx;
+        if (typeof trace === "undefined")
+            return;
+        var ctx = te.$canvas[0].getContext("2d");
         var base = is_binary ? te.timeline.max / 10 : 0;
         var binary = is_binary ? te.timeline.max / 10 : 1;
         
@@ -190,8 +194,6 @@ const DataModel = require("common/DataModel.js");
         var first = true;
         var now = trace[i].time;
         var lp;
-        console.log("Last trace at " + new Date(now));
-        console.log("Cur time " + new Date());
         while (i >= 0 && trace[i].time > midnight) {           
             var tp = { time: trace[i].time - midnight,
                        value: base + trace[i].value * binary };
@@ -237,9 +239,8 @@ const DataModel = require("common/DataModel.js");
     }
     
     function renderTraces() {
-        var $canvas = $(this);
-        var service = $canvas.data("service");
-        var te = $("#" + service + "-timeline-canvas").data("timeline_editor");
+        var service = $(this).data("service");
+        var te = $(this).data("timeline_editor");
         
         renderTrace(te,
             traces["thermostat-" + service], "#00AA00", "#006600", false)
@@ -248,23 +249,74 @@ const DataModel = require("common/DataModel.js");
     }
     
     function initialiseTimeline() {
-        var $canvas = $(this);
+        var $timeline = $(this);
+        var service = $timeline.data("service");
         var DAY_IN_MS = 24 * 60 * 60 * 1000;
         var timeline = new Timeline({
             period: DAY_IN_MS, min: 0, max: 25
         });
-        $canvas.TimelineEditor(timeline);
-        $canvas.on("change", function() {
-            // Really don't want to send an update to the server until we're
-            // finished moving.
-            $(this).changed = true;
+        $timeline.TimelineEditor(timeline);
+        var te = $timeline.data("timeline_editor");
+        $timeline.on("rendered", renderTraces);
+
+        var $tp = $("#" + service + "-point");
+        var $tt = $("#" + service + "-time");
+        var $th = $("#" + service + "-temperature");
+        
+        $tp
+            .on("spin_up", function() {
+                var now = Number.parseInt($(this).val());
+                if (isNaN(now))
+                    now = -1;
+                if (now < te.timeline.nPoints() - 1) {
+                    $(this).val(++now);
+                    te.setSelectedPoint(now);
+                }
+            })
+            .on("spin_down", function() {
+                var now = Number.parseInt($(this).val());
+                if (isNaN(now))
+                    now = te.timeline.nPoints();
+                if (now > 0) {
+                    $(this).val(--now);
+                    te.setSelectedPoint(now);
+                }
+            })
+            .on("change", function() {
+                var now = Number.parseInt($(this).val());
+                if (now >= 0 && now < te.timeline.nPoints()) {
+                    te.setSelectedPoint(now);
+                }
+            });
+
+        $tt.on("change", function() {
+            try {
+                var now = Time.parse($(this).val());
+                te.setSelectedTime(now);
+            } catch (e) {
+            }
         });
-        $canvas.on("rendered", renderTraces);
+        
+        $th.on("change", function() {
+            var now = Number.parseFloat($(this).val());
+            if (isNaN(now))
+                return;
+            te.setSelectedValue(now);
+        });
+        
+        $timeline.on("selection_changed", function() {
+            var index = te.selected_point;
+            var dp = te.timeline.getPoint(index);
+            $tp.val(index);
+            $tt.val(Time.unparse(dp.time));
+            $th.val(dp.value.toPrecision(4));
+        });
     }
 
     function openTimeline(e) {
         var service = e.data;
-        var te = $("#"+service+"-timeline-canvas").data("timeline_editor");
+        var $te = $("div.timeline[data-service='"+service+"']");
+        var te = $te.data("timeline_editor");
         $("#open-"+service+"-timeline").css("display", "none");
         $.getJSON("/ajax/getconfig/thermostat/"+service+
                   "/timeline", function(tl) {
@@ -272,7 +324,7 @@ const DataModel = require("common/DataModel.js");
                       te.timeline = DataModel.remodel(
                           service, tl, Timeline.Model);
                       te.changed = false;
-                      te.render();
+                      te.$main_canvas.trigger("redraw");
                   });
     }
 
@@ -280,13 +332,13 @@ const DataModel = require("common/DataModel.js");
         var service = e.data;
         $("#"+service+"-timeline").css("display", "none");
         $("#open-"+service+"-timeline").css("display", "inline-block");
-        // Update the timeline on the server here if it
-        // has changed
     };
 
     function saveTimeline(e) {
+        var service = e.data;
         closeTimeline();
-        var te = $("#"+service+"-timeline-canvas").data("timeline_editor");
+        var te = $("timeline[data-service='"+service+"']")
+            .data("timeline_editor");
         if (te.changed) {
             var timeline = te.timeline;
             console.log("Send timeline update to server");
@@ -295,6 +347,7 @@ const DataModel = require("common/DataModel.js");
                    // Can't use getSerialisable because it uses Q promises
                    JSON.stringify({ value: timeline }),
                    function(/*raw*/) {
+                       te.changed = false;
                        $(document).trigger("poll");
                    });
         }
@@ -304,7 +357,9 @@ const DataModel = require("common/DataModel.js");
      * Add handlers and fire initial events to configure the graphs
      * and start the polling loop.
      */
-    function configure() {
+    function configure() {      
+        $(".spinnable").Spinner();
+
         for (var service in { CH: 1, HW: 1 }) {
             for (var fn in requests) {
                 $("#pin-" + service + "-"+fn).click(
@@ -318,16 +373,15 @@ const DataModel = require("common/DataModel.js");
             $("#save-"+service+"-timeline").click(service, saveTimeline);
             $("#cancel-"+service+"-timeline").click(service, closeTimeline);
         }
-        $(".timeline_canvas").each(initialiseTimeline);
+        $(".timeline").each(initialiseTimeline);
 
 	$("#refresh_calendars").on("click", refreshCalendars);
 
 	$(".switcher").on("click", function() {
             $(".display").hide();
             $("#" + $(this).data("to")).show();
-            $("#graph_canvas").data("graph").render();
         });
-
+    
         // Get the last 24 hours of logs
         var params = { since: Date.now() - 24 * 60 * 60 };
         $.getJSON("/ajax/log", JSON.stringify(params), loadTraces)
