@@ -186,11 +186,13 @@ Timeline.prototype.insertBefore = function(index, point) {
 /**
  * Remove the point at the given index
  * @param idx index of point to remove
+ * @return this
  */
 Timeline.prototype.remove = function(idx) {
     if (idx <= 0 || idx >= this.points.length - 1)
         throw "Not a removable point";
     this.points.splice(idx, 1);
+    return this;
 };
 
 /**

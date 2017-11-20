@@ -6,7 +6,7 @@
     <link rel="icon" href="browser/images/favicon.ico" type="image/x-icon" />
     <script src="https://use.fontawesome.com/1f1fc84fe3.js"></script>
     <link rel="stylesheet" href="browser/styles.css">
-    <script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-touch-events/1.0.5/jquery.mobile-events.js"></script>
     <script type="text/javascript">
       var require_path = [ 'browser/js' ];
@@ -36,12 +36,15 @@
         <button id="pin-CH-off">OFF</button>
         <button id="open-CH-timeline">Timeline</button>
         <div id="info"></div>
-        <div id="CH-timeline" style="width:100%">
+        <div class="timeline_container" id="CH-timeline">
           <div class="timeline" data-service="CH">
             <div class="spinner-controls">
               <input type="text" size="2" class="spinnable" id="CH-point" />
               Time: <input id="CH-time"/>
               Temperature: <input id="CH-temperature"/>
+              <button id="CH-removepoint">
+                <img class="trashcan" src="browser/images/wastebin.svg" />
+              </button>
             </div>
           </div>
           <button id="save-CH-timeline">Save</button>
@@ -61,12 +64,15 @@
 <!--        <button id="pin-HW-on">Request ON</button>-->
         <button id="pin-HW-off">OFF</button>
         <button id="open-HW-timeline">Timeline</button>
-        <div id="HW-timeline" style="width:100%">
+        <div class="timeline_container" id="HW-timeline" >
           <div class="timeline" data-service="HW">
             <div class="spinner-controls">
               <input type="text" size="2" class="spinnable" id="HW-point" />
               Time: <input type="text" id="HW-time"/>
               Temperature: <input type="text" id="HW-temperature"/>
+              <button id="HW-removepoint">
+                <img class="trashcan" src="browser/images/wastebin.svg" />
+              </button>
             </div>
           </div>
           <button id="save-HW-timeline">Save</button>

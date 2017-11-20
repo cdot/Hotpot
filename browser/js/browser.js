@@ -62,11 +62,10 @@ const DataModel = require("../../common/DataModel.js");
                     traces[type+"-"+name] = [];
                 if (typeof d !== "undefined") {
                     traces[type+"-"+name].push({time: data.time, value: d});
-                    var te = $(".timeline[data-service='" + name + "']")
+                    var te = $("#" + name + "-timeline > .timeline")
                         .data("timeline_editor");
-                    if (te)
-                        te.setCrosshairs(data.time, d);
-//                    te.$canvas.trigger("rendered");
+                    if (te && typeof o.temperature !== "undefined")
+                        te.setCrosshairs(data.time - Time.midnight(), d);
                 }
             }
         }
@@ -182,7 +181,7 @@ const DataModel = require("../../common/DataModel.js");
     function renderTrace(te, trace, style1, style2, is_binary) {
         if (typeof trace === "undefined")
             return;
-        var ctx = te.$canvas[0].getContext("2d");
+        var ctx = te.$main_canvas[0].getContext("2d");
         var base = is_binary ? te.timeline.max / 10 : 0;
         var binary = is_binary ? te.timeline.max / 10 : 1;
         
@@ -197,13 +196,13 @@ const DataModel = require("../../common/DataModel.js");
         while (i >= 0 && trace[i].time > midnight) {           
             var tp = { time: trace[i].time - midnight,
                        value: base + trace[i].value * binary };
-            var p = te.p2xy(tp);
+            var p = te.tv2xy(tp);
             if (first) {
                 ctx.moveTo(p.x, p.y);
                 first = false;
             } else {
                 if (is_binary && lp && tp.value != lp.value) {
-                    var lp = te.p2xy(lp);
+                    var lp = te.tv2xy(lp);
                     ctx.lineTo(lp.x, lp.y);
                 }
                 ctx.lineTo(p.x, p.y);
@@ -223,13 +222,13 @@ const DataModel = require("../../common/DataModel.js");
         while (i >= 0 && trace[i].time > stop) {           
             var tp = { time: trace[i].time - midnight,
                        value: base + trace[i].value * binary };
-            var p = te.p2xy(tp);
+            var p = te.tv2xy(tp);
             if (first) {
                 ctx.moveTo(p.x, p.y);
                 first = false;
             } else
                 if (is_binary && lp && tp.value != lp.value) {
-                    var lp = te.p2xy(lp);
+                    var lp = te.tv2xy(lp);
                     ctx.lineTo(lp.x, lp.y);
                 }
             i--;
@@ -257,7 +256,7 @@ const DataModel = require("../../common/DataModel.js");
         });
         $timeline.TimelineEditor(timeline);
         var te = $timeline.data("timeline_editor");
-        $timeline.on("rendered", renderTraces);
+        $timeline.on("redraw", renderTraces);
 
         var $tp = $("#" + service + "-point");
         var $tt = $("#" + service + "-time");
@@ -303,19 +302,23 @@ const DataModel = require("../../common/DataModel.js");
                 return;
             te.setSelectedValue(now);
         });
+
+        $("#" + service + "-removepoint")
+            .on("click", function() {
+                te.removeSelectedPoint();
+            });
         
         $timeline.on("selection_changed", function() {
-            var index = te.selected_point;
-            var dp = te.timeline.getPoint(index);
-            $tp.val(index);
+            var dp = te.getSelectedPoint();
+            $tp.val(dp.index);
             $tt.val(Time.unparse(dp.time));
             $th.val(dp.value.toPrecision(4));
-        });
+        }).trigger("selection_changed");
     }
 
     function openTimeline(e) {
         var service = e.data;
-        var $te = $("div.timeline[data-service='"+service+"']");
+        var $te = $("#" + service + "-timeline > .timeline");
         var te = $te.data("timeline_editor");
         $("#open-"+service+"-timeline").css("display", "none");
         $.getJSON("/ajax/getconfig/thermostat/"+service+
@@ -335,10 +338,10 @@ const DataModel = require("../../common/DataModel.js");
     };
 
     function saveTimeline(e) {
+        closeTimeline(e);
         var service = e.data;
-        closeTimeline();
-        var te = $("timeline[data-service='"+service+"']")
-            .data("timeline_editor");
+        var $te = $("#" + service + "-timeline > .timeline");
+        var te = $te.data("timeline_editor");
         if (te.changed) {
             var timeline = te.timeline;
             console.log("Send timeline update to server");
