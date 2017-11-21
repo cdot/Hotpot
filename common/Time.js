@@ -94,15 +94,12 @@ Time.unparse = function(t) {
     }
     if (t < 0 || t > ONE_DAY)
         throw "Time.unparse time out of range";
-    var ms = Math.trunc(t % 1000);
-    t = Math.trunc(t / 1000);
-    var s = Math.trunc(t % 60);
-    t = Math.trunc(t / 60);
-    var m = Math.trunc(t % 60);
-    var h = Math.trunc(t / 60);
+    t = Math.trunc(t / 1000);   // to seconds
+    var s = Math.round(t % 60); // seconds
+    t = Math.trunc(t / 60);     // to minutes
+    var m = Math.trunc(t % 60); // minutes
+    var h = Math.trunc(t / 60); // hours
     var ts = pad(h, 2) + ":" + pad(m, 2) + ":" + pad(s, 2);
-    if (ms > 0)
-        ts += "." + pad(ms, 3);
     return ts;
 };
 

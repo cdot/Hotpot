@@ -312,7 +312,7 @@ const DataModel = require("../../common/DataModel.js");
             var dp = te.getSelectedPoint();
             $tp.val(dp.index);
             $tt.val(Time.unparse(dp.time));
-            $th.val(dp.value.toPrecision(4));
+            $th.val(dp.value.toFixed(1));
         }).trigger("selection_changed");
     }
 

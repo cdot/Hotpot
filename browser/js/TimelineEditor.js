@@ -31,9 +31,10 @@ function TimelineEditor(timeline, $container) {
 
     this.timeline = timeline;
 
-    this.drag_point = -1;
-    this.selected_point = 0;
-    this.last_tip_location = undefined;
+    this.drag_pt_ix = -1;
+    this.sel_pt_ix = 0;
+    this.last_tip_xy = undefined;
+    this.drag_start_xy = undefined;
     this.$container = $container;
     
     this.$main_canvas = $("<canvas></canvas>")
@@ -72,7 +73,7 @@ function TimelineEditor(timeline, $container) {
     
     // Hold down over a line to add a point and select it
     this.$main_canvas.on("taphold", function(e, touch) {
-        Utils.LOG("E: taphold ", self.drag_point);
+        Utils.LOG("E: taphold ", self.drag_pt_ix);
         if (self.is_editing) {
             e.preventDefault();
             var xy = touch.startOffset;
@@ -84,15 +85,15 @@ function TimelineEditor(timeline, $container) {
                     selpt = self.timeline.insertBefore(
                         selpt.next, tv);
                     self.changed = true;
-                    self.last_tip_location = xy;
+                    self.last_tip_xy = xy;
                 }
             } else {
                 // taphold on a point will just select it
                 self.changed = true;
-                self.drag_point = -1;
-                self.selected_point = selpt;
+                self.drag_pt_ix = -1;
+                self.sel_pt_ix = selpt;
                 self.$container.trigger("selection_changed");
-                self.last_tip_location = xy;
+                self.last_tip_xy = xy;
             }
             refresh_all();
         }
@@ -100,20 +101,21 @@ function TimelineEditor(timeline, $container) {
     });
 
     this.$main_canvas.on($.getStartEvent(), function(e) {
-        Utils.LOG("E: ", $.getStartEvent(), " ", self.drag_point);
-        if (self.is_editing && self.drag_point < 0) {
+        Utils.LOG("E: ", $.getStartEvent(), " ", self.drag_pt_ix);
+        if (self.is_editing && self.drag_pt_ix < 0) {
             e.preventDefault();
             var xy = self.e2xy(e);
             var selpt = self.overPoint(xy);
             if (typeof selpt !== "undefined") {
-                self.selected_point = selpt;
-                self.drag_point = selpt;
+                self.sel_pt_ix = selpt;
+                self.drag_pt_ix = selpt;
+                self.drag_start_xy = xy;
             } else {
-                self.drag_point = -1;
+                self.drag_pt_ix = -1;
             }
             self.$container.trigger("selection_changed");
             self.$selection_canvas.trigger("redraw");
-            self.last_tip_location = xy;
+            self.last_tip_xy = xy;
             self.$tip_canvas.trigger("redraw");
             // Don't return false or you'll kill taphold
         }
@@ -121,33 +123,34 @@ function TimelineEditor(timeline, $container) {
 
     
     this.$main_canvas.on($.getMoveEvent(), function(e) {
-        Utils.LOG("E: ", $.getMoveEvent(), " ", self.drag_point);
-        if (self.is_editing && self.drag_point >= 0) {
+        Utils.LOG("E: ", $.getMoveEvent(), " ", self.drag_pt_ix);
+        if (self.is_editing && self.drag_pt_ix >= 0) {
             e.preventDefault();
             var xy = self.e2xy(e);
             var tv = self.xy2tv(xy);
-            if (self.timeline.setPointConstrained(self.drag_point, tv)) {
+            if (self.timeline.setPointConstrained(self.drag_pt_ix, tv)) {
                 self.changed = true;
                 self.$container.trigger("selection_changed");
             }
             self.$selection_canvas.trigger("redraw");
-            self.last_tip_location = (xy || self.e2xy(e));
+            self.last_tip_xy = xy;
             self.$tip_canvas.trigger("redraw");
         }
     });
     
     this.$main_canvas.on($.getEndEvent(), function(e) {
-        Utils.LOG("E: ", $.getEndEvent(), " ", self.drag_point);
-        if (self.is_editing && self.drag_point >= 0) {
+        Utils.LOG("E: ", $.getEndEvent(), " ", self.drag_pt_ix);
+        var xy = self.e2xy(e);
+        self.last_tip_xy = xy;
+        if (self.is_editing && self.drag_pt_ix >= 0) {
             e.preventDefault();
-            var xy = self.e2xy(e);
-            self.drag_point = -1;
+            self.drag_pt_ix = -1;
             self.$container.trigger("selection_changed");
             self.$main_canvas.css( 'cursor', 'default' );
-            self.last_tip_location = xy;
             refresh_all();
             return false;
-        }
+        } else
+            self.$tip_canvas.trigger("redraw");            
     });
 
     this.$main_canvas.hover(
@@ -323,7 +326,7 @@ TimelineEditor.prototype.setCrosshairs = function(time, value) {
         
         this.crosshairs = { time: time, value: value };
 
-        if (this.drag_point < 0) {
+        if (this.drag_pt_ix < 0) {
             // Don't trigger a redraw during dragging
             this.$main_canvas.trigger("redraw");
         }
@@ -336,9 +339,9 @@ TimelineEditor.prototype.setCrosshairs = function(time, value) {
  * @return <index:, time:, value:> for selected point
  */
 TimelineEditor.prototype.getSelectedPoint = function() {
-    var pt = this.timeline.getPoint(this.selected_point);
+    var pt = this.timeline.getPoint(this.sel_pt_ix);
     return {
-        index: this.selected_point,
+        index: this.sel_pt_ix,
         time: pt.time,
         value: pt.value
     };
@@ -356,8 +359,8 @@ TimelineEditor.prototype.setSelectedPoint = function(pno) {
         pno = 0;
     if (pno >= this.timeline.nPoints())
         pno = this.timeline.nPoints();
-    if (pno != this.selected_point) {
-        this.selected_point = pno;
+    if (pno != this.sel_pt_ix) {
+        this.sel_pt_ix = pno;
         this.$container.trigger("selection_changed");
         this.$selection_canvas.trigger("redraw");
     }
@@ -370,9 +373,9 @@ TimelineEditor.prototype.setSelectedPoint = function(pno) {
  * @return this
 */
 TimelineEditor.prototype.setSelectedTime = function(t) {
-    var dp = this.timeline.getPoint(this.selected_point);
+    var dp = this.timeline.getPoint(this.sel_pt_ix);
     dp = { time: t, value: dp.value };
-    if (this.timeline.setPointConstrained(this.selected_point, dp)) {
+    if (this.timeline.setPointConstrained(this.sel_pt_ix, dp)) {
         this.$main_canvas.trigger("redraw");
         this.$tip_canvas.trigger("redraw");
         this.$selection_canvas.trigger("redraw");
@@ -385,9 +388,9 @@ TimelineEditor.prototype.setSelectedTime = function(t) {
  * @return this
 */
 TimelineEditor.prototype.setSelectedValue = function(v) {
-    var dp = this.timeline.getPoint(this.selected_point);
+    var dp = this.timeline.getPoint(this.sel_pt_ix);
     dp = { time: dp.time, value: v };
-    if (this.timeline.setPointConstrained(this.selected_point, dp)) {
+    if (this.timeline.setPointConstrained(this.sel_pt_ix, dp)) {
         this.$main_canvas.trigger("redraw");
         this.$tip_canvas.trigger("redraw");
         this.$selection_canvas.trigger("redraw");
@@ -402,7 +405,7 @@ TimelineEditor.prototype.setSelectedValue = function(v) {
 */
 TimelineEditor.prototype.removeSelectedPoint = function() {
     try {
-        this.timeline.remove(this.selected_point);
+        this.timeline.remove(this.sel_pt_ix);
         if (this.selectedPoint > this.timeline.nPoints() - 1)
             this.selectedPoint = this.timeline.nPoints() - 1;
         this.$main_canvas.trigger("redraw");
@@ -420,7 +423,7 @@ TimelineEditor.prototype.removeSelectedPoint = function() {
 TimelineEditor.prototype.drawSelectionCanvas = function() {
     "use strict";
     
-    if (this.drag_point < 0 && this.selected_point < 0) {
+    if (this.drag_pt_ix < 0 && this.sel_pt_ix < 0) {
         this.$selection_canvas.hide();
         return;
     }
@@ -429,8 +432,8 @@ TimelineEditor.prototype.drawSelectionCanvas = function() {
     var pCtx = this.$selection_canvas[0].getContext("2d");
     pCtx.canvas.width = 2 * POINT_RADIUS;
     pCtx.canvas.height = 2 * POINT_RADIUS;
-    if (this.selected_point >= 0) {
-        var xy = this.tv2xy(this.timeline.getPoint(this.selected_point));
+    if (this.sel_pt_ix >= 0) {
+        var xy = this.tv2xy(this.timeline.getPoint(this.sel_pt_ix));
         this.$selection_canvas.css({
             left: (xy.x - POINT_RADIUS + this.$main_canvas.offset().left) + "px",
             top: (xy.y - POINT_RADIUS + this.$main_canvas.offset().top) + "px"
@@ -440,8 +443,8 @@ TimelineEditor.prototype.drawSelectionCanvas = function() {
         pCtx.arc(POINT_RADIUS, POINT_RADIUS, POINT_RADIUS, 0, 2 * Math.PI, false);
         pCtx.fill();
     }
-    if (this.drag_point >= 0) {
-        var xy = this.tv2xy(this.timeline.getPoint(this.drag_point));
+    if (this.drag_pt_ix >= 0) {
+        var xy = this.tv2xy(this.timeline.getPoint(this.drag_pt_ix));
         this.$selection_canvas.css({
             left: (xy.x - POINT_RADIUS + this.$main_canvas.offset().left) + "px",
             top: (xy.y - POINT_RADIUS + this.$main_canvas.offset().top) + "px"
@@ -461,22 +464,22 @@ TimelineEditor.prototype.drawTipCanvas = function() {
 
     var tv, fg, bg, xy;
 
-    if (this.drag_point < 0) {
-        if (!self.last_tip_location)
+    if (this.drag_pt_ix < 0) {
+        xy = this.last_tip_xy;
+        if (!xy)
             return;
-        xy = self.last_ti_point;
-        tv = this.xy2tv(self.last_tip_location);
+        tv = this.xy2tv(xy);
         fg = "white";
     } else {
         // Dragging, lock to the drag point
-        tv = this.timeline.getPoint(this.drag_point);
+        tv = this.timeline.getPoint(this.drag_pt_ix);
         xy = this.tv2xy(tv);
         fg = "black";
         bg = "yellow";
     }
 
     var ts = Time.unparse(tv.time);
-    var vs = this.timeline.valueAtTime(tv.time).toPrecision(4);
+    var vs = /*this.timeline.valueAtTime(tv.time)*/tv.value.toFixed(1);
     var text = "  " + ts + " : " + vs;
 
     var tipCtx = this.$tip_canvas[0].getContext("2d");
