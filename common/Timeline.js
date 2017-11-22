@@ -113,10 +113,12 @@ Timeline.prototype.fixExtremes = function() {
         this.points.unshift(new Timepoint({
             time: 0, value: this.points[0].value}));
 
-    if (this.points[this.points.length - 1].time < this.period - 1)
+    if (this.points[this.points.length - 1].time < this.period - 60000) {
+        throw Utils.report("Fuck ",this);
         this.points.push(new Timepoint({
             time: this.period - 1,
             value: this.points[this.points.length - 1].value}));
+    }
 };
 
 /**
@@ -230,7 +232,10 @@ Timeline.prototype.setPoint = function(i, p) {
     if (p.time < 0 || p.time >= this.period)
         throw "Time " + p.time + " outside period 0.." + this.period;
     if (i < this.points.length - 1 && p.time >= this.points[i + 1].time)
-        throw "Bad time order";
+        throw Utils.report("Timeline.setPoint(", i, ",",
+                           p.time, "=", Time.unparse(p.time),
+                           ") bad time order ", this.points[i + 1].time,
+                           "=", Time.unparse(this.points[i + 1].time));
     if (i > 0 && p.time <= this.points[i - 1].time)
         throw "Bad time order";
     if (p.value < this.min || p.value > this.max)

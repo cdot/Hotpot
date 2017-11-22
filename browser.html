@@ -23,25 +23,27 @@
 
     <div id="controls" class="display">
       <div>
-        Central Heating
-        <span id="thermostat-CH-temp"></span>
-        <span id="thermostat-CH-diff"></span>
-        <span id="thermostat-CH-target"></span>°C
-        <span id="pin-CH-state"></span>
-        <span id="pin-CH-reason"></span>
-        <div id="pin-CH-requests">
+        <h1>Central Heating</h1>
+        <div>
+          <span id="thermostat-CH-temp"></span>
+          <span id="thermostat-CH-diff"></span>
+          <span id="thermostat-CH-target"></span>°C
         </div>
-        <button id="pin-CH-boost">BOOST</button>
-<!--        <button id="pin-CH-on">Request ON</button>-->
-        <button id="pin-CH-off">OFF</button>
-        <button id="open-CH-timeline">Timeline</button>
+        <div>
+          <span id="pin-CH-state"></span>
+          <span id="pin-CH-reason"></span>
+        </div>
+        <div id="CH-requests"></div>
+        <button id="CH-boost">BOOST</button> to
+        <input id="CH-boost-target" value="18" size="3" />°C
+        <button id="open-CH-timeline">Open Timeline</button>
         <div id="info"></div>
         <div class="timeline_container" id="CH-timeline">
           <div class="timeline" data-service="CH">
             <div class="spinner-controls">
               <input type="text" size="2" class="spinnable" id="CH-point" />
-              Time: <input id="CH-time"/>
-              Temperature: <input id="CH-temperature"/>
+              Time: <input id="CH-time" size="9"/>
+              Temperature: <input id="CH-temperature" size="5"/>°C
               <button id="CH-removepoint">
                 <img class="trashcan" src="browser/images/wastebin.svg" />
               </button>
@@ -51,25 +53,28 @@
           <button id="cancel-CH-timeline">Cancel</button>
         </div>
       </div>
+      <p></p>
       <div>
-        Hot Water
-        <span id="thermostat-HW-temp"></span>
-        <span id="thermostat-HW-diff"></span>
-        <span id="thermostat-HW-target"></span>°C
-        <span id="pin-HW-state"></span>
-        <span id="pin-HW-reason"></span>
-        <div id="pin-HW-requests">
+        <h1>Hot Water</h1>
+        <div>
+          <span id="thermostat-HW-temp"></span>
+          <span id="thermostat-HW-diff"></span>
+          <span id="thermostat-HW-target"></span>°C
         </div>
-        <button id="pin-HW-boost">BOOST</button>
-<!--        <button id="pin-HW-on">Request ON</button>-->
-        <button id="pin-HW-off">OFF</button>
-        <button id="open-HW-timeline">Timeline</button>
+        <div>
+          <span id="pin-HW-state"></span>
+          <span id="pin-HW-reason"></span>
+        </div>
+        <div id="HW-requests"></div>
+        <button id="HW-boost">BOOST</button> to 
+        <input id="HW-boost-target" value="40" size="3" />°C
+        <button id="open-HW-timeline">Open Timeline</button>
         <div class="timeline_container" id="HW-timeline" >
           <div class="timeline" data-service="HW">
             <div class="spinner-controls">
               <input type="text" size="2" class="spinnable" id="HW-point" />
-              Time: <input type="text" id="HW-time"/>
-              Temperature: <input type="text" id="HW-temperature"/>
+              Time: <input type="text" id="HW-time" size="9"/>
+              Temperature: <input type="text" id="HW-temperature" size="4"/>°C
               <button id="HW-removepoint">
                 <img class="trashcan" src="browser/images/wastebin.svg" />
               </button>
@@ -79,15 +84,53 @@
           <button id="cancel-HW-timeline">Cancel</button>
         </div>
       </div>
+      <p></p>
       <button class="switcher" data-to="help">Help</button>
       <button id="refresh_calendars">Update Calendars</button>
     </div>
     <div class="display" id="help">
-      <p>BOOST will turn the service on until the temperature hits the maximum for the
-      service; it will then revert to following the timeline.</p>
-      <p>OFF will turn the service off. It won't come on again until the request is cancelled.</p>
-      <p>Timeline will open a graphical timeline editor</p>
-<!--      <p>ON will keep the temperature at the timeline until the request is cancelled.</p>-->
+      <p>
+        <button>BOOST</button> will turn the service on until the temperature
+        hits the requested level; it will then revert to following the
+        timeline
+      </p>
+      <p>
+        <button>Open Timeline</button> will open a graphical timeline editor
+        <button class="twisty" id="open-twisty">more...</button>
+        <div id="help-twisty">
+          <ul>
+            <li>You can select a point to adjust using
+              <div class="example">
+                <input type="text" size="2" class="spinnable" value="1" />
+              </div> the selected point will be highlighted on the display
+            </li>
+            <li>Adjust the point using
+              <div class="example">
+                Time: <input size="9" value="08:30:00"/>
+                Temperature: <input size="5" value="18" />°C
+              </div> inputs. Use
+              <button>
+                <img class="trashcan" src="browser/images/wastebin.svg" />
+              </button>
+              to delete the point
+            </li>
+            <li>The white line on the display shows the timeline</li>
+            <li>Double-tap the display to show handles on each point</li>
+            <li>Tap a handle, hold, and drag to move a point</li>
+            <li>The red crosshairs show the current date and temperature</li>
+            <li>The green trace shows the temperature over the last 24h</li>
+            <li>The orange trace shows the pin activity over the last 24h</li>
+            <li>Tap anywhere in the display to see the time and the
+              temperature at the point you hit</li>
+            <li>Select <button>Save</button> to update the server or <button>Cancel</button> to quit the edit and discard all changes</li>
+          </ul>
+          <button class="twisty" id="close-twisty">...less</button>
+        </div>
+      </p>
+      <p>
+        <button>Update Calendars</button> will update the cache of the
+        calendars on the server from Google
+      </p>
       <button class="switcher" data-to="controls">Close</button>
   </body>
 </html>

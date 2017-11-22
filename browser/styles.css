@@ -25,6 +25,11 @@
     margin: 0;
 }
 
+h1 {
+    font-size: 8vmin;
+    margin: 1vmin 0vmin;
+}
+
 table {
     width: 100%;
 }
@@ -34,12 +39,19 @@ table {
 }
 
 button {
-    font-size: 4vmin;
+    font-size: 6vmin;
     padding: 1vmin;
     -webkit-border-radius: 1vmin;
     -moz-border-radius: 1vmin;
     color: black;
     background-color: #dfdced/*whiteish*/
+}
+
+input {
+    font-family: Courier, "Courier New", Monospace;
+    font-size: 5vmin;
+    line-height: 1;
+    text-align: right;
 }
 
 .switcher {
@@ -48,6 +60,29 @@ button {
 
 #help {
     display: none;
+}
+
+.example {
+    display: inline-block;
+    background-color: lightgrey;
+    padding: 2px;
+}
+
+button.twisty {
+    font-size: 2vmin;
+    -webkit-border-radius: 0;
+    -moz-border-radius: 0;
+    background-color: transparent;
+    color: black;
+}
+
+#help-twisty {
+    display: none;
+}
+
+.request {
+    background-color: orange;
+    padding: 1vmin;
 }
 
 /* The canvases used to edit timelines */
@@ -74,7 +109,6 @@ canvas {
 
 .timeline_container {
     width: 100%;
-/*    max-height: 50%;*/
 }
 
 .spinner { /** container for a spinnable input */

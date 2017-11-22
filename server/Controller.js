@@ -20,6 +20,7 @@ const TAG = "Controller";
  * Controller for a number of pins, thermostats, calendars, weather agents,
  * and the rules that manage the system state based on inputs from all these
  * elements.
+ *
  * @param {object} proto prototype object
  * @class
  */
@@ -128,6 +129,48 @@ Controller.prototype.createWeatherAgents = function() {
 };
 
 /**
+ * Add a request to a thermostat. If "boost" is in until or the target
+ * if prexied with "BOOST" then a boost request will be created.
+ * @param service themostat to add the request to
+ * @param id source of the request
+ * @param target target temperature, possibly prefixed by "BOOST "
+ * @param until time at which the request expires (or "boost")
+ */
+Controller.prototype.addRequest = function(service, id, target, until) {
+    var remove = false;
+    if (typeof until === "string") {
+        if (until == "now")
+            remove = true;
+    } else
+        until = Date.parse(until);
+
+    Utils.TRACE(TAG, "Request ", service, " from ",
+                id, " ", target, "C until ", until);
+    var m = /^BOOST\s*(.*)$/.exec(target);
+    if (m) {
+        until = "boost";
+        target = parseFloat(m[1]);
+    } else {
+        target = parseFloat(target);
+    }
+
+    if (/^ALL$/i.test(service)) {
+        Utils.forEach(this.thermostat, function(th) {
+            if (remove)
+                th.purgeRequests({ source: id });
+            else
+                th.addRequest(id, target, until);
+        });
+    } else if (!this.thermostat[service])
+        throw Utils.report("Cannot add request: ", service,
+                           " is not a known thermostat");
+    else if (remove)
+        this.thermostat[service].purgeRequests({ source: id });
+    else
+        this.thermostat[service].addRequest(id, target, until);
+};
+
+/**
  * Attach handlers to calendars calendars
  * @param {Array} configs array of calendar configurations
  * @return {Promise} a promise. Calendar creation doesn't depend on this
@@ -142,12 +185,18 @@ Controller.prototype.initialiseCalendars = function() {
     var self = this;
     Utils.forEach(this.calendar, function(cal) {
         cal.setTrigger(
-            function(id, pin, state, until) {
-                self.addRequest(pin, id, state, until);
+            function(id, service, target, until) {
+                self.addRequest(service, id, target, until);
             });
         cal.setRemove(
-            function(id, pin) {
-                self.removeRequests(pin, id);
+            function(id, service) {
+                if (/^ALL$/i.test(service)) {
+                    Utils.forEach(self.thermostat, function(th) {
+                        th.purgeRequests({source: id});
+                    });
+                } else
+                    self.thermostat[service].purgeRequests({source: id});
+
             });
         // Queue an asynchronous calendar update
         cal.update(1000);
@@ -425,51 +474,6 @@ Controller.prototype.setPromise = function(channel, new_state) {
 };
 
 /**
- * Add a Pin.Request to a pin (or all pins).
- * @param {String} pin pin name (or "ALL" for all pins)
- * @param {String} source source of the request
- * @param {int} state state to set (see Pin.addRequest)
- * @param {int} until (optional) epoch ms
- * @private
- */
-Controller.prototype.addRequest = function(pin, source, state, until) {
-    var req = {
-        state: state,
-        source: source,
-        until: until
-    };
-    Utils.TRACE(TAG, "Add request ", pin, " ", req);
-    var pins = this.pin;
-    if (pin === "ALL") {
-        Utils.forEach(pins, function(p) {
-            p.addRequest(req);
-        });
-    } else if (typeof pins[pin] !== "undefined")
-        pins[pin].addRequest(req);
-    else
-        Utils.ERROR(TAG, "Cannot addRequest; No such pin '" + pin + "'");
-};
-
-/**
- * Remove matching Pin.Requests from a pin.
- * @param {String} pin pin name (or "ALL" for all pins)
- * @param {String} source source of the request
- * @private
- */
-Controller.prototype.removeRequests = function(pin, source) {
-    Utils.TRACE(TAG, "Remove request ", pin, " ", source);
-    var pins = this.pin;
-    if (pin === "ALL") {
-        Utils.forEach(pins, function(p) {
-            p.purgeRequests(undefined, source);
-        });
-    } else if (typeof pins[pin] !== "undefined")
-        pins[pin].purgeRequests(undefined, source);
-    else
-        Utils.ERROR(TAG, "Cannot addRequest; No such pin '" + pin + "'");
-};
-
-/**
  * Command handler for ajax commands, suitable for calling by a Server.
  * @params {array} path the url path components
  * @param {object} data structure containing parameters. These vary according
@@ -521,14 +525,10 @@ Controller.prototype.dispatch = function(path, data) {
             });
         break;
     case "request":
-        // Push a request onto a pin (or all pins). Requests may come
+        // Push a request onto a service (or all services). Requests may come
         // from external sources such as mobiles or browsers.
-        // /request?source=;pin=;state=;until=
-        var until = data.until;
-        if (typeof until === "string")
-            until = Date.parse(until);
-        this.addRequest(data.pin, data.source,
-                        parseInt(data.state), until);
+        // /request?source=;service=;target=;until=
+        this.addRequest(data.service, data.source, data.target, data.until);
         self.pollRules();
         break;
     case "settime":

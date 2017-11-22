@@ -11,27 +11,8 @@ function () {
                             "°C so turning off");
                 pin.reason = "Overheat";
             }
-            // Cancel any boost requests
-            pin.purgeRequests(2);
             // setPromise is a NOP if already in the right state
             return self.setPromise("CH", 0);
-        }
-
-        // See if there's any demand from requests
-        var req = pin.getActiveRequest();
-        if (req) {
-            var restate;
-            if (req.state === 0 || req.state === 3)
-                restate = 0;
-            else
-                restate = 1;
-            if (restate !== state) {
-                Utils.TRACE("Rules", "active request for CH, ", req.state,
-                            " from ", req.source);
-                pin.reason = req.source + " requested " +
-                    pin.STATE_NAMES[req.state];
-            }
-            return self.setPromise("CH", restate);
         }
 
         // Otherwise respect the timeline

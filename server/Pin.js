@@ -19,21 +19,7 @@ const EXPORT_PATH = GPIO_PATH + "export";
 const UNEXPORT_PATH = GPIO_PATH + "unexport";
 
 /**
- * A Pin is the interface to a RPi GPIO pin. A pin maintains a state,
- *  history, and one or more Pin.Requests. These are used to record a
- * requirement for a specific state for the pin:
- * ```
- * Pin.Request {
- *   until: epoch ms,
- *   state: 2|1|0,
- *   source: string
- * }
- * ```
- * Requests that turn off the pin (state 0) override those that turn it on
- * (state 1, pin on, and state 2, pin boost). "Boost" is a special pin state
- * that is used in rules to bring a thermostat up to a target temperature
- * and then turn the pin off. Requests have an optional `until` field that
- * can be used to expire the request at a given time.
+ * A Pin is the interface to a RPi GPIO pin.
  * @class
  * @param {string} name name of the pin e.g. HW
  * @param {object} proto see Pin.Model
@@ -49,13 +35,6 @@ function Pin(proto, name) {
      */
     this.name = name;
 
-    // Request types
-    this.STATE_NAMES = [
-        "OFF",  // 0
-        "ON",   // 1
-        "BOOST" // 2
-    ];
-
     /**
      * @property {string} reason Descriptive reason the pin is currently in
      * the state it is.
@@ -67,10 +46,6 @@ function Pin(proto, name) {
         HOTPOT_DEBUG.mapPin(this);
 
     this.value_path = GPIO_PATH + "gpio" + this.gpio + "/value";
-
-    /** @property {object} requests List of requests for this pin
-     * (see #addRequest) */
-    this.requests = [];
 
     Utils.TRACE(TAG, "'", this.name,
                   "' constructed on gpio ", this.gpio);
@@ -251,18 +226,12 @@ Pin.prototype.getSerialisableState = function() {
     "use strict";
     var self = this;
 
-    self.purgeRequests();
     return this.getStatePromise()
     .then(function(value) {
-        var state = {
-            requests: self.requests,
-            reason: self.reason
+        return {
+            reason: self.reason,
+            state: value
         };
-        var ar = self.getActiveRequest();
-        if (typeof ar !== "undefined")
-            state.request = ar;
-        state.state = value;
-        return state;
     });
 };
 
@@ -275,73 +244,4 @@ Pin.prototype.getSerialisableLog = function(since) {
     if (!this.history)
         return Q();
     return this.history.getSerialisableHistory(since);
-};
-
-/**
- * Purge requests that have timed out, or are force-purged by matching
- * the parameters.
- * @param {number} state state of requests to force-purge, or undefined
- * @param {string} source source of requests to force-purge, or undefined
- * @private
- */
-Pin.prototype.purgeRequests = function(state, source) {
-    var reqs = this.requests;
-    for (var i = 0; i < reqs.length;) {
-        var r = reqs[i];
-        if ((typeof source !== "undefined" && r.source === source)
-            // state === BOOST requests will be purged by rules
-            || (typeof state !== "undefined" && r.state === state)
-            || (r.state === 1 && r.until <= Time.nowSeconds())
-            // OFF requests are only timed out if r.until is > 0
-            || (r.state === 0
-                && r.until > 0 && r.until <= Time.now())) {
-            // BOOST requests are explicitly expired by rules
-            Utils.TRACE(TAG, "Purge request ", r);
-            reqs.splice(i, 1);
-        } else
-            i++;
-    }
-};
-
-/**
- * Add a request. A request is an override for rules that suspends the
- * normal rules either for a period of time ('until' is a number), or until
- * the rules purge the request. The exact interpretation
- * of requests is in the hands of the rules; the pin simply stores them.
- * A pin may have multiple requests, but only one request from each source.
- * When it gets a request it purges all existing requests from the same source
- * before adding the new request. The special state -1 (none) is used to
- * remove all existing requests.
- * Where multiple sources have active requests, then requests for lower states
- * override requests for higher states.
- * @param {Pin.Request} request the request, see Pin.Request in the class
- * description
- */
-Pin.prototype.addRequest = function(request) {
-    Utils.TRACE(TAG, this.name + " add request ", request);
-    this.purgeRequests(undefined, request.source);
-    if (request.state >= 0)
-        this.requests.push(request);
-};
-
-/**
- * Test what state is currently requested for the pin.
- * @return {Pin.Request} request
- */
-Pin.prototype.getActiveRequest = function() {
-    "use strict";
-
-    var active_req;
-    this.purgeRequests();
-    for (var i = 0; i < this.requests.length; i++) {
-        if (typeof active_req === "undefined") {
-            active_req = this.requests[i];
-            if (active_req.state === 0)
-                return active_req;
-        }
-        else if (!active_req || this.requests[i].state < active_req.state)
-            // Lower state overrides higher
-            active_req = this.requests[i];
-    }
-    return active_req;
 };

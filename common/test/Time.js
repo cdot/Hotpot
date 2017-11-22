@@ -70,7 +70,7 @@ describe('Time', function() {
 
     describe('#unparse()', function() {
         it("should unparse 00:00:00.001", function() {
-            assert.equal(Time.unparse(1), "00:00:00.001");
+            assert.equal(Time.unparse(1), "00:00:00");
         });
         it("should unparse 00:00:00", function() {
             assert.equal(Time.unparse(0), "00:00:00");
@@ -85,7 +85,7 @@ describe('Time', function() {
             assert.equal(Time.unparse(61 * 1000), "00:01:01");
         });
         it("should unparse 23:59:59.999", function() {
-            assert.equal(Time.unparse(ONE_DAY-1), "23:59:59.999");
+            assert.equal(Time.unparse(ONE_DAY-1), "23:59:59");
         });
         it("should check upper end of range", function() {
             try {

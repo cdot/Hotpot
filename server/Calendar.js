@@ -20,15 +20,29 @@ const TAG = "Calendar";
  * heating events are cached. The cache size is limited by the config.
  * Longer means less frequent automatic updates, and larger memory
  * footprint for the server, but less network traffic.
+ * Hotpot events are read from the summary and description fields of calendar
+ * events. They are of the form
+ * ```
+ * <event> : <prefix> <service> [=] <command>? <target>
+ * ```
+ * where <prefix> is an optional prefix (HOTPOT:), <service> is a service
+ * name e.g. CH, <command> is an optional command e.g. BOOST and
+ * target is a temperature in  degrees C. For example,
+ * ```
+ * Hotpot:CH BOOST 18
+ * ```
+ * is a command to boost the central heating up to 18C. The prefix and
+ * <command> are case-insensitive.
+ *
  * @ignore
  */
-function ScheduledEvent(cal, id, start, end, pin, state) {
+function ScheduledEvent(cal, id, start, end, service, state) {
     // Reference to container {Calendar}
     this.calendar = cal;
     // Event ID
     this.id = id;
-    // Pin the event applies to e.g. "CH"
-    this.pin = pin;
+    // Service the event applies to e.g. "CH"
+    this.service = service;
     // Required state
     this.state = state;
     // Start of the event, in epoch ms
@@ -39,8 +53,8 @@ function ScheduledEvent(cal, id, start, end, pin, state) {
     var self = this;
     var now = Time.now();
     if (start > now) {
-        Utils.TRACE(TAG, self.id, " will start at ", Date, start,
-                   " now is ", Date, now);
+        Utils.TRACE(TAG, self.id, "(", service, ",", state, ") will start at ", new Date(start),
+                    " now is ", new Date());
         this.event = setTimeout(function() {
             self.start();
         }, start - now);
@@ -60,7 +74,7 @@ ScheduledEvent.prototype.cancel = function() {
         this.event = undefined;
     }
     if (typeof this.calendar.remove === "function") {
-        this.calendar.remove(this.id, this.pin);
+        this.calendar.remove(this.id, this.service);
     }
 };
 
@@ -70,11 +84,11 @@ ScheduledEvent.prototype.start = function() {
 
     Utils.TRACE(TAG, this.id, " starting");
     if (typeof this.calendar.trigger === "function")
-        this.calendar.trigger(this.id, this.pin, this.state, this.endms);
+        this.calendar.trigger(this.id, this.service, this.state, this.endms);
 
     Utils.runAt(function() {
         Utils.TRACE(TAG, self.id, " finished");
-        self.calendar.remove(self.id, self.pin);
+        self.calendar.remove(self.id, self.service);
     }, this.endms);
 };
 
@@ -108,10 +122,10 @@ module.exports = Calendar;
  * @param {function} trigger callback triggered when an event starts
  * (or after an update and the event has already started).
  * ```
- * trigger(String id, String pin, int state, int until)
+ * trigger(String id, String service, int state, int until)
  * ```
  * * `id` id of the event
- * * `pin` in the even is for (or `ALL` for all pins)
+ * * `service` service the event is for (or `ALL` for all services)
  * * `state` required state 0|1|2
  * * `until` when the event ends (epoch ms)
  * @param {function} remove callback invoked when a scheduled event is removed.
@@ -122,10 +136,10 @@ Calendar.prototype.setTrigger = function(trigger) {
 };
 
 /*
- * remove(String id, String pin)
+ * remove(String id, String service)
  * ```
  * * `id` id of the event being removed
- * * `pin` pin the event appies to
+ * * `service` service the event appies to
  */
 Calendar.prototype.setRemove = function(remove) {
     this.remove = remove;
@@ -250,7 +264,7 @@ Calendar.prototype.fillCache = function() {
         var events = response.items;
         var re = new RegExp(
             (self.require_prefix ? "HOTPOT:\\s*" : "")
-                + "([A-Z]+)[=\\s]+(0|1|2|on|off|away|boost)", "ig");
+                + "([A-Z]+)[=\\s]+((?:BOOST\\s+)?[\\d.]+)", "ig");
         Utils.TRACE(TAG, "'" + self.name + "' has "
                     + events.length + " events");
         self.last_update = new Date();
@@ -262,32 +276,12 @@ Calendar.prototype.fillCache = function() {
             var fullText = event.summary + " " + event.description;
             var match;
             while ((match = re.exec(fullText)) !== null) {
-                var pin = match[1];
-                if (pin.toUpperCase() === "ALL")
-                    pin = "ALL";
-                var state = match[2];
-                if (/^[0-9]+$/i.test(state))
-                    state = parseInt(state);
-                else if (/^(off|away)$/i.test(state))
-                    state = 0;
-                else if (/^on$/i.test(state))
-                    state = 1;
-                else if (/^boost$/i.test(state))
-                    state = 2;
-                else {
-                    Utils.TRACE(TAG, "Ignored bad calendar entry ",
-                                Date, start, "..",
-                                Date, end, " ",
-                                pin, "=", state);
-                    continue;
-                }
-                Utils.TRACE(TAG, "Parsed event ", i, " ", Date, start, "..",
-                            Date, end, " ",
-                            pin, "=", state);
+                var service = match[1];
+                var target = match[2].toUpperCase();
                 self.schedule.push(new ScheduledEvent(
                     self,
                     self.name + "_" + i,
-                    start, end, pin, state));
+                    start, end, service, target));
             }
         }
         Utils.TRACE(TAG, self.name, " ready");
@@ -301,14 +295,14 @@ Calendar.prototype.fillCache = function() {
 
 /**
  * The serialisable state of a calendar is the current (or next) active
- * event in the calendar for each unique pin in the calendar.
+ * event in the calendar for each unique service in the calendar.
  */
 Calendar.prototype.getSerialisableState = function() {
     var state = {};
     for (var i in this.schedule) {
 	var event = this.schedule[i];
-	if (typeof state[event.pin] === "undefined") {
-	    state[event.pin] = {
+	if (typeof state[event.service] === "undefined") {
+	    state[event.service] = {
 		state: event.state,
 		start: event.startms,
 		length: event.endms - event.startms

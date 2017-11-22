@@ -13,7 +13,6 @@ const DataModel = require("../../common/DataModel.js");
     "use strict";
 
     var requests = { off: 0, on: 1, boost: 2 };
-    var state_name = [ "OFF", "ON", "BOOST" ];
 
     var update_backoff = 10; // seconds
 
@@ -34,15 +33,10 @@ const DataModel = require("../../common/DataModel.js");
      * User clicks a request button
      * @return {boolean} false to terminate event handling
      */
-    function requestState(pin, val, source) {
-        if (typeof source === "undefined") source = "Browser";
-        var params = {
-            // until: , - no timeout
-            source: source,
-            pin: pin,
-            state: val
-        };
-
+    function sendRequest(params) {
+        if (!params.source)
+            params.source = "Browser";
+        
         // Away from home, set up to report after interval
         $.post("/ajax/request",
                JSON.stringify(params),
@@ -96,35 +90,27 @@ const DataModel = require("../../common/DataModel.js");
             var ptext = (obj.pin[service].state === 0) ? "OFF" : "ON";
             $(pin + "state").text(ptext);
             $(pin + "reason").text(obj.pin[service].reason);
-            $(pin + "requests").empty();
+            $("#" + service + "-requests").empty();
             function buttClick(e) {
-                requestState(e.data.service, -1, e.data.source);
-                e.$div.remove();
+                sendRequest({
+                    service: e.data.service,
+                    source: e.data.source,
+                    until: "now" });
+                e.data.$div.remove();
             }
-            var browser_requesting;
-            for (var i = 0; i < obj.pin[service].requests.length; i++) {
-                var req = obj.pin[service].requests[i];
-                if (req.source === "Browser")
-                    browser_requesting = req;
-                var $div = $("<div></div>");
+
+            for (var i = 0; i < obj.thermostat[service].requests.length; i++) {
+                var req = obj.thermostat[service].requests[i];
+                var $div = $("<div></div>").addClass("request");
+                var u = req.until == "boost" ? "boosted" : new Date(req.until);
                 $div.append("<span>" + req.source + " is requesting " +
-                            state_name[req.state] + " </span>");
+                            req.target + " </span>°C until " + u + " ");
                 var $butt = $("<button>Clear</button>")
                 $div.append($butt);
                 $butt.click(
                     { service: service, source: req.source, $div: $div },
                     buttClick);
-                $(pin + "requests").append($div);
-            }
-            for (var butt in requests)
-                $(pin + butt).css("display", "inline");
-            if (typeof browser_requesting !== "undefined") {
-                if (browser_requesting.state == 0)
-                    $(pin + "off").css("display", "none");
-                else if (browser_requesting.state == 1)
-                    $(pin + "on").css("display", "none");
-                else if (browser_requesting.state == 2)
-                    $(pin + "boost").css("display", "none");
+                $("#" + service + "-requests").append($div);
             }
         }
     }
@@ -190,7 +176,6 @@ const DataModel = require("../../common/DataModel.js");
         ctx.beginPath();
         var midnight = Time.midnight();
         var i = trace.length - 1;
-        var first = true;
         var now = trace[i].time;
         var lp;
 
@@ -200,7 +185,6 @@ const DataModel = require("../../common/DataModel.js");
             var xy = te.tv2xy(tp);
             if (!last_tv) {
                 ctx.moveTo(xy.x, xy.y);
-                first = false;
             } else {
                 if (is_binary && tp.value != last_tv.value) {
                     var lxy = te.tv2xy({ time: last_tv.time,
@@ -220,7 +204,6 @@ const DataModel = require("../../common/DataModel.js");
         // Draw from midnight back to same time yesterday
         ctx.strokeStyle = style2;
         ctx.beginPath();
-        first = true;
         var stop = now - 24 * 60 * 60 * 1000;
         midnight -= 24 * 60 * 60 * 1000;
         lp = undefined;
@@ -357,14 +340,15 @@ const DataModel = require("../../common/DataModel.js");
         $(".spinnable").Spinner();
 
         for (var service in { CH: 1, HW: 1 }) {
-            for (var fn in requests) {
-                $("#pin-" + service + "-"+fn).click(
-                    { service: service, fn: fn },
-                    function(e) {
-                        requestState(e.data.service, requests[e.data.fn]);
-                    });
-                $("#"+service+"-timeline").css("display", "none");
-            }
+            $("#" + service + "-boost").click(
+                { service: service, until: "boost" },
+                function(e) {
+                    e.data.target =
+                        $("#" + e.data.service + "-boost-target").val();
+                    sendRequest(e.data);
+                });
+            $("#"+service+"-timeline").css("display", "none");
+            
             $("#open-"+service+"-timeline").click(service, openTimeline);
             $("#save-"+service+"-timeline").click(service, saveTimeline);
             $("#cancel-"+service+"-timeline").click(service, closeTimeline);
@@ -373,6 +357,16 @@ const DataModel = require("../../common/DataModel.js");
 
 	$("#refresh_calendars").on("click", refreshCalendars);
 
+        $("#open-twisty").on("click", function() {
+            $("#help-twisty").show();
+            $(this).hide();
+        });
+
+        $("#close-twisty").on("click", function() {
+            $("#help-twisty").hide();
+            $("#open-twisty").show();
+        });
+        
 	$(".switcher").on("click", function() {
             $(".display").hide();
             $("#" + $(this).data("to")).show();
