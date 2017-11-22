@@ -4,61 +4,52 @@
 
 // Test support
 
-const fs = require("fs");
+const Fs = require("fs");
 
-function TestSupport() {
-    console.log("****** Running with TestSupport ******");
-    this.temperature = { CH: 20, HW: 40 };
-    this.thermoMap = {};
-    this.pinMap = {};
+// Heating and cooling rates, in degrees per minute
+const RATES = [
+    { HW: -0.01, CH: -0.03 }, // COOL
+    { HW: 0.333, CH: 0.1 }   // WARM
+];
 
+var TestSupport = {
     // Path for debug pin files
-    this.pin_path = "/tmp/gpio";
-}
+    pin_path: "/tmp/gpio",
+    
+    ds18x20: {
+        get: function(id, fn) {
+            var sensor = TestSupport.thid2Sensor[id];
+            fn(null, sensor.temperature);
+        },
+
+        isDriverLoaded: function() { return true; }
+    },
+    
+    adjustSensor: function(sensor) {
+        if (typeof TestSupport.name2gpio[sensor.name] !== "undefined") {
+            var pState = parseInt(Fs.readFileSync(
+                TestSupport.pin_path + TestSupport.name2gpio[sensor.name]));
+            sensor.temperature += RATES[pState][sensor.name] / 120.0;
+        }
+        setTimeout(function() {
+            TestSupport.adjustSensor(sensor);
+        }, 500);
+    },
+
+    thid2Sensor: {},
+    mapThermostat: function(th) {
+        var sensor = {
+            name: th.name,
+            temperature: th.getTargetTemperature()
+        };
+        TestSupport.thid2Sensor[th.id] = sensor;
+        TestSupport.adjustSensor(sensor);
+    },
+
+    name2gpio: {},
+    mapPin: function(pin) {
+        TestSupport.name2gpio[pin.name] = pin.gpio;
+    },
+};
+
 module.exports = TestSupport;
-
-// Map an ID - e.g. of a temp sensor - to a name
-TestSupport.prototype.mapThermostat = function(id, name) {
-    this.thermoMap[id] = name;
-    this.temperature[name] = 20;
-    this.warmDown(name);
-};
-
-// Map an ID - e.g. of a temp sensor - to a name
-TestSupport.prototype.mapPin = function(id, name) {
-    this.pinMap[name] = id;
-};
-
-TestSupport.prototype.warmDown = function(name) {
-    var self = this;
-    if (this.pinMap[name]) {
-        var odl = this.temperature[name];
-        var offset = Math.random() / 10;
-        var pState = this.getPin(name);
-        this.temperature[name] += (pState === 0) ? -offset : offset;
-        if (this.temperature[name] < 13)
-            this.temperature[name] = 13;
-        if (this.temperature[name] > 60)
-            this.temperature[name] = 60;
-        //console.log("WTF " + name + " (" + pState + ") "
-        //            + odl + " -> " + this.temperature[name]);
-    }
-    setTimeout(function() {
-        self.warmDown(name);
-    }, 1000);
-};
-
-// Simulate a ds18x20
-TestSupport.prototype.get = function(id, fn) {
-    var name = this.thermoMap[id];
-    if (typeof fn !== "undefined")
-        fn(null, this.temperature[name]);
-    else
-        return this.temperature[name];
-};
-
-// private
-TestSupport.prototype.getPin = function(name) {
-    return parseInt(fs.readFileSync(this.pin_path + this.pinMap[name]));
-};
-

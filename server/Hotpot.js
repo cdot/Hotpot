@@ -48,8 +48,7 @@ const HOTPOT_MODEL = {
     if (typeof cliopt.debug !== "undefined") {
         // Development only
         Q.longStackSupport = true;
-        var TestSupport = require("./test/TestSupport.js");
-        HOTPOT_DEBUG = new TestSupport();
+        HOTPOT_DEBUG = require("./test/TestSupport.js");
     }
 
     if (cliopt.trace && cliopt.trace !== "")

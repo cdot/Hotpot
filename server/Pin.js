@@ -64,7 +64,7 @@ function Pin(proto, name) {
     this.reason = "";
 
     if (typeof HOTPOT_DEBUG !== "undefined")
-        HOTPOT_DEBUG.mapPin(this.gpio, this.name);
+        HOTPOT_DEBUG.mapPin(this);
 
     this.value_path = GPIO_PATH + "gpio" + this.gpio + "/value";
 

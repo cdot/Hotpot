@@ -193,22 +193,27 @@ const DataModel = require("../../common/DataModel.js");
         var first = true;
         var now = trace[i].time;
         var lp;
-        while (i >= 0 && trace[i].time > midnight) {           
-            var tp = { time: trace[i].time - midnight,
-                       value: base + trace[i].value * binary };
-            var p = te.tv2xy(tp);
-            if (first) {
-                ctx.moveTo(p.x, p.y);
+
+        function nextPoint(tv, last_tv) {
+            var tp = { time: tv.time - midnight,
+                       value: base + tv.value * binary };
+            var xy = te.tv2xy(tp);
+            if (!last_tv) {
+                ctx.moveTo(xy.x, xy.y);
                 first = false;
             } else {
-                if (is_binary && lp && tp.value != lp.value) {
-                    var lp = te.tv2xy(lp);
-                    ctx.lineTo(lp.x, lp.y);
+                if (is_binary && tp.value != last_tv.value) {
+                    var lxy = te.tv2xy({ time: last_tv.time,
+                                         value: tp.value } );
+                    ctx.lineTo(lxy.x, lxy.y);
                 }
-                ctx.lineTo(p.x, p.y);
+                ctx.lineTo(xy.x, xy.y);
             }
-            lp = tp;
-            i--;
+            return tp;
+        }
+        
+        while (i >= 0 && trace[i].time > midnight) {
+            lp = nextPoint(trace[i--], lp);
         }
         ctx.stroke();
 
@@ -219,20 +224,8 @@ const DataModel = require("../../common/DataModel.js");
         var stop = now - 24 * 60 * 60 * 1000;
         midnight -= 24 * 60 * 60 * 1000;
         lp = undefined;
-        while (i >= 0 && trace[i].time > stop) {           
-            var tp = { time: trace[i].time - midnight,
-                       value: base + trace[i].value * binary };
-            var p = te.tv2xy(tp);
-            if (first) {
-                ctx.moveTo(p.x, p.y);
-                first = false;
-            } else
-                if (is_binary && lp && tp.value != lp.value) {
-                    var lp = te.tv2xy(lp);
-                    ctx.lineTo(lp.x, lp.y);
-                }
-            i--;
-            lp = tp;
+        while (i >= 0 && trace[i].time > stop) {
+            lp = nextPoint(trace[i--], lp);
         }
         ctx.stroke();
     }
@@ -242,9 +235,9 @@ const DataModel = require("../../common/DataModel.js");
         var te = $(this).data("timeline_editor");
         
         renderTrace(te,
-            traces["thermostat-" + service], "#00AA00", "#006600", false)
+            traces["thermostat-" + service], "#00AA00", "#005500", false)
         renderTrace(te,
-            traces["pin-" + service], "#AA0000", "#660000", true)
+            traces["pin-" + service], "#eea500", "#665200", true)
     }
     
     function initialiseTimeline() {

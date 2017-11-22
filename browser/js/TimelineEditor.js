@@ -65,7 +65,7 @@ function TimelineEditor(timeline, $container) {
     }
     
     this.$main_canvas.on("doubletap", function(e) {
-        Utils.LOG("E: doubletap");
+        //Utils.LOG("E: doubletap");
         e.preventDefault();
         self.is_editing = !self.is_editing;
         self.$main_canvas.trigger("redraw");
@@ -73,7 +73,7 @@ function TimelineEditor(timeline, $container) {
     
     // Hold down over a line to add a point and select it
     this.$main_canvas.on("taphold", function(e, touch) {
-        Utils.LOG("E: taphold ", self.drag_pt_ix);
+        //Utils.LOG("E: taphold ", self.drag_pt_ix);
         if (self.is_editing) {
             e.preventDefault();
             var xy = touch.startOffset;
@@ -101,7 +101,7 @@ function TimelineEditor(timeline, $container) {
     });
 
     this.$main_canvas.on($.getStartEvent(), function(e) {
-        Utils.LOG("E: ", $.getStartEvent(), " ", self.drag_pt_ix);
+        //Utils.LOG("E: ", $.getStartEvent(), " ", self.drag_pt_ix);
         if (self.is_editing && self.drag_pt_ix < 0) {
             e.preventDefault();
             var xy = self.e2xy(e);
@@ -123,7 +123,7 @@ function TimelineEditor(timeline, $container) {
 
     
     this.$main_canvas.on($.getMoveEvent(), function(e) {
-        Utils.LOG("E: ", $.getMoveEvent(), " ", self.drag_pt_ix);
+        //Utils.LOG("E: ", $.getMoveEvent(), " ", self.drag_pt_ix);
         if (self.is_editing && self.drag_pt_ix >= 0) {
             e.preventDefault();
             var xy = self.e2xy(e);
@@ -139,7 +139,7 @@ function TimelineEditor(timeline, $container) {
     });
     
     this.$main_canvas.on($.getEndEvent(), function(e) {
-        Utils.LOG("E: ", $.getEndEvent(), " ", self.drag_pt_ix);
+        //Utils.LOG("E: ", $.getEndEvent(), " ", self.drag_pt_ix);
         var xy = self.e2xy(e);
         self.last_tip_xy = xy;
         if (self.is_editing && self.drag_pt_ix >= 0) {

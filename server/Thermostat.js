@@ -28,27 +28,21 @@ var ds18x20;
 function Thermostat(proto, name) {
     "use strict";
 
-    if (!ds18x20) {
-        // Load the driver asynchronously
-        ds18x20 = require("ds18x20");
-        if (!ds18x20.isDriverLoaded()) {
-            try {
-                ds18x20.loadDriver();
-            } catch (err) {
-                Utils.ERROR(TAG, "Temperature sensor '",
-                            name, "' driver not loaded: ", err.message);
-                if (typeof HOTPOT_DEBUG !== "undefined")
-                    ds18x20 = HOTPOT_DEBUG;
-                else
-                    throw err;
-            }
-        }
-    }
-
     Utils.extend(this, proto);
 
     // Name of the thermostat e.g. "HW"
     this.name = name;
+
+    if (!ds18x20) {
+        // Load the driver asynchronously
+        if (typeof HOTPOT_DEBUG !== "undefined")
+            ds18x20 = HOTPOT_DEBUG.ds18x20;
+        else
+            ds18x20 = require("ds18x20");
+        
+        if (!ds18x20.isDriverLoaded())
+            ds18x20.loadDriver();
+    }
 
     // Last recorded temperature {float}
     this.temperature = 0;
@@ -66,7 +60,7 @@ function Thermostat(proto, name) {
     }
 
     if (typeof HOTPOT_DEBUG !== "undefined")
-        HOTPOT_DEBUG.mapThermostat(this.id, name);
+        HOTPOT_DEBUG.mapThermostat(this);
 }
 
 Thermostat.Model = {
@@ -157,9 +151,9 @@ Thermostat.prototype.pollTemperature = function() {
 
     var self = this;
 
-    ds18x20.get(this.id, function(err, temp) {
+    ds18x20.get(self.id, function(err, temp) {
         if (err !== null) {
-            Utils.ERROR(TAG, "d218x20 error: ", err);
+            Utils.ERROR(TAG, "Sensor error: ", err);
         } else {
             if (typeof temp === "number")
                 // At least once this has been "boolean"!
