@@ -69,23 +69,23 @@ describe('Time', function() {
     });
 
     describe('#unparse()', function() {
-        it("should unparse 00:00:00.001", function() {
-            assert.equal(Time.unparse(1), "00:00:00");
+        it("should unparse 1ms as 00:00:00.001", function() {
+            assert.equal(Time.unparse(1), "00:00:00.001");
         });
-        it("should unparse 00:00:00", function() {
-            assert.equal(Time.unparse(0), "00:00:00");
+        it("should unparse 0 as 00:00", function() {
+            assert.equal(Time.unparse(0), "00:00");
         });
-        it("should unparse 00:01", function() {
-            assert.equal(Time.unparse(60 * 60 * 1000), "01:00:00");
+        it("should unparse 1 hour as 01:00", function() {
+            assert.equal(Time.unparse(60 * 60 * 1000), "01:00");
         });
-        it("should unparse 00:01", function() {
-            assert.equal(Time.unparse(60 * 1000), "00:01:00");
+        it("should unparse unparse 1 minute as 00:01", function() {
+            assert.equal(Time.unparse(60 * 1000), "00:01");
         });
-        it("should unparse 00:01:01", function() {
-            assert.equal(Time.unparse(61 * 1000), "00:01:01");
+        it("should unparse 1 second as 00:00:01", function() {
+            assert.equal(Time.unparse(1000), "00:00:01");
         });
         it("should unparse 23:59:59.999", function() {
-            assert.equal(Time.unparse(ONE_DAY-1), "23:59:59");
+            assert.equal(Time.unparse(ONE_DAY-1), "23:59:59.999");
         });
         it("should check upper end of range", function() {
             try {

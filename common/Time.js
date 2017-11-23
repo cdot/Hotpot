@@ -87,19 +87,26 @@ Time.time_of_day = function() {
  */
 Time.unparse = function(t) {
     function pad(n, w) {
-        var s = "" + n;
-        while (s.length < w)
-            s = "0" + s;
-        return s;
+        var k = Math.trunc(n);
+        var pad = "";
+        for (var pl = w - ("" + k).length; pl > 0; pl--)
+            pad += "0";
+        return pad + n;
     }
     if (t < 0 || t > ONE_DAY)
         throw "Time.unparse time out of range";
+    var ms = t % 1000;
     t = Math.trunc(t / 1000);   // to seconds
-    var s = Math.round(t % 60); // seconds
+    var s = t % 60;             // seconds
     t = Math.trunc(t / 60);     // to minutes
     var m = Math.trunc(t % 60); // minutes
     var h = Math.trunc(t / 60); // hours
-    var ts = pad(h, 2) + ":" + pad(m, 2) + ":" + pad(s, 2);
+    var ts = pad(h, 2) + ":" + pad(m, 2);
+    if (s + ms > 0) {
+        ts += ":" + pad(s, 2);
+        if (ms > 0)
+            ts += "." + pad(ms, 3);
+    }
     return ts;
 };
 
