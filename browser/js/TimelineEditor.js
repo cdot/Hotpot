@@ -301,13 +301,14 @@ TimelineEditor.prototype.tv2xy = function(p) {
 };
 
 /**
- * Convert a canvas point to timeline space
+ * Convert a canvas point to timeline space (integer ms)
  * @private
  */
 TimelineEditor.prototype.xy2tv = function(p) {
     "use strict";
     return {
-        time: this.timeline.period * p.x / this.$main_canvas.width(),
+        time: Math.trunc(this.timeline.period * p.x /
+                         this.$main_canvas.width()),
         value: this.timeline.min + (this.timeline.max - this.timeline.min) *
             (this.$main_canvas.height() - p.y) / this.$main_canvas.height()
     };
