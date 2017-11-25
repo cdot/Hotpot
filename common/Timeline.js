@@ -113,7 +113,7 @@ Timeline.prototype.fixExtremes = function() {
         this.points.unshift(new Timepoint({
             time: 0, value: this.points[0].value}));
 
-    if (this.points[this.points.length - 1].time < this.period) {
+    if (this.points[this.points.length - 1].time < this.period - 1) {
         this.points.push(new Timepoint({
             time: this.period - 1,
             value: this.points[this.points.length - 1].value}));
