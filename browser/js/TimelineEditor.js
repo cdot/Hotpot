@@ -15,7 +15,7 @@
  * See https://github.com/benmajor/jQuery-Touch-Events for touch event
  * support.
  */
-var POINT_RADIUS = 20; // px
+var POINT_RADIUS = 10; // px
 var POINT_RADIUS2 = POINT_RADIUS * POINT_RADIUS;
 
 const Utils = require("../../common/Utils.js");
@@ -377,6 +377,7 @@ TimelineEditor.prototype.setSelectedTime = function(t) {
     var dp = this.timeline.getPoint(this.sel_pt_ix);
     dp = { time: t, value: dp.value };
     if (this.timeline.setPointConstrained(this.sel_pt_ix, dp)) {
+        this.changed = true;
         this.$main_canvas.trigger("redraw");
         this.$tip_canvas.trigger("redraw");
         this.$selection_canvas.trigger("redraw");
@@ -392,6 +393,7 @@ TimelineEditor.prototype.setSelectedValue = function(v) {
     var dp = this.timeline.getPoint(this.sel_pt_ix);
     dp = { time: dp.time, value: v };
     if (this.timeline.setPointConstrained(this.sel_pt_ix, dp)) {
+        this.changed = true;
         this.$main_canvas.trigger("redraw");
         this.$tip_canvas.trigger("redraw");
         this.$selection_canvas.trigger("redraw");
@@ -409,6 +411,7 @@ TimelineEditor.prototype.removeSelectedPoint = function() {
         this.timeline.remove(this.sel_pt_ix);
         if (this.selectedPoint > this.timeline.nPoints() - 1)
             this.selectedPoint = this.timeline.nPoints() - 1;
+        this.changed = true;
         this.$main_canvas.trigger("redraw");
         this.$tip_canvas.trigger("redraw");
         this.$selection_canvas.trigger("redraw");
@@ -439,7 +442,7 @@ TimelineEditor.prototype.drawSelectionCanvas = function() {
             left: (xy.x - POINT_RADIUS + this.$main_canvas.offset().left) + "px",
             top: (xy.y - POINT_RADIUS + this.$main_canvas.offset().top) + "px"
         });
-        pCtx.fillStyle = '#FFFF0077';
+        pCtx.fillStyle = 'rgba(255,255,0,0.5)';
         pCtx.beginPath();
         pCtx.arc(POINT_RADIUS, POINT_RADIUS, POINT_RADIUS, 0, 2 * Math.PI, false);
         pCtx.fill();
@@ -450,7 +453,7 @@ TimelineEditor.prototype.drawSelectionCanvas = function() {
             left: (xy.x - POINT_RADIUS + this.$main_canvas.offset().left) + "px",
             top: (xy.y - POINT_RADIUS + this.$main_canvas.offset().top) + "px"
         });
-        pCtx.fillStyle = '#FF000077';
+        pCtx.fillStyle = 'rgba(255,0,0,0.5)';
         pCtx.beginPath();
         pCtx.arc(POINT_RADIUS, POINT_RADIUS, POINT_RADIUS, 0, 2 * Math.PI, false);
         pCtx.fill();
@@ -567,7 +570,7 @@ TimelineEditor.prototype.drawMainCanvas = function() {
     ctx.stroke();
 
     if (this.is_editing) {
-        ctx.fillStyle = '#00FF0066';
+        ctx.fillStyle = 'rgba(0,255,0,0.5)';
         for (var i = 0; i < this.timeline.nPoints(); i++) {
             var p = this.tv2xy(this.timeline.getPoint(i));
             ctx.beginPath();

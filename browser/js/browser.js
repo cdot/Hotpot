@@ -12,8 +12,6 @@ const DataModel = require("../../common/DataModel.js");
 (function($) {
     "use strict";
 
-    var requests = { off: 0, on: 1, boost: 2 };
-
     var update_backoff = 10; // seconds
 
     var poller;
@@ -372,6 +370,8 @@ const DataModel = require("../../common/DataModel.js");
             $("#" + $(this).data("to")).show();
         });
     
+        $(document).trigger("poll");
+        
         // Get the last 24 hours of logs
         var params = { since: Date.now() - 24 * 60 * 60 };
         $.getJSON("/ajax/log", JSON.stringify(params), loadTraces)

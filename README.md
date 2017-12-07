@@ -90,10 +90,12 @@ recommended to rotate them on a regular basis. When a log is rotated make sure t
 Histories can either be sampling - such as temperatures - or logging, such as pin states or weather agents. Sampling histories require an interval to be specified to set how often the item is sampled. Logging histories rely on the caller explicitly logging events.
 
 ## Weather
-Weather information is retrieved from the UK Meteorological Office data service, via a simple API that can easily be overridden with your own weather service provider. The class "MetOffice" is the reference implementation.
+Weather information can be retrieved from the UK Meteorological Office data service, via a simple API that can easily be overridden with your own weather service provider. The class "MetOffice" is the reference implementation.
 
 An API key is required to access weather information from the Met Office. These
 are available for free.
+
+The weather feature is considered experimental, and is likely to change.
 
 ## Rules
 
@@ -169,17 +171,10 @@ Note that calendar events are only used to generate requests. It is up to the
 rules whether and how those requests are interpreted. Rules should always
 contain conditions to stop runaway temperature rises and freezing.
 
-## Android App
-The Android app provides a simple interface to a Hotpot server.
-Setup requires the server URL and authentication details. The app will
-interrogate the server and update status so long as the device isn't using
-mobile data; if it starts using mobile data, it has to be refreshed on demand.
-App users can boost pins, but that's the limit of their control.
-
 ## Browser App
 The browser app is served automatically when `/browser.html` is loaded from
-a browser. The app provides similar capabilities to the Android app, though it
-adds continuous monitoring of temperatures and states of the system. Users of the browser app can also remotely edit rules and upload the changes.
+a browser. The app provides control and monitoring capabilities in a portable
+interface that can be used fom desktops, laptops, tablets and smartphones.
 
 # GetIP
 

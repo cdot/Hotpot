@@ -144,7 +144,7 @@ Controller.prototype.addRequest = function(service, id, target, until) {
     } else
         until = Date.parse(until);
 
-    Utils.TRACE(TAG, "Request ", service, " from ",
+    Utils.TRACE(TAG, "request ", service, " from ",
                 id, " ", target, "C until ", until);
     var m = /^BOOST\s*(.*)$/.exec(target);
     if (m) {
@@ -497,6 +497,7 @@ Controller.prototype.dispatch = function(path, data) {
         break;
     case "log":
         // /log[/{type}[/{name}]]
+        Utils.TRACE(TAG, "log ", path);
         if (typeof path[0] === "undefined")
             return self.getSerialisableLog(data.since);
         if (typeof path[1] === "undefined")
@@ -504,6 +505,7 @@ Controller.prototype.dispatch = function(path, data) {
         return self[path[0]][path[1]].getSerialisableLog(data.since);
     case "getconfig":
         // /getconfig/path/to/config/node
+        Utils.TRACE(TAG, "getconfig ", path);
         return DataModel.at(
             this, Controller.Model, path,
             function(data, model) {
@@ -520,7 +522,7 @@ Controller.prototype.dispatch = function(path, data) {
                     throw Utils.report("Cannot update ", path,
                                        " insufficient context");
                 parent[key] = DataModel.remodel(key, data.value, model, path);
-                //Utils.TRACE(TAG, "Set ", path.join('.'), " = ", parent[key]);
+                Utils.TRACE(TAG, "setconfig ", path, " = ", parent[key]);
                 self.emit("config_change");
             });
         break;
@@ -545,6 +547,7 @@ Controller.prototype.dispatch = function(path, data) {
         // SMELL: could use push notification to do this, but that requires
         // a server host with a DNS entry so not bothered.
         // /refresh_calendars
+        Utils.TRACE(TAG, "Refresh calendars");
         for (var cal in this.calendar)
             this.calendar[cal].update(100);
         self.pollRules();
