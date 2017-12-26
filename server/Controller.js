@@ -138,14 +138,17 @@ Controller.prototype.createWeatherAgents = function() {
  */
 Controller.prototype.addRequest = function(service, id, target, until) {
     var remove = false;
-    if (typeof until === "string") {
-        if (until == "now")
-            remove = true;
-    } else
-        until = Date.parse(until);
 
     Utils.TRACE(TAG, "request ", service, " from ",
                 id, " ", target, "C until ", until);
+
+    if (typeof until === "string") {
+        if (until == "now")
+            remove = true;
+	else
+            until = Date.parse(until);
+    }
+
     var m = /^BOOST\s*(.*)$/.exec(target);
     if (m) {
         until = "boost";

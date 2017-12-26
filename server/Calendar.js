@@ -280,7 +280,7 @@ Calendar.prototype.fillCache = function() {
                 var target = match[2].toUpperCase();
                 self.schedule.push(new ScheduledEvent(
                     self,
-                    self.name + "_" + i,
+                    "Calendar '" + self.name + "' event " + i,
                     start, end, service, target));
             }
         }

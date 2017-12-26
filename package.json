@@ -2,16 +2,19 @@
     "name": "Hottie",
     "version": "0.0.0",
     "description": "Central heating controller",
-    "main": "Hotpot.js",
+    "main": {
+        "module-name": "./Hottie.js"
+    },
     "bugs": {
-        "url" : "https://github.com/cdot/hottie/issues"
+        "url": "https://github.com/cdot/hottie/issues"
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "Crawford Currie",
-    "bin": { "module-name": "./Hottie.js" },
-    "main": { "module-name": "./Hottie.js" },
+    "bin": {
+        "module-name": "./Hottie.js"
+    },
     "license": "MIT",
     "keywords": [
         "gpio",
@@ -27,14 +30,14 @@
         "basic-auth": ">= 1.0.4",
         "ds18x20": ">= 0.2.0",
         "events": ">= 1.1.0",
-	"extend": ">= 3.0.0",
+        "extend": ">= 3.0.0",
         "follow-redirects": ">= 0.2.0",
         "fs": ">= 0.0.2",
         "googleapis": ">= 12.2.0",
         "google-auth-library": ">= 0.9.8",
         "http": ">= 0.0.0",
         "https": ">= 1.0.0",
-	"jquery":  ">= 2.2.3",
+        "jquery": ">= 2.2.3",
         "mime-types": ">= 2.1.11",
         "node-getopt": ">= 0.2.3",
         "q": ">= 1.4.1",
@@ -55,13 +58,13 @@
             "blockBindings": true
         },
         "globals": {
-            "module" : true,
+            "module": true,
             "Time": true,
             "Utils": true,
             "HOTPOT_DEBUG": true
         },
         "rules": {
-            "strict": [ "error", "global" ],
+            "strict": 0,
             "no-underscore-dangle": 0,
             "curly": 0,
             "camelcase": 0,
@@ -70,16 +73,15 @@
             "no-console": 0,
             "no-debugger": 0,
             "no-alert": 1,
-            "no-new" : 0,
-            "new-cap" : 0,
-            "dot-notation" : 1,
-            "no-trailing-spaces" : 0,
+            "no-new": 0,
+            "new-cap": 0,
+            "dot-notation": 1,
+            "no-trailing-spaces": 0,
             "no-use-before-define": 0,
             "no-loop-func": 1,
             "no-process-exit": 0,
             "no-eval": 1,
-            "quotes": 0,
-            "strict": 0
+            "quotes": 0
         }
     }
 }
