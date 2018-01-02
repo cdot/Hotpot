@@ -143,7 +143,7 @@ Controller.prototype.addRequest = function(service, id, target, until) {
                 id, " ", target, "C until ", until);
 
     if (typeof until === "string") {
-        if (until == "now")
+        if (until === "now")
             remove = true;
 	else
             until = Date.parse(until);
@@ -574,7 +574,10 @@ Controller.prototype.pollRules = function() {
         self.poll.timer = undefined;
     }
 
-    // Test each of the rules
+    // Test each of the rules. Rule evaluation functions return a
+    // promise to set a pin state, which is decided by reading the
+    // thermostats. Requests in the thermostats may define a temperature
+    // target, or if not the timeline is used.
     Utils.forEach(self.rule, function(rule) {
         if (typeof rule.testfn !== "function") {
             Utils.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
