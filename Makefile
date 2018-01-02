@@ -59,3 +59,10 @@ clean:
 	$(FIND) '*.min.js' -exec rm \{\} \;
 	$(FIND) '*.esl' -exec rm \{\} \;
 	rm -rf doc
+
+# Dependencies (link for dev)
+%.dependencies : %/package.json
+	$(shell cat $^ | \
+   perl -e 'use JSON;$$/=undef;$$d=decode_json(<>);print join(";", map { "npm link $$_" } keys %{$$d->{dependencies}});')
+
+dependencies: GetIP.dependencies server.dependencies
