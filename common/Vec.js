@@ -16,7 +16,7 @@ var Vec = {
      * @param p2 vector to take away
      * @return a new vector p1-p2
      */
-    sub: function(p1, p2) {
+    sub: function (p1, p2) {
         var res = {};
         for (var ord in p1)
             res[ord] = p1[ord] - p2[ord];
@@ -29,7 +29,7 @@ var Vec = {
      * @param p2 second vector
      * @return a new vector
      */
-    add: function(p1, p2) {
+    add: function (p1, p2) {
         var res = {};
         for (var ord in p1)
             res[ord] = p1[ord] + p2[ord];
@@ -42,7 +42,7 @@ var Vec = {
      * @param d factor to scale by
      * @return a new vector scaled by d
      */
-    mul: function(v, d) {
+    mul: function (v, d) {
         var res = {};
         for (var ord in v)
             res[ord] = v[ord] * d;
@@ -55,7 +55,7 @@ var Vec = {
      * @param a second vector
      * @return scalar dot product
      */
-    dot: function(a, b) {
+    dot: function (a, b) {
         var res = 0;
         for (var ord in a)
             res += a[ord] * b[ord];
@@ -67,7 +67,7 @@ var Vec = {
      * @param v the vector
      * @return sum of the squares of the coordinates
      */
-    mag2: function(v) {
+    mag2: function (v) {
         var res = 0;
         for (var ord in v)
             res += v[ord] * v[ord];
@@ -79,7 +79,7 @@ var Vec = {
      * @param v the vector
      * @return scalar magnitude of the vector
      */
-    mag: function(v) {
+    mag: function (v) {
         return Math.sqrt(Vec.mag2(v));
     },
 
@@ -90,7 +90,7 @@ var Vec = {
      * @param d (optional) pre-computed magnitude of the vector
      * @return the normalised vector
      */
-    normalise: function(v, d) {
+    normalise: function (v, d) {
         var d = typeof d !== "undefined" ? d : Vec.mag(v);
         var res = {};
         for (var ord in v)

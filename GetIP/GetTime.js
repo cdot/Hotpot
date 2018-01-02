@@ -10,31 +10,30 @@ const getopt = require("node-getopt");
 var Http = require("http");
 
 var cliopt = getopt.create([
-    [ "h", "help", "Show this help" ],
-    [ "s", "set", "Set the time (must be root)" ]
+    ["h", "help", "Show this help"],
+    ["s", "set", "Set the time (must be root)"]
 ])
     .bindHelp()
     .parseSystem()
     .options;
 
 Http.get(
-    "http://www.ntp.org",
-    function(res) {
-	console.log(res.headers.date);
-        if (res.statusCode < 200 || res.statusCode > 299) {
-            console.error(new Error("Failed to load URL, status: "
-                             + res.statusCode));
-        } else if (cliopt.set) {
-            var Sys = require('child_process');
+        "http://www.ntp.org",
+        function (res) {
+            console.log(res.headers.date);
+            if (res.statusCode < 200 || res.statusCode > 299) {
+                console.error(new Error("Failed to load URL, status: " +
+                    res.statusCode));
+            } else if (cliopt.set) {
+                var Sys = require('child_process');
 
-            Sys.execFile("/bin/date", [ "-s", res.headers.date ],
-            function(error, stdout, stderr) {
-                if (error)
-                    console.error(error);
-             });
-        }
-    })
-    .on("error", function(err) {
+                Sys.execFile("/bin/date", ["-s", res.headers.date],
+                    function (error, stdout, stderr) {
+                        if (error)
+                            console.error(error);
+                    });
+            }
+        })
+    .on("error", function (err) {
         console.error(err);
     });
-

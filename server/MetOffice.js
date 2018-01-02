@@ -49,11 +49,10 @@ const IS_NUMBER = [
  * @param {object} proto prototype
  * @class
  */
-var MetOffice = function(proto) {
+var MetOffice = function (proto) {
     "use strict";
     proto.history = DataModel.remodel(
-        'history', proto.history, Historian.Model,
-        ['Metoffice', 'history']);
+        'history', proto.history, Historian.Model, ['Metoffice', 'history']);
     Utils.extend(this, proto);
     this.url = Url.parse("http://datapoint.metoffice.gov.uk");
     this.name = "MetOffice";
@@ -66,13 +65,15 @@ MetOffice.Model = {
         $class: String,
         $doc: "API key for requests to the Met Office website"
     },
-    history: Utils.extend({ $optional: true }, Historian.Model)
+    history: Utils.extend({
+        $optional: true
+    }, Historian.Model)
 };
 
 /**
  * Return a promise to initialise the agent
  */
-MetOffice.prototype.initialise = function() {
+MetOffice.prototype.initialise = function () {
     return Q();
 };
 
@@ -82,21 +83,21 @@ MetOffice.prototype.initialise = function() {
  * refresh the weather cache with new data as and when it comes available.
  * @param {Location} loc where
  */
-MetOffice.prototype.setLocation = function(loc) {
+MetOffice.prototype.setLocation = function (loc) {
     "use strict";
     var self = this;
     loc = new Location(loc);
     Utils.TRACE(TAG, "Set location ", loc);
     return this.findNearestLocation(loc)
-    .then(function() {
-        return self.update(true);
-    });
+        .then(function () {
+            return self.update(true);
+        });
 };
 
 /**
  * Stop the automatic updater.
  */
-MetOffice.prototype.stop = function() {
+MetOffice.prototype.stop = function () {
     if (typeof this.timeout !== undefined) {
         clearTimeout(this.timeout);
         delete this.timeout;
@@ -107,12 +108,12 @@ MetOffice.prototype.stop = function() {
 /**
  * Promise to get serialisable configuration. See common/DataModel
  */
-MetOffice.prototype.getSerialisable = function(context) {
+MetOffice.prototype.getSerialisable = function (context) {
     var self = this;
     return DataModel.getSerialisable(
-        this.history, Historian.Model, context.concat('history'))
+            this.history, Historian.Model, context.concat('history'))
 
-        .then(function(h) {
+        .then(function (h) {
             return {
                 api_key: self.api_key,
                 history: h
@@ -126,10 +127,12 @@ MetOffice.prototype.getSerialisable = function(context) {
  * @return {Promise} a promise, passed a structure containing the
  * current outside temperature
  */
-MetOffice.prototype.getSerialisableState = function() {
+MetOffice.prototype.getSerialisableState = function () {
     var self = this;
-    return Q.fcall(function() {
-        return { temperature: self.get("Temperature") };
+    return Q.fcall(function () {
+        return {
+            temperature: self.get("Temperature")
+        };
     });
 };
 
@@ -138,38 +141,39 @@ MetOffice.prototype.getSerialisableState = function() {
  * simply records the estimated outside temperature.
  * @param since optional param giving start of logs as a ms datime
  */
-MetOffice.prototype.getSerialisableLog = function(since) {
+MetOffice.prototype.getSerialisableLog = function (since) {
     "use strict";
     if (!this.history)
         return Q();
     return this.history.getSerialisableHistory(since)
-    .then(function(h) {
-        // Clip to the current time
-        var before = -1, after = -1;
-        var now = Time.now();
-        for (var i = 1; i < h.length; i += 2) {
-            if (h[0] + h[i] <= now)
-                before = i;
-            else {
-                after = i;
-                break;
+        .then(function (h) {
+            // Clip to the current time
+            var before = -1,
+                after = -1;
+            var now = Time.now();
+            for (var i = 1; i < h.length; i += 2) {
+                if (h[0] + h[i] <= now)
+                    before = i;
+                else {
+                    after = i;
+                    break;
+                }
             }
-        }
-        var est;
-        if (before >= 0 && after > before) {
-            est = h[before + 1];
-            if (h[after + 1] !== est) {
-                var frac = ((now - h[0]) - h[before]) / (h[after] - h[before]);
-                est += (h[after + 1] - est) * frac;
+            var est;
+            if (before >= 0 && after > before) {
+                est = h[before + 1];
+                if (h[after + 1] !== est) {
+                    var frac = ((now - h[0]) - h[before]) / (h[after] - h[before]);
+                    est += (h[after + 1] - est) * frac;
+                }
             }
-        }
-        h.splice(after);
-        if (typeof est !== "undefined") {
-            h.push(now - h[0]);
-            h.push(est);
-        }
-        return h;
-    });
+            h.splice(after);
+            if (typeof est !== "undefined") {
+                h.push(now - h[0]);
+                h.push(est);
+            }
+            return h;
+        });
 };
 
 /**
@@ -179,7 +183,7 @@ MetOffice.prototype.getSerialisableLog = function(since) {
  * @param data data returned from the metoffice server
  * @private
  */
-MetOffice.prototype.findClosest = function(data, loc) {
+MetOffice.prototype.findClosest = function (data, loc) {
     "use strict";
 
     var list = data.Locations.Location;
@@ -193,7 +197,7 @@ MetOffice.prototype.findClosest = function(data, loc) {
         }
     }
     Utils.TRACE(TAG, "Nearest location is ", best.name, " at ",
-                new Location(best));
+        new Location(best));
     this.location_id = best.id;
 };
 
@@ -203,7 +207,7 @@ MetOffice.prototype.findClosest = function(data, loc) {
  * @param {Location} loc where is "here"
  * @private
  */
-MetOffice.prototype.findNearestLocation = function(loc) {
+MetOffice.prototype.findNearestLocation = function (loc) {
     "use strict";
 
     var self = this;
@@ -216,29 +220,29 @@ MetOffice.prototype.findNearestLocation = function(loc) {
         path: path
     };
 
-    return Q.Promise(function(resolve, reject) {
+    return Q.Promise(function (resolve, reject) {
         Http.get(
-            options,
-            function(res) {
-                var result = "";
-                if (res.statusCode < 200 || res.statusCode > 299) {
-                    reject(new Error(
-                        TAG + " failed to load sitelist, status: "
-                            + res.statusCode));
-                    return;
-                }
-                res.on("data", function(chunk) {
-                    result += chunk;
-                });
-                res.on("end", function() {
-                    self.findClosest(JSON.parse(result), loc);
-                    resolve();
-                });
-            })
-        .on("error", function(err) {
-            Utils.ERROR(TAG, "Failed to GET sitelist: ", err.toString());
-            reject(err);
-        });
+                options,
+                function (res) {
+                    var result = "";
+                    if (res.statusCode < 200 || res.statusCode > 299) {
+                        reject(new Error(
+                            TAG + " failed to load sitelist, status: " +
+                            res.statusCode));
+                        return;
+                    }
+                    res.on("data", function (chunk) {
+                        result += chunk;
+                    });
+                    res.on("end", function () {
+                        self.findClosest(JSON.parse(result), loc);
+                        resolve();
+                    });
+                })
+            .on("error", function (err) {
+                Utils.ERROR(TAG, "Failed to GET sitelist: ", err.toString());
+                reject(err);
+            });
     });
 };
 
@@ -247,7 +251,7 @@ MetOffice.prototype.findNearestLocation = function(loc) {
  * and storing the temperature history in the historian.
  * @private
  */
-MetOffice.prototype.buildLog = function(data) {
+MetOffice.prototype.buildLog = function (data) {
     "use strict";
 
     if (!data.SiteRep) return;
@@ -255,7 +259,10 @@ MetOffice.prototype.buildLog = function(data) {
     if (!data.SiteRep.Wx.Param) return;
 
     var lu = data.SiteRep.Wx.Param;
-    var s2c = { "$": "$" }, i, j, k;
+    var s2c = {
+            "$": "$"
+        },
+        i, j, k;
     for (i in lu)
         s2c[lu[i].name] = lu[i].$;
 
@@ -305,11 +312,11 @@ MetOffice.prototype.buildLog = function(data) {
  * Return a promise to get the forecast for the current time
  * @private
  */
-MetOffice.prototype.getWeather = function() {
+MetOffice.prototype.getWeather = function () {
     "use strict";
 
-    if (typeof this.after !== "undefined"
-        && Time.now() < this.after.$) {
+    if (typeof this.after !== "undefined" &&
+        Time.now() < this.after.$) {
         return Q();
     }
 
@@ -322,27 +329,27 @@ MetOffice.prototype.getWeather = function() {
             this.api_key + "&res=3hourly"
     };
 
-    return Q.Promise(function(fulfill, fail) {
+    return Q.Promise(function (fulfill, fail) {
         Http.get(
-            options,
-            function(res) {
-                var result = "";
-                res.on("data", function(chunk) {
-                    result += chunk;
-                });
-                res.on("end", function() {
-                    self.buildLog(JSON.parse(result));
-                    fulfill();
-                });
-            })
-            .on("error", function(err) {
+                options,
+                function (res) {
+                    var result = "";
+                    res.on("data", function (chunk) {
+                        result += chunk;
+                    });
+                    res.on("end", function () {
+                        self.buildLog(JSON.parse(result));
+                        fulfill();
+                    });
+                })
+            .on("error", function (err) {
                 Utils.ERROR(TAG, "Failed to GET weather: ", err.toString());
                 fail(err);
             });
     });
 };
 
-MetOffice.prototype.bracket = function() {
+MetOffice.prototype.bracket = function () {
     var now = Time.now();
     var b = {};
 
@@ -364,7 +371,7 @@ MetOffice.prototype.bracket = function() {
  * next update.
  * @private
  */
-MetOffice.prototype.update = function() {
+MetOffice.prototype.update = function () {
     "use strict";
     var self = this;
     if (self.timeout)
@@ -372,15 +379,15 @@ MetOffice.prototype.update = function() {
     delete self.timeout;
     Utils.TRACE(TAG, "Updating from MetOffice website");
     return this.getWeather()
-    .then(function() {
-        var br = self.bracket();
-        self.last_update = Time.now();
-        var wait = br.after.$ - self.last_update;
-        Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
-        self.timeout = setTimeout(function() {
-            self.update().done();
-        }, wait);
-    });
+        .then(function () {
+            var br = self.bracket();
+            self.last_update = Time.now();
+            var wait = br.after.$ - self.last_update;
+            Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
+            self.timeout = setTimeout(function () {
+                self.update().done();
+            }, wait);
+        });
 };
 
 /**
@@ -391,7 +398,7 @@ MetOffice.prototype.update = function() {
  * @return the weather item
  * @public
  */
-MetOffice.prototype.get = function(what) {
+MetOffice.prototype.get = function (what) {
     "use strict";
 
     var b = this.bracket();
@@ -399,8 +406,8 @@ MetOffice.prototype.get = function(what) {
         return 0;
     var est = b.before[what];
     if (b.after[what] !== est && IS_NUMBER.indexOf(what) >= 0) {
-        var frac = (Time.now() - b.before.$)
-            / (b.after.$ - b.before.$);
+        var frac = (Time.now() - b.before.$) /
+            (b.after.$ - b.before.$);
         est += (b.after[what] - est) * frac;
     }
     return est;

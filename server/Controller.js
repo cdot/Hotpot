@@ -61,11 +61,13 @@ Controller.Model = {
     weather: {
         $doc: "Array of weather agents",
         // We don't know what class the agents are yet
-        $map_of: { $skip: true }
+        $map_of: {
+            $skip: true
+        }
     }
 };
 
-Controller.prototype.initialise = function() {
+Controller.prototype.initialise = function () {
     "use strict";
     Utils.TRACE(TAG, "Initialising Controller");
 
@@ -76,33 +78,33 @@ Controller.prototype.initialise = function() {
 
     return Q()
 
-    .then(function() {
-        return self.initialisePins();
-    })
+        .then(function () {
+            return self.initialisePins();
+        })
 
-    .then(function() {
-        return self.resetValve();
-    })
+        .then(function () {
+            return self.resetValve();
+        })
 
-    .then(function() {
-        return self.initialiseThermostats();
-    })
+        .then(function () {
+            return self.initialiseThermostats();
+        })
 
-    .then(function() {
-        return self.initialiseRules();
-    })
+        .then(function () {
+            return self.initialiseRules();
+        })
 
-    .then(function() {
-        return self.initialiseCalendars();
-    })
+        .then(function () {
+            return self.initialiseCalendars();
+        })
 
-    .then(function() {
-        return self.createWeatherAgents();
-    })
+        .then(function () {
+            return self.createWeatherAgents();
+        })
 
-    .then(function() {
-        self.pollRules();
-    });
+        .then(function () {
+            self.pollRules();
+        });
 };
 
 /**
@@ -112,15 +114,15 @@ Controller.prototype.initialise = function() {
  * promise, it will resolve immediately.
  * @private
  */
-Controller.prototype.createWeatherAgents = function() {
+Controller.prototype.createWeatherAgents = function () {
     var self = this;
     var promise = Q();
     if (Object.keys(this.weather).length > 0) {
         Utils.TRACE(TAG, "Creating weather agents");
-        Utils.forEach(this.weather, function(config, name) {
+        Utils.forEach(this.weather, function (config, name) {
             var WeatherAgent = require("./" + name + ".js");
             self.weather[name] = new WeatherAgent(config);
-            promise = promise.then(function() {
+            promise = promise.then(function () {
                 return self.weather[name].initialise();
             });
         });
@@ -136,16 +138,16 @@ Controller.prototype.createWeatherAgents = function() {
  * @param target target temperature, possibly prefixed by "BOOST "
  * @param until time at which the request expires (or "boost")
  */
-Controller.prototype.addRequest = function(service, id, target, until) {
+Controller.prototype.addRequest = function (service, id, target, until) {
     var remove = false;
 
     Utils.TRACE(TAG, "request ", service, " from ",
-                id, " ", target, "C until ", until);
+        id, " ", target, "C until ", until);
 
     if (typeof until === "string") {
         if (until === "now")
             remove = true;
-	else
+        else
             until = Date.parse(until);
     }
 
@@ -158,17 +160,21 @@ Controller.prototype.addRequest = function(service, id, target, until) {
     }
 
     if (/^ALL$/i.test(service)) {
-        Utils.forEach(this.thermostat, function(th) {
+        Utils.forEach(this.thermostat, function (th) {
             if (remove)
-                th.purgeRequests({ source: id });
+                th.purgeRequests({
+                    source: id
+                });
             else
                 th.addRequest(id, target, until);
         });
     } else if (!this.thermostat[service])
         throw Utils.report("Cannot add request: ", service,
-                           " is not a known thermostat");
+            " is not a known thermostat");
     else if (remove)
-        this.thermostat[service].purgeRequests({ source: id });
+        this.thermostat[service].purgeRequests({
+            source: id
+        });
     else
         this.thermostat[service].addRequest(id, target, until);
 };
@@ -180,25 +186,29 @@ Controller.prototype.addRequest = function(service, id, target, until) {
  * promise, it will resolve immediately.
  * @private
  */
-Controller.prototype.initialiseCalendars = function() {
+Controller.prototype.initialiseCalendars = function () {
     "use strict";
 
     Utils.TRACE(TAG, "Initialising Calendars");
 
     var self = this;
-    Utils.forEach(this.calendar, function(cal) {
+    Utils.forEach(this.calendar, function (cal) {
         cal.setTrigger(
-            function(id, service, target, until) {
+            function (id, service, target, until) {
                 self.addRequest(service, id, target, until);
             });
         cal.setRemove(
-            function(id, service) {
+            function (id, service) {
                 if (/^ALL$/i.test(service)) {
-                    Utils.forEach(self.thermostat, function(th) {
-                        th.purgeRequests({source: id});
+                    Utils.forEach(self.thermostat, function (th) {
+                        th.purgeRequests({
+                            source: id
+                        });
                     });
                 } else
-                    self.thermostat[service].purgeRequests({source: id});
+                    self.thermostat[service].purgeRequests({
+                        source: id
+                    });
 
             });
         // Queue an asynchronous calendar update
@@ -215,14 +225,14 @@ Controller.prototype.initialiseCalendars = function() {
  * is resolved.
  * @private
  */
-Controller.prototype.initialisePins = function() {
+Controller.prototype.initialisePins = function () {
     "use strict";
     var self = this;
 
     Utils.TRACE(TAG, "Initialising Pins");
     var promise = Q();
-    Utils.forEach(self.pin, function(pin) {
-        promise = promise.then(function() {
+    Utils.forEach(self.pin, function (pin) {
+        promise = promise.then(function () {
             return pin.initialise();
         });
     });
@@ -234,33 +244,33 @@ Controller.prototype.initialisePins = function() {
  * Promise to reset pins to a known state on startup.
  * @private
  */
-Controller.prototype.resetValve = function() {
+Controller.prototype.resetValve = function () {
     var pins = this.pin;
     var promise = pins.HW.set(1, "Reset")
 
-    .then(function() {
-        Utils.TRACE(TAG, "Reset: HW(1) done");
-    })
+        .then(function () {
+            Utils.TRACE(TAG, "Reset: HW(1) done");
+        })
 
-    .delay(this.valve_return)
+        .delay(this.valve_return)
 
-    .then(function() {
-        Utils.TRACE(TAG, "Reset: delay done");
-        return pins.CH.set(0, "Reset");
-    })
+        .then(function () {
+            Utils.TRACE(TAG, "Reset: delay done");
+            return pins.CH.set(0, "Reset");
+        })
 
-    .then(function() {
-        Utils.TRACE(TAG, "Reset: CH(0) done");
-        return pins.HW.set(0, "Reset");
-    })
+        .then(function () {
+            Utils.TRACE(TAG, "Reset: CH(0) done");
+            return pins.HW.set(0, "Reset");
+        })
 
-    .then(function() {
-        Utils.TRACE(TAG, "Valve reset");
-    })
+        .then(function () {
+            Utils.TRACE(TAG, "Valve reset");
+        })
 
-    .catch(function(e) {
-        Utils.ERROR(TAG, "Failed to reset valve: ", e);
-    });
+        .catch(function (e) {
+            Utils.ERROR(TAG, "Failed to reset valve: ", e);
+        });
 
     return promise;
 };
@@ -269,20 +279,20 @@ Controller.prototype.resetValve = function() {
  * Create thermostats as specified by config
  * @private
  */
-Controller.prototype.initialiseThermostats = function() {
+Controller.prototype.initialiseThermostats = function () {
     "use strict";
 
     var promise = Q();
 
     Utils.TRACE(TAG, "Initialising Thermostats");
 
-    Utils.forEach(this.thermostat, function(th) {
-        promise = promise.then(function() {
+    Utils.forEach(this.thermostat, function (th) {
+        promise = promise.then(function () {
             return th.initialise();
         });
     }, this);
 
-    return promise.then(function() {
+    return promise.then(function () {
         Utils.TRACE(TAG, "Initialised thermostats");
     });
 };
@@ -293,13 +303,13 @@ Controller.prototype.initialiseThermostats = function() {
  * @return {Promise} a promise.
  * @private
  */
-Controller.prototype.initialiseRules = function() {
+Controller.prototype.initialiseRules = function () {
     "use strict";
     var promise = Q();
 
     Utils.TRACE(TAG, "Initialising Rules");
-    Utils.forEach(this.rule, function(rule) {
-        promise = promise.then(function() {
+    Utils.forEach(this.rule, function (rule) {
+        promise = promise.then(function () {
             return rule.initialise();
         });
     });
@@ -309,9 +319,9 @@ Controller.prototype.initialiseRules = function() {
 /**
  * Set the location of the server
  */
-Controller.prototype.setLocation = function(location) {
+Controller.prototype.setLocation = function (location) {
     "use strict";
-    Utils.forEach(this.weather, function(wa) {
+    Utils.forEach(this.weather, function (wa) {
         wa.setLocation(location);
     });
 };
@@ -321,33 +331,33 @@ Controller.prototype.setLocation = function(location) {
  * suitable for use in an AJAX response.
  * @return {Promise} a promise
  */
-Controller.prototype.getSerialisableState = function() {
+Controller.prototype.getSerialisableState = function () {
     "use strict";
 
     var state = {
-	time: Time.now() // local time
+        time: Time.now() // local time
     };
 
     var promise = Q();
 
     // Should be able to do this using Q.all, but it doesn't do
     // what I expect
-    Utils.forEach(this, function(block, field) {
-       Utils.forEach(block, function(item, key) {
+    Utils.forEach(this, function (block, field) {
+        Utils.forEach(block, function (item, key) {
             if (typeof item.getSerialisableState === "function") {
                 if (typeof state[field] === "undefined")
                     state[field] = {};
-                promise = promise.then(function() {
-                    return item.getSerialisableState();
-                })
-                .then(function(value) {
-                    state[field][key] = value;
-                });
+                promise = promise.then(function () {
+                        return item.getSerialisableState();
+                    })
+                    .then(function (value) {
+                        state[field][key] = value;
+                    });
             }
         });
     });
 
-    return promise.then(function() {
+    return promise.then(function () {
         return state;
     });
 };
@@ -358,26 +368,26 @@ Controller.prototype.getSerialisableState = function() {
  * @param since optional param giving start of logs as a ms datime
  * @private
  */
-Controller.prototype.getSetLogs = function(set, since) {
+Controller.prototype.getSetLogs = function (set, since) {
     var promise = Q();
     var logset;
 
-    Utils.forEach(set, function(item, key) {
+    Utils.forEach(set, function (item, key) {
         if (typeof item.getSerialisableLog === "function") {
             if (typeof logset === "undefined")
                 logset = {};
 
-            promise = promise.then(function() {
-                return item.getSerialisableLog(since);
-            })
+            promise = promise.then(function () {
+                    return item.getSerialisableLog(since);
+                })
 
-            .then(function(value) {
-                logset[key] = value;
-            });
+                .then(function (value) {
+                    logset[key] = value;
+                });
         }
     });
 
-    return promise.then(function() {
+    return promise.then(function () {
         return logset;
     });
 };
@@ -388,7 +398,7 @@ Controller.prototype.getSetLogs = function(set, since) {
  * @param since optional param giving start of logs as a ms datime
  * @return {object} a promise to create serialisable structure
  */
-Controller.prototype.getSerialisableLog = function(since) {
+Controller.prototype.getSerialisableLog = function (since) {
     "use strict";
 
     var logs = {};
@@ -396,17 +406,17 @@ Controller.prototype.getSerialisableLog = function(since) {
     var promise = Q();
     var self = this;
 
-    Utils.forEach(this, function(block, field) {
-        promise = promise.then(function() {
+    Utils.forEach(this, function (block, field) {
+        promise = promise.then(function () {
             return self.getSetLogs(self[field], since)
-            .then(function(logset) {
-                if (typeof logset !== "undefined")
-                    logs[field] = logset;
-            });
+                .then(function (logset) {
+                    if (typeof logset !== "undefined")
+                        logs[field] = logset;
+                });
         });
     });
 
-    return promise.then(function() {
+    return promise.then(function () {
         return logs;
     });
 };
@@ -420,60 +430,60 @@ Controller.prototype.getSerialisableLog = function(since) {
  * @param {String} channel e.g. "HW" or "CH"
  * @param {number} state 1 (on) or 0 (off)
  */
-Controller.prototype.setPromise = function(channel, new_state) {
+Controller.prototype.setPromise = function (channel, new_state) {
     "use strict";
     var self = this;
     var pins = self.pin;
 
     // Duck race condition during initialisation
     if (pins[channel] === "undefined")
-        return Q.promise(function() {});
+        return Q.promise(function () {});
 
     if (this.pending) {
-        return Q.delay(self.valve_return).then(function() {
+        return Q.delay(self.valve_return).then(function () {
             return self.setPromise(channel, new_state);
         });
     }
 
     return pins[channel].getStatePromise()
 
-    .then(function(cur_state) {
-        if (cur_state === new_state) {
-            return Q(); // already in the right state
-        }
-
-        // Y-plan systems have a state where if the heating is on but the
-        // hot water is off, and the heating is turned off, then the grey
-        // wire to the valve (the "hot water off" signal) is held high,
-        // stalling the motor and consuming power pointlessly. We need some
-        // special processing to avoid this state.
-
-        if (cur_state === 1 && channel === "CH" && new_state === 0) {
-            // CH is on, and it's going off
-            var hw_state = pins.HW.getState();
-            if (hw_state === 0) {
-                // HW is off, so switch off CH and switch on HW to kill
-                // the grey wire.
-                // This allows the spring to fully return. Then after a
-                // timeout, turn the CH on.
-                return pins.CH.set(0) // switch off CH
-                .then(function() {
-                    return pins.HW.set(1); // switch on HW
-                })
-                .then(function() {
-                    self.pending = true;
-                    return Q.delay(self.valve_return); // wait for spring
-                })
-                .then(function() {
-                    self.pending = false;
-                    return pins.CH.set(0); // switch off CH
-                });
+        .then(function (cur_state) {
+            if (cur_state === new_state) {
+                return Q(); // already in the right state
             }
-        }
-        // Otherwise this is a simple state transition, just
-        // promise to set the appropriate pin
-        return pins[channel].set(new_state);
-    });
+
+            // Y-plan systems have a state where if the heating is on but the
+            // hot water is off, and the heating is turned off, then the grey
+            // wire to the valve (the "hot water off" signal) is held high,
+            // stalling the motor and consuming power pointlessly. We need some
+            // special processing to avoid this state.
+
+            if (cur_state === 1 && channel === "CH" && new_state === 0) {
+                // CH is on, and it's going off
+                var hw_state = pins.HW.getState();
+                if (hw_state === 0) {
+                    // HW is off, so switch off CH and switch on HW to kill
+                    // the grey wire.
+                    // This allows the spring to fully return. Then after a
+                    // timeout, turn the CH on.
+                    return pins.CH.set(0) // switch off CH
+                        .then(function () {
+                            return pins.HW.set(1); // switch on HW
+                        })
+                        .then(function () {
+                            self.pending = true;
+                            return Q.delay(self.valve_return); // wait for spring
+                        })
+                        .then(function () {
+                            self.pending = false;
+                            return pins.CH.set(0); // switch off CH
+                        });
+                }
+            }
+            // Otherwise this is a simple state transition, just
+            // promise to set the appropriate pin
+            return pins[channel].set(new_state);
+        });
 };
 
 /**
@@ -483,7 +493,7 @@ Controller.prototype.setPromise = function(channel, new_state) {
  * to the command (commands are documented in README.md)
  * @return a promise, passed an object for serialisation in the response
  */
-Controller.prototype.dispatch = function(path, data) {
+Controller.prototype.dispatch = function (path, data) {
     "use strict";
     var self = this;
     var command = path.shift();
@@ -511,19 +521,19 @@ Controller.prototype.dispatch = function(path, data) {
         Utils.TRACE(TAG, "getconfig ", path);
         return DataModel.at(
             this, Controller.Model, path,
-            function(data, model) {
+            function (data, model) {
                 return DataModel.getSerialisable(data, model);
             });
     case "setconfig":
         // /setconfig/path/to/config/node, data.value is new setting
         DataModel.at(
             this, Controller.Model, path,
-            function(item, model, parent, key) {
+            function (item, model, parent, key) {
                 if (typeof parent === "undefined" ||
                     typeof key === "undefined" ||
                     typeof item === "undefined")
                     throw Utils.report("Cannot update ", path,
-                                       " insufficient context");
+                        " insufficient context");
                 parent[key] = DataModel.remodel(key, data.value, model, path);
                 Utils.TRACE(TAG, "setconfig ", path, " = ", parent[key]);
                 self.emit("config_change");
@@ -558,14 +568,18 @@ Controller.prototype.dispatch = function(path, data) {
     default:
         throw "Unrecognised command " + command;
     }
-    return Q.fcall(function() { return { status: "OK" }; });
+    return Q.fcall(function () {
+        return {
+            status: "OK"
+        };
+    });
 };
 
 /**
  * Evaluate rules at regular intervals.
  * @private
  */
-Controller.prototype.pollRules = function() {
+Controller.prototype.pollRules = function () {
     "use strict";
     var self = this;
 
@@ -578,18 +592,18 @@ Controller.prototype.pollRules = function() {
     // promise to set a pin state, which is decided by reading the
     // thermostats. Requests in the thermostats may define a temperature
     // target, or if not the timeline is used.
-    Utils.forEach(self.rule, function(rule) {
+    Utils.forEach(self.rule, function (rule) {
         if (typeof rule.testfn !== "function") {
             Utils.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
             return true;
         }
 
         rule.testfn.call(self, self.thermostat, self.pin)
-        .catch(function(e) {
-            if (typeof e.stack !== "undefined")
-                Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
-            Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.toString());
-        });
+            .catch(function (e) {
+                if (typeof e.stack !== "undefined")
+                    Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
+                Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.toString());
+            });
     });
 
     // Queue the next poll

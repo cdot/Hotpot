@@ -20,26 +20,26 @@ function Url(e) {
         this[i] = e[i];
 }
 
-Url.prototype.toString = function() {
-    return (this.protocol ? this.protocol : "?")
-        + "://"
-        + (this.ipaddr ? this.ipaddr : "?")
-        + (this.port ? this.port : "")
-        + (this.path ? this.path : "");
+Url.prototype.toString = function () {
+    return (this.protocol ? this.protocol : "?") +
+        "://" +
+        (this.ipaddr ? this.ipaddr : "?") +
+        (this.port ? this.port : "") +
+        (this.path ? this.path : "");
 };
 
-Url.prototype.equals = function(other) {
-    return (this.ipaddr === other.ipaddr)
-        && (this.protocol === other.protocol)
-        && (this.path === other.path)
-        && (this.port === other.port);
+Url.prototype.equals = function (other) {
+    return (this.ipaddr === other.ipaddr) &&
+        (this.protocol === other.protocol) &&
+        (this.path === other.path) &&
+        (this.port === other.port);
 };
 
 var cliopt = getopt.create([
-    [ "h", "help", "Show this help" ],
-    [ "", "debug", "Run in debug mode" ],
-    [ "", "force", "Force an update, even if the target hasn't changed" ],
-    [ "c", "config=ARG", "Configuration file (default ./GetIP.cfg)" ]
+    ["h", "help", "Show this help"],
+    ["", "debug", "Run in debug mode"],
+    ["", "force", "Force an update, even if the target hasn't changed"],
+    ["c", "config=ARG", "Configuration file (default ./GetIP.cfg)"]
 ])
     .bindHelp()
     .parseSystem()
@@ -53,11 +53,13 @@ if (cliopt.debug)
 
 var config, current = {};
 
-DataModel.loadData(cliopt.config, { $skip: true })
-.done(function(cfg) {
-    config = cfg;
-    step1();
-});
+DataModel.loadData(cliopt.config, {
+        $skip: true
+    })
+    .done(function (cfg) {
+        config = cfg;
+        step1();
+    });
 
 /**
  * Return a promise to update the IP address using FTP, if it has changed
@@ -69,7 +71,7 @@ function update(data) {
     var Ftp = new JSFtp(config.ftp);
 
     if (config.ftp.debugEnable) {
-        Ftp.on("jsftp_debug", function(eventType, daa) {
+        Ftp.on("jsftp_debug", function (eventType, daa) {
             Utils.TRACE("FTP DEBUG: ", eventType);
             Utils.TRACE(JSON.stringify(daa, null, 2));
         });
@@ -77,16 +79,16 @@ function update(data) {
 
     Utils.TRACE("Push up new redirect");
 
-    return Q.Promise(function(resolve, reject) {
+    return Q.Promise(function (resolve, reject) {
         Ftp.put(new Buffer(data), config.ftp.path,
-                function(hadErr) {
-                    Utils.TRACE("Upload finished");
-                    Ftp.raw.quit();
-                    if (hadErr)
-                        reject(hadErr);
-                    else
-                        resolve();
-                });
+            function (hadErr) {
+                Utils.TRACE("Upload finished");
+                Ftp.raw.quit();
+                if (hadErr)
+                    reject(hadErr);
+                else
+                    resolve();
+            });
     });
 }
 
@@ -101,24 +103,24 @@ function httpGET(url, nofollow) {
         getter = require("follow-redirects").https;
     else
         getter = require("follow-redirects").http;
-    return Q.Promise(function(resolve, reject) {
+    return Q.Promise(function (resolve, reject) {
         getter.get(
-            url,
-            function(res) {
-                if (res.statusCode < 200 || res.statusCode > 299) {
-                    reject(new Error("Failed to load URL, status: "
-                                     + res.statusCode));
-                    return;
-                }
+                url,
+                function (res) {
+                    if (res.statusCode < 200 || res.statusCode > 299) {
+                        reject(new Error("Failed to load URL, status: " +
+                            res.statusCode));
+                        return;
+                    }
 
-                res.on("data", function(chunk) {
-                    result += chunk;
-                });
-                res.on("end", function() {
-                    resolve(result);
-                });
-            })
-            .on("error", function(err) {
+                    res.on("data", function (chunk) {
+                        result += chunk;
+                    });
+                    res.on("end", function () {
+                        resolve(result);
+                    });
+                })
+            .on("error", function (err) {
                 reject(err);
             });
     });
@@ -148,18 +150,18 @@ function finish(ip) {
     Utils.LOG("New target ", current);
 
     readFile(Utils.expandEnvVars(config.template))
-    .then(function(buf) {
-        var html = buf.toString();
-        for (var k in current) {
-            if (typeof current[k] !== "undefined")
-                html = html.replace(new RegExp("#" + k, "g"), current[k]);
-        }
-        html = html.replace(new RegExp("#url", "g"), current.toString());
-        return update(html);
-    })
-    .catch(function (e) {
-        Utils.ERROR("Update failed", e);
-    });
+        .then(function (buf) {
+            var html = buf.toString();
+            for (var k in current) {
+                if (typeof current[k] !== "undefined")
+                    html = html.replace(new RegExp("#" + k, "g"), current[k]);
+            }
+            html = html.replace(new RegExp("#url", "g"), current.toString());
+            return update(html);
+        })
+        .catch(function (e) {
+            Utils.ERROR("Update failed", e);
+        });
 }
 
 /**
@@ -168,26 +170,26 @@ function finish(ip) {
  */
 function step1() {
     httpGET(config.http, true) // dodge redirects
-    .then(function(data) {
-        var s = data.toString();
-        // The current information is encoded in a JSON block comment
-        var m = /<!--GetIP((.|\n)*?)-->/g.exec(s);
-        if (m && m[1]) {
-            try {
-                eval("current=new Url(" + m[1] + ")");
-                Utils.TRACE("Existing redirect target ", current);
-            } catch (e) {
-                Utils.TRACE("Old redirect meta-information unparseable ", e);
+        .then(function (data) {
+            var s = data.toString();
+            // The current information is encoded in a JSON block comment
+            var m = /<!--GetIP((.|\n)*?)-->/g.exec(s);
+            if (m && m[1]) {
+                try {
+                    eval("current=new Url(" + m[1] + ")");
+                    Utils.TRACE("Existing redirect target ", current);
+                } catch (e) {
+                    Utils.TRACE("Old redirect meta-information unparseable ", e);
+                }
+            } else {
+                Utils.TRACE("Old redirect had no meta-information", s);
             }
-        } else {
-            Utils.TRACE("Old redirect had no meta-information", s);
-        }
-        step2();
-    })
-    .catch(function(e) {
-        Utils.TRACE("Old GET failed ", e);
-        step2();
-    });
+            step2();
+        })
+        .catch(function (e) {
+            Utils.TRACE("Old GET failed ", e);
+            step2();
+        });
 }
 
 /**
@@ -202,29 +204,29 @@ function step2() {
     var Telnet = require("telnet-client");
     var connection = new Telnet();
     connection
-    .connect(config.gateway_router)
-    .then(function() {
-        return connection
-        .exec('ip iplist')
-        .then(function(resp) {
-            connection.end();
-            var m = config.gateway_router.extract.exec(resp);
-            if (m)
-                finish(m[1]);
-            else {
-                Utils.TRACE("Gateway router no IP address found");
+        .connect(config.gateway_router)
+        .then(function () {
+                return connection
+                    .exec('ip iplist')
+                    .then(function (resp) {
+                            connection.end();
+                            var m = config.gateway_router.extract.exec(resp);
+                            if (m)
+                                finish(m[1]);
+                            else {
+                                Utils.TRACE("Gateway router no IP address found");
+                                step3();
+                            }
+                        },
+                        function (err) {
+                            Utils.TRACE("Gateway router Telnet error", err);
+                            step3();
+                        });
+            },
+            function (err) {
+                Utils.TRACE("Gateway router Telnet error:", err);
                 step3();
-            }
-        },
-        function(err) {
-            Utils.TRACE("Gateway router Telnet error", err);
-            step3();
-        });
-    },
-    function (err) {
-        Utils.TRACE("Gateway router Telnet error:", err);
-        step3();
-    });
+            });
 }
 
 /**
@@ -248,30 +250,30 @@ function step3(second) {
     }
 
     httpGET(config.netgear_router.url)
-    .then(function(data) {
-        return Q.Promise(function(resolve, reject) {
-            data = data.replace(/\n/g, " ");
-            var scan = /<td[^>]*>\s*IP Address\s*<\/td>\s*<td[^>]*>\s*(\d+\.\d+\.\d+\.\d+)\s*</g;
-            var m;
-            while ((m = scan.exec(data)) != null) {
-                if (!/^192\.168/.test(m[1])) {
-                    Utils.LOG("Got ", m[1], " from Netgear Router");
-                    finish(m[1]);
-                    resolve();
-                    return;
+        .then(function (data) {
+            return Q.Promise(function (resolve, reject) {
+                data = data.replace(/\n/g, " ");
+                var scan = /<td[^>]*>\s*IP Address\s*<\/td>\s*<td[^>]*>\s*(\d+\.\d+\.\d+\.\d+)\s*</g;
+                var m;
+                while ((m = scan.exec(data)) != null) {
+                    if (!/^192\.168/.test(m[1])) {
+                        Utils.LOG("Got ", m[1], " from Netgear Router");
+                        finish(m[1]);
+                        resolve();
+                        return;
+                    }
                 }
-            }
-            didnt_work(config.netgear_router.url + " had no IP address");
-            reject();
+                didnt_work(config.netgear_router.url + " had no IP address");
+                reject();
+            });
+        }, didnt_work)
+        .finally(function () {
+            httpGET(config.netgear_router.logout_url)
+                .catch(function (e) {
+                    if (!/status: 401/.test(e))
+                        Utils.TRACE("Problem logging out of netgear router ", e);
+                });
         });
-    }, didnt_work)
-    .finally(function() {
-        httpGET(config.netgear_router.logout_url)
-        .catch(function(e) {
-            if (!/status: 401/.test(e))
-                Utils.TRACE("Problem logging out of netgear router ", e);
-        });
-    });
 }
 
 /**
@@ -280,13 +282,13 @@ function step3(second) {
  */
 function step4() {
     httpGET("http://icanhazip.com")
-    .then(function(data) {
-        finish(data.toString().trim());
-    },
-    function(err) {
-        Utils.TRACE("icanhazip failed: ", err);
-        step5();
-    });
+        .then(function (data) {
+                finish(data.toString().trim());
+            },
+            function (err) {
+                Utils.TRACE("icanhazip failed: ", err);
+                step5();
+            });
 }
 
 /**
@@ -295,11 +297,10 @@ function step4() {
  */
 function step5() {
     httpGET("http://freegeoip.net/json")
-    .then(function(data) {
-        finish(JSON.parse(data).ip);
-    },
-    function(err) {
-        Utils.ERROR("Failed to fetch new IP address: " + err);
-    });
+        .then(function (data) {
+                finish(JSON.parse(data).ip);
+            },
+            function (err) {
+                Utils.ERROR("Failed to fetch new IP address: " + err);
+            });
 }
-

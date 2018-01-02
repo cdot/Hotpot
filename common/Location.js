@@ -64,7 +64,7 @@ module.exports = Location;
  * @param {Location} p2 second point
  * @return {float} distance in metres
  */
-Location.prototype.haversine = function(p2) {
+Location.prototype.haversine = function (p2) {
     "use strict";
     /**
      * Convert a number in degrees to radians
@@ -91,7 +91,7 @@ Location.prototype.haversine = function(p2) {
 /**
  * @return {string} containing geo coordinates
  */
-Location.prototype.toString = function() {
+Location.prototype.toString = function () {
     "use strict";
     return Utils.report('(', this.latitude, ",", this.longitude, ')');
 };
@@ -101,8 +101,8 @@ Location.prototype.toString = function() {
  * @param {Location} p2 other point
  * @return {boolean}
  */
-Location.prototype.equals = function(p2) {
+Location.prototype.equals = function (p2) {
     "use strict";
-    return Math.abs((this.latitude - p2.latitude)) < MIN_DEG
-        && Math.abs((this.longitude - p2.longitude)) < MIN_DEG;
+    return Math.abs((this.latitude - p2.latitude)) < MIN_DEG &&
+        Math.abs((this.longitude - p2.longitude)) < MIN_DEG;
 };

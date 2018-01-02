@@ -48,7 +48,7 @@ function Pin(proto, name) {
     this.value_path = GPIO_PATH + "gpio" + this.gpio + "/value";
 
     Utils.TRACE(TAG, "'", this.name,
-                  "' constructed on gpio ", this.gpio);
+        "' constructed on gpio ", this.gpio);
 }
 
 Pin.Model = {
@@ -57,13 +57,15 @@ Pin.Model = {
         $class: Number,
         $doc: "the number of the gpio pin"
     },
-    history: Utils.extend({ $optional: true }, Historian.Model)
+    history: Utils.extend({
+        $optional: true
+    }, Historian.Model)
 };
 
 /**
  * Return a promise to initialise the pin
  */
-Pin.prototype.initialise = function() {
+Pin.prototype.initialise = function () {
     var self = this;
     var exported = false;
 
@@ -73,13 +75,13 @@ Pin.prototype.initialise = function() {
     function readCheck() {
         var m = self.value_path + " readCheck ";
         return readFile(self.value_path, "utf8")
-            .then(function() {
+            .then(function () {
                 // Check passed, so we know it's exported
                 exported = true;
                 Utils.TRACE(TAG, m, " OK for ", self.name);
                 return setDirection();
             })
-            .catch(function(e) {
+            .catch(function (e) {
                 m += " failed: " + e;
                 if (exported)
                     // Already exported, no point trying again
@@ -95,12 +97,12 @@ Pin.prototype.initialise = function() {
     function exportPin() {
         var m = EXPORT_PATH + "=" + self.gpio;
         return writeFile(EXPORT_PATH, self.gpio, "utf8")
-            .then(function() {
+            .then(function () {
                 Utils.TRACE(TAG, m, " OK for ", self.name);
                 // Use a timeout to give it time to get set up
                 return Q.delay(1000).then(readCheck);
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 return fallBackToDebug(m + " failed " + err);
             });
     }
@@ -109,11 +111,11 @@ Pin.prototype.initialise = function() {
     function setDirection() {
         var path = GPIO_PATH + "gpio" + self.gpio + "/direction";
         return writeFile(path, "out")
-            .then(function() {
+            .then(function () {
                 Utils.TRACE(TAG, path, "=out OK for ", self.name);
                 return setActive();
             })
-            .catch(function(e) {
+            .catch(function (e) {
                 return fallBackToDebug(path + "=out failed: " + e);
             });
     }
@@ -125,7 +127,7 @@ Pin.prototype.initialise = function() {
         var path = GPIO_PATH + "gpio" + self.gpio + "/active_low";
         return writeFile(path, 1)
             .then(writeCheck)
-            .catch(function(e) {
+            .catch(function (e) {
                 return fallBackToDebug(path + "=1 failed: " + e);
             });
     }
@@ -133,13 +135,13 @@ Pin.prototype.initialise = function() {
     // Pin is exported and direction is set, should be OK to write
     function writeCheck() {
         return writeFile(self.value_path, 0, "utf8")
-            .then(function() {
+            .then(function () {
                 Utils.TRACE(TAG, self.value_path, " writeCheck OK for ",
-                              self.name);
+                    self.name);
                 if (self.history)
                     self.history.record(0);
             })
-            .catch(function(e) {
+            .catch(function (e) {
                 return fallBackToDebug(
                     self.value_path + " writeCheck failed: " + e);
             });
@@ -148,7 +150,7 @@ Pin.prototype.initialise = function() {
     // Something went wrong, but still use a file
     function fallBackToDebug(err) {
         Utils.ERROR(TAG, self.name, ":", self.gpio,
-                    " setup failed: ", err);
+            " setup failed: ", err);
         if (typeof HOTPOT_DEBUG === "undefined")
             throw "Pin setup failed";
         Utils.ERROR(TAG, "Falling back to debug for ", self.name);
@@ -164,7 +166,7 @@ module.exports = Pin;
  * Release all resources used by the pin
  * @protected
  */
-Pin.prototype.DESTROY = function() {
+Pin.prototype.DESTROY = function () {
     "use strict";
 
     Utils.TRACE(TAG, "Unexport gpio ", this.gpio);
@@ -178,7 +180,7 @@ Pin.prototype.DESTROY = function() {
  * @return {Promise} a promise to set the pin state
  * @public
  */
-Pin.prototype.set = function(state) {
+Pin.prototype.set = function (state) {
     "use strict";
     var self = this;
 
@@ -186,7 +188,7 @@ Pin.prototype.set = function(state) {
 
     var promise = writeFile(self.value_path, state, "UTF8");
     if (self.history)
-        promise = promise.then(function() {
+        promise = promise.then(function () {
             return self.history.record(state);
         });
     return promise;
@@ -197,7 +199,7 @@ Pin.prototype.set = function(state) {
  * @return pin state {integer}
  * @public
  */
-Pin.prototype.getState = function() {
+Pin.prototype.getState = function () {
     "use strict";
     var state = Fs.readFileSync(this.value_path, "utf8");
     return parseInt(state);
@@ -208,12 +210,12 @@ Pin.prototype.getState = function() {
  * @return a promise, passed the pin state
  * @public
  */
-Pin.prototype.getStatePromise = function() {
+Pin.prototype.getStatePromise = function () {
     "use strict";
     return readFile(this.value_path, "utf8")
-    .then(function(data) {
-        return parseInt(data);
-    });
+        .then(function (data) {
+            return parseInt(data);
+        });
 };
 
 /**
@@ -222,24 +224,24 @@ Pin.prototype.getStatePromise = function() {
  * @return {Promise} a promise that is passed the state
  * @protected
  */
-Pin.prototype.getSerialisableState = function() {
+Pin.prototype.getSerialisableState = function () {
     "use strict";
     var self = this;
 
     return this.getStatePromise()
-    .then(function(value) {
-        return {
-            reason: self.reason,
-            state: value
-        };
-    });
+        .then(function (value) {
+            return {
+                reason: self.reason,
+                state: value
+            };
+        });
 };
 
 /**
  * Get a promise for the current log of the pin state.
  * @param since optional param giving start of logs as a ms datime
  */
-Pin.prototype.getSerialisableLog = function(since) {
+Pin.prototype.getSerialisableLog = function (since) {
     "use strict";
     if (!this.history)
         return Q();

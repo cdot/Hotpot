@@ -30,7 +30,7 @@ function require(ident) {
         }
         return ss.join('/');
     }
-    
+
     // Resolve ident so it is relative to the invoking module
     //console.log("require " + ident);
     var path = ident.split("/");

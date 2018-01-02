@@ -18,18 +18,18 @@ module.exports = Time;
 
 /**
  * Debug support. Force now to a specific time until unset.
-*/
-Time.force = function(now) {
+ */
+Time.force = function (now) {
     now = Date.parse(now);
-    Time.now = function() {
+    Time.now = function () {
         return now;
     };
 };
 
 /**
  * Debug support. Revert to system time
-*/
-Time.unforce = function() {
+ */
+Time.unforce = function () {
     Time.now = Date.now;
 };
 
@@ -37,7 +37,7 @@ Time.unforce = function() {
  * Get midnight, today, as a number of ms since the epoch
  * @return {number} midnight as number of ms since epoch
  */
-Time.midnight = function() {
+Time.midnight = function () {
     "use strict";
     var d = new Date(Time.now());
     d.setHours(0, 0, 0, 0);
@@ -51,7 +51,7 @@ Time.midnight = function() {
  * @param {string} s time string
  * @return {number} number of ms since midnight
  */
-Time.parse = function(str) {
+Time.parse = function (str) {
     "use strict";
     var hms = str.split(":");
     var h = Number.parseInt(hms.shift());
@@ -67,7 +67,7 @@ Time.parse = function(str) {
  * Get the current time in s
  * @return current time in epoch seconds
  */
-Time.nowSeconds = function() {
+Time.nowSeconds = function () {
     "use strict";
     return Time.now() / 1000;
 };
@@ -75,7 +75,7 @@ Time.nowSeconds = function() {
 /**
  * Get the current time as an offset in ms from the preceding midnight
  */
-Time.time_of_day = function() {
+Time.time_of_day = function () {
     return Time.now() - Time.midnight();
 };
 
@@ -85,7 +85,7 @@ Time.time_of_day = function() {
  * @param {number} number of ms since midnight
  * @result {string} string representation
  */
-Time.unparse = function(t) {
+Time.unparse = function (t) {
     function pad(n, w) {
         var k = Math.trunc(n);
         var pad = "";
@@ -96,9 +96,9 @@ Time.unparse = function(t) {
     if (t < 0 || t > ONE_DAY)
         throw "Time.unparse time out of range";
     var ms = t % 1000;
-    t = Math.trunc(t / 1000);   // to seconds
-    var s = t % 60;             // seconds
-    t = Math.trunc(t / 60);     // to minutes
+    t = Math.trunc(t / 1000); // to seconds
+    var s = t % 60; // seconds
+    t = Math.trunc(t / 60); // to minutes
     var m = Math.trunc(t % 60); // minutes
     var h = Math.trunc(t / 60); // hours
     var ts = pad(h, 2) + ":" + pad(m, 2);
@@ -109,4 +109,3 @@ Time.unparse = function(t) {
     }
     return ts;
 };
-

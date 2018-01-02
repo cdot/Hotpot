@@ -1,10 +1,10 @@
-(function($) {
+(function ($) {
     "use strict";
-    $.fn.Spinner = function() {
+    $.fn.Spinner = function () {
         var $inputs = $(this);
 
         // Stop people from typing
-        $inputs.keydown(function(e){
+        $inputs.keydown(function (e) {
             e.preventDefault();
             return false;
         });
@@ -13,14 +13,14 @@
             var $ig = $('<div class="spinner"></div>');
             $input.replaceWith($ig);
             $ig.append($input);
-       
+
             var $up = $('<div class="btn btn-default">▲</div>');
-            $up.on('click', function() {
+            $up.on('click', function () {
                 $input.trigger("spin_up");
             });
 
             var $down = $('<div class="btn btn-default">▼</div>');
-            $down.on('click', function() {
+            $down.on('click', function () {
                 $input.trigger("spin_down");
             });
 
@@ -29,7 +29,7 @@
             $vg.append($down);
 
             $ig.append($vg);
-            
+
             return $ig;
         }
         for (var i = 0; i < $inputs.length; i++) {

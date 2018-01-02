@@ -57,7 +57,7 @@ Historian.Model = {
  * Get the expanded file name
  * @private
  */
-Historian.prototype.path = function() {
+Historian.prototype.path = function () {
     "use strict";
     return Utils.expandEnvVars(this.file);
 };
@@ -66,77 +66,77 @@ Historian.prototype.path = function() {
  * Return a promise to rewrite the history file with the given data
  * @private
  */
-Historian.prototype.rewriteFile = function(report) {
+Historian.prototype.rewriteFile = function (report) {
     "use strict";
     var s = "";
     for (var i = 0; i < report.length; i++)
         s += report[i].time + "," + report[i].sample + "\n";
     return writeFile(this.path(), s)
-    .then(function() {
-        Utils.TRACE(TAG, "Wrote ", this.path());
-    });
+        .then(function () {
+            Utils.TRACE(TAG, "Wrote ", this.path());
+        });
 };
 
 /**
  * Load history from the data file
  * @private
  */
-Historian.prototype.loadFromFile = function() {
+Historian.prototype.loadFromFile = function () {
     "use strict";
     var self = this;
 
     return readFile(this.path())
-    .then(function(data) {
-        var lines = data.toString().split("\n");
-        var report = [];
-        var i;
+        .then(function (data) {
+            var lines = data.toString().split("\n");
+            var report = [];
+            var i;
 
-        // Load report
-        for (i in lines) {
-            var csv = lines[i].split(",", 2);
-            if (csv.length === 2) {
-                var point = {
-                    time: parseFloat(csv[0]),
-                    sample: parseFloat(csv[1])
-                };
-                report.push(point);
+            // Load report
+            for (i in lines) {
+                var csv = lines[i].split(",", 2);
+                if (csv.length === 2) {
+                    var point = {
+                        time: parseFloat(csv[0]),
+                        sample: parseFloat(csv[1])
+                    };
+                    report.push(point);
+                }
             }
-        }
-        if (self.unordered && report.length > 1) {
-            // Sort samples by time. If two samples occur at the same
-            // time, keep the most recently added.
-            var doomed = report;
-            report = [];
-            for (i = 0; i < doomed.length; i++)
-                doomed[i].index = i;
-            doomed.sort(function(a, b) {
-                if (a.time < b.time)
-                    return -1;
-                if (a.time > b.time)
-                    return 1;
-                if (a.index < b.index)
-                    a.dead = true;
-                else
-                    b.dead = true;
-                return 0;
-            });
-            for (i = 0; i < doomed.length; i++) {
-                if (!doomed[i].dead)
-                    report.push({
-                        time: doomed[i].time,
-                        sample: doomed[i].sample
-                    });
+            if (self.unordered && report.length > 1) {
+                // Sort samples by time. If two samples occur at the same
+                // time, keep the most recently added.
+                var doomed = report;
+                report = [];
+                for (i = 0; i < doomed.length; i++)
+                    doomed[i].index = i;
+                doomed.sort(function (a, b) {
+                    if (a.time < b.time)
+                        return -1;
+                    if (a.time > b.time)
+                        return 1;
+                    if (a.index < b.index)
+                        a.dead = true;
+                    else
+                        b.dead = true;
+                    return 0;
+                });
+                for (i = 0; i < doomed.length; i++) {
+                    if (!doomed[i].dead)
+                        report.push({
+                            time: doomed[i].time,
+                            sample: doomed[i].sample
+                        });
+                }
+                if (report.length !== doomed.length)
+                    self.rewriteFile(report);
             }
-            if (report.length !== doomed.length)
-                self.rewriteFile(report);
-        }
 
-        return report;
-    })
-    .catch(function(e) {
-        Utils.TRACE(TAG, "Failed to open history ", e);
-        return [];
-    });
+            return report;
+        })
+        .catch(function (e) {
+            Utils.TRACE(TAG, "Failed to open history ", e);
+            return [];
+        });
 };
 
 /**
@@ -147,20 +147,20 @@ Historian.prototype.loadFromFile = function() {
  * subsequent elements are alternating times and samples. Times are
  * in ms.
  */
-Historian.prototype.getSerialisableHistory = function(since) {
+Historian.prototype.getSerialisableHistory = function (since) {
     "use strict";
     return this.loadFromFile()
-    .then(function(report) {
-        var basetime = report.length > 0 ? report[0].time : Time.now();
-        var res = [ basetime ];
-        for (var i in report) {
-            if (typeof since === "undefined" || report[i].time >= since) {
-                res.push(report[i].time - basetime);
-                res.push(report[i].sample);
+        .then(function (report) {
+            var basetime = report.length > 0 ? report[0].time : Time.now();
+            var res = [basetime];
+            for (var i in report) {
+                if (typeof since === "undefined" || report[i].time >= since) {
+                    res.push(report[i].time - basetime);
+                    res.push(report[i].sample);
+                }
             }
-        }
-        return res;
-    });
+            return res;
+        });
 };
 
 /**
@@ -169,7 +169,7 @@ Historian.prototype.getSerialisableHistory = function(since) {
  * Requires the `interval` option to be given.
  * @param {function} sample sampling function (required)
  */
-Historian.prototype.start = function(sample) {
+Historian.prototype.start = function (sample) {
     "use strict";
 
     if (typeof sample !== "function")
@@ -179,8 +179,9 @@ Historian.prototype.start = function(sample) {
         throw "Cannot start Historian; interval not defined";
 
     var self = this;
+
     function repoll() {
-        self.timeout = setTimeout(function() {
+        self.timeout = setTimeout(function () {
             self.start(sample);
         }, self.interval);
     }
@@ -193,13 +194,13 @@ Historian.prototype.start = function(sample) {
     }
 
     this.record(datum)
-    .then(repoll);
+        .then(repoll);
 };
 
 /**
  * Stop the polling loop
  */
-Historian.prototype.stop = function() {
+Historian.prototype.stop = function () {
     if (typeof this.timeout !== undefined) {
         clearTimeout(this.timeout);
         delete this.timeout;
@@ -213,7 +214,7 @@ Historian.prototype.stop = function() {
  * @param {int} time (optional) time in ms to force into the record
  * @public
  */
-Historian.prototype.record = function(sample, time) {
+Historian.prototype.record = function (sample, time) {
     "use strict";
 
     if (typeof time === "undefined")
@@ -223,8 +224,8 @@ Historian.prototype.record = function(sample, time) {
 
     // If we've skipped recording an interval since the last
     // recorded sample, pop in a checkpoint
-    if (typeof this.last_time !== "undefined"
-        && time > this.last_time + 5 * this.interval / 4)
+    if (typeof this.last_time !== "undefined" &&
+        time > this.last_time + 5 * this.interval / 4)
         promise = appendFile(
             this.path(),
             (time - this.interval) + "," + this.last_sample + "\n");
@@ -235,11 +236,11 @@ Historian.prototype.record = function(sample, time) {
     this.last_sample = sample;
 
     var self = this;
-    return promise.then(function() {
+    return promise.then(function () {
         return appendFile(self.path(), time + "," + sample + "\n")
-        .catch(function(ferr) {
-            Utils.ERROR(TAG, "failed to append to '",
-                        self.path(), "': ", ferr);
-        });
+            .catch(function (ferr) {
+                Utils.ERROR(TAG, "failed to append to '",
+                    self.path(), "': ", ferr);
+            });
     });
 };

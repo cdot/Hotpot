@@ -32,13 +32,13 @@ function Server(proto) {
     var self = this;
     self.ready = false;
     if (typeof this.auth !== "undefined") {
-        self.authenticate = function(request) {
+        self.authenticate = function (request) {
             var BasicAuth = require("basic-auth");
             var credentials = BasicAuth(request);
             if (typeof credentials === "undefined")
                 return false;
-            return (credentials.name === self.auth.user
-                    && credentials.pass === self.auth.pass);
+            return (credentials.name === self.auth.user &&
+                credentials.pass === self.auth.pass);
         };
     }
 }
@@ -56,7 +56,7 @@ module.exports = Server;
  * The object must be JSON-ifiable. Without a dispatch function, the server
  * will be a simple file server.
  */
-Server.prototype.setDispatch = function(dispatch) {
+Server.prototype.setDispatch = function (dispatch) {
     this.dispatch = dispatch;
 };
 
@@ -67,24 +67,24 @@ Server.Model = {
         $doc: "Port to run the server on",
         $class: Number
     },
-    docroot: Utils.extend(
-        {}, DataModel.File.Model,
-        { $doc: "Absolute file path to server documents",
-          $mode: "dr" }),
-    location: Utils.extend(
-        {}, Location.Model,
-        { $doc: "Where in the world the server is located" }),
+    docroot: Utils.extend({}, DataModel.File.Model, {
+        $doc: "Absolute file path to server documents",
+        $mode: "dr"
+    }),
+    location: Utils.extend({}, Location.Model, {
+        $doc: "Where in the world the server is located"
+    }),
     ssl: {
         $doc: "SSL configuration",
         $optional: true,
-        cert: Utils.extend(
-            {}, DataModel.TextOrFile.Model,
-            { $doc: "SSL certificate (filename or text)",
-              $mode: "r" }),
-        key: Utils.extend(
-            {}, DataModel.TextOrFile.Model,
-            { $doc: "SSL key (filename or text)",
-              $mode: "r" })
+        cert: Utils.extend({}, DataModel.TextOrFile.Model, {
+            $doc: "SSL certificate (filename or text)",
+            $mode: "r"
+        }),
+        key: Utils.extend({}, DataModel.TextOrFile.Model, {
+            $doc: "SSL key (filename or text)",
+            $mode: "r"
+        })
     },
     auth: {
         $doc: "Basic auth to access the server",
@@ -107,16 +107,16 @@ Server.Model = {
  * Get a promise to start the server.
  * @return {Promise} a promise to start the server
  */
-Server.prototype.start = function() {
+Server.prototype.start = function () {
     var self = this;
 
-    var handler = function(request, response) {
+    var handler = function (request, response) {
         if (typeof self.authenticate !== "undefined") {
             if (!self.authenticate(request)) {
                 Utils.TRACE(TAG, "Authentication failed ", request.url);
                 response.statusCode = 401;
-                response.setHeader('WWW-Authenticate', 'Basic realm="'
-                                   + self.auth.realm + '"');
+                response.setHeader('WWW-Authenticate', 'Basic realm="' +
+                    self.auth.realm + '"');
                 response.end('Access denied');
                 return;
             }
@@ -137,50 +137,50 @@ Server.prototype.start = function() {
 
         promise = promise
 
-        .then(function() {
-            return self.ssl.key.read();
-        })
+            .then(function () {
+                return self.ssl.key.read();
+            })
 
-        .then(function(k) {
-            options.key = k;
-            Utils.TRACE(TAG, "SSL key loaded");
-        })
+            .then(function (k) {
+                options.key = k;
+                Utils.TRACE(TAG, "SSL key loaded");
+            })
 
-        .then(function() {
-            return self.ssl.cert.read();
-        })
+            .then(function () {
+                return self.ssl.cert.read();
+            })
 
-        .then(function(c) {
-            options.cert = c;
-            Utils.TRACE(TAG, "SSL certificate loaded");
-            if (typeof self.auth !== "undefined")
-                Utils.TRACE(TAG, "Requires authentication");
-            Utils.TRACE(TAG, "HTTPS starting on port ", self.port);
-        })
+            .then(function (c) {
+                options.cert = c;
+                Utils.TRACE(TAG, "SSL certificate loaded");
+                if (typeof self.auth !== "undefined")
+                    Utils.TRACE(TAG, "Requires authentication");
+                Utils.TRACE(TAG, "HTTPS starting on port ", self.port);
+            })
 
-        .then(function() {
-            return require("https").createServer(options, handler);
-        });
+            .then(function () {
+                return require("https").createServer(options, handler);
+            });
     } else {
         if (typeof self.auth !== "undefined")
             Utils.TRACE(TAG, "Requires authentication");
         Utils.TRACE(TAG, "HTTP starting on port ", self.port);
         promise = promise
-        .then(function() {
-            return require("http").createServer(handler);
-        });
+            .then(function () {
+                return require("http").createServer(handler);
+            });
     }
 
     return promise
 
-    .then(function(httpot) {
-        self.ready = true;
-        self.http = httpot;
-        httpot.listen(self.port);
-    });
+        .then(function (httpot) {
+            self.ready = true;
+            self.http = httpot;
+            httpot.listen(self.port);
+        });
 };
 
-Server.prototype.stop = function() {
+Server.prototype.stop = function () {
     this.http.close();
 };
 
@@ -188,7 +188,7 @@ Server.prototype.stop = function() {
  * Common handling for POST or GET
  * @private
  */
-Server.prototype.handle = function(spath, params, request, response) {
+Server.prototype.handle = function (spath, params, request, response) {
     "use strict";
 
     if (spath.indexOf("/") !== 0 || spath.length === 0)
@@ -219,18 +219,18 @@ Server.prototype.handle = function(spath, params, request, response) {
 
         promise = this.dispatch(path, params)
 
-        .then(function(reply) {
-            var s = (typeof reply !== "undefined" && reply !== null)
-                ? JSON.stringify(reply) : "";
-            return s;
-        });
+            .then(function (reply) {
+                var s = (typeof reply !== "undefined" && reply !== null) ?
+                    JSON.stringify(reply) : "";
+                return s;
+            });
     } else if (path.join("") === "") {
         promise = Q("");
     } else {
         // Handle file lookup
         Utils.TRACE(TAG, "GET ", path.join("/"));
-        var filepath = Utils.expandEnvVars(this.docroot
-                                           + "/" + path.join("/"));
+        var filepath = Utils.expandEnvVars(this.docroot +
+            "/" + path.join("/"));
 
         var m = /\.([A-Z0-9]+)$/i.exec(filepath);
         if (m) {
@@ -243,31 +243,31 @@ Server.prototype.handle = function(spath, params, request, response) {
     }
 
     promise
-    .then(function(responseBody) {
-        response.setHeader("Content-Type", contentType);
-        response.setHeader("Content-Length", Buffer.byteLength(responseBody));
-        response.statusCode = 200;
-        response.write(responseBody);
-        response.end();
-    },
-    function(error) {
-        // Send the error message in the payload
-        console.error("ERROR " + error);
-        Utils.TRACE(TAG, error.stack);
-        var e = error.toString();
-        response.setHeader("Content-Type", "text/plain");
-        response.setHeader("Content-Length", Buffer.byteLength(e));
-        response.statusCode = 500;
-        response.write(e);
-        response.end(e);
-    });
+        .then(function (responseBody) {
+                response.setHeader("Content-Type", contentType);
+                response.setHeader("Content-Length", Buffer.byteLength(responseBody));
+                response.statusCode = 200;
+                response.write(responseBody);
+                response.end();
+            },
+            function (error) {
+                // Send the error message in the payload
+                console.error("ERROR " + error);
+                Utils.TRACE(TAG, error.stack);
+                var e = error.toString();
+                response.setHeader("Content-Type", "text/plain");
+                response.setHeader("Content-Length", Buffer.byteLength(e));
+                response.statusCode = 500;
+                response.write(e);
+                response.end(e);
+            });
 };
 
 /**
  * handler for incoming GET request
  * @private
  */
-Server.prototype.GET = function(request, response) {
+Server.prototype.GET = function (request, response) {
     "use strict";
     try {
         // Parse URL parameters and pass them as the data
@@ -275,7 +275,7 @@ Server.prototype.GET = function(request, response) {
         this.handle(req.pathname, req.query, request, response);
     } catch (e) {
         Utils.TRACE(TAG, e, " in ", request.url, "\n",
-                    typeof e.stack !== "undefined" ? e.stack : e);
+            typeof e.stack !== "undefined" ? e.stack : e);
         response.write(e + " in " + request.url + "\n");
         response.statusCode = 400;
         response.end();
@@ -286,13 +286,14 @@ Server.prototype.GET = function(request, response) {
  * Handler for incoming POST request
  * @private
  */
-Server.prototype.POST = function(request, response) {
+Server.prototype.POST = function (request, response) {
     "use strict";
 
-    var body = [], self = this;
-    request.on("data", function(chunk) {
+    var body = [],
+        self = this;
+    request.on("data", function (chunk) {
         body.push(chunk);
-    }).on("end", function() {
+    }).on("end", function () {
         try {
             // Parse the JSON body and pass as the data
             var object;

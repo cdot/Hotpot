@@ -22,71 +22,84 @@
     <div id="comms_error"></div>
 
     <div id="controls" class="display">
-      <div>
+      <div id="CH">
         <h1>Central Heating</h1>
         <div>
-          <span id="thermostat-CH-temp"></span>
-          <span id="thermostat-CH-diff"></span>
-          <span id="thermostat-CH-target"></span>°C
+          <span class="th-temp"></span>
+          <span class="th-diff"></span>
+          <span class="th-target"></span>°C
         </div>
         <div>
-          <span id="pin-CH-state"></span>
-          <span id="pin-CH-reason"></span>
+          <span class="pin-state"></span>
+          <span class="pin-reason"></span>
         </div>
-        <div id="CH-requests"></div>
-        <button id="CH-boost">BOOST</button> to
-        <input id="CH-boost-target" value="18" size="3" />°C
-        <button id="open-CH-timeline">Open Timeline</button>
-        <div id="info"></div>
-        <div class="timeline_container" id="CH-timeline">
-          <div class="timeline" data-service="CH">
+        <div class="requests"></div>
+        <button class="boost">BOOST</button> to
+        <input class="boost-target" value="18" size="3" />°C
+        <button class="tl-open">Open Timeline</button>
+        <div class="info"></div>
+        <div class="tl-container">
+          <div class="tl-canvas" data-service="CH">
             <div class="spinner-controls">
-              <input type="text" size="2" class="spinnable" id="CH-point" />
-              Time: <input id="CH-time" size="9"/>
-              Temperature: <input id="CH-temperature" size="5"/>°C
-              <button id="CH-removepoint">
+              <input type="text" size="2" class="spinnable tl-point" />
+              Time: <input class="tl-time" size="9"/>
+              Temperature: <input class="tl-temp" size="5"/>°C
+              <button class="tl-removepoint">
                 <img class="trashcan" src="browser/images/wastebin.svg" />
               </button>
             </div>
           </div>
-          <button id="save-CH-timeline">Save</button>
-          <button id="cancel-CH-timeline">Cancel</button>
+          <button class="tl-save">Save</button>
+          <button class="tl-cancel">Cancel</button>
+        </div>
+        <div class="calendar">
+          <span class="cal-name"></span>:
+          <span class="cal-state"></span>°C from
+          <span class="cal-start"></span> until
+          <span class="cal-end"></span>
         </div>
       </div>
       <p></p>
-      <div>
+      <div id="HW">
         <h1>Hot Water</h1>
         <div>
-          <span id="thermostat-HW-temp"></span>
-          <span id="thermostat-HW-diff"></span>
-          <span id="thermostat-HW-target"></span>°C
+          <span class="th-temp"></span>
+          <span class="th-diff"></span>
+          <span class="th-target"></span>°C
         </div>
         <div>
-          <span id="pin-HW-state"></span>
-          <span id="pin-HW-reason"></span>
+          <span class="pin-state"></span>
+          <span class="pin-reason"></span>
         </div>
-        <div id="HW-requests"></div>
-        <button id="HW-boost">BOOST</button> to 
-        <input id="HW-boost-target" value="40" size="3" />°C
-        <button id="open-HW-timeline">Open Timeline</button>
-        <div class="timeline_container" id="HW-timeline" >
-          <div class="timeline" data-service="HW">
+        <div class="requests"></div>
+        <button class="boost">BOOST</button> to 
+        <input class="boost-target" value="40" size="3" />°C
+        <button class="tl-open">Open Timeline</button>
+        <div class="tl-container" >
+          <div class="tl-canvas" data-service="HW">
             <div class="spinner-controls">
-              <input type="text" size="2" class="spinnable" id="HW-point" />
-              Time: <input type="text" id="HW-time" size="9"/>
-              Temperature: <input type="text" id="HW-temperature" size="4"/>°C
-              <button id="HW-removepoint">
+              <input type="text" size="2" class="spinnable tl-point" />
+              Time: <input type="text" class="tl-time" size="9"/>
+              Temperature: <input type="text" class="tl-temp" size="4"/>°C
+              <button class="tl-removepoint">
                 <img class="trashcan" src="browser/images/wastebin.svg" />
               </button>
             </div>
           </div>
-          <button id="save-HW-timeline">Save</button>
-          <button id="cancel-HW-timeline">Cancel</button>
+          <button class="save">Save</button>
+          <button class="cancel">Cancel</button>
+        </div>
+        <div class="calendar">
+          <span class="cal-name"></span>:
+          <span class="cal-state"></span>°C from
+          <span class="cal-start"></span> until
+          <span class="cal-end"></span>
         </div>
       </div>
       <p></p>
       <button class="switcher" data-to="help">Help</button>
       <button id="refresh_calendars">Update Calendars</button>
+      <span id="cal_update_pending">Update pending</span>
     </div>
     <div class="display" id="help">
       <p>

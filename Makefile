@@ -37,6 +37,12 @@ FIND := find . \
 	eslint --no-ignore $^
 	touch $*.esl
 
+# Tidy
+%.js.tidy : %.js
+	js-beautify -j --good-stuff -o $^ $^
+
+tidy: $(patsubst %.js,%.js.tidy,$(SOURCES))
+
 # Lint all JS
 lint: $(subst .js,.esl,$(SOURCES))
 

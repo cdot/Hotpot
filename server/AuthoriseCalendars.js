@@ -17,13 +17,13 @@ const Utils = require("../common/Utils.js");
 Time = require("../common/Time.js");
 const DataModel = require("../common/DataModel.js");
 
-const HELP = "Hotpot Google Calendar Authorisation\n"
-    + "This program will cache the access token required to access "
-    + "a Google calendar that contains control events";
+const HELP = "Hotpot Google Calendar Authorisation\n" +
+    "This program will cache the access token required to access " +
+    "a Google calendar that contains control events";
 
 var cliopt = new Getopt([
-    [ "h", "help", "Show this help" ],
-    [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ]
+    ["h", "help", "Show this help"],
+    ["c", "config=ARG", "Configuration file (default ./hotpot.cfg)"]
 ])
     .bindHelp()
     .setHelp(HELP + "[[OPTIONS]]")
@@ -35,7 +35,7 @@ if (typeof cliopt.config === "undefined")
 
 function configureCalendar(credentials) {
     var cfn = Utils.expandEnvVars(credentials.auth_cache);
-    Fs.stat(cfn, function(e, stats) {
+    Fs.stat(cfn, function (e, stats) {
         if (e) {
             authorise(credentials);
         } else if (stats.isFile()) {
@@ -45,7 +45,7 @@ function configureCalendar(credentials) {
                 input: process.stdin,
                 output: process.stdout
             });
-            rl.question("Continue [Y/n]?: ", function(ans) {
+            rl.question("Continue [Y/n]?: ", function (ans) {
                 rl.close();
                 if (ans === "" || /^[Yy]/.test(ans))
                     authorise(credentials);
@@ -53,9 +53,9 @@ function configureCalendar(credentials) {
                     console.log("\nSkipping this calendar");
             });
         } else {
-            console.error("Skipping because " + credentials.auth_cache
-                    + " is not a file" + "\n"
-                    + "Please check the auth_cache of this calendar");
+            console.error("Skipping because " + credentials.auth_cache +
+                " is not a file" + "\n" +
+                "Please check the auth_cache of this calendar");
         }
     });
 }
@@ -76,38 +76,39 @@ function authorise(credentials) {
         input: process.stdin,
         output: process.stdout
     });
-    rl.question("Enter the code here: ", function(code) {
+    rl.question("Enter the code here: ", function (code) {
         rl.close();
-        oauth2Client.getToken(code, function(err, token) {
+        oauth2Client.getToken(code, function (err, token) {
             if (err) {
                 console.log("Error while trying to retrieve access token",
-                            err);
+                    err);
                 return;
             }
             oauth2Client.credentials = token;
 
             writeFile(Utils.expandEnvVars(credentials.auth_cache),
-                      JSON.stringify(token))
+                    JSON.stringify(token))
 
-                .then(function() {
-                    console.log("Token cached in '" + credentials.auth_cache
-                                + "'");
+                .then(function () {
+                    console.log("Token cached in '" + credentials.auth_cache +
+                        "'");
                 })
 
-                .catch(function(e) {
-                    console.error("Failed to write '"
-                                  + credentials.auth_cache + "': " + e);
+                .catch(function (e) {
+                    console.error("Failed to write '" +
+                        credentials.auth_cache + "': " + e);
                 });
         });
     });
 }
 
-DataModel.loadData(cliopt.config, { $skip: true })
+DataModel.loadData(cliopt.config, {
+        $skip: true
+    })
 
-.done(function(config) {
-    for (var cal in config.controller.calendar) {
-        console.log("Configuring calendar '" + cal + "'");
-        configureCalendar(config.controller.calendar[cal]);
-    }
-});
-
+    .done(function (config) {
+        for (var cal in config.controller.calendar) {
+            console.log("Configuring calendar '" + cal + "'");
+            configureCalendar(config.controller.calendar[cal]);
+        }
+    });

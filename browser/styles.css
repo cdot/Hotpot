@@ -34,10 +34,6 @@ table {
     width: 100%;
 }
 
-.template {
-    display: none;
-}
-
 button {
     font-size: 6vmin;
     padding: 1vmin;
@@ -85,11 +81,6 @@ button.twisty {
     padding: 1vmin;
 }
 
-/* The canvases used to edit timelines */
-.timeline {
-    width: 100%;
-}
-
 canvas {
     -webkit-touch-callout:none;
     -webkit-user-select:none;
@@ -107,7 +98,13 @@ canvas {
     pointer-events: none;
 }
 
-.timeline_container {
+.tl-container {
+    width: 100%;
+    display: none;
+}
+
+/* The canvases used to edit timelines */
+.tl-canvas {
     width: 100%;
 }
 

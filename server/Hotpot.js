@@ -7,8 +7,8 @@
  * @module Hotpot
  */
 const DESCRIPTION =
-"DESCRIPTION\nA Raspberry PI central heating control server.\n" +
-"See README.md for details\n\nOPTIONS\n";
+    "DESCRIPTION\nA Raspberry PI central heating control server.\n" +
+    "See README.md for details\n\nOPTIONS\n";
 
 const getopt = require("node-getopt");
 const Q = require("q");
@@ -29,13 +29,13 @@ const HOTPOT_MODEL = {
     controller: Controller.Model
 };
 
-(function() {
+(function () {
     var cliopt = getopt.create([
-        [ "h", "help", "Show this help" ],
-        [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ],
-        [ "C", "confhelp", "Configuration file help" ],
-        [ "t", "trace=ARG", "Trace modules e.g. --trace=Rules" ],
-        [ "d", "debug", "Run in debug mode, using stubs for missing hardware" ]
+        ["h", "help", "Show this help"],
+        ["c", "config=ARG", "Configuration file (default ./hotpot.cfg)"],
+        ["C", "confhelp", "Configuration file help"],
+        ["t", "trace=ARG", "Trace modules e.g. --trace=Rules"],
+        ["d", "debug", "Run in debug mode, using stubs for missing hardware"]
     ])
         .bindHelp()
         .setHelp(DESCRIPTION + "[[OPTIONS]]")
@@ -54,56 +54,55 @@ const HOTPOT_MODEL = {
     if (cliopt.trace && cliopt.trace !== "")
         Utils.setTRACE(cliopt.trace);
     else
-        Utils.TRACE = function() {};
+        Utils.TRACE = function () {};
 
     var config, controller, server;
 
     DataModel.loadData(cliopt.config, HOTPOT_MODEL)
 
-        .then(function(cfg) {
-        if (cliopt.confhelp) {
-            Utils.LOG(TAG, " ", DataModel.help(Controller.Model));
-            eval("process.exit(1)");
-        }
-        return cfg;
-    })
+        .then(function (cfg) {
+            if (cliopt.confhelp) {
+                Utils.LOG(TAG, " ", DataModel.help(Controller.Model));
+                eval("process.exit(1)");
+            }
+            return cfg;
+        })
 
-    .then(function(cfg) {
-        config = cfg;
-        controller = config.controller;
-        server = config.server;
-        server.setDispatch(
-            function(path, params) {
-                return controller.dispatch(path, params);
-            });
-        return controller.initialise()
-        .then(function() {
-            var loc = new Location(server.location);
-            controller.setLocation(loc);
-        });
-    })
-
-    .then(function() {
-        return server.start();
-    })
-
-    .then(function() {
-        // Save config when it changes, so we restart to the
-        // same state
-        controller.on(
-            "config_change",
-            function() {
-                DataModel.saveData(config, HOTPOT_MODEL, cliopt.config)
-                .done(function() {
-                    Utils.TRACE(TAG, cliopt.config, " updated");
+        .then(function (cfg) {
+            config = cfg;
+            controller = config.controller;
+            server = config.server;
+            server.setDispatch(
+                function (path, params) {
+                    return controller.dispatch(path, params);
                 });
-            });
-    })
+            return controller.initialise()
+                .then(function () {
+                    var loc = new Location(server.location);
+                    controller.setLocation(loc);
+                });
+        })
 
-    .catch(function(e) {
-        Utils.ERROR(TAG, "Controller initialisation failed: ",
-                      typeof e.stack !== "undefined" ? e.stack : e);
-        eval("process.exit(1)");
-    });
+        .then(function () {
+            return server.start();
+        })
+
+        .then(function () {
+            // Save config when it changes, so we restart to the
+            // same state
+            controller.on(
+                "config_change",
+                function () {
+                    DataModel.saveData(config, HOTPOT_MODEL, cliopt.config)
+                        .done(function () {
+                            Utils.TRACE(TAG, cliopt.config, " updated");
+                        });
+                });
+        })
+
+        .catch(function (e) {
+            Utils.ERROR(TAG, "Controller initialisation failed: ",
+                typeof e.stack !== "undefined" ? e.stack : e);
+            eval("process.exit(1)");
+        });
 })();
-

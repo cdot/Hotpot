@@ -51,33 +51,30 @@ Rule.Model = {
 /**
  * Promise to initialise a new rule.
  */
-Rule.prototype.initialise = function() {
+Rule.prototype.initialise = function () {
     var self = this;
 
     return this.test.read()
-    .then(function(fn) {
-        if (typeof fn !== "function") {
-            // Compile the function
-            try {
-                fn = Utils.eval(fn);
-            } catch (e) {
-                if (e instanceof SyntaxError)
-                    Utils.ERROR(TAG, "Syntax error in '" + self.name
-                                + "': " + e.stack);
-                else
-                    Utils.ERROR(TAG, "'" + self.name
-                                + "' compilation failed: " + e.stack);
+        .then(function (fn) {
+            if (typeof fn !== "function") {
+                // Compile the function
+                try {
+                    fn = Utils.eval(fn);
+                } catch (e) {
+                    if (e instanceof SyntaxError)
+                        Utils.ERROR(TAG, "Syntax error in '" + self.name +
+                            "': " + e.stack);
+                    else
+                        Utils.ERROR(TAG, "'" + self.name +
+                            "' compilation failed: " + e.stack);
+                }
+                if (typeof self.testfn !== "undefined" &&
+                    self.testfn === fn) {
+                    Utils.TRACE(TAG, self.name, " unchanged");
+                    return;
+                }
             }
-            if (typeof self.testfn !== "undefined"
-                && self.testfn === fn) {
-                Utils.TRACE(TAG, self.name, " unchanged");
-                return;
-            }
-        }
-        self.testfn = fn;
-        Utils.TRACE(TAG, self.name, " initialised");
-    });
+            self.testfn = fn;
+            Utils.TRACE(TAG, self.name, " initialised");
+        });
 };
-
-
-

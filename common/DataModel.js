@@ -146,7 +146,7 @@ var DataModel = {
  * @param context undefined or an array
  * @private
  */
-DataModel.check = function(model, context) {
+DataModel.check = function (model, context) {
     if (model.$checked)
         return;
 
@@ -155,7 +155,7 @@ DataModel.check = function(model, context) {
 
     if (typeof model !== "object")
         throw Utils.report(TAG, ".check: Illegal model type ", model,
-                           " at ", context.join('.'));
+            " at ", context.join('.'));
 
     //Utils.LOG("check <",context.join('.'),"> {");
 
@@ -170,7 +170,7 @@ DataModel.check = function(model, context) {
             throw Utils.report(TAG, ".check: cannot have $array_of and $class");
     } else if (typeof model.$class !== "undefined") {
         throw Utils.report(TAG, "/check: $class is ",
-                           typeof model.$class, " at ", context.join('.'));
+            typeof model.$class, " at ", context.join('.'));
     }
 
     model.$checked = true;
@@ -210,7 +210,7 @@ DataModel.check = function(model, context) {
  * @param {string} context The context of the check, used in messages only
  * @return the data (or the default, if one was applied)
  */
-DataModel.remodel = function(index, data, model, context) {
+DataModel.remodel = function (index, data, model, context) {
     var i;
 
     DataModel.check(model);
@@ -229,7 +229,7 @@ DataModel.remodel = function(index, data, model, context) {
             return data;
         if (typeof model.$default === "undefined")
             throw Utils.report(TAG, ".remodel: not optional and no default at ",
-                               context.join('.'));
+                context.join('.'));
         else
             data = model.$default;
     }
@@ -310,7 +310,7 @@ DataModel.remodel = function(index, data, model, context) {
  * @param {object} data data to save
  * @param {object{ model data model to follow
  */
-DataModel.getSerialisable = function(data, model, context) {
+DataModel.getSerialisable = function (data, model, context) {
     DataModel.check(model);
 
     var Q = require("q");
@@ -325,7 +325,7 @@ DataModel.getSerialisable = function(data, model, context) {
             return Q();
         }
         throw Utils.report(TAG, ".getSerialisable: non-optional at ",
-                           context.join('.'));
+            context.join('.'));
     }
 
     //Utils.LOG("Serialise ", data, " using ",model);
@@ -350,43 +350,43 @@ DataModel.getSerialisable = function(data, model, context) {
         // Serialise all entries in the object, it's an array
         if (typeof data !== "object")
             throw Utils.report(TAG, ".getSerialisable: array expected at ",
-                               context.join('.'), data);
+                context.join('.'), data);
         serialisable = [];
-        Utils.forEach(data, function(entry, index) {
-            promises = promises.then(function() {
-                return DataModel.getSerialisable(
-                    entry, model.$array_of,
-                    context.concat(index));
-            })
-            .then(function(c) {
-                serialisable[index] = c;
-            });
+        Utils.forEach(data, function (entry, index) {
+            promises = promises.then(function () {
+                    return DataModel.getSerialisable(
+                        entry, model.$array_of,
+                        context.concat(index));
+                })
+                .then(function (c) {
+                    serialisable[index] = c;
+                });
         });
-        return promises.then(function() {
+        return promises.then(function () {
             return serialisable;
         });
 
     } else if (typeof model.$map_of !== "undefined") {
         if (typeof data !== "object")
             throw Utils.report(TAG, ".getSerialisable: map expected at ",
-                               context.join('.'), data);
+                context.join('.'), data);
         serialisable = {};
-        Utils.forEach(data, function(entry, index) {
-            promises = promises.then(function() {
-                return DataModel.getSerialisable(
-                    entry, model.$map_of,
-                    context.concat(index));
-            })
-            .then(function(c) {
-                serialisable[index] = c;
-            });
+        Utils.forEach(data, function (entry, index) {
+            promises = promises.then(function () {
+                    return DataModel.getSerialisable(
+                        entry, model.$map_of,
+                        context.concat(index));
+                })
+                .then(function (c) {
+                    serialisable[index] = c;
+                });
         });
-        return promises.then(function() {
+        return promises.then(function () {
             return serialisable;
         });
 
     } else if (typeof model.$class === "function" &&
-               typeof data.getSerialisable === "function") {
+        typeof data.getSerialisable === "function") {
         // objects can override getSerialisable
         // Could also use model.prototype.getSerialisable
         return data.getSerialisable(model);
@@ -397,24 +397,24 @@ DataModel.getSerialisable = function(data, model, context) {
     serialisable = {};
     // Only serialise fields described in the model. All other fields
     // in the object are ignored.
-    Utils.forEach(model, function(fieldmodel, key) {
+    Utils.forEach(model, function (fieldmodel, key) {
         if (DataModel.private_key[key])
             return;
         promises = promises
-            .then(function() {
+            .then(function () {
                 var promise = DataModel.getSerialisable(
                     data[key], fieldmodel,
                     context.concat(key));
                 return promise
             })
-            .then(function(c) {
+            .then(function (c) {
                 if (typeof c !== "undefined") {
                     serialisable[key] = c;
                 }
             });
     });
 
-    return promises.then(function() {
+    return promises.then(function () {
         return serialisable;
     });
 };
@@ -435,7 +435,7 @@ DataModel.getSerialisable = function(data, model, context) {
  * undefined if the path is empty.
  * @return the result of the call to fn
  */
-DataModel.at = function(root, model, path, fn) {
+DataModel.at = function (root, model, path, fn) {
     if (typeof path === "string") {
         // Convert string path to array of path components
         path = path.split(/\/+/);
@@ -482,7 +482,7 @@ DataModel.at = function(root, model, path, fn) {
  * @return {promise} promise that returns the loaded data
  * @public
  */
-DataModel.loadData = function(file, model) {
+DataModel.loadData = function (file, model) {
     "use strict";
 
     DataModel.check(model);
@@ -492,12 +492,12 @@ DataModel.loadData = function(file, model) {
     var readFilePromise = Q.denodeify(Fs.readFile);
 
     return readFilePromise(file)
-    .then(function(code) {
-        var data = Utils.eval(code, file);
-        data = DataModel.remodel("", data, model);
-        data._readFrom = file;
-        return data;
-    });
+        .then(function (code) {
+            var data = Utils.eval(code, file);
+            data = DataModel.remodel("", data, model);
+            data._readFrom = file;
+            return data;
+        });
 };
 
 /**
@@ -509,7 +509,7 @@ DataModel.loadData = function(file, model) {
  * file the data was read from.
  * @return {promise} promise that returns after saving
  */
-DataModel.saveData = function(data, model, file) {
+DataModel.saveData = function (data, model, file) {
     "use strict";
 
     DataModel.check(model);
@@ -521,7 +521,7 @@ DataModel.saveData = function(data, model, file) {
     var Fs = require("fs");
     var writeFilePromise = Q.denodeify(Fs.writeFile);
 
-    return DataModel.getSerialisable(data, model).then(function(remod) {
+    return DataModel.getSerialisable(data, model).then(function (remod) {
         return writeFilePromise(
             Utils.expandEnvVars(file),
             JSON.stringify(remod, null, 2), "utf8");
@@ -532,7 +532,7 @@ DataModel.saveData = function(data, model, file) {
  * Generate the help string for the given model
  * @param {object} model the data model to generate help for
  */
-DataModel.help = function(model, index) {
+DataModel.help = function (model, index) {
     DataModel.check(model);
 
     // index is used for formatting and is not visible to callers
@@ -552,7 +552,7 @@ DataModel.help = function(model, index) {
         docstring.push("(optional)");
     if (typeof model.$class !== "undefined") {
         if (typeof model.$class === "string")
-            docstring.push('<'  + model.$class + '>');
+            docstring.push('<' + model.$class + '>');
         else if (typeof model.$class === "function")
             docstring.push('<' + model.$class.name + '>');
         else
@@ -628,16 +628,18 @@ function File(filename, index, model) {
 
             if (Fs.existsSync(fnm)) {
                 Fs.access(fnm, mode,
-                          function(err) {
-                              if (err)
-                                  throw "Bad " + index + ": " + filename + " " +
-                                  + $mode + " mode check failed: "
-                                  + err;
-                          });
+                    function (err) {
+                        if (err)
+                            throw "Bad " + index + ": " + filename + " " +
+                                +$mode + " mode check failed: " +
+                                err;
+                    });
             }
         } else if ($mode.indexOf("w") >= 0) {
             // Just make sure we can write, and clear down the file
-            Fs.writeFileSync(fnm, "", { mode: mode });
+            Fs.writeFileSync(fnm, "", {
+                mode: mode
+            });
         }
     }
 };
@@ -653,7 +655,7 @@ File.Model = {
  * Generate a simple string representation of this object suitable
  * for use in debugging and in serialisation
  */
-File.prototype.toString = function() {
+File.prototype.toString = function () {
     return this.data;
 };
 
@@ -661,7 +663,7 @@ File.prototype.toString = function() {
  * Promise to write a new value to the file
  * @param value new data to write to the file
  */
-File.prototype.write = function(value) {
+File.prototype.write = function (value) {
     var Q = require("q");
     var Fs = require("fs");
     var writeFilePromise = Q.denodeify(Fs.writeFile);
@@ -671,14 +673,14 @@ File.prototype.write = function(value) {
 /**
  * Promise to read the file
  */
-File.prototype.read = function() {
+File.prototype.read = function () {
     var Q = require("q");
     var Fs = require("fs");
     var readFilePromise = Q.denodeify(Fs.readFile);
     return readFilePromise(Utils.expandEnvVars(this.data));
 };
 
-File.prototype.getSerialisable = function() {
+File.prototype.getSerialisable = function () {
     var Q = require("q");
     return Q(this.data);
 };
@@ -711,13 +713,15 @@ TextOrFile.Model = {
 /**
  * Promise to read the datum
  */
-TextOrFile.prototype.read = function() {
+TextOrFile.prototype.read = function () {
     if (this.is_file)
         return DataModel.File.prototype.read.call(this);
     else {
         var data = this.data;
         var Q = require("q");
-        return Q.fcall(function() { return data; });
+        return Q.fcall(function () {
+            return data;
+        });
     }
 };
 
@@ -725,7 +729,7 @@ TextOrFile.prototype.read = function() {
  * Promise to update the datum
  * @param value new value to store in the datum
  */
-TextOrFile.prototype.write = function(value) {
+TextOrFile.prototype.write = function (value) {
     if (this.is_file)
         return DataModel.File.prototype.write.call(this, value);
     else {

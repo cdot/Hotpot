@@ -66,7 +66,7 @@ function Thermostat(proto, name) {
             ds18x20 = HOTPOT_DEBUG.ds18x20;
         else
             ds18x20 = require("ds18x20");
-        
+
         if (!ds18x20.isDriverLoaded())
             ds18x20.loadDriver();
     }
@@ -80,7 +80,7 @@ function Thermostat(proto, name) {
     if (typeof hc !== "undefined") {
         if (typeof hc.interval === "undefined")
             hc.interval = 300; // 5 minutes
-        hc.sample = function() {
+        hc.sample = function () {
             // Only log temperatures to one decimal place
             return Math.round(self.temperature * 10) / 10;
         };
@@ -97,18 +97,20 @@ Thermostat.Model = {
         $doc: "unique ID used to communicate with this thermostat"
     },
     timeline: Timeline.Model,
-    history: Utils.extend({ $optional: true }, Historian.Model)
+    history: Utils.extend({
+        $optional: true
+    }, Historian.Model)
 };
 
 /**
  * Return a promise to intiialise the thermostat with a valid value read
  * from the probe
  */
-Thermostat.prototype.initialise = function() {
+Thermostat.prototype.initialise = function () {
     var self = this;
 
-    return Q.Promise(function(resolve, reject) {
-        ds18x20.get(self.id, function(err, temp) {
+    return Q.Promise(function (resolve, reject) {
+        ds18x20.get(self.id, function (err, temp) {
             if (err !== null) {
                 Utils.ERROR(TAG, "d218x20 error: ", err);
                 reject(err);
@@ -121,7 +123,7 @@ Thermostat.prototype.initialise = function() {
                 self.pollTemperature();
                 // Start the historian
                 if (self.history)
-                    self.history.start(function() {
+                    self.history.start(function () {
                         return self.temperature;
                     });
                 Utils.TRACE(TAG, "'", self.name, "' intialised");
@@ -138,7 +140,7 @@ module.exports = Thermostat;
  * @return {Promise} a promise
  * @protected
  */
-Thermostat.prototype.getSerialisableState = function() {
+Thermostat.prototype.getSerialisableState = function () {
     "use strict";
     this.purgeRequests();
     var data = {
@@ -146,7 +148,7 @@ Thermostat.prototype.getSerialisableState = function() {
         target: this.getTargetTemperature(),
         requests: this.requests
     };
-    return Q.fcall(function() {
+    return Q.fcall(function () {
         return data;
     });
 };
@@ -162,7 +164,7 @@ Thermostat.prototype.getSerialisableState = function() {
  * @param since optional param giving start of logs as a ms datime
  * @protected
  */
-Thermostat.prototype.getSerialisableLog = function(since) {
+Thermostat.prototype.getSerialisableLog = function (since) {
     "use strict";
     if (!this.history)
         return Q();
@@ -175,23 +177,23 @@ Thermostat.prototype.getSerialisableLog = function(since) {
  * asynchronously and cached in the Thermostat object
  * @private
  */
-Thermostat.prototype.pollTemperature = function() {
+Thermostat.prototype.pollTemperature = function () {
     "use strict";
 
     var self = this;
 
-    ds18x20.get(self.id, function(err, temp) {
+    ds18x20.get(self.id, function (err, temp) {
         if (err !== null) {
             Utils.ERROR(TAG, "Sensor error: ", err);
         } else {
             if (typeof temp === "number")
                 // At least once this has been "boolean"!
                 self.temperature = temp;
-            setTimeout(function() {
-                self.pollTemperature();
-            }, typeof self.poll_interval === "undefined"
-                       ? DEFAULT_POLL_INTERVAL
-                       : self.poll_interval);
+            setTimeout(function () {
+                    self.pollTemperature();
+                }, typeof self.poll_interval === "undefined" ?
+                DEFAULT_POLL_INTERVAL :
+                self.poll_interval);
         }
     });
 };
@@ -200,7 +202,7 @@ Thermostat.prototype.pollTemperature = function() {
  * Get the target temperature specified by the timeline for this thermostat
  * at the current time. This may be overridden by a request.
  */
-Thermostat.prototype.getTargetTemperature = function() {
+Thermostat.prototype.getTargetTemperature = function () {
     this.purgeRequests();
     if (this.requests.length > 0) {
         // The most recent boost request
@@ -217,7 +219,7 @@ Thermostat.prototype.getTargetTemperature = function() {
  * Get the maximum temperature allowed by the timeline for this thermostat
  * at any time.
  */
-Thermostat.prototype.getMaximumTemperature = function() {
+Thermostat.prototype.getMaximumTemperature = function () {
     return this.timeline.getMaxValue();
 };
 
@@ -232,12 +234,18 @@ Thermostat.prototype.getMaximumTemperature = function() {
  * service resolves which requests win.
  * @private
  */
-Thermostat.prototype.addRequest = function(source, target, until) {
+Thermostat.prototype.addRequest = function (source, target, until) {
     if (source)
-        this.purgeRequests({source: source});
-    
-    var req = { source: source, target: target, until: until };
-    
+        this.purgeRequests({
+            source: source
+        });
+
+    var req = {
+        source: source,
+        target: target,
+        until: until
+    };
+
     Utils.TRACE(TAG, "Add request ", this.name, " ", req);
     this.requests.push(req);
 };
@@ -248,7 +256,7 @@ Thermostat.prototype.addRequest = function(source, target, until) {
  * @param match map of request fields to match
  * @private
  */
-Thermostat.prototype.purgeRequests = function(match) {
+Thermostat.prototype.purgeRequests = function (match) {
     if (match)
         Utils.TRACE(TAG, "Purge ", this.name, match);
     match = match || {};
@@ -271,7 +279,7 @@ Thermostat.prototype.purgeRequests = function(match) {
             }
         } else if (r.until < Time.nowSeconds()) {
             purge = true;
-                Utils.TRACE(TAG, "Purge because old");
+            Utils.TRACE(TAG, "Purge because old");
         }
         if (purge) {
             Utils.TRACE(TAG, "Purge ", this.name, " request ", r);

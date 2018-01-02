@@ -40,9 +40,12 @@ Timepoint.Model = {
     }
 };
 
-Timepoint.prototype.getSerialisable = function() {
+Timepoint.prototype.getSerialisable = function () {
     var Q = require("q");
-    return Q({ times: Time.unparse(this.time), value: this.value });
+    return Q({
+        times: Time.unparse(this.time),
+        value: this.value
+    });
 };
 
 /**
@@ -101,22 +104,29 @@ Timeline.Model = {
 };
 
 // Private function to add extreme points if needed
-Timeline.prototype.fixExtremes = function() {
+Timeline.prototype.fixExtremes = function () {
     // Add missing points to extremes
     if (this.points.length == 0) {
         this.points.push(new Timepoint({
-            time: 0, value: (this.min + this.max) / 2}));
+            time: 0,
+            value: (this.min + this.max) / 2
+        }));
         this.points.push(new Timepoint({
-            time: this.period - 1, value: (this.min + this.max) / 2}));
+            time: this.period - 1,
+            value: (this.min + this.max) / 2
+        }));
     }
     if (this.points[0].time != 0)
         this.points.unshift(new Timepoint({
-            time: 0, value: this.points[0].value}));
+            time: 0,
+            value: this.points[0].value
+        }));
 
     if (this.points[this.points.length - 1].time < this.period - 1) {
         this.points.push(new Timepoint({
             time: this.period - 1,
-            value: this.points[this.points.length - 1].value}));
+            value: this.points[this.points.length - 1].value
+        }));
     }
 };
 
@@ -125,7 +135,7 @@ Timeline.prototype.fixExtremes = function() {
  * @param t the time to test
  * @return the index of the point
  */
-Timeline.prototype.getPointAfter = function(t) {
+Timeline.prototype.getPointAfter = function (t) {
     if (t < 0 || t >= this.period)
         throw "Time is outside timeline";
     for (var i = 1; i < this.points.length - 1; i++) {
@@ -139,7 +149,7 @@ Timeline.prototype.getPointAfter = function(t) {
  * Get the maximum value at any time
  * @return {float} the maximum value
  */
-Timeline.prototype.getMaxValue = function() {
+Timeline.prototype.getMaxValue = function () {
     var max = this.points[0].value;
     for (var i = 1; i < this.points.length; i++) {
         if (this.points[i].value > max)
@@ -153,7 +163,7 @@ Timeline.prototype.getMaxValue = function() {
  * @param t the time, must be in range of the timeline
  * @return{float}the value at time t
  */
-Timeline.prototype.valueAtTime = function(t) {
+Timeline.prototype.valueAtTime = function (t) {
     var i = this.getPointAfter(t);
     var lp = this.points[i - 1];
     var p = this.points[i];
@@ -168,7 +178,7 @@ Timeline.prototype.valueAtTime = function(t) {
  * @param point the (time: value:) point to add
  * @return index of the point added
  */
-Timeline.prototype.insertBefore = function(index, point) {
+Timeline.prototype.insertBefore = function (index, point) {
     if (index <= 0)
         throw "Can't insert before 0 point";
     if (index >= this.points.length)
@@ -189,7 +199,7 @@ Timeline.prototype.insertBefore = function(index, point) {
  * @param idx index of point to remove
  * @return this
  */
-Timeline.prototype.remove = function(idx) {
+Timeline.prototype.remove = function (idx) {
     if (idx <= 0 || idx >= this.points.length - 1)
         throw "Not a removable point";
     this.points.splice(idx, 1);
@@ -200,7 +210,7 @@ Timeline.prototype.remove = function(idx) {
  * Get total number of points
  * @return number of points
  */
-Timeline.prototype.nPoints = function() {
+Timeline.prototype.nPoints = function () {
     return this.points.length;
 };
 
@@ -208,10 +218,10 @@ Timeline.prototype.nPoints = function() {
  * Get the point at the given index
  * @return the point object
  */
-Timeline.prototype.getPoint = function(i) {
+Timeline.prototype.getPoint = function (i) {
     if (i < 0 || i >= this.points.length)
-        throw Utils.report("Timeline.getPoint(", i,") not in 0..",
-                           this.points.length);
+        throw Utils.report("Timeline.getPoint(", i, ") not in 0..",
+            this.points.length);
     return this.points[i];
 
 };
@@ -223,7 +233,7 @@ Timeline.prototype.getPoint = function(i) {
  * @param p a point object giving the (time,value) to set. If this is
  * undefined, it will validate the point already at i
  */
-Timeline.prototype.setPoint = function(i, p) {
+Timeline.prototype.setPoint = function (i, p) {
     if (i < 0 || i >= this.points.length)
         throw "Not a point";
     if (typeof p === "undefined")
@@ -232,14 +242,14 @@ Timeline.prototype.setPoint = function(i, p) {
         throw "Time " + p.time + " outside period 0.." + this.period;
     if (i < this.points.length - 1 && p.time >= this.points[i + 1].time)
         throw Utils.report("Timeline.setPoint(", i, ",",
-                           p.time, "=", Time.unparse(p.time),
-                           ") bad time order ", this.points[i + 1].time,
-                           "=", Time.unparse(this.points[i + 1].time));
+            p.time, "=", Time.unparse(p.time),
+            ") bad time order ", this.points[i + 1].time,
+            "=", Time.unparse(this.points[i + 1].time));
     if (i > 0 && p.time <= this.points[i - 1].time)
         throw "Bad time order";
     if (p.value < this.min || p.value > this.max)
         throw Utils.report("Timeline.setPoint ", i, ",", p,
-                           " out of range ", this);
+            " out of range ", this);
     this.points[i].time = p.time;
     this.points[i].value = p.value;
 };
@@ -252,11 +262,11 @@ Timeline.prototype.setPoint = function(i, p) {
  * rewritten to the constrained point.
  * @return true if the point was changed
  */
-Timeline.prototype.setPointConstrained = function(idx, tp) {
+Timeline.prototype.setPointConstrained = function (idx, tp) {
     // Clip
-    if (tp.value < this.min)    tp.value = this.min;
-    if (tp.value > this.max)    tp.value = this.max;
-    if (tp.time < 0)            tp.time = 0;
+    if (tp.value < this.min) tp.value = this.min;
+    if (tp.value > this.max) tp.value = this.max;
+    if (tp.time < 0) tp.time = 0;
     if (tp.time >= this.period) tp.time = this.period - 1;
 
     // Constrain first and last points
@@ -282,4 +292,3 @@ Timeline.prototype.setPointConstrained = function(idx, tp) {
     cp.value = tp.value;
     return true;
 };
-
