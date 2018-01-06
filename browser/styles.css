@@ -133,6 +133,10 @@ canvas {
     height: 4vmin;
 }
 
+.calendar {
+    display: none;
+}
+
 .input-group-btn-vertical {
   position: relative;
   display: inline-block;

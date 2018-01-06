@@ -110,7 +110,7 @@ const DataModel = require("../../common/DataModel.js");
             for (var i = 0; i < obj.thermostat[service].requests.length; i++) {
                 var req = obj.thermostat[service].requests[i];
                 var $div = $("<div></div>").addClass("request");
-                var u = req.until == "boost" ? "boosted" : new Date(req.until);
+                var u = (!req.until || req.until === "boost") ? "boosted" : new Date(req.until);
                 $div.append("<span>" + req.source + " is requesting " +
                     req.target + " </span>°C until " + u + " ");
                 var $butt = $("<button>Clear</button>")
