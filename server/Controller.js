@@ -588,6 +588,11 @@ Controller.prototype.pollRules = function () {
         self.poll.timer = undefined;
     }
 
+    // Purge completed requests
+    Utils.forEach(self.thermostat, function (th) {
+        th.purgeRequests();
+    });
+
     // Test each of the rules. Rule evaluation functions return a
     // promise to set a pin state, which is decided by reading the
     // thermostats. Requests in the thermostats may define a temperature
