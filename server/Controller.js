@@ -132,7 +132,7 @@ Controller.prototype.createWeatherAgents = function () {
 
 /**
  * Add a request to a thermostat. If "boost" is in until or the target
- * if prexied with "BOOST" then a boost request will be created.
+ * is prefixed with "BOOST" then a boost request will be created.
  * @param service themostat to add the request to
  * @param id source of the request
  * @param target target temperature, possibly prefixed by "BOOST "
@@ -147,11 +147,11 @@ Controller.prototype.addRequest = function (service, id, target, until) {
     if (typeof until === "string") {
         if (until === "now")
             remove = true;
-        else
+        else if (until !== "boost")
             until = Date.parse(until);
     }
 
-    var m = /^BOOST\s*(.*)$/.exec(target);
+    var m = /^BOOST\s*(.*)$/i.exec(target);
     if (m) {
         until = "boost";
         target = parseFloat(m[1]);
