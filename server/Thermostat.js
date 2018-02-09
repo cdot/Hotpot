@@ -199,15 +199,15 @@ Thermostat.prototype.pollTemperature = function () {
 };
 
 /**
- * Get the target temperature specified by the timeline for this thermostat
- * at the current time. This may be overridden by a request.
+ * Get the target temperature specified by the timeline or active boost
+ * request for this thermostat at the current time.
  */
 Thermostat.prototype.getTargetTemperature = function () {
     this.purgeRequests();
     if (this.requests.length > 0) {
-        // The most recent boost request
         for (var i = this.requests.length - 1; i >= 0; i--)
             if (this.requests[i].until == "boost")
+                // The current boost request
                 return this.requests[i].target;
         // Otherwise the most recently-added request
         return this.requests[this.requests.length - 1].target;
@@ -216,11 +216,20 @@ Thermostat.prototype.getTargetTemperature = function () {
 };
 
 /**
- * Get the maximum temperature allowed by the timeline for this thermostat
- * at any time.
+ * Get the maximum temperature allowed by the timeline or active boost
+ * requests for this thermostat at any time.
  */
 Thermostat.prototype.getMaximumTemperature = function () {
-    return this.timeline.getMaxValue();
+    var max = this.timeline.getMaxValue();
+    // If there's a promise to boost to a higher temperature,
+    // honour it.
+    if (this.requests.length > 0) {
+        for (var i = this.requests.length - 1; i >= 0; i--)
+            if (this.requests[i].until == "boost" &&
+                this.requests[i].target > max)
+                max = this.requests[i].target;
+    }
+    return max;
 };
 
 /**

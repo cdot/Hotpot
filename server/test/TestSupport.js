@@ -8,8 +8,8 @@ const Fs = require("fs");
 
 // Heating and cooling rates, in degrees per minute
 const RATES = [
-    { HW: -0.01, CH: -0.03 }, // COOL
-    { HW: 0.333, CH: 0.1 }   // WARM
+    { HW: -0.01, CH: -0.03 }, // OFF = COOL
+    { HW: 0.333, CH: 0.1 }   // ON = WARM
 ];
 
 var TestSupport = {
@@ -27,8 +27,15 @@ var TestSupport = {
     
     adjustSensor: function(sensor) {
         if (typeof TestSupport.name2gpio[sensor.name] !== "undefined") {
-            var pState = parseInt(Fs.readFileSync(
-                TestSupport.pin_path + TestSupport.name2gpio[sensor.name]));
+            var data = Fs.readFileSync(
+                TestSupport.pin_path + TestSupport.name2gpio[sensor.name]);
+            var pState = parseInt(data);
+            if (isNaN(pState)) {
+                console.error("TestSupport: pState from " + TestSupport.pin_path
+                              + TestSupport.name2gpio[sensor.name]
+                              + " was unparseable; '" + data + "'");
+                pState = 0;
+            }
             sensor.temperature += RATES[pState][sensor.name] / 120.0;
         }
         setTimeout(function() {
