@@ -131,19 +131,23 @@ Controller.prototype.createWeatherAgents = function () {
 };
 
 /**
- * Add a request to a thermostat. If "boost" is in until or the target
- * is prefixed with "BOOST" then a boost request will be created.
- * @param service themostat to add the request to
+ * Add a request to a thermostat.
+ * @param service themostat to add the request to, or "ALL" to add the request
+ * to all thermostats.
  * @param id source of the request
- * @param target target temperature, possibly prefixed by "BOOST "
- * @param until time at which the request expires (or "boost")
+ * @param target number giving the target temperature, possibly prefixed
+ * by "BOOST ". If the boost prefix is present, a boost request is created.
+ * @param until time at which the request expires, a pareseable date string or
+ * if 'until' is "boost", then a boost request will be created, or if 'until'
+ * is "now" the request will expire immediately.
  */
 Controller.prototype.addRequest = function (service, id, target, until) {
-    var remove = false;
+    var remove = false, tgt;
 
     Utils.TRACE(TAG, "request ", service, " from ",
         id, " ", target, "C until ", until);
 
+    // Parse the until
     if (typeof until === "string") {
         if (until === "now")
             remove = true;
@@ -151,13 +155,20 @@ Controller.prototype.addRequest = function (service, id, target, until) {
             until = Date.parse(until);
     }
 
+    // Parse the target
     var m = /^BOOST\s*(.*)$/i.exec(target);
     if (m) {
         until = "boost";
-        target = parseFloat(m[1]);
-    } else {
-        target = parseFloat(target);
-    }
+        tgt = m[1];
+    } else
+        tgt = target;
+
+    if (/^OFF$/i.test(tgt))
+        tgt = 0;
+    else if (parseFloat(tgt) == NaN)
+        throw Utils.report("Cannot add request: ", service,
+                           " bad target temperature in '" + target + "'");
+    target = parseFloat(tgt);
 
     if (/^ALL$/i.test(service)) {
         Utils.forEach(this.thermostat, function (th) {
@@ -205,10 +216,11 @@ Controller.prototype.initialiseCalendars = function () {
                             source: id
                         });
                     });
-                } else
+                } else if (self.thermostat[service]) {
                     self.thermostat[service].purgeRequests({
                         source: id
                     });
+                }
 
             });
         // Queue an asynchronous calendar update

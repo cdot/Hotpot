@@ -144,7 +144,7 @@ amphibianProto = {
     toad: [{ data: { x: 4, y: false } }]
 };
 
-describe('DataModel', function() {
+describe('common/DataModel', function() {
     it("remodel-simple", function() {
         var remodeled = DataModel.remodel('', simpleProto, simpleModel);
         assert.equal(Utils.dump(remodeled), Utils.dump(simpleProto));

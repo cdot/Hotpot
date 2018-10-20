@@ -9,7 +9,7 @@ var Historian = require("../Historian");
 //Utils.setTRACE("all");
 Q.longStackSupport = true;
 
-describe('Historian', function() {
+describe('server/Historian', function() {
     describe('unordered', function() {
         var h = new Historian({
             unordered: true,

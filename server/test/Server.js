@@ -27,7 +27,7 @@ var server_config = {
 
 //Utils.setTRACE("all");
 
-describe("Server", function() {
+describe("server/Server", function() {
 
     var server;
 

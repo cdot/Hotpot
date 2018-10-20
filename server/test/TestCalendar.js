@@ -27,8 +27,9 @@ var getopt = new Getopt([
 
 var cliopt = getopt.options;
 
-if (typeof cliopt.config === "undefined")
-    cliopt.config = "./simulated_hotpot.cfg";
+if (typeof cliopt.config === "undefined") {
+    cliopt.config = "./test/simulated_hotpot.cfg";
+}
 
 Q.longStackSupport = true;
 

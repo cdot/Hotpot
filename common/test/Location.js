@@ -2,7 +2,7 @@
 var assert = require('chai').assert;
 
 var Location = require('../Location.js');
-describe('Location', function() {
+describe('common/Location', function() {
     var l1, l2, l3;
     describe('#Location()', function() {
         it('should handle numbers', function() {

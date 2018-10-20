@@ -21,7 +21,7 @@ var config = {
     }
 };
 
-describe('MetOffice', function() {
+describe('server/MetOffice', function() {
     it('Works', function() {
         var mo = new MetOffice(config);
         return mo.setLocation(config.location).then(function() {

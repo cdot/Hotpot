@@ -3,11 +3,11 @@ var assert = require('chai').assert;
 
 const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 var Time = require('../Time.js');
-describe('Time', function() {
+describe('common/Time', function() {
     describe('#midnight()', function() {
         it('should give a time of 00:00', function() {
-            assert.equal(Date.parse(new Date().toLocaleDateString()),
-                    Time.midnight());
+            var lds = new Date().toDateString();
+            assert.equal(Date.parse(lds), Time.midnight());
             var d = new Date(Time.midnight());
             assert.equal(0, d.getHours());
             assert.equal(0, d.getMinutes());
