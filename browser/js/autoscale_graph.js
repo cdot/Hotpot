@@ -117,7 +117,7 @@ Trace.prototype.clipLine = function(a, b) {
 Trace.prototype.addPoint = function(t, s) {
     "use strict";
     if (typeof s === "undefined")
-        throw "WTF";
+        throw new Utils.exception("Trace", "Cannot add null point");
     this.points.push({ t: t, s: s });
     this.extents = null; // clear cache
 };

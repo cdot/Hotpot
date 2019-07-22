@@ -16,8 +16,8 @@ const TAG = "Server";
 
 /**
  * Super-lightweight HTTP(S) server object (singleton) with very few
- * dependencies. Only supports POST and GET, does not support auth.
- * The server sits on the selected report and processes GET and POST
+ * dependencies. Only supports POST and GET and Basic auth
+ * The server sits on the selected port and processes GET and POST
  * requests. The predefined root path `/ajax` is used to decide when to
  * route requests to a dispatcher function. Otherwise requests are
  * handled as files relative to the defined `docroot`.
@@ -192,12 +192,12 @@ Server.prototype.handle = function (spath, params, request, response) {
     "use strict";
 
     if (spath.indexOf("/") !== 0 || spath.length === 0)
-        throw "Bad command";
+        throw new Utils.exception(TAG, "Bad command ", spath);
     spath = spath.substring(1);
     var path = spath.split(/\/+/);
 
     if (path.length < 1)
-        throw "Bad command";
+        throw new Utils.exception(TAG, "Bad command ", spath);
 
     if (!this.ready) {
         // Not ready

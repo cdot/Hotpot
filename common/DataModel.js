@@ -6,8 +6,6 @@
 // module can be used in a browser.
 const Utils = require("./Utils");
 
-const TAG = "DataModel";
-
 /**
  * This module provides a way to deserialise a datastructure from
  * JSON data which contains only initialisation data for the
@@ -154,7 +152,7 @@ DataModel.check = function (model, context) {
         context = [];
 
     if (typeof model !== "object")
-        throw Utils.report(TAG, ".check: Illegal model type ", model,
+        throw new Utils.exception('DataModel', ".check: Illegal model type ", model,
             " at ", context.join('.'));
 
     //Utils.LOG("check <",context.join('.'),"> {");
@@ -167,9 +165,9 @@ DataModel.check = function (model, context) {
         }
         // Currently cannot have both $array_of and $class
         if (typeof model.$array_of !== "undefined")
-            throw Utils.report(TAG, ".check: cannot have $array_of and $class");
+            throw new Utils.exception('DataModel', ".check: cannot have $array_of and $class");
     } else if (typeof model.$class !== "undefined") {
-        throw Utils.report(TAG, "/check: $class is ",
+        throw new Utils.exception('DataModel', ".check: $class is ",
             typeof model.$class, " at ", context.join('.'));
     }
 
@@ -178,8 +176,8 @@ DataModel.check = function (model, context) {
     if (!model.$skip) {
         if (typeof model.$array_of !== "undefined") {
             if (typeof model.$map_of !== "undefined")
-                throw Utils.report(
-                    TAG, ".check: cannot have $array_of and $map_of");
+                throw new Utils.exception(
+                    'DataModel', ".check: cannot have $array_of and $map_of");
             DataModel.check(model.$array_of, context.concat("[]"));
         } else if (typeof model.$map_of !== "undefined")
             DataModel.check(model.$map_of, context.concat("{}"));
@@ -187,8 +185,8 @@ DataModel.check = function (model, context) {
             for (var i in model) {
                 if (i.charAt(0) !== '$') {
                     if (is_base)
-                        throw Utils.report(
-                            TAG, ".check: $class ",
+                        throw new Utils.exception(
+                            'DataModel', ".check: $class ",
                             model.$class.name, " has field ", i, " at ",
                             context.join('.'));
                     DataModel.check(model[i], context.concat(i));
@@ -207,7 +205,7 @@ DataModel.check = function (model, context) {
  * will be a number for an array entry, or a key for a hash, and is used
  * to pass to constructors for named objects.
  * @param {object} model the model
- * @param {string} context The context of the check, used in messages only
+ * @param {string[]} context The context of the check, used in messages only
  * @return the data (or the default, if one was applied)
  */
 DataModel.remodel = function (index, data, model, context) {
@@ -228,8 +226,10 @@ DataModel.remodel = function (index, data, model, context) {
         if (model.$optional)
             return data;
         if (typeof model.$default === "undefined")
-            throw Utils.report(TAG, ".remodel: not optional and no default at ",
-                context.join('.'));
+            throw new Utils.exception(
+                'DataModel',
+                ".remodel: not optional and no default at "
+                    + context.join("."));
         else
             data = model.$default;
     }
@@ -285,8 +285,8 @@ DataModel.remodel = function (index, data, model, context) {
         // Make sure the data doesn't carry any hidden payload
         for (var i in data) {
             if (!model[i])
-                throw Utils.report(
-                    TAG, ".remodel: Hidden payload ", i, " in ", data,
+                throw new Utils.exception(
+                    'DataModel', ".remodel: Hidden payload ", i, " in ", data,
                     " at ", context.join('.'));
         }
     }
@@ -324,7 +324,7 @@ DataModel.getSerialisable = function (data, model, context) {
         if (typeof model !== "undefined" && model.$optional) {
             return Q();
         }
-        throw Utils.report(TAG, ".getSerialisable: non-optional at ",
+        throw new Utils.exception('DataModel', ".getSerialisable: non-optional at ",
             context.join('.'));
     }
 
@@ -348,11 +348,11 @@ DataModel.getSerialisable = function (data, model, context) {
 
     if (typeof model.$array_of !== "undefined") {
         // Serialise all entries in the object, it's an array
-        if (typeof data !== "object")
-            throw Utils.report(TAG, ".getSerialisable: array expected at ",
-                context.join('.'), data);
+        if (!data.forEach)
+            throw new Utils.exception('DataModel', ".getSerialisable: array expected at ",
+                                  context.join('.'), data);
         serialisable = [];
-        Utils.forEach(data, function (entry, index) {
+        data.forEach(function (entry, index) {
             promises = promises.then(function () {
                     return DataModel.getSerialisable(
                         entry, model.$array_of,
@@ -368,11 +368,12 @@ DataModel.getSerialisable = function (data, model, context) {
 
     } else if (typeof model.$map_of !== "undefined") {
         if (typeof data !== "object")
-            throw Utils.report(TAG, ".getSerialisable: map expected at ",
+            throw new Utils.exception('DataModel', ".getSerialisable: map expected at ",
                 context.join('.'), data);
         serialisable = {};
-        Utils.forEach(data, function (entry, index) {
-            promises = promises.then(function () {
+        Utils.each(data, function (entry, index) {
+            promises = promises
+                .then(function () {
                     return DataModel.getSerialisable(
                         entry, model.$map_of,
                         context.concat(index));
@@ -384,7 +385,7 @@ DataModel.getSerialisable = function (data, model, context) {
         return promises.then(function () {
             return serialisable;
         });
-
+        
     } else if (typeof model.$class === "function" &&
         typeof data.getSerialisable === "function") {
         // objects can override getSerialisable
@@ -397,7 +398,7 @@ DataModel.getSerialisable = function (data, model, context) {
     serialisable = {};
     // Only serialise fields described in the model. All other fields
     // in the object are ignored.
-    Utils.forEach(model, function (fieldmodel, key) {
+    Utils.each(model, function (fieldmodel, key) {
         if (DataModel.private_key[key])
             return;
         promises = promises
@@ -454,11 +455,11 @@ DataModel.at = function (root, model, path, fn) {
     var i = 0;
     while (i < path.length) {
         if (typeof node === "undefined")
-            throw Utils.report(
-                TAG, ".at: no node at ", path, "[", i, "]");
+            throw new Utils.exception(
+                'DataModel', ".at: no node at ", path, "[", i, "]");
         if (typeof node_model === "undefined")
-            throw Utils.report(
-                TAG, ".at: no model at ", path, "[", i, "]");
+            throw new Utils.exception(
+                'DataModel', ".at: no model at ", path, "[", i, "]");
         parent = node;
         key = path[i++];
         node = node[key];
@@ -470,7 +471,7 @@ DataModel.at = function (root, model, path, fn) {
             node_model = node_model[key];
     }
     if (i < path.length)
-        throw Utils.report(TAG, ".at: could not find ", path);
+        throw new Utils.exception('DataModel', ".at: could not find ", path);
     return fn(node, node_model, parent, key);
 };
 
@@ -620,7 +621,8 @@ function File(filename, index, model) {
             mode = mode | Fs.constants.X_OK;
 
         if ($mode.indexOf("e") >= 0 && !Fs.existsSync(fnm)) {
-            throw "Bad " + index + ": " + filename + " does not exist";
+            throw new Utils.exception(
+                "Bad ", index, ": ", filename, " does not exist");
         }
 
         if ($mode.indexOf("w") >= 0) {
@@ -630,9 +632,9 @@ function File(filename, index, model) {
                 Fs.access(fnm, mode,
                     function (err) {
                         if (err)
-                            throw "Bad " + index + ": " + filename + " " +
-                                +$mode + " mode check failed: " +
-                                err;
+                            throw new Utils.exception(
+                                "Bad ", index, ": ", filename, " ",
+                                $mode, " mode check failed: ", err);
                     });
             }
         } else if ($mode.indexOf("w") >= 0) {

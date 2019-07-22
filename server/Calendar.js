@@ -292,7 +292,7 @@ Calendar.prototype.fillCache = function () {
         })
 
         .catch(function (e) {
-            throw "Calendar had an error: " + e;
+            throw new Utils.exception(TAG, "error: ", e);
         });
 };
 

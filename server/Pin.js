@@ -152,7 +152,7 @@ Pin.prototype.initialise = function () {
         Utils.ERROR(TAG, self.name, ":", self.gpio,
             " setup failed: ", err);
         if (typeof HOTPOT_DEBUG === "undefined")
-            throw "Pin setup failed";
+            throw new Utils.exception(TAG, self.name, " setup failed: ", err);
         Utils.ERROR(TAG, "Falling back to debug for ", self.name);
         self.value_path = HOTPOT_DEBUG.pin_path + self.gpio;
         return writeCheck();

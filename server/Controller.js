@@ -119,7 +119,7 @@ Controller.prototype.createWeatherAgents = function () {
     var promise = Q();
     if (Object.keys(this.weather).length > 0) {
         Utils.TRACE(TAG, "Creating weather agents");
-        Utils.forEach(this.weather, function (config, name) {
+        this.weather.forEach(function (config, name) {
             var WeatherAgent = require("./" + name + ".js");
             self.weather[name] = new WeatherAgent(config);
             promise = promise.then(function () {
@@ -166,12 +166,13 @@ Controller.prototype.addRequest = function (service, id, target, until) {
     if (/^OFF$/i.test(tgt))
         tgt = 0;
     else if (parseFloat(tgt) == NaN)
-        throw Utils.report("Cannot add request: ", service,
-                           " bad target temperature in '" + target + "'");
+        throw new Utils.exception(TAG,
+            "Cannot add request: ", service,
+            " bad target temperature in '", target, "'");
     target = parseFloat(tgt);
 
     if (/^ALL$/i.test(service)) {
-        Utils.forEach(this.thermostat, function (th) {
+        this.thermostat.forEach(function (th) {
             if (remove)
                 th.purgeRequests({
                     source: id
@@ -180,7 +181,7 @@ Controller.prototype.addRequest = function (service, id, target, until) {
                 th.addRequest(id, target, until);
         });
     } else if (!this.thermostat[service])
-        throw Utils.report("Cannot add request: ", service,
+        throw new Utils.exception(TAG, "Cannot add request: ", service,
             " is not a known thermostat");
     else if (remove)
         this.thermostat[service].purgeRequests({
@@ -203,7 +204,7 @@ Controller.prototype.initialiseCalendars = function () {
     Utils.TRACE(TAG, "Initialising Calendars");
 
     var self = this;
-    Utils.forEach(this.calendar, function (cal) {
+    this.calendar.forEach(function (cal) {
         cal.setTrigger(
             function (id, service, target, until) {
                 self.addRequest(service, id, target, until);
@@ -211,7 +212,7 @@ Controller.prototype.initialiseCalendars = function () {
         cal.setRemove(
             function (id, service) {
                 if (/^ALL$/i.test(service)) {
-                    Utils.forEach(self.thermostat, function (th) {
+                    self.thermostat.forEach(function (th) {
                         th.purgeRequests({
                             source: id
                         });
@@ -243,7 +244,7 @@ Controller.prototype.initialisePins = function () {
 
     Utils.TRACE(TAG, "Initialising Pins");
     var promise = Q();
-    Utils.forEach(self.pin, function (pin) {
+    self.pin.forEach(function (pin) {
         promise = promise.then(function () {
             return pin.initialise();
         });
@@ -298,7 +299,7 @@ Controller.prototype.initialiseThermostats = function () {
 
     Utils.TRACE(TAG, "Initialising Thermostats");
 
-    Utils.forEach(this.thermostat, function (th) {
+    this.thermostat.forEach(function (th) {
         promise = promise.then(function () {
             return th.initialise();
         });
@@ -320,7 +321,7 @@ Controller.prototype.initialiseRules = function () {
     var promise = Q();
 
     Utils.TRACE(TAG, "Initialising Rules");
-    Utils.forEach(this.rule, function (rule) {
+    this.rule.forEach(function (rule) {
         promise = promise.then(function () {
             return rule.initialise();
         });
@@ -333,7 +334,7 @@ Controller.prototype.initialiseRules = function () {
  */
 Controller.prototype.setLocation = function (location) {
     "use strict";
-    Utils.forEach(this.weather, function (wa) {
+    this.weather.forEach(function (wa) {
         wa.setLocation(location);
     });
 };
@@ -354,8 +355,8 @@ Controller.prototype.getSerialisableState = function () {
 
     // Should be able to do this using Q.all, but it doesn't do
     // what I expect
-    Utils.forEach(this, function (block, field) {
-        Utils.forEach(block, function (item, key) {
+    this.forEach(function (block, field) {
+        block.forEach(function (item, key) {
             if (typeof item.getSerialisableState === "function") {
                 if (typeof state[field] === "undefined")
                     state[field] = {};
@@ -384,7 +385,7 @@ Controller.prototype.getSetLogs = function (set, since) {
     var promise = Q();
     var logset;
 
-    Utils.forEach(set, function (item, key) {
+    set.forEach(function (item, key) {
         if (typeof item.getSerialisableLog === "function") {
             if (typeof logset === "undefined")
                 logset = {};
@@ -418,7 +419,7 @@ Controller.prototype.getSerialisableLog = function (since) {
     var promise = Q();
     var self = this;
 
-    Utils.forEach(this, function (block, field) {
+    this.forEach(function (block, field) {
         promise = promise.then(function () {
             return self.getSetLogs(self[field], since)
                 .then(function (logset) {
@@ -544,8 +545,9 @@ Controller.prototype.dispatch = function (path, data) {
                 if (typeof parent === "undefined" ||
                     typeof key === "undefined" ||
                     typeof item === "undefined")
-                    throw Utils.report("Cannot update ", path,
-                        " insufficient context");
+                    throw new Utils.exception(
+                        TAG,
+                        "Cannot update ", path, ", insufficient context");
                 parent[key] = DataModel.remodel(key, data.value, model, path);
                 Utils.TRACE(TAG, "setconfig ", path, " = ", parent[key]);
                 self.emit("config_change");
@@ -578,7 +580,7 @@ Controller.prototype.dispatch = function (path, data) {
         self.pollRules();
         break;
     default:
-        throw "Unrecognised command " + command;
+        throw new Utils.exception(TAG, "Unrecognised command ", command);
     }
     return Q.fcall(function () {
         return {
@@ -601,7 +603,7 @@ Controller.prototype.pollRules = function () {
     }
 
     // Purge completed requests
-    Utils.forEach(self.thermostat, function (th) {
+    self.thermostat.forEach(function (th) {
         th.purgeRequests();
     });
 
@@ -609,7 +611,7 @@ Controller.prototype.pollRules = function () {
     // promise to set a pin state, which is decided by reading the
     // thermostats. Requests in the thermostats may define a temperature
     // target, or if not the timeline is used.
-    Utils.forEach(self.rule, function (rule) {
+    self.rule.forEach(function (rule) {
         if (typeof rule.testfn !== "function") {
             Utils.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
             return true;

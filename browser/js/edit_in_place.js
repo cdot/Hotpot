@@ -32,7 +32,8 @@
             try {
                 eval("data={" + data + "}");
             } catch (e) {
-                throw "Unparseable data-editable: " + data + ": " + e.message;
+                throw new Utils.exception(
+                    TAG, "Unparseable data-editable: ", data, ": ", e.message);
             }
             for (var o in options)
                 if (typeof data[o] !== "undefined")

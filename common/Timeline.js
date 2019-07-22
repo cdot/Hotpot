@@ -14,11 +14,11 @@ function Timepoint(proto) {
 
     if (typeof this.time === "undefined") {
         if (typeof this.times === "undefined")
-            throw Utils.report("Timepoint must have time or times");
+            throw new Utils.exception("Timepoint", "must have time or times");
         this.time = Time.parse(this.times);
         delete this.times;
     } else if (typeof this.times !== "undefined")
-        throw Utils.report("Timepoint must have time or times, not both");
+        throw new Utils.exception("Timepoint", "must have time or times, not both");
 }
 
 Timepoint.Model = {
@@ -51,7 +51,7 @@ Timepoint.prototype.getSerialisable = function () {
 /**
  * A timeline is an object that represents a continuous graph
  * giving a value at each point over a time line. The timeline starts
- * at 0 and runs for a period in milliseconds.
+ * at 0 and runs for a period in milliseconds i.e. to (period - 1)
  * Times are milliseconds and values in the range
  * {min}..{max} (out of range values are validated).
  * New Timelines are initialised with a straight line at value
@@ -63,11 +63,13 @@ function Timeline(proto) {
 
     Utils.extend(this, proto);
 
-    if (this.max <= this.min)
-        throw "Value range inside out";
-    if (this.period <= 0)
-        throw "Bad period";
-
+    if (typeof this.max !== "number"
+        || typeof this.min !== "number"
+        || this.max < this.min
+        || typeof this.period !== "number"
+        || this.period <= 0)
+        throw new Utils.exception("Timeline", "Bad model");
+    
     if (typeof this.points === "undefined")
         this.points = [];
 
@@ -75,7 +77,7 @@ function Timeline(proto) {
     for (var i = 1; i < this.points.length; i++)
         this.setPoint(i);
 
-    this.fixExtremes();
+    this._fixExtremes();
 }
 
 module.exports = Timeline;
@@ -104,7 +106,7 @@ Timeline.Model = {
 };
 
 // Private function to add extreme points if needed
-Timeline.prototype.fixExtremes = function () {
+Timeline.prototype._fixExtremes = function () {
     // Add missing points to extremes
     if (this.points.length == 0) {
         this.points.push(new Timepoint({
@@ -134,10 +136,12 @@ Timeline.prototype.fixExtremes = function () {
  * Get the index of the point that follows the given time.
  * @param t the time to test
  * @return the index of the point
+ * @throws {Hotpot
  */
 Timeline.prototype.getPointAfter = function (t) {
     if (t < 0 || t >= this.period)
-        throw "Time is outside timeline";
+        throw new Utils.exception(
+            "Timeline", t, " is outside timeline 0..", this.period - 1);
     for (var i = 1; i < this.points.length - 1; i++) {
         if (this.points[i].time > t)
             return i;
@@ -179,10 +183,11 @@ Timeline.prototype.valueAtTime = function (t) {
  * @return index of the point added
  */
 Timeline.prototype.insertBefore = function (index, point) {
-    if (index <= 0)
-        throw "Can't insert before 0 point";
-    if (index >= this.points.length)
-        throw "index beyond end";
+    if (index <= 0 || index >= this.points.length)
+        throw new Utils.exception(
+            "Timeline", "Index " + index
+                + " is outside timeline 0.."
+                + (this.points.length - 1));
     this.points.splice(index, 0, new Timepoint(point));
     // Use setPoint to validate it
     try {
@@ -201,7 +206,9 @@ Timeline.prototype.insertBefore = function (index, point) {
  */
 Timeline.prototype.remove = function (idx) {
     if (idx <= 0 || idx >= this.points.length - 1)
-        throw "Not a removable point";
+        throw new Utils.exception(
+            "Timeline", idx, " cannot be removed from 0..",
+            this.points.length - 1);
     this.points.splice(idx, 1);
     return this;
 };
@@ -220,8 +227,8 @@ Timeline.prototype.nPoints = function () {
  */
 Timeline.prototype.getPoint = function (i) {
     if (i < 0 || i >= this.points.length)
-        throw Utils.report("Timeline.getPoint(", i, ") not in 0..",
-            this.points.length);
+        throw new Utils.exception("Timeline", "getPoint ", i, " not in 0..",
+                              this.points.length - 1);
     return this.points[i];
 
 };
@@ -235,21 +242,27 @@ Timeline.prototype.getPoint = function (i) {
  */
 Timeline.prototype.setPoint = function (i, p) {
     if (i < 0 || i >= this.points.length)
-        throw "Not a point";
+        throw new Utils.exception("Timeline", "Point ", i, " not in timeline");
     if (typeof p === "undefined")
         p = this.points[i];
-    if (p.time < 0 || p.time >= this.period)
-        throw "Time " + p.time + " outside period 0.." + this.period;
+    if (p.time < 0 || p.time >= this.period) {
+        throw new Utils.exception(
+            "Timeline",
+            "Time " + p.time
+                + " outside period 0.." + (this.period - 1));
+    }
     if (i < this.points.length - 1 && p.time >= this.points[i + 1].time)
-        throw Utils.report("Timeline.setPoint(", i, ",",
-            p.time, "=", Time.unparse(p.time),
-            ") bad time order ", this.points[i + 1].time,
-            "=", Time.unparse(this.points[i + 1].time));
+        throw new Utils.exception(
+            "Timeline", "setPoint ", p.time,
+            " is later than following point @", this.points[i + 1].time);
     if (i > 0 && p.time <= this.points[i - 1].time)
-        throw "Bad time order";
+        throw new Utils.exception(
+            "Timeline", "setPoint ", p.time,
+            " is earlier than preceding point @", this.points[i - 1].time);
     if (p.value < this.min || p.value > this.max)
-        throw Utils.report("Timeline.setPoint ", i, ",", p,
-            " out of range ", this);
+        throw new Utils.exception("Timeline", "setPoint value ",
+                                  p.value, " is out of range ",
+                                  this.min, "..", this.max);
     this.points[i].time = p.time;
     this.points[i].value = p.value;
 };
@@ -263,6 +276,10 @@ Timeline.prototype.setPoint = function (i, p) {
  * @return true if the point was changed
  */
 Timeline.prototype.setPointConstrained = function (idx, tp) {
+    if (idx < 0 || idx >= this.points.length)
+        throw new Utils.exception(
+            "Timeline", "Point ", idx, " not in timeline");
+
     // Clip
     if (tp.value < this.min) tp.value = this.min;
     if (tp.value > this.max) tp.value = this.max;

@@ -154,7 +154,8 @@ describe('common/DataModel', function() {
         try {
             DataModel.remodel('', simpleProtoBad, simpleModel);
         } catch(s) {
-            assert.equal(s, "DataModel.remodel: not optional and no default at cuthbert.dibble");
+            assert(s.name == "DataModel");
+            assert.equal(s.message, ".remodel: not optional and no default at cuthbert.dibble");
             return;
         }
         assert(false, "Failed");
@@ -171,7 +172,8 @@ describe('common/DataModel', function() {
         try {
             DataModel.remodel("", builtInsProtoBad, builtInsModel);
         } catch(s) {
-            assert.equal(s, "DataModel.remodel: not optional and no default at fnaar");
+            assert.equal(s.name, "DataModel");
+            assert.equal(s.message, ".remodel: not optional and no default at fnaar");
             return;
         }
         assert(false, "Failed");

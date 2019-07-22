@@ -70,23 +70,23 @@ const STANDARD_TYPES = [
  * @return {String} data string with env vars expanded
  */
 Utils.expandEnvVars = function (data) {
-    data = ("" + data).replace(/^~/, "$HOME");
-    return data.replace(
-        /(\$[A-Z]+)/g,
-        function (match) {
-            var v = match.substring(1);
-            if (typeof process.env[v] !== "undefined")
-                return process.env[v];
-            return match;
-        });
+    var rep = function(match, v) {
+        if (typeof process.env[v] !== "undefined")
+            return process.env[v];
+        return match;
+    }
+    data = ("" + data).replace(/^~/, "${HOME}");
+    return data
+        .replace(/\$([A-Z]+)/g, rep)
+        .replace(/\$\{([^}]+)\}/g, rep);
 };
 
 /**
  * Add extend() to Utils namespace - See npm extend
  */
 Utils.extend = function () {
-    if (typeof $ !== "undefined")
-        Utils.extend = $.extend;
+    if (typeof jQuery !== "undefined")
+        Utils.extend = jQuery.extend;
     else
         Utils.extend = require("extend");
     return Utils.extend.apply(this, arguments);
@@ -157,7 +157,12 @@ Utils.dump = function (data, cache) {
 };
 
 /**
- * Join arguments with no spaces
+ * Join arguments with no spaces to create a message, expanding objects
+ * using Utils.dump()
+ * @param args arguments vector
+ * @param start optional point in args to start constructing the message.
+ * Without this the whole args vector will be used.
+ * @return string dump of the arguments from args[start]
  */
 Utils.joinArgs = function (args, start) {
     var mess = "";
@@ -173,8 +178,16 @@ Utils.joinArgs = function (args, start) {
     return mess;
 };
 
-Utils.report = function () {
-    return Utils.joinArgs(arguments);
+/**
+ * Construct a slightly customised exception object
+ * @param name Exception type name
+ * @param args remaining args will be
+ * @return an Erro object
+ */
+Utils.exception = function () {
+    var e = new Error(Utils.joinArgs(arguments, 1));
+    e.name = arguments[0];
+    return e;
 };
 
 /**
@@ -207,17 +220,25 @@ Utils.LOG = function () {
  * Produce a tagged error message.
  */
 Utils.ERROR = function () {
-    console.error(Utils.report("*", arguments[0], "*", Utils.joinArgs(arguments, 1)));
+    console.error(Utils.joinArgs("*", arguments[0], "*", Utils.joinArgs(arguments, 1)));
 };
 
 /**
- * Simulate ES6 forEach
+ * Call a function on each property of an object (but not on inherited
+ * properties)
  */
-Utils.forEach = function (that, callback) {
-    for (var i in that) {
-        callback(that[i], i, that);
-    }
-};
+Utils.each = function(object, callback) {
+    if (typeof jQuery !== "undefined")
+        Utils.each = jQuery.each;
+    else
+        Utils.each = function(object, callback) {
+            for (var key in object) {
+                if (object.hasOwnProperty(key))
+                    callback(object[key], key);
+            }
+        }
+    return Utils.each(object, callback);
+}
 
 /**
  * eval() the code, generating meaningful syntax errors (with line numbers)

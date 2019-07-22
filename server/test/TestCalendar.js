@@ -28,7 +28,7 @@ var getopt = new Getopt([
 var cliopt = getopt.options;
 
 if (typeof cliopt.config === "undefined") {
-    cliopt.config = "./test/simulated_hotpot.cfg";
+    cliopt.config = "./server/test/simulated_hotpot.cfg";
 }
 
 Q.longStackSupport = true;
@@ -73,7 +73,8 @@ DataModel.loadData(cliopt.config, HOTPOT_MODEL)
         var cfg = config.controller.calendar[cliopt.calendar];
 
         if (!cfg)
-            throw Utils.report("No calendar ", clipopt.calendar, " in config");
+            throw new Utils.exception("Calendar", "No calendar ",
+                                      clipopt.calendar, " in config");
         console.log("Using calendar '" + cliopt.calendar + "'");
 
         var cal = new Calendar(cfg, cliopt.calendar);

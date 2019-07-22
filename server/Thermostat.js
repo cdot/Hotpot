@@ -212,7 +212,15 @@ Thermostat.prototype.getTargetTemperature = function () {
         // Otherwise the most recently-added request
         return this.requests[this.requests.length - 1].target;
     }
-    return this.timeline.valueAtTime(Time.time_of_day());
+    var t;
+    try {
+        this.timeline.valueAtTime(Time.time_of_day());
+    } catch (e) {
+        Utils.TRACE(TAG, e, " in ", request.url, "\n",
+                    typeof e.stack !== "undefined" ? e.stack : e);
+        t = 0;
+    }
+    return t;
 };
 
 /**

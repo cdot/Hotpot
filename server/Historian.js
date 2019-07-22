@@ -173,10 +173,10 @@ Historian.prototype.start = function (sample) {
     "use strict";
 
     if (typeof sample !== "function")
-        throw "Cannot start Historian; sample not a function";
+        throw new Utils.exception(TAG, "Cannot start; sample not a function");
 
     if (typeof this.interval === "undefined")
-        throw "Cannot start Historian; interval not defined";
+        throw new Utils.exception(TAG, "Cannot start; interval not defined");
 
     var self = this;
 

@@ -37,7 +37,9 @@ function Location(lat, lng) {
             lng = lat.longitude;
             lat = lat.latitude;
         } else {
-            throw "Cannot initialise a Location from " + Utils.dump(lat);
+            throw new Utils.exception(
+                "Location",
+                "Cannot initialise from ", lat);
         }
     } // else Constructor (1.)
     this.latitude = lat;
@@ -90,10 +92,11 @@ Location.prototype.haversine = function (p2) {
 
 /**
  * @return {string} containing geo coordinates
+ * @throw {Error} 
  */
 Location.prototype.toString = function () {
     "use strict";
-    return Utils.report('(', this.latitude, ",", this.longitude, ')');
+    return Utils.joinArgs(['(', this.latitude, ",", this.longitude, ')']);
 };
 
 /**
