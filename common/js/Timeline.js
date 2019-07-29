@@ -2,7 +2,7 @@
 
 /*eslint-env browser,node */
 
-define("common/Timeline", ['common/Utils', 'common/Time'], function(Utils, Time) {
+define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Utils, Time) {
 
     class Timepoint {
         constructor(proto) {
@@ -72,7 +72,7 @@ define("common/Timeline", ['common/Utils', 'common/Time'], function(Utils, Time)
                 this.points = [];
 
             // Use setPoint to validate points passed
-            for (var i = 1; i < this.points.length; i++)
+            for (let i = 1; i < this.points.length; i++)
                 this.setPoint(i);
 
             this._fixExtremes();
@@ -115,7 +115,7 @@ define("common/Timeline", ['common/Utils', 'common/Time'], function(Utils, Time)
             if (t < 0 || t >= this.period)
                 throw new Utils.exception(
                     "Timeline", t, " is outside timeline 0..", this.period - 1);
-            for (var i = 1; i < this.points.length - 1; i++) {
+            for (let i = 1; i < this.points.length - 1; i++) {
                 if (this.points[i].time > t)
                     return i;
             }
@@ -127,8 +127,8 @@ define("common/Timeline", ['common/Utils', 'common/Time'], function(Utils, Time)
          * @return {float} the maximum value
          */
         getMaxValue() {
-            var max = this.points[0].value;
-            for (var i = 1; i < this.points.length; i++) {
+            let max = this.points[0].value;
+            for (let i = 1; i < this.points.length; i++) {
                 if (this.points[i].value > max)
                     max = this.points[i].value;
             }
@@ -141,9 +141,9 @@ define("common/Timeline", ['common/Utils', 'common/Time'], function(Utils, Time)
          * @return{float}the value at time t
          */
         valueAtTime(t) {
-            var i = this.getPointAfter(t);
-            var lp = this.points[i - 1];
-            var p = this.points[i];
+            let i = this.getPointAfter(t);
+            let lp = this.points[i - 1];
+            let p = this.points[i];
             // Interpolate between last point and this point
             return lp.value + (t - lp.time) *
             (p.value - lp.value) / (p.time - lp.time);
@@ -190,7 +190,7 @@ define("common/Timeline", ['common/Utils', 'common/Time'], function(Utils, Time)
          * Get total number of points
          * @return number of points
          */
-        nPoints() {
+        get nPoints() {
             return this.points.length;
         };
 
@@ -263,18 +263,18 @@ define("common/Timeline", ['common/Utils', 'common/Time'], function(Utils, Time)
             if (idx === 0)
                 tp.time = 0;
             else {
-                var prevtime = this.points[idx - 1].time;
+                let prevtime = this.points[idx - 1].time;
                 if (tp.time <= prevtime) tp.time = prevtime + 1;
             }
 
             if (idx === this.points.length - 1)
                 tp.time = this.period - 1;
             else {
-                var nexttime = this.points[idx + 1].time;
+                let nexttime = this.points[idx + 1].time;
                 if (tp.time >= nexttime) tp.time = nexttime - 1;
             }
 
-            var cp = this.points[idx];
+            let cp = this.points[idx];
             if (tp.time == cp.time && tp.value == cp.value)
                 return false;
 

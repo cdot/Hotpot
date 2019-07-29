@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -16,7 +16,7 @@ const Utils = require("../common/Utils");
 const DataModel = require("../common/DataModel.js");
 
 function Url(e) {
-    for (var i in e)
+    for (let i in e)
         this[i] = e[i];
 }
 
@@ -35,7 +35,7 @@ Url.prototype.equals = function (other) {
         (this.port === other.port);
 };
 
-var cliopt = getopt.create([
+let cliopt = getopt.create([
     ["h", "help", "Show this help"],
     ["", "debug", "Run in debug mode"],
     ["", "force", "Force an update, even if the target hasn't changed"],
@@ -51,7 +51,7 @@ if (typeof cliopt.config === "undefined")
 if (cliopt.debug)
     Utils.setTRACE("all");
 
-var config, current = {};
+let config, current = {};
 
 DataModel.loadData(cliopt.config, {
         $skip: true
@@ -68,7 +68,7 @@ DataModel.loadData(cliopt.config, {
 function update(data) {
     "use strict";
 
-    var Ftp = new JSFtp(config.ftp);
+    let Ftp = new JSFtp(config.ftp);
 
     if (config.ftp.debugEnable) {
         Ftp.on("jsftp_debug", function (eventType, daa) {
@@ -95,8 +95,8 @@ function update(data) {
 function httpGET(url, nofollow) {
     "use strict";
     Utils.TRACE("GET ", url);
-    var result = "";
-    var getter;
+    let result = "";
+    let getter;
     if (nofollow)
         getter = require("http");
     else if (/^https/.test(url))
@@ -131,7 +131,7 @@ function httpGET(url, nofollow) {
  * @ignore
  */
 function finish(ip) {
-    var url = new Url(config.target);
+    let url = new Url(config.target);
     url.ipaddr = ip;
 
     if (url.equals(current)) {
@@ -151,8 +151,8 @@ function finish(ip) {
 
     readFile(Utils.expandEnvVars(config.template))
         .then(function (buf) {
-            var html = buf.toString();
-            for (var k in current) {
+            let html = buf.toString();
+            for (let k in current) {
                 if (typeof current[k] !== "undefined")
                     html = html.replace(new RegExp("#" + k, "g"), current[k]);
             }
@@ -171,9 +171,9 @@ function finish(ip) {
 function step1() {
     httpGET(config.http, true) // dodge redirects
         .then(function (data) {
-            var s = data.toString();
+            let s = data.toString();
             // The current information is encoded in a JSON block comment
-            var m = /<!--GetIP((.|\n)*?)-->/g.exec(s);
+            let m = /<!--GetIP((.|\n)*?)-->/g.exec(s);
             if (m && m[1]) {
                 try {
                     eval("current=new Url(" + m[1] + ")");
@@ -201,8 +201,8 @@ function step2() {
         step3();
         return;
     }
-    var Telnet = require("telnet-client");
-    var connection = new Telnet();
+    let Telnet = require("telnet-client");
+    let connection = new Telnet();
     connection
         .connect(config.gateway_router)
         .then(function () {
@@ -210,7 +210,7 @@ function step2() {
                     .exec('ip iplist')
                     .then(function (resp) {
                             connection.end();
-                            var m = config.gateway_router.extract.exec(resp);
+                            let m = config.gateway_router.extract.exec(resp);
                             if (m)
                                 finish(m[1]);
                             else {
@@ -253,8 +253,8 @@ function step3(second) {
         .then(function (data) {
             return Q.Promise(function (resolve, reject) {
                 data = data.replace(/\n/g, " ");
-                var scan = /<td[^>]*>\s*IP Address\s*<\/td>\s*<td[^>]*>\s*(\d+\.\d+\.\d+\.\d+)\s*</g;
-                var m;
+                let scan = /<td[^>]*>\s*IP Address\s*<\/td>\s*<td[^>]*>\s*(\d+\.\d+\.\d+\.\d+)\s*</g;
+                let m;
                 while ((m = scan.exec(data)) != null) {
                     if (!/^192\.168/.test(m[1])) {
                         Utils.LOG("Got ", m[1], " from Netgear Router");

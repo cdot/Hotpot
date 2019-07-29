@@ -5,21 +5,16 @@
     <title>HotPot remote monitor</title>
     <link rel="icon" href="browser/images/favicon.ico" type="image/x-icon" />
     <!--script src="https://use.fontawesome.com/1f1fc84fe3.js"></script-->
-    <link rel="stylesheet" href="browser/styles.css">
-    <script src="//code.jquery.com/jquery-3.2.1.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-touch-events/1.0.5/jquery.mobile-events.js"></script>
-    <script type="text/javascript">
-      var require_path = [ 'browser/js' ];
-    </script>
-    <script src="browser/js/require.js"></script>
-    <script src="browser/js/Spinner.js"></script>
-    <script src="browser/js/TimelineEditor.js"></script>
-    <script src="browser/js/browser.js"></script>
+    <link rel="stylesheet" href="browser/css/styles.css">
+
+    <script data-main="browser/js/main" src="https://cdnjs.cloudflare.com/ajax/libs/requ
+ire.js/2.3.6/require.js"></script>
+
   </head>
   <body class="body-bg body-fg fonts">
     <h1 class="banner banner-bg banner-fg">Hotpot
       <img src="browser/images/hotpot.svg" style="height: 230px; float:right"></h1>
-    <div id="comms_error"></div>
+    <div id="log"></div>
 
     <div id="controls" class="display">
       <div id="CH">

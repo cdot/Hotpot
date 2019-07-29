@@ -1,5 +1,7 @@
 /*@preserve Copyright (C) 2015 Crawford Currie http://c-dot.co.uk license MIT*/
 
+// NOT USED
+
 // Clipping outcodes
 const OUT_MAX_S = 1;
 const OUT_MIN_S = OUT_MAX_S << 1;
@@ -56,7 +58,7 @@ function Trace(options) {
  */
 Trace.prototype.outCode = function(p) {
     "use strict";
-    var code = 0;
+    let code = 0;
     if (p.t < this.options.min.t)
 	code |= OUT_MIN_T;
     else if (p.t > this.options.max.t)
@@ -72,9 +74,9 @@ Trace.prototype.outCode = function(p) {
 Trace.prototype.clipLine = function(a, b) {
     "use strict";
 
-    var ac = this.outCode(a);
-    var bc = this.outCode(b);
-    var cc, x, y;
+    let ac = this.outCode(a);
+    let bc = this.outCode(b);
+    let cc, x, y;
 
     while (ac + bc !== 0) {
         if ((ac & bc) !== 0)
@@ -129,7 +131,7 @@ Trace.prototype.clip = function() {
     "use strict";
     // TODO: do this properly. At the moment it assumes clipping
     // on the left and leaves all else unclipped.
-    var lp;
+    let lp;
     while (this.points.length > 0 && (this.outCode(this.points[0]) & OUT_MIN_T) !== 0)
         lp = this.points.shift();
     if (lp)
@@ -148,12 +150,12 @@ Trace.prototype.getExtents = function() {
     "use strict";
     if (this.extents)
         return this.extents;
-    var e = this.extents = {
+    let e = this.extents = {
         min: { t: Number.MAX_VALUE, s: Number.MAX_VALUE },
         max: { t: Number.MIN_VALUE, s: Number.MIN_VALUE }
     };
-    for (var i in this.points) {
-        var p = this.points[i];
+    for (let i in this.points) {
+        let p = this.points[i];
         if (p.t < e.min.t) e.min.t = p.t;
         if (p.t > e.max.t) e.max.t = p.t;
         if (p.s < e.min.s) e.min.s = p.s;
@@ -179,9 +181,9 @@ Trace.prototype.st2xy = function(stp) {
     "use strict";
 
     // Normalise to range 0..1
-    var norm_s =  (stp.s - this.options.min.s)
+    let norm_s =  (stp.s - this.options.min.s)
         / (this.options.max.s - this.options.min.s);
-    var norm_t = (stp.t - this.options.min.t)
+    let norm_t = (stp.t - this.options.min.t)
         / (this.options.max.t - this.options.min.t);
 
     // Map to viewport
@@ -205,12 +207,12 @@ Trace.prototype.xy2st = function(p) {
         || p.y > this.viewport.y + this.viewport.dy)
         return undefined;
 
-    var norm_y = (this.viewport.y + this.viewport.dy - p.y)
+    let norm_y = (this.viewport.y + this.viewport.dy - p.y)
         / this.viewport.dy;
-    var norm_x = (this.viewport.x + this.viewport.dx - p.x)
+    let norm_x = (this.viewport.x + this.viewport.dx - p.x)
         / this.viewport.dx;
-    var dt = this.options.max.t - this.options.min.t;
-    var ds = this.options.max.s - this.options.min.s;
+    let dt = this.options.max.t - this.options.min.t;
+    let ds = this.options.max.s - this.options.min.s;
 
     return {
         t: this.options.min.t + dt * norm_x,
@@ -230,13 +232,13 @@ Trace.prototype.render = function(ctx, lock_t) {
         return;
 
     // Scale and clip the data
-    var options = this.options;
+    let options = this.options;
 
-    var adj = options.adjust;
-    var e = this.getExtents();
-    var clip = false;
-    for (var ord in e.min) {
-        var range = options.max[ord] - options.min[ord];
+    let adj = options.adjust;
+    let e = this.getExtents();
+    let clip = false;
+    for (let ord in e.min) {
+        let range = options.max[ord] - options.min[ord];
         if (adj[ord] === "flex") {
             if (e.min[ord] < options.min[ord])
                 // Move the start of the range to match the start of the data
@@ -269,10 +271,10 @@ Trace.prototype.render = function(ctx, lock_t) {
     // Current
     ctx.beginPath();
 
-    var p = this.st2xy(this.points[0]);
-    var len = this.points.length;
+    let p = this.st2xy(this.points[0]);
+    let len = this.points.length;
     this.firstPoint(p, ctx);
-    for (var j = 1; j < len; j++) {
+    for (let j = 1; j < len; j++) {
         p = this.st2xy(this.points[j]);
         this.nextPoint(p, ctx);
     }
@@ -345,7 +347,7 @@ BinaryTrace.prototype = Object.create(Trace.prototype);
 BinaryTrace.prototype.addPoint = function(t, s) {
     "use strict";
     if (this.points.length > 0) {
-        var lp = this.points[this.points.length - 1];
+        let lp = this.points[this.points.length - 1];
 
         this.points.push({ t: t, s: lp.s });
     }
@@ -371,7 +373,7 @@ BinaryTrace.prototype.addPoint = function(t, s) {
  */
 function Graph(options, $canvas) {
     "use strict";
-    var self = this;
+    let self = this;
 
     self.$canvas = $canvas;
     self.ctx = $canvas[0].getContext("2d");
@@ -390,7 +392,7 @@ function Graph(options, $canvas) {
     }, options);
 
     $canvas.on("mousemove", function(e) {
-        var targ;
+        let targ;
         if (!e)
             e = window.event;
         if (e.target)
@@ -426,10 +428,10 @@ Graph.prototype.addTrace = function(trace) {
  */
 Graph.prototype.render = function() {
     "use strict";
-    var $canvas = this.$canvas;
-    var options = this.options;
-    var ctx = this.ctx;
-    var i;
+    let $canvas = this.$canvas;
+    let options = this.options;
+    let ctx = this.ctx;
+    let i;
 
     if ($canvas.height() === 0 || this.traces.length === 0)
         return;
@@ -447,8 +449,8 @@ Graph.prototype.render = function() {
 
     // Tell the traces their containing boxes
     // Allow font_height below the drawing area for legend
-    var trh, w;
-    var vstack = this.options.stack_traces !== "horizontal";
+    let trh, w;
+    let vstack = this.options.stack_traces !== "horizontal";
     if (vstack) {
         trh = ($canvas.height() - this.options.font_height) / this.traces.length;
         w = $canvas.width();
@@ -457,9 +459,9 @@ Graph.prototype.render = function() {
         w = $canvas.height() - this.options.font_height;
     }
 
-    var troff = 0;
+    let troff = 0;
     for (i in this.traces) {
-        var tit = this.traces[i];
+        let tit = this.traces[i];
         if (vstack)
             tit.setViewport({
                 x: 0, y: troff, dx: w, dy: trh
@@ -471,17 +473,17 @@ Graph.prototype.render = function() {
         troff += trh;
     }
 
-    var locked_t;
+    let locked_t;
     if (options.lock_t) {
         locked_t = 0;
         for (i in this.traces) {
-            var e = this.traces[i].getExtents();
+            let e = this.traces[i].getExtents();
             if (e.max.t > locked_t)
                 locked_t = e.max.t;
         }
         for (i in this.traces) {
-            var e = this.traces[i].getExtents();
-            var width = e.max.t - e.min.t;
+            let e = this.traces[i].getExtents();
+            let width = e.max.t - e.min.t;
             e.max.t = locked_t;
             e.min.t = locked_t - width;
         }
@@ -496,7 +498,7 @@ Graph.prototype.render = function() {
     ctx.font = options.font_height + "px sans-serif";
     ctx.textBaseline = "bottom";
 
-    var x = 20;
+    let x = 20;
     for (i in this.traces) {
         x += this.traces[i].renderLegend(x, $canvas.height(), this.ctx) + 15;
     }
@@ -506,15 +508,15 @@ Graph.prototype.render = function() {
  * Mouse hovering over graph
  */
 Graph.prototype.handleMouse = function(e) {
-    var $canvas = this.$canvas;
-    var targ_left = $canvas.offset().left;
-    var targ_top = $canvas.offset().top;
+    let $canvas = this.$canvas;
+    let targ_left = $canvas.offset().left;
+    let targ_top = $canvas.offset().top;
 
     // jQuery normalizes the pageX and pageY
     // pageX,Y are the mouse positions relative to the document
-    var p = { x: e.pageX - targ_left, y: e.pageY - targ_top };
-    var options = this.options;
-    var th = options.font_height;
+    let p = { x: e.pageX - targ_left, y: e.pageY - targ_top };
+    let options = this.options;
+    let th = options.font_height;
 
     // Not over legend
     if (p.y > $canvas.height() - th) {
@@ -522,7 +524,7 @@ Graph.prototype.handleMouse = function(e) {
         return;
     }
 
-    var l, tn;
+    let l, tn;
     for (tn in this.traces) {
         l = this.traces[tn].xy2st(p);
         if (l)
@@ -530,13 +532,13 @@ Graph.prototype.handleMouse = function(e) {
     }
     if (!l)
         return;
-    var text = " " + this.traces[tn].options.legend + ": " +
+    let text = " " + this.traces[tn].options.legend + ": " +
         (typeof options.render_tip_t === "function" ?  options.render_tip_t(l.t) : l.t) +
         "\n" +
         (typeof options.render_tip_s === "function" ? options.render_tip_s(l.s) : l.s);
 
-    var tipCtx = this.$tip_canvas[0].getContext("2d");
-    var tw = tipCtx.measureText(text).width;
+    let tipCtx = this.$tip_canvas[0].getContext("2d");
+    let tw = tipCtx.measureText(text).width;
 
     // CSS just stretches the content
     tipCtx.canvas.width = tw;
@@ -568,7 +570,7 @@ Graph.prototype.handleMouse = function(e) {
     "use strict";
 
     $.fn.autoscale_graph = function(options) {
-        var $canvas = $(this);
+        let $canvas = $(this);
 
         $canvas.data("graph", new Graph(options, $canvas));
     };

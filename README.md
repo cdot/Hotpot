@@ -182,8 +182,8 @@ GetIP is a program to help with accessing a home server that is hidden behind a 
 
 # Debugging
 
-cd to $packageroot/server
-node Hotpot.js -d --trace all -c test/simulated_hotpot.cfg
+cd to $packageroot/server/test
+node ../js/Hotpot.js -d --trace all -c simulated_hotpot.cfg
 
 This will start a debug mini-web-server listening on port 13196
 

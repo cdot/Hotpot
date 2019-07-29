@@ -1,39 +1,40 @@
 /*eslint-env node, mocha */
 
-const getopt = require("node-getopt");
-const Q = require("q");
-var assert = require('chai').assert;
-const Utils = require("../../common/Utils");
-const Time = require("../../common/Time");
-const MetOffice = require("../MetOffice");
+/*eslint-env node */
 
-//Utils.setTRACE("all");
-Q.longStackSupport = true;
+let requirejs = require('requirejs');
+requirejs.config({
+    baseUrl: "../.."
+});
 
-var config = {
-    api_key: "f6268ca5-e67f-4666-8fd2-59f219c5f66d",
-    history: {
-        file: "/tmp/metoffice.log"
-    },
-    location: {
-      latitude: 53.2479442,
-      longitude: -2.5043655
-    }
-};
+requirejs(["test/TestRunner", "common/js/Utils", "common/js/Time", "server/js/MetOffice"], function(TestRunner, Utils, Time, MetOffice) {
 
-describe('server/MetOffice', function() {
-    it('Works', function() {
-        var mo = new MetOffice(config);
+    var config = {
+        api_key: "f6268ca5-e67f-4666-8fd2-59f219c5f66d",
+        history: {
+            file: "/tmp/metoffice.log"
+        },
+        location: {
+            latitude: 53.2479442,
+            longitude: -2.5043655
+        }
+    };
+
+    let tr = new TestRunner("MetOffice");
+    let assert = tr.assert;
+    
+    tr.addTest('Works', function() {
+        let mo = new MetOffice(config);
         return mo.setLocation(config.location).then(function() {
             return mo.getSerialisableState()
             .then(function(d) {
                 assert(typeof d.temperature === "number");
                 return mo.getSerialisableLog()
                 .then(function(result) {
-                    var base = result[0];
+                    let base = result[0];
                     assert(typeof base === "number");
-                    var last = 0;
-                    for (var i = 1; i < result.length; i += 2) {
+                    let last = 0;
+                    for (let i = 1; i < result.length; i += 2) {
                         assert(result[i] >= last);
                         assert(result[i] <= Time.now());
                         last = result[i];
@@ -41,7 +42,7 @@ describe('server/MetOffice', function() {
                         assert(result[i + 1] < 50);
                     }
                     /// Force an update to make sure it happens
-                    var u1 = mo.last_update;
+                    let u1 = mo.last_update;
                     return mo.update()
                     .then(function() {
                         assert(mo.last_update > u1, "No fresh data");
@@ -51,4 +52,6 @@ describe('server/MetOffice', function() {
             });
         });
     });
+
+    tr.run();
 });

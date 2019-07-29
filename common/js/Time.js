@@ -4,7 +4,7 @@
 
 const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
-define("common/Time", function() {
+define("common/js/Time", function() {
     /**
      * Functions for handling times within the current 24 hour period.
      * Use Time.now() rather than Date.now() so that tests can be written
@@ -38,7 +38,7 @@ define("common/Time", function() {
      */
     Time.midnight = function () {
         "use strict";
-        var d = new Date(Time.now());
+        let d = new Date(Time.now());
         d.setHours(0, 0, 0, 0);
         return d.getTime();
     };
@@ -52,10 +52,10 @@ define("common/Time", function() {
      */
     Time.parse = function (str) {
         "use strict";
-        var hms = str.split(":");
-        var h = Number.parseInt(hms.shift());
-        var m = Number.parseInt(hms.shift() || "0");
-        var s = Number.parseFloat(hms.shift() || "0");
+        let hms = str.split(":");
+        let h = Number.parseInt(hms.shift());
+        let m = Number.parseInt(hms.shift() || "0");
+        let s = Number.parseFloat(hms.shift() || "0");
         // Set according to local time
         if (h > 23 || m > 59 || s >= 60 || h < 0 || m < 0 || s < 0)
             throw new Utils.exception("Time", "out of range 00:00:00..23:59:59");
@@ -86,21 +86,21 @@ define("common/Time", function() {
      */
     Time.unparse = function (t) {
         function pad(n, w) {
-            var k = Math.trunc(n);
-            var pad = "";
-            for (var pl = w - ("" + k).length; pl > 0; pl--)
+            let k = Math.trunc(n);
+            let pad = "";
+            for (let pl = w - ("" + k).length; pl > 0; pl--)
                 pad += "0";
             return pad + n;
         }
         if (t < 0 || t > ONE_DAY)
             throw new Utils.exception("Time", "unparse time out of range");
-        var ms = t % 1000;
+        let ms = t % 1000;
         t = Math.trunc(t / 1000); // to seconds
-        var s = t % 60; // seconds
+        let s = t % 60; // seconds
         t = Math.trunc(t / 60); // to minutes
-        var m = Math.trunc(t % 60); // minutes
-        var h = Math.trunc(t / 60); // hours
-        var ts = pad(h, 2) + ":" + pad(m, 2);
+        let m = Math.trunc(t % 60); // minutes
+        let h = Math.trunc(t / 60); // hours
+        let ts = pad(h, 2) + ":" + pad(m, 2);
         if (s + ms > 0) {
             ts += ":" + pad(s, 2);
             if (ms > 0)

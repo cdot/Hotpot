@@ -2,21 +2,20 @@
 
 /*eslint-env node */
 
-define("common/DataModel", ["common/Utils"], function(Utils) {
+define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
     /**
-     * This module provides a way to deserialise a datastructure from
-     * JSON data which contains only initialisation data for the
-     * objects within the data structure, under control of a data model
-     * (specification).
+     * Provides a way to deserialise a datastructure from JSON data
+     * such that the resultant desrialised data obeys a specific data
+     * model.
      *
-     * The data is read from in a JSON file. On load this data is
-     * post-processed under the guidance of the spec, to validate the
-     * structure and instantiate class members.
+     * The data is read from JSON. On load this data is post-processed
+     * under the guidance of the spec, to validate the structure, and
+     * instantiate any required class members.
      *
      * The data model is a recursive description of the data. The data can
      * contain simple Javascript types (number, string etc), objects, and
-     * arrays. Function and SYmbol objects are not supported.
+     * arrays. Function and Symbol objects are not supported.
      *
      * Keywords in the model, starting with $, are used to control the
      * checking and expansion, while other simple names are used for fields
@@ -43,7 +42,8 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
      * and a block of documentation ($doc).
      *
      * Keywords include:
-     *   $class - type of the datum (as returned by typeof, defaults to "object")
+     *   $class - type of the datum (as returned by typeof, defaults
+     *   to "object")
      *   $doc - a documentation string for the datum
      *   $optional - this datum is optional
      *   $default: default value, if not defined and not $optional
@@ -116,7 +116,7 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
      * value of a field is undefined, the key for that field will be dropped.
      * @namespace
      */
-    var DataModel = {
+    let DataModel = {
         private_key: {
             $map_of: true,
             $array_of: true,
@@ -155,7 +155,7 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
 
         //Utils.LOG("check <",context.join('.'),"> {");
 
-        var is_base = false;
+        let is_base = false;
         if (typeof model.$class === "function") {
             if (DataModel.builtin_types.indexOf(model.$class) >= 0) {
                 // Internal fields not supported
@@ -180,7 +180,7 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
             } else if (typeof model.$map_of !== "undefined")
                 DataModel.check(model.$map_of, context.concat("{}"));
             else {
-                for (var i in model) {
+                for (let i in model) {
                     if (i.charAt(0) !== '$') {
                         if (is_base)
                             throw new Utils.exception(
@@ -207,7 +207,7 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
      * @return the data (or the default, if one was applied)
      */
     DataModel.remodel = function (index, data, model, context) {
-        var i;
+        let i;
 
         DataModel.check(model);
 
@@ -217,7 +217,9 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
         if (typeof context === "undefined")
             context = [];
 
-        //Utils.LOG("Remodel ", context.join('.'));
+        let details = false;//(context.indexOf("rule") >= 0);
+        
+        if (details) Utils.LOG("Remodel ", context.join('.'));
 
         // Got a data definition
         if (typeof data === "undefined") {
@@ -240,16 +242,16 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
         if (typeof model.$map_of !== "undefined") {
             // Object with keys that don't have to match the model,
             // and values that can be undefined
-            var rebuilt = {};
-            for (var i in data) {
+            let rebuilt = {};
+            for (let i in data) {
                 rebuilt[i] = DataModel.remodel(
                     i, data[i], model.$map_of, context.concat(i));
             }
             return rebuilt;
         } else if (typeof model.$array_of !== "undefined") {
-            var rebuilt = [];
+            let rebuilt = [];
 
-            for (var i in data) {
+            for (let i in data) {
                 // undefined is allowed in array data
                 rebuilt[i] = DataModel.remodel(
                     i, data[i], model.$array_of, context.concat(i));
@@ -263,7 +265,7 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
         
         // Not a base type, so the model describes what has to be passed
         // to the constructor (if there is one)
-        var rebuilt = data;
+        let rebuilt = data;
 
         if (typeof data === "object") {
             // Rebuild the sub-structure for this object. The rebuilt object
@@ -273,19 +275,19 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
             // into rebuilt.
             rebuilt = {};
 
-            for (var i in model) {
+            for (let i in model) {
                 if (!DataModel.private_key[i]) {
-                    var datum = DataModel.remodel(
+                    let datum = DataModel.remodel(
                         i, data[i], model[i],
                         context.concat(i));
                     if (typeof datum !== "undefined")
                         // undefined is skipped in objects
                         rebuilt[i] = datum;
-                    //Utils.LOG("Rebuilt ",data[i]," to ",rebuilt[i]);
+                    if (details) Utils.LOG("Rebuilt ",data[i]," to ",rebuilt[i]);
                 }
             }
             // Make sure the data doesn't carry any hidden payload
-            for (var i in data) {
+            for (let i in data) {
                 if (!model[i])
                     throw new Utils.exception(
                         'DataModel', ".remodel: Hidden payload ", i, " in ", data,
@@ -294,15 +296,15 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
         }
 
         if (typeof model.$class === "function") {
-            //Utils.LOG("Instantiate ", model.$class.name, " ", index," on ", rebuilt);
+            if (details) Utils.LOG("Instantiate ", model.$class.name, " ", index," on ", rebuilt);
             // Have to pass index first for building native types such
             // as String, Number, Date
             // Could call remodel, this is fractionally quicker
             rebuilt = new model.$class(rebuilt, index, model);
 
-            //Utils.LOG("Gives ",res);
         }
 
+        if (details) Utils.LOG("Gives",rebuilt,model);
         return rebuilt;
     };
 
@@ -344,21 +346,21 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
         if (typeof data !== "object")
             return Promise.resolve(data);
 
-        var serialisable;
+        let serialisable;
 
         if (typeof model.$array_of !== "undefined") {
             // Serialise all entries in the object, it's an array
-            if (!data.forEach)
+            if (typeof data[Symbol.iterator] !== 'function')
                 throw new Utils.exception(
-                    'DataModel', ".getSerialisable: array expected at ",
+                    'DataModel', ".getSerialisable: iterable expected at ",
                     context.join('.'), data);
             let promises = [];
-            data.forEach(function (entry, index) {
+            for (let index in data) {
                 promises.push(
                     DataModel.getSerialisable(
-                        entry, model.$array_of,
+                        data[index], model.$array_of,
                         context.concat(index)));
-            });
+            }
             return Promise.all(promises).then((serialisable) => serialisable);
 
         } else if (typeof model.$map_of !== "undefined") {
@@ -368,16 +370,16 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
                     context.join('.'), data);
             serialisable = {};
             let promise = Promise.resolve();
-            Utils.each(data, function (entry, index) {
+            for (let index in data) {
                 promise = promise.then(() => {
                     return DataModel.getSerialisable(
-                        entry, model.$map_of,
+                        data[index], model.$map_of,
                         context.concat(index));
                 })
                 .then((ser) => {
                     serialisable[index] = ser;
                 });
-            });
+            }
             return promise.then(() => serialisable);
             
         } else if (typeof model.$class === "function" &&
@@ -390,27 +392,24 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
         }
 
         serialisable = {};
-        var promise = Promise.resolve();
+        let promises = [];
         // Only serialise fields described in the model. All other fields
         // in the object are ignored.
-        Utils.each(model, function (fieldmodel, key) {
+        for (let key in model) {
             if (DataModel.private_key[key])
-                return;
-            promise = promise
-            .then(function () {
-                var promise = DataModel.getSerialisable(
-                    data[key], fieldmodel,
-                    context.concat(key));
-                return promise
-            })
-            .then(function (c) {
-                if (typeof c !== "undefined") {
-                    serialisable[key] = c;
-                }
-            });
-        });
+                continue;
+            promises.push(
+                DataModel.getSerialisable(
+                    data[key], model[key],
+                    context.concat(key))
+                .then(function (c) {
+                    if (typeof c !== "undefined") {
+                        serialisable[key] = c;
+                    }
+                }));
+        }
 
-        return promise.then(function () {
+        return Promise.all(promises).then(function () {
             return serialisable;
         });
     };
@@ -441,13 +440,13 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
 
         DataModel.check(model);
 
-        var node = root;
-        var node_model = model;
-        var parent;
-        var key;
+        let node = root;
+        let node_model = model;
+        let parent;
+        let key;
 
         // Walk down the node and model trees
-        var i = 0;
+        let i = 0;
         while (i < path.length) {
             if (typeof node === "undefined")
                 throw new Utils.exception(
@@ -485,7 +484,7 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
             requirejs(["fs-extra"], function(Fs) {
                 return Fs.readFile(file)
                 .then(function (code) {
-                    var data = Utils.eval(code, file);
+                    let data = Utils.eval(code, file);
                     data = DataModel.remodel("", data, model);
                     data._readFrom = file;
                     resolve(data);
@@ -535,7 +534,7 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
             return s.replace(/\n/g, "\n ");
         }
 
-        var docstring = [];
+        let docstring = [];
 
         if (index)
             docstring.push(index + ":");
@@ -568,8 +567,8 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
                 docstring.push("\n*}");
             } else {
                 docstring.push("{\n");
-                var sub = [];
-                for (var i in model) {
+                let sub = [];
+                for (let i in model) {
                     if (i.charAt(0) !== '$')
                         sub.push(DataModel.help(model[i], i));
                 }
@@ -603,8 +602,8 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
             if (typeof model !== "undefined") {
                 // Got a model to check against. This should always be the case
                 // except in tests.
-                var fnm = Utils.expandEnvVars(filename);
-                var $mode = model.$mode;
+                let fnm = Utils.expandEnvVars(filename);
+                let $mode = model.$mode;
                 if (typeof $mode === "undefined")
                     $mode = "r";
                 
@@ -668,20 +667,21 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
          * Promise to read the file
          */
         read() {
+            let self = this;
             return new Promise((resolve) => {
                 requirejs(["fs-extra"], function(Fs) {
-                    resolve(readFile(Utils.expandEnvVars(this.data)));
+                    resolve(Fs.readFile(Utils.expandEnvVars(self.data)));
                 });
             });
         };
 
         getSerialisable() {
             return Promise.resolve(this.data);
-        };
+        }
     }
 
     File.Model = {
-        $class: DataModel.File,
+        $class: File,
         $doc: "Filename"
     };
 
@@ -715,8 +715,9 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
         read() {
             if (this.is_file)
                 return super.read();
-            else
+            else {
                 return Promise.resolve(this.data);
+            }
         };
 
         /**
@@ -734,7 +735,7 @@ define("common/DataModel", ["common/Utils"], function(Utils) {
     }
 
     TextOrFile.Model = {
-        $class: DataModel.TextOrFile,
+        $class: TextOrFile,
         $doc: "Filename or plain text"
     };
 

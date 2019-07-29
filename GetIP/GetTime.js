@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -7,9 +7,9 @@
  * See README.md for information.
  */
 const getopt = require("node-getopt");
-var Http = require("http");
+const Http = require("http");
 
-var cliopt = getopt.create([
+let cliopt = getopt.create([
     ["h", "help", "Show this help"],
     ["s", "set", "Set the time (must be root)"]
 ])
@@ -25,7 +25,7 @@ Http.get(
                 console.error(new Error("Failed to load URL, status: " +
                     res.statusCode));
             } else if (cliopt.set) {
-                var Sys = require('child_process');
+                let Sys = require('child_process');
 
                 Sys.execFile("/bin/date", ["-s", res.headers.date],
                     function (error, stdout, stderr) {

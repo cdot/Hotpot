@@ -3,7 +3,7 @@
     "version": "0.0.0",
     "description": "Central heating controller",
     "main": {
-        "module-name": "./Hotpot.js"
+        "module-name": "Hotpot.js"
     },
     "bugs": {
         "url": "https://github.com/cdot/hottie/issues"
@@ -13,7 +13,7 @@
     },
     "author": "Crawford Currie",
     "bin": {
-        "module-name": "./Hotpot.js"
+        "module-name": "Hotpot.js"
     },
     "license": "MIT",
     "keywords": [

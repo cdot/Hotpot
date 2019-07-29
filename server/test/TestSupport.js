@@ -1,10 +1,10 @@
-/*@preserve Copyright (C) 2016 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
-// Test support
+let Fs = require("fs-extra");
 
-const Fs = require("fs");
+// Test support
 
 // Heating and cooling rates, in degrees per minute
 const RATES = [
@@ -12,51 +12,62 @@ const RATES = [
     { HW: 0.333, CH: 0.1 }   // ON = WARM
 ];
 
-var TestSupport = {
-    // Path for debug pin files
-    pin_path: "/tmp/gpio",
-    
-    ds18x20: {
-        get: function(id, fn) {
-            var sensor = TestSupport.thid2Sensor[id];
-            fn(null, sensor.temperature);
-        },
+class TestSupport {
 
-        isDriverLoaded: function() { return true; }
-    },
+    constructor() {
+        // Path for debug pin files
+        this.pin_path = "/tmp/gpio";
+
+        let self = this;
+        this.ds18x20 = {
+            get: function(id, fn) {
+                let sensor = self.thid2Sensor[id];
+                fn(null, sensor.temperature || 100);
+            },
+
+            isDriverLoaded: function() { return true; }
+        };
+
+        this.thid2Sensor = {};
+        this.name2gpio = {};
+    }
     
-    adjustSensor: function(sensor) {
-        if (typeof TestSupport.name2gpio[sensor.name] !== "undefined") {
-            var data = Fs.readFileSync(
-                TestSupport.pin_path + TestSupport.name2gpio[sensor.name]);
-            var pState = parseInt(data);
-            if (isNaN(pState)) {
-                console.error("TestSupport: pState from " + TestSupport.pin_path
-                              + TestSupport.name2gpio[sensor.name]
-                              + " was unparseable; '" + data + "'");
-                pState = 0;
-            }
-            sensor.temperature += RATES[pState][sensor.name] / 120.0;
+    adjustSensor(sensor) {
+        if (typeof this.name2gpio[sensor.name] !== "undefined") {
+            Fs.readFile(this.pin_path + this.name2gpio[sensor.name])
+            .then((data) => {
+                var pState = parseInt(data);
+                if (isNaN(pState)) {
+                    console.error("TestSupport: pState from " + this.pin_path
+                                  + this.name2gpio[sensor.name]
+                                  + " was unparseable; '" + data + "'");
+                    pState = 0;
+                }
+                sensor.temperature += RATES[pState][sensor.name] / 120.0;
+            })
+            .catch((e) => {
+                sensor.temperature = 100;
+            });
         }
-        setTimeout(function() {
-            TestSupport.adjustSensor(sensor);
+        let self = this;
+        setTimeout(() => {
+            self.adjustSensor(sensor);
         }, 500);
-    },
+    }
 
-    thid2Sensor: {},
-    mapThermostat: function(th) {
+    mapThermostat(th) {
         var sensor = {
             name: th.name,
             temperature: th.getTargetTemperature()
         };
-        TestSupport.thid2Sensor[th.id] = sensor;
-        TestSupport.adjustSensor(sensor);
-    },
+        this.thid2Sensor[th.id] = sensor;
+        this.adjustSensor(sensor);
+    }
 
-    name2gpio: {},
-    mapPin: function(pin) {
-        TestSupport.name2gpio[pin.name] = pin.gpio;
-    },
-};
+    mapPin(pin) {
+        this.name2gpio[pin.name] = pin.gpio;
+    }
+}
 
-module.exports = TestSupport;
+module.exports = new TestSupport();
+

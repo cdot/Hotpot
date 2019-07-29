@@ -1,16 +1,18 @@
+/*@preserve Copyright (C) 2017-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+
 /*eslint-env node, mocha */
 
-var Fs = require("fs");
-const Q = require("q");
-var assert = require('chai').assert;
+let requirejs = require('requirejs');
+requirejs.config({
+    baseUrl: "../.."
+});
 
-var Historian = require("../Historian");
+requirejs(["test/TestRunner", "server/js/Historian"], function(TestRunner, Historian) {
 
-//Utils.setTRACE("all");
-Q.longStackSupport = true;
+    let tr = new TestRunner("Historian");
+    let assert = tr.assert;
 
-describe('server/Historian', function() {
-    describe('unordered', function() {
+    tr.addTest('unordered', function() {
         var h = new Historian({
             unordered: true,
             file: "/tmp/unordered_historian.log"
@@ -21,7 +23,7 @@ describe('server/Historian', function() {
         } catch (e) {
         }
 
-        var p = Q();
+        var p = Promise.resolve();
 
         function do_record(t, s) {
             p = p.then(function() {
@@ -37,24 +39,22 @@ describe('server/Historian', function() {
         for (i = 1; i < 3; i++)
             do_record(i, -i);
 
-        it("Accepts unordered data", function() {
-            return p.then(function() {
-                return h.getSerialisableHistory()
-                .then(function(report) {
-                    assert.equal(report.length, 7);
-                    assert.equal(report[0], 0);
-                    assert.equal(report[1], 0);
-                    assert.equal(report[2], 0);
-                    assert.equal(report[3], 1);
-                    assert.equal(report[4], -1);
-                    assert.equal(report[5], 2);
-                    assert.equal(report[6], -2);
-                });
+        return p.then(function() {
+            return h.getSerialisableHistory()
+            .then(function(report) {
+                assert.equal(report.length, 7);
+                assert.equal(report[0], 0);
+                assert.equal(report[1], 0);
+                assert.equal(report[2], 0);
+                assert.equal(report[3], 1);
+                assert.equal(report[4], -1);
+                assert.equal(report[5], 2);
+                assert.equal(report[6], -2);
             });
         });
     });
 
-    describe('sampled', function() {
+    tr.addTest('sampled', function() {
         var nsamples = 0;
 
         var h = new Historian({
@@ -70,27 +70,26 @@ describe('server/Historian', function() {
         h.start(function() {
             if (nsamples === 7) {
                 h.stop();
-                h.done();
             }
             return nsamples++;
         });
 
-        it('Supports polling', function() {
-            return h.getSerialisableHistory()
-            .then(function(report) {
-                var d = new Date(report[0]);
-                d.setHours(0, 0, 0);
-                var now = new Date();
-                now.setHours(0, 0, 0);
-                assert.equal(d.toString(), now.toString());
-                var t = report[1] - h.interval;
-                var c = 0;
-                for (var i = 1; i < report.length; i += 2, c++) {
-                    assert(report[i] >= t + h.interval);
-                    assert.equal(report[i + 1], c);
-                    t = report[i];
-                }
-            });
+        return h.getSerialisableHistory()
+        .then(function(report) {
+            var d = new Date(report[0]);
+            d.setHours(0, 0, 0);
+            var now = new Date();
+            now.setHours(0, 0, 0);
+            assert.equal(d.toString(), now.toString());
+            var t = report[1] - h.interval;
+            var c = 0;
+            for (var i = 1; i < report.length; i += 2, c++) {
+                assert(report[i] >= t + h.interval);
+                assert.equal(report[i + 1], c);
+                t = report[i];
+            }
         });
     });
+
+    tr.run();
 });

@@ -2,7 +2,7 @@
 
 /*eslint-env node */
 
-define("common/Location", ["common/Utils"], function(Utils) {
+define("common/js/Location", ["common/js/Utils"], function(Utils) {
 
     const EARTH_RADIUS = 6371000; // metres
 

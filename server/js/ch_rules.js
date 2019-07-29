@@ -1,7 +1,7 @@
 function () {
-    var self = this;
-    var thermostat = self.thermostat.CH;
-    var pin = self.pin.CH;
+    let self = this;
+    let thermostat = self.thermostat.CH;
+    let pin = self.pin.CH;
 
     return pin.getStatePromise()
     .then(function(state) {
@@ -16,7 +16,7 @@ function () {
         }
 
         // Otherwise respect the timeline
-        var target = thermostat.getTargetTemperature();
+        let target = thermostat.getTargetTemperature();
         if (thermostat.temperature > target) {
             // Warm enough inside, so switch off even if 
             if (state === 1) {

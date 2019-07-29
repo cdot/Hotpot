@@ -2,7 +2,7 @@
 
 /*eslint-env browser,node */
 
-define("common/Utils", function() {
+define("common/js/Utils", function() {
     /**
      * Useful utilities
      * @namespace
@@ -69,7 +69,7 @@ define("common/Utils", function() {
      * @return {String} data string with env vars expanded
      */
     Utils.expandEnvVars = function (data) {
-        var rep = function(match, v) {
+        let rep = function(match, v) {
             if (typeof process.env[v] !== "undefined")
                 return process.env[v];
             return match;
@@ -118,9 +118,9 @@ define("common/Utils", function() {
         if (typeof data !== "object" || data === null)
             return data;
 
-        var s = "";
-        var ob = "{";
-        var cb = "}";
+        let s = "";
+        let ob = "{";
+        let cb = "}";
 
         if (typeof data.constructor !== "undefined") {
             if (data.constructor.name === "Array") {
@@ -143,9 +143,9 @@ define("common/Utils", function() {
             s += data.toString();
         } else {
             s += ob;
-            var values = [];
-            for (var i in data) {
-                var val = Utils.dump(data[i], cache);
+            let values = [];
+            for (let i in data) {
+                let val = Utils.dump(data[i], cache);
                 if (ob === "{")
                     val = i + ": " + val;
                 values.push(indent("" + val))
@@ -164,10 +164,10 @@ define("common/Utils", function() {
      * @return string dump of the arguments from args[start]
      */
     Utils.joinArgs = function (args, start) {
-        var mess = "";
+        let mess = "";
         if (typeof start === "undefined")
             start = 0;
-        for (var i = start; i < args.length; i++) {
+        for (let i = start; i < args.length; i++) {
             if (typeof args[i] === "object" && args[i] !== null) {
                 mess += Utils.dump(args[i]);
             } else {
@@ -184,7 +184,7 @@ define("common/Utils", function() {
      * @return an Erro object
      */
     Utils.exception = function () {
-        var e = new Error(Utils.joinArgs(arguments, 1));
+        let e = new Error(Utils.joinArgs(arguments, 1));
         e.name = arguments[0];
         return e;
     };
@@ -201,7 +201,7 @@ define("common/Utils", function() {
      * passed to Utils.setTRACE
      */
     Utils.TRACE = function () {
-        var level = arguments[0];
+        let level = arguments[0];
         if (typeof Utils.trace !== "undefined" &&
             (Utils.trace.indexOf("all") >= 0 ||
              Utils.trace.indexOf(level) >= 0) &&
@@ -224,20 +224,20 @@ define("common/Utils", function() {
 
     /**
      * Call a function on each property of an object (but not on inherited
-     * properties)
-     */
+     * properties) NOT USED
     Utils.each = function(object, callback) {
         if (typeof jQuery !== "undefined")
             Utils.each = jQuery.each;
         else
             Utils.each = function(object, callback) {
-                for (var key in object) {
+                for (let key in object) {
                     if (object.hasOwnProperty(key))
                         callback(object[key], key);
                 }
             }
         return Utils.each(object, callback);
     }
+     */
 
     /**
      * eval() the code, generating meaningful syntax errors (with line numbers)
@@ -248,12 +248,12 @@ define("common/Utils", function() {
 //        if (typeof context === "undefined")
 //            context = "eval";
 //       if (context === "browser") {
-            var compiled;
+            let compiled;
             eval("compiled=" + code);
             return compiled;
 //        } else {
-//            var Module = require("module");
-//            var m = new Module();
+//            let Module = require("module");
+//            let m = new Module();
 //            m._compile("module.exports=\n" + code + "\n;", context);
 //            return m.exports;
 //        }
@@ -264,9 +264,9 @@ define("common/Utils", function() {
      * a delta. date can be a Date object or a time in ms
      */
     Utils.runAt = function (func, date) {
-        var now = (new Date()).getTime();
-        var then = typeof date === "object" ? date.getTime() : date;
-        var diff = Math.max((then - now), 0);
+        let now = (new Date()).getTime();
+        let then = typeof date === "object" ? date.getTime() : date;
+        let diff = Math.max((then - now), 0);
         if (diff > 0x7FFFFFFF) // setTimeout limit is MAX_INT32=(2^31-1)
             setTimeout(function () {
                 Utils.runAt(func, date);

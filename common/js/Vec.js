@@ -2,7 +2,7 @@
 
 /*eslint-env node */
 
-define("common/Vec", ["common/Utils"], function(Utils) {
+define("common/js/Vec", ["common/js/Utils"], function(Utils) {
 
     /**
      * Simple vector package
@@ -13,7 +13,7 @@ define("common/Vec", ["common/Utils"], function(Utils) {
      */
     let Vec = {
         _check: function() {
-            var v = arguments[0], i, j;
+            let v = arguments[0], i, j;
             if (v instanceof Array) {
                 for (i = 1; i < arguments.length; i++)
                     if (!(arguments[i] instanceof Array)
@@ -24,7 +24,9 @@ define("common/Vec", ["common/Utils"], function(Utils) {
                 for (i in v) {
                     for (j = 1; j < arguments.length; j++)
                         if (typeof arguments[j][i] !== typeof v[i])
-                            throw new Utils.exception("Vec", "Type mismatch");
+                            throw new Utils.exception("Vec", "Type mismatch",
+                                                      typeof arguments[j][i],
+                                                      typeof v[i]);
                 }
                 return {};
             }
@@ -37,8 +39,8 @@ define("common/Vec", ["common/Utils"], function(Utils) {
          * @return a new vector p1-p2
          */
         sub: function (p1, p2) {
-            var res = Vec._check(p1, p2);
-            for (var ord in p1) {
+            let res = Vec._check(p1, p2);
+            for (let ord in p1) {
                 res[ord] = p1[ord] - p2[ord];
             }
             return res;
@@ -51,8 +53,8 @@ define("common/Vec", ["common/Utils"], function(Utils) {
          * @return a new vector
          */
         add: function (p1, p2) {
-            var res = Vec._check(p1, p2);
-            for (var ord in p1)
+            let res = Vec._check(p1, p2);
+            for (let ord in p1)
                 res[ord] = p1[ord] + p2[ord];
             return res;
         },
@@ -64,8 +66,8 @@ define("common/Vec", ["common/Utils"], function(Utils) {
          * @return a new vector scaled by d
          */
         mul: function (v, d) {
-            var res = Vec._check(v);
-            for (var ord in v)
+            let res = Vec._check(v);
+            for (let ord in v)
                 res[ord] = v[ord] * d;
             return res;
         },
@@ -77,8 +79,8 @@ define("common/Vec", ["common/Utils"], function(Utils) {
          * @return a new vector scaled by d
          */
         div: function (v, d) {
-            var res = Vec._check(v);
-            for (var ord in v)
+            let res = Vec._check(v);
+            for (let ord in v)
                 res[ord] = v[ord] / d;
             return res;
         },
@@ -91,8 +93,8 @@ define("common/Vec", ["common/Utils"], function(Utils) {
          */
         dot: function (a, b) {
             Vec._check(a, b);
-            var res = 0;
-            for (var ord in a)
+            let res = 0;
+            for (let ord in a)
                 res += a[ord] * b[ord];
             return res;
         },
@@ -103,8 +105,8 @@ define("common/Vec", ["common/Utils"], function(Utils) {
          * @return sum of the squares of the coordinates
          */
         mag2: function (v) {
-            var res = 0;
-            for (var ord in v)
+            let res = 0;
+            for (let ord in v)
                 res += v[ord] * v[ord];
             return res;
         },
@@ -126,8 +128,7 @@ define("common/Vec", ["common/Utils"], function(Utils) {
          * @return the normalised vector
          */
         normalise: function (v, d) {
-            var d = typeof d !== "undefined" ? d : Vec.mag(v);
-            return Vec.div(v, d);
+            return Vec.div(v, typeof d !== "undefined" ? d : Vec.mag(v));
         }
     };
 

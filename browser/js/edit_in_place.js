@@ -17,7 +17,7 @@
     "use strict";
     $.fn.edit_in_place = function(options) {
 
-        var $elf = $(this);
+        let $elf = $(this);
         options = $.extend({
             height: $elf.height(),
             width: $elf.width(),
@@ -27,7 +27,7 @@
             area: false
         }, options);
 
-        var data = $elf.data("editable");
+        let data = $elf.data("editable");
         if (typeof data === "string") {
             try {
                 eval("data={" + data + "}");
@@ -35,29 +35,29 @@
                 throw new Utils.exception(
                     TAG, "Unparseable data-editable: ", data, ": ", e.message);
             }
-            for (var o in options)
+            for (let o in options)
                 if (typeof data[o] !== "undefined")
                     options[o] = data[o];
         }
 
-        var $editor;
+        let $editor;
 
-        var destroy = function() {
+        let destroy = function() {
             $editor.remove();
             $elf.show();
         };
 
         if (options.area) {
-            var $tick, $cross, $controls, $ta;
-            var h = Math.max($elf.outerHeight(), options.height);
-            var w = Math.max($elf.outerWidth(), options.width);
+            let $tick, $cross, $controls, $ta;
+            let h = Math.max($elf.outerHeight(), options.height);
+            let w = Math.max($elf.outerWidth(), options.width);
 
             $editor = $("<div></div>")
                 .css("height", h + "px")
                 .css("width", w + "px")
                 .height(h)
                 .width(w);
-            var $error = $("<div></div>")
+            let $error = $("<div></div>")
                 .css("color", "white")
                 .css("background-color", "red")
                 .css("font-weight", "bold");
@@ -65,11 +65,11 @@
             $tick = $("<div>&#9745;</div>")
                 .addClass("editable_button")
                 .on("click", function() {
-                    var fn = $ta.val();
+                    let fn = $ta.val();
                     if (fn !== $elf.text()) {
                         try {
                             // Does it compile?
-                            var ok;
+                            let ok;
                             eval("ok=" + fn);
                             destroy();
                             options.changed.call($elf, fn);
@@ -130,7 +130,7 @@
                         return true;
                 })
                 .on("change", function() {
-                    var val = $editor.val();
+                    let val = $editor.val();
                     destroy();
                     if (val !== $elf.text()) {
                         options.changed.call($elf, val);
