@@ -18,9 +18,9 @@ let cliopt = getopt.create([
     .options;
 
 Http.get(
-        "http://www.ntp.org",
+        "http://www.gov.uk",
         function (res) {
-            console.log(res.headers.date);
+            console.log(res.statusCode + " received " + res.headers.date);
             if (res.statusCode < 200 || res.statusCode > 299) {
                 console.error(new Error("Failed to load URL, status: " +
                     res.statusCode));
@@ -30,7 +30,7 @@ Http.get(
                 Sys.execFile("/bin/date", ["-s", res.headers.date],
                     function (error, stdout, stderr) {
                         if (error)
-                            console.error(error);
+                            console.error("Error " + error);
                     });
             }
         })

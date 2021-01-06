@@ -153,6 +153,7 @@ define("browser/js/Hotpot", ["common/js/Time", "common/js/Timeline", "common/js/
          */
         updateState(data) {
             $("#cal_update_pending").hide();
+			$("#systemTime").text(new Date(data.time).toLocaleString())
             this.updateService("CH", data);
             this.updateService("HW", data);
         }

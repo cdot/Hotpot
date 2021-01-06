@@ -7,13 +7,16 @@ requirejs.config({
     baseUrl: "../.."
 });
 
-requirejs(["test/TestRunner", "server/js/Historian"], function(TestRunner, Historian) {
+requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], function(TestRunner, Historian, Utils, Fs) {
 
     let tr = new TestRunner("Historian");
     let assert = tr.assert;
 
+    //Utils.setTRACE("all");
+    Fs.unlinkSync("/tmp/unordered_historian.log");
+    
     tr.addTest('unordered', function() {
-        var h = new Historian({
+        let h = new Historian({
             unordered: true,
             file: "/tmp/unordered_historian.log"
         }, "test1");
@@ -23,7 +26,7 @@ requirejs(["test/TestRunner", "server/js/Historian"], function(TestRunner, Histo
         } catch (e) {
         }
 
-        var p = Promise.resolve();
+        let p = Promise.resolve();
 
         function do_record(t, s) {
             p = p.then(function() {
@@ -32,7 +35,7 @@ requirejs(["test/TestRunner", "server/js/Historian"], function(TestRunner, Histo
         }
 
         // Create some out-of-order samples
-        for (var i = 2; i >= 0; i--)
+        for (let i = 2; i >= 0; i--)
             do_record(i, i);
 
         /// Create some rewrites
@@ -55,11 +58,15 @@ requirejs(["test/TestRunner", "server/js/Historian"], function(TestRunner, Histo
     });
 
     tr.addTest('sampled', function() {
-        var nsamples = 0;
+        let INTERVAL = 50;
+        let COUNT = 7;
+        let nsamples = 0;
 
-        var h = new Historian({
+        Fs.unlinkSync("/tmp/sampled_historian.log");
+        
+        let h = new Historian({
             file: "/tmp/sampled_historian.log",
-            interval: 50
+            interval: INTERVAL
         }, "test2");
 
         try {
@@ -67,29 +74,26 @@ requirejs(["test/TestRunner", "server/js/Historian"], function(TestRunner, Histo
         } catch (e) {
         }
 
-        h.start(function() {
-            if (nsamples === 7) {
-                h.stop();
-            }
-            return nsamples++;
-        });
-
-        return h.getSerialisableHistory()
-        .then(function(report) {
-            var d = new Date(report[0]);
-            d.setHours(0, 0, 0);
-            var now = new Date();
-            now.setHours(0, 0, 0);
-            assert.equal(d.toString(), now.toString());
-            var t = report[1] - h.interval;
-            var c = 0;
-            for (var i = 1; i < report.length; i += 2, c++) {
-                assert(report[i] >= t + h.interval);
-                assert.equal(report[i + 1], c);
-                t = report[i];
-            }
-        });
+        h.start(
+            () => {
+                if (nsamples >= COUNT) {
+                    h.stop();
+                    h.getSerialisableHistory()
+                    .then((report) => {
+                        assert.equal(report.length, 2 * COUNT + 1);
+                        let last_t = -INTERVAL;
+                        for (let i = 1, j = 0; i < report.length; i += 2, j++) {
+                            let t = report[i];
+                            let d = report[i + 1];
+                            assert(t >= last_t + INTERVAL);
+                            assert.equal(d, j);
+                            last_t = t;
+                        }
+                    });
+                }
+                return nsamples++;
+            });
     });
-
+    
     tr.run();
 });

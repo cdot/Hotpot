@@ -144,36 +144,46 @@ define("server/js/Historian", ["fs-extra", "common/js/Time", "common/js/Utils", 
             
             if (typeof sample !== "function")
                 throw new Utils.exception(TAG, "Cannot start; sample not a function");
-            
+            this.sampler = sample;
+
             if (typeof this.interval === "undefined")
                 throw new Utils.exception(TAG, "Cannot start; interval not defined");
-            
+            // Polling will continue until the timer is deleted
             let self = this;
-            
-            function repoll() {
-                self.timeout = setTimeout(function () {
-                    self.start(sample);
-                }, self.interval);
-            }
-            
-            // Don't record if this sample has the same value as the last
-            let datum = sample();
-            if (typeof datum !== "number" || datum === this.last_sample) {
-                repoll();
-                return;
-            }
-            
-            this.record(datum)
-            .then(repoll);
-        };
+            this.timeout = setTimeout(() => { self._poll(); }, 100);
+        }
+
+        /**
+         * Private method woken on each poll
+         */
+        _poll() {
+            let datum = this.sampler();
+
+            let p;
+            // Don't record repeat of same sample
+            if (typeof datum === "number" && datum !== this.last_sample)
+                p = this.record(datum);
+            else
+                p = Promise.resolve();
+
+            p.then(() => {
+                if (this.timeout) {
+                    // Existance of a timer indicates we must continue
+                    // to poll
+                    this.timeout = setTimeout(() => {
+                        this._poll();
+                    }, this.interval);
+                }
+            });
+        }
         
         /**
          * Stop the polling loop
          */
         stop() {
-            if (typeof this.timeout !== undefined) {
+            if (this.timeout) {
                 clearTimeout(this.timeout);
-                delete this.timeout;
+                this.timeout = null;
                 Utils.TRACE(TAG, this.name, " stopped");
             }
         };
