@@ -2,7 +2,7 @@
 
 /*eslint-env node */
 define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataModel", "common/js/Time", "server/js/Thermostat", "server/js/Pin", "server/js/Rule", "server/js/Calendar"], function(Events, Utils, DataModel, Time, Thermostat, Pin, Rule, Calendar) {
-    
+
     const TAG = "Controller";
 
     /**
@@ -29,7 +29,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             };
 
             return this.initialisePins()
-            
+
             .then(() => {
                 return this.resetValve();
             })
@@ -192,6 +192,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          */
         initialisePins() {
             let promises = [];
+Utils.TRACE(TAG, "Initialising pins " + this.pin);
             for (let name in this.pin)
                 promises.push(this.pin[name].initialise());
             return Promise.all(promises).then(() => {
@@ -210,7 +211,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
             .then(function () {
                 Utils.TRACE(TAG, "Reset: HW(1) done");
-                
+
                 return new Promise((resolve) => {
                     setTimeout(resolve, this.valve_return);
                 });
