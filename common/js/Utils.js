@@ -219,7 +219,7 @@ define("common/js/Utils", function() {
      * Produce a tagged error message.
      */
     Utils.ERROR = function () {
-        console.error(Utils.joinArgs("*", arguments[0], "*", Utils.joinArgs(arguments, 1)));
+		console.error(Utils.joinArgs("*", arguments[0], "*") + Utils.joinArgs(arguments, 1));
     };
 
     /**

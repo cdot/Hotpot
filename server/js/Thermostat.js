@@ -66,8 +66,13 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
                 else
                     ds18x20 = require("ds18x20");
 
-                if (!ds18x20.isDriverLoaded())
-                    ds18x20.loadDriver();
+				try {
+					if (!ds18x20.isDriverLoaded())
+						ds18x20.loadDriver();
+				} catch (e) {
+					Utils.ERROR(TAG, "COULD NOT LOAD DS18X20 DRIVER\n", e, "\n",
+								typeof e.stack !== "undefined" ? e.stack : e);
+				}
             }
 
             // Last recorded temperature {float}
