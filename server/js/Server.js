@@ -135,8 +135,18 @@ define("server/js/Server", ["url", "common/js/Utils", "common/js/DataModel", "co
             .catch((e) => { console.error(e); });
         };
 
+		/**
+		 * return a promise to stop the server
+		 */
         stop() {
-            this.http.close();
+            return new Promise((resolve, reject) => {
+				this.http.close((e) => {
+					if (e instanceof Error)
+						reject(e);
+					else
+						resolve();
+				});
+			});
         };
 
         /**
