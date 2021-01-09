@@ -123,7 +123,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                         service: service,
                         source: req.source,
 						target: req.target,
-                        until: req.until
+                        until: Utils.CLEAR
                     });
                     $div.remove();
                 });

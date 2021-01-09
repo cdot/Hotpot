@@ -63,12 +63,12 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
         return cfg;
     })
 
-    .then(function (cfg) {
+    .then((cfg) => {
         config = cfg;
         controller = config.controller;
         server = config.server;
         server.setDispatch(
-            function (path, params) {
+            (path, params) => {
                 return controller.dispatch(path, params);
             });
         return controller.initialise()
@@ -78,11 +78,11 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
         });
     })
 
-    .then(function () {
+    .then(() => {
         return server.start();
     })
 
-    .then(function () {
+    .then(() => {
         // Save config when it changes, so we restart to the
         // same state
         controller.on(

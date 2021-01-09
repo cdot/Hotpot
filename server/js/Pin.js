@@ -10,8 +10,8 @@ define("server/js/Pin", ["fs-extra", "common/js/Utils", "server/js/Historian"], 
     const GPIO_PATH = "/sys/class/gpio/";
 
     // Paths to write to to export/unexport GPIO pins
-    const EXPORT_PATH = GPIO_PATH + "export";
-    const UNEXPORT_PATH = GPIO_PATH + "unexport";
+    const EXPORT_PATH = `${GPIO_PATH}export`;
+    const UNEXPORT_PATH = `${GPIO_PATH}unexport`;
 
     /**
      * A Pin is the interface to a RPi GPIO pin.
@@ -43,10 +43,9 @@ define("server/js/Pin", ["fs-extra", "common/js/Utils", "server/js/Historian"], 
             if (typeof HOTPOT_DEBUG !== "undefined")
                 HOTPOT_DEBUG.mapPin(this);
 
-            this.value_path = GPIO_PATH + "gpio" + this.gpio + "/value";
+            this.value_path = `${GPIO_PATH}gpio${this.gpio}/value`;
 
-            Utils.TRACE(TAG, "'", this.name,
-                        "' constructed on gpio ", this.gpio);
+            Utils.TRACE(TAG, `'${this.name}' constructed on gpio ${this.gpio}`);
         }
 
         /**
@@ -60,16 +59,16 @@ define("server/js/Pin", ["fs-extra", "common/js/Utils", "server/js/Historian"], 
             // exported and we can move on to setting the direction, otherwise
             // we have to export it.
             function readCheck() {
-                let m = self.value_path + " readCheck ";
+                let m = `${self.value_path} readCheck `;
                 return Fs.readFile(self.value_path, "utf8")
-                .then(function () {
+                .then(() => {
                     // Check passed, so we know it's exported
                     exported = true;
-                    Utils.TRACE(TAG, m, " OK for ", self.name);
+                    Utils.TRACE(TAG, `${m} OK for ${self.name}`);
                     return setDirection();
                 })
                 .catch(function (e) {
-                    m += " failed: " + e;
+                    m += `failed: ${e}`;
                     if (exported)
                         // Already exported, no point trying again
                         return fallBackToDebug(m);
@@ -82,10 +81,10 @@ define("server/js/Pin", ["fs-extra", "common/js/Utils", "server/js/Historian"], 
 
             // Try and export the pin
             function exportPin() {
-                let m = EXPORT_PATH + "=" + self.gpio;
+                let m = `${EXPORT_PATH}=${self.gpio}`;
                 return Fs.writeFile(EXPORT_PATH, self.gpio, "utf8")
                 .then(function () {
-                    Utils.TRACE(TAG, m, " OK for ", self.name);
+                    Utils.TRACE(TAG, `${m} OK for ${self.name}`);
                     // Use a timeout to give it time to get set up
                     return new Promise((resolve) => {
                         setTimeout(resolve, 1000);
@@ -93,20 +92,20 @@ define("server/js/Pin", ["fs-extra", "common/js/Utils", "server/js/Historian"], 
                     .then(readCheck);
                 })
                 .catch(function (err) {
-                    return fallBackToDebug(m + " failed " + err);
+                    return fallBackToDebug(`${m} failed ${err}`);
                 });
             }
 
             // The pin is known to be exported, set the direction
             function setDirection() {
-                let path = GPIO_PATH + "gpio" + self.gpio + "/direction";
+                let path = `${GPIO_PATH}gpio${self.gpio}/direction`;
                 return Fs.writeFile(path, "out")
                 .then(function () {
-                    Utils.TRACE(TAG, path, "=out OK for ", self.name);
+                    Utils.TRACE(TAG, `${path}=out OK for ${self.name}`);
                     return setActive();
                 })
                 .catch(function (e) {
-                    return fallBackToDebug(path + "=out failed: " + e);
+                    return fallBackToDebug(`${path}=out failed: ${e}`);
                 });
             }
 
@@ -114,11 +113,11 @@ define("server/js/Pin", ["fs-extra", "common/js/Utils", "server/js/Historian"], 
             // If we don't set the pin active_low, then writing a 1 to value
             // sets the pin low, and vice-versa. Ho hum.
             function setActive() {
-                let path = GPIO_PATH + "gpio" + self.gpio + "/active_low";
+                let path = `${GPIO_PATH}gpio${self.gpio}/active_low`;
                 return Fs.writeFile(path, 1)
                 .then(writeCheck)
                 .catch(function (e) {
-                    return fallBackToDebug(path + "=1 failed: " + e);
+                    return fallBackToDebug(`${path}=1 failed: ${e}`);
                 });
             }
 
@@ -126,25 +125,23 @@ define("server/js/Pin", ["fs-extra", "common/js/Utils", "server/js/Historian"], 
             function writeCheck() {
                 return Fs.writeFile(self.value_path, 0, "utf8")
                 .then(function () {
-                    Utils.TRACE(TAG, self.value_path, " writeCheck OK for ",
-                                self.name);
+                    Utils.TRACE(TAG, `${self.value_path} writeCheck OK for ${self.name}`);
                     if (self.history)
                         self.history.record(0);
                 })
                 .catch(function (e) {
                     return fallBackToDebug(
-                        self.value_path + " writeCheck failed: " + e);
+                        `${self.value_path} writeCheck failed: ${e}`);
                 });
             }
 
             // Something went wrong, but still use a file
             function fallBackToDebug(err) {
-                Utils.ERROR(TAG, self.name, ":", self.gpio,
-                            " setup failed: ", err);
+                Utils.ERROR(TAG, `${self.name}:${self.gpio} setup failed: ${err}`);
                 if (typeof HOTPOT_DEBUG === "undefined")
-                    throw new Utils.exception(TAG, self.name, " setup failed: ", err);
-                Utils.ERROR(TAG, "Falling back to debug for ", self.name);
-                self.value_path = HOTPOT_DEBUG.pin_path + self.gpio;
+                    throw new Utils.exception(TAG, `${self.name} setup failed: ${err}`);
+                Utils.ERROR(TAG, `Falling back to debug for pin ${self.name}`);
+                self.value_path = `${HOTPOT_DEBUG.pin_path}${self.gpio}`;
                 return writeCheck();
             }
 
@@ -157,7 +154,7 @@ define("server/js/Pin", ["fs-extra", "common/js/Utils", "server/js/Historian"], 
          */
         DESTROY() {
 
-            Utils.TRACE(TAG, "Unexport gpio ", this.gpio);
+            Utils.TRACE(TAG, `Unexport gpio ${this.gpio}`);
             Fs.writeFile(UNEXPORT_PATH, this.gpio, "utf8");
         }
 
@@ -171,7 +168,7 @@ define("server/js/Pin", ["fs-extra", "common/js/Utils", "server/js/Historian"], 
         set(state) {
             let self = this;
 
-            Utils.TRACE(TAG, self.value_path, " = ", (state === 1 ? "ON" : "OFF"));
+            Utils.TRACE(TAG, `${self.value_path} = ${state === 1 ? "ON" : "OFF"}`);
 
             let promise = Fs.writeFile(self.value_path, state, "UTF8");
             if (self.history)

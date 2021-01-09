@@ -1,7 +1,7 @@
 /*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
-define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataModel", "common/js/Time", "server/js/Thermostat", "server/js/Pin", "server/js/Rule", "server/js/Calendar"], function(Events, Utils, DataModel, Time, Thermostat, Pin, Rule, Calendar) {
+define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataModel", "common/js/Time", "server/js/Thermostat", "server/js/Pin", "server/js/Rule", "server/js/GoogleCalendar"], function(Events, Utils, DataModel, Time, Thermostat, Pin, Rule, Calendar) {
 
     const TAG = "Controller";
 
@@ -90,22 +90,11 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 		 * Utils.BOOST, in which case a boost request will be created.
          */
         addRequest(service, id, target, until) {
-            let remove = false, tgt;
+            let remove = (until == Utils.CLEAR), tgt;
 
-            Utils.TRACE(TAG, "request ", service, " from ",
-                        id, " ", target, "C until ", until);
-
-            // Parse the until
-            if (typeof until !== "number")
-				throw new Utils.exception(TAG,
-										  "Cannot add request: ", service,
-										  " bad until '", until, "'");
-
-            target = parseFloat(tgt);
-            if (target == NaN)
-                throw new Utils.exception(TAG,
-                                          "Cannot add request: ", service,
-                                          " bad target temperature in '", target, "'");
+            Utils.TRACE(TAG, `request ${service} from ${id} ${target}C until `,
+						(until == Utils.BOOST) ? "boosted" :
+						(until == Utils.CLEAR) ? "CLEAR" : until);
 
             if (/^ALL$/i.test(service)) {
                 for (let name in this.thermostat) {
@@ -118,8 +107,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                         th.addRequest(id, target, until);
                 }
             } else if (!this.thermostat[service])
-                throw new Utils.exception(TAG, "Cannot add request: ", service,
-                                          " is not a known thermostat");
+                throw new Utils.exception(
+					TAG, `Cannot add request, ${service} is not a known thermostat`);
             else if (remove)
                 this.thermostat[service].purgeRequests({
                     source: id
@@ -178,7 +167,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          */
         initialisePins() {
             let promises = [];
-Utils.TRACE(TAG, "Initialising pins " + this.pin);
+			Utils.TRACE(TAG, "Initialising Pins", this.pin);
             for (let name in this.pin)
                 promises.push(this.pin[name].initialise());
             return Promise.all(promises).then(() => {
@@ -192,14 +181,15 @@ Utils.TRACE(TAG, "Initialising pins " + this.pin);
          */
         resetValve() {
             let pins = this.pin;
+			let valve_back = this.valve_return;
+			
             Utils.TRACE(TAG, "Resetting valve");
             return pins.HW.set(1, "Reset")
 
-            .then(function () {
+            .then(() => {
                 Utils.TRACE(TAG, "Reset: HW(1) done");
-
                 return new Promise((resolve) => {
-                    setTimeout(resolve, this.valve_return);
+                    setTimeout(resolve, valve_back);
                 });
             })
 
@@ -442,12 +432,11 @@ Utils.TRACE(TAG, "Initialising pins " + this.pin);
                 return self.getSerialisableState();
             case "trace": // Set tracing level
                 // Set trace level
-                Utils.TRACE(TAG, "Set TRACE ", data.trace);
                 Utils.setTRACE(data.trace);
                 break;
             case "log":
                 // /log[/{type}[/{name}]]
-                Utils.TRACE(TAG, "log ", path);
+                Utils.TRACE(TAG, `log ${path}`);
                 if (typeof path[0] === "undefined")
                     // Get all logs
                     return self.getSerialisableLog(data.since);
@@ -458,7 +447,7 @@ Utils.TRACE(TAG, "Initialising pins " + this.pin);
                 return self[path[0]][path[1]].getSerialisableLog(data.since);
             case "getconfig":
                 // /getconfig/path/to/config/node
-                Utils.TRACE(TAG, "getconfig ", path);
+                Utils.TRACE(TAG, `getconfig ${path}`);
                 return DataModel.at(
                     this, Controller.Model, path,
                     (data, model) => DataModel.getSerialisable(data, model))
@@ -472,9 +461,9 @@ Utils.TRACE(TAG, "Initialising pins " + this.pin);
                             typeof item === "undefined")
                             throw new Utils.exception(
                                 TAG,
-                                "Cannot update ", path, ", insufficient context");
+                                `Cannot update ${path}, insufficient context`);
                         parent[key] = DataModel.remodel(key, data.value, model, path);
-                        Utils.TRACE(TAG, "setconfig ", path, " = ", parent[key]);
+                        Utils.TRACE(TAG, `setconfig ${path} = ${parent[key]}`);
                         self.emit("config_change");
                     });
                 break;
@@ -509,7 +498,7 @@ Utils.TRACE(TAG, "Initialising pins " + this.pin);
                 self.pollRules();
                 break;
             default:
-                throw new Utils.exception(TAG, "Unrecognised command ", command);
+                throw new Utils.exception(TAG, `Unrecognised command ${command}`);
             }
             return Promise.resolve({
                 status: "OK"

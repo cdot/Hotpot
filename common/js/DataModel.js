@@ -2,10 +2,17 @@
 
 /*eslint-env node */
 
-let Fs = require("fs-extra");
-
 define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
+	const TAG = "DataModel";
+
+	// Demand-load fs-extra; it should never be loaded in the browser
+	var Fs = () => {
+		var fse = require("fs-extra");
+		Fs = () => fse;
+		return fse;
+	}
+	
     /**
      * Provides a way to deserialise a datastructure from JSON data
      * such that the resultant deserialised data obeys a specific data
@@ -152,8 +159,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             context = [];
 
         if (typeof model !== "object")
-            throw new Utils.exception('DataModel', ".check: Illegal model type ", model,
-                                      " at ", context.join('.'));
+            throw new Utils.exception(
+				TAG, "Illegal model type", model, "at", context.join('.'));
 
         //Utils.LOG("check <",context.join('.'),"> {");
 
@@ -165,9 +172,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             }
             // Currently cannot have both $array_of and $class
             if (typeof model.$array_of !== "undefined")
-                throw new Utils.exception('DataModel', ".check: cannot have $array_of and $class");
+                throw new Utils.exception(TAG, ".check: cannot have $array_of and $class");
         } else if (typeof model.$class !== "undefined") {
-            throw new Utils.exception('DataModel', ".check: $class is ",
+            throw new Utils.exception(TAG, ".check: $class is ",
                                       typeof model.$class, " at ", context.join('.'));
         }
 
@@ -177,7 +184,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             if (typeof model.$array_of !== "undefined") {
                 if (typeof model.$map_of !== "undefined")
                     throw new Utils.exception(
-                        'DataModel', ".check: cannot have $array_of and $map_of");
+                        TAG, ".check: cannot have $array_of and $map_of");
                 DataModel.check(model.$array_of, context.concat("[]"));
             } else if (typeof model.$map_of !== "undefined")
                 DataModel.check(model.$map_of, context.concat("{}"));
@@ -186,7 +193,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                     if (i.charAt(0) !== '$') {
                         if (is_base)
                             throw new Utils.exception(
-                                'DataModel', ".check: $class ",
+                                TAG, ".check: $class ",
                                 model.$class.name, " has field ", i, " at ",
                                 context.join('.'));
                         DataModel.check(model[i], context.concat(i));
@@ -230,7 +237,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             }
             if (typeof model.$default === "undefined")
                 throw new Utils.exception(
-                    'DataModel',
+                    TAG,
                     ".remodel: not optional and no default at "
                     + context.join("."));
             else
@@ -292,7 +299,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             for (let i in data) {
                 if (!model[i])
                     throw new Utils.exception(
-                        'DataModel', ".remodel: Hidden payload ", i, " in ", data,
+                        TAG, ".remodel: Hidden payload ", i, " in ", data,
                         " at ", context.join('.'));
             }
         }
@@ -329,7 +336,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             if (typeof model !== "undefined" && model.$optional) {
                 return Promise.resolve();
             }
-            throw new Utils.exception('DataModel', ".getSerialisable: non-optional at ",
+            throw new Utils.exception(TAG, ".getSerialisable: non-optional at ",
                                       context.join('.'));
         }
 
@@ -354,7 +361,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             // Serialise all entries in the object, it's an array
             if (typeof data[Symbol.iterator] !== 'function')
                 throw new Utils.exception(
-                    'DataModel', ".getSerialisable: iterable expected at ",
+                    TAG, ".getSerialisable: iterable expected at ",
                     context.join('.'), data);
             let promises = [];
             for (let index in data) {
@@ -368,7 +375,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         } else if (typeof model.$map_of !== "undefined") {
             if (typeof data !== "object")
                 throw new Utils.exception(
-                    'DataModel', ".getSerialisable: map expected at ",
+                    TAG, ".getSerialisable: map expected at ",
                     context.join('.'), data);
             serialisable = {};
             let promise = Promise.resolve();
@@ -452,10 +459,10 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         while (i < path.length) {
             if (typeof node === "undefined")
                 throw new Utils.exception(
-                    'DataModel', ".at: no node at ", path, "[", i, "]");
+                    TAG, ".at: no node at ", path, "[", i, "]");
             if (typeof node_model === "undefined")
                 throw new Utils.exception(
-                    'DataModel', ".at: no model at ", path, "[", i, "]");
+                    TAG, ".at: no model at ", path, "[", i, "]");
             parent = node;
             key = path[i++];
             node = node[key];
@@ -467,7 +474,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 node_model = node_model[key];
         }
         if (i < path.length)
-            throw new Utils.exception('DataModel', ".at: could not find ", path);
+            throw new Utils.exception(TAG, ".at: could not find ", path);
         return fn(node, node_model, parent, key);
     };
 
@@ -482,7 +489,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
     DataModel.loadData = function (file, model) {
         DataModel.check(model);
 
-        return Fs.readFile(file)
+        return Fs().readFile(file)
         .then(function (code) {
             let data = Utils.eval(code, file);
             data = DataModel.remodel("", data, model);
@@ -510,7 +517,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
         return DataModel.getSerialisable(data, model)
         .then((remod) => {
-            return Fs.writeFile(
+            return Fs().writeFile(
                 Utils.expandEnvVars(file),
                 JSON.stringify(remod, null, 2), "utf8");
         });      
@@ -601,24 +608,24 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 if (typeof $mode === "undefined")
                     $mode = "r";
                 
-                let mode = Fs.constants.F_OK;
+                let mode = Fs().constants.F_OK;
 
                 if ($mode.indexOf("r") >= 0)
-                    mode = mode | Fs.constants.R_OK;
+                    mode = mode | Fs().constants.R_OK;
 
                 if ($mode.indexOf("x") >= 0)
-                    mode = mode | Fs.constants.X_OK;
+                    mode = mode | Fs().constants.X_OK;
 
-                if ($mode.indexOf("e") >= 0 && !Fs.existsSync(fnm)) {
+                if ($mode.indexOf("e") >= 0 && !Fs().existsSync(fnm)) {
                     throw new Utils.exception(
                         "Bad ", index, ": ", filename, " does not exist");
                 }
 
                 if ($mode.indexOf("w") >= 0) {
-                    mode = mode | Fs.constants.W_OK;
+                    mode = mode | Fs().constants.W_OK;
 
-                    if (Fs.existsSync(fnm)) {
-                        Fs.access(fnm, mode,
+                    if (Fs().existsSync(fnm)) {
+                        Fs().access(fnm, mode,
                                   function (err) {
                                       if (err)
                                           throw new Utils.exception(
@@ -628,7 +635,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                     }
                 } else if ($mode.indexOf("w") >= 0) {
                     // Just make sure we can write, and clear down the file
-                    Fs.writeFileSync(fnm, "", {
+                    Fs().writeFileSync(fnm, "", {
                         mode: mode
                     });
                 }
@@ -648,7 +655,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
          * @param value new data to write to the file
          */
         write(value) {
-            return Fs.writeFile(Utils.expandEnvVars(this.data), value, "utf8");
+            return Fs().writeFile(Utils.expandEnvVars(this.data), value, "utf8");
         }
 
         /**
@@ -656,7 +663,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
          */
         read() {
             let self = this;
-            return Fs.readFile(Utils.expandEnvVars(self.data));
+            return Fs().readFile(Utils.expandEnvVars(self.data));
         };
 
         getSerialisable() {
@@ -688,7 +695,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         constructor(data, index, model) {
             super(data, index, model);
             let self = this;
-            self.is_file = Fs.existsSync(Utils.expandEnvVars(data));
+            self.is_file = Fs().existsSync(Utils.expandEnvVars(data));
         }
 
         /**

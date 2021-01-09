@@ -107,8 +107,7 @@ define("server/js/GoogleCalendar", ["fs-extra", "common/js/Utils", "common/js/Ti
             .then(function (response) {
                 self.clearSchedule();
                 let events = response.data.items;
-				console.log(response)
-                Utils.TRACE(TAG, "'" + self.name + "' has " + events.length + " events");
+                Utils.TRACE(TAG, `'${self.name}' has ${events.length} events`);
                 self.last_update = new Date();
                 for (let i = 0; i < events.length; i++) {
                     let event = events[i];
@@ -118,7 +117,7 @@ define("server/js/GoogleCalendar", ["fs-extra", "common/js/Utils", "common/js/Ti
                     let fullText = event.summary + ";" + event.description;
 					parseEvents(start, end, fullText);
                 }
-                Utils.TRACE(TAG, self.name, " ready");
+                Utils.TRACE(TAG, `${self.name} ready`);
             })
 
             .catch(function (e) {
@@ -131,7 +130,7 @@ define("server/js/GoogleCalendar", ["fs-extra", "common/js/Utils", "common/js/Ti
 
             return this.authorise()
             .then(function () {
-				console.debug("Listing calendars");
+				Utils.TRACE(TAG, "Listing calendars");
                 let calendar = googleCalendarAPI();
 
                 return new Promise(function (resolve, reject) {

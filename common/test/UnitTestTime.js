@@ -10,7 +10,7 @@ requirejs.config({
 requirejs(["test/TestRunner", "common/js/Time"], function(TestRunner, Time) {
     const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
-    let tr = new TestRunner("Utils");
+    let tr = new TestRunner("Time");
     let assert = tr.assert;
 
     tr.addTest('should give a time of 00:00', function() {

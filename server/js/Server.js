@@ -126,13 +126,14 @@ define("server/js/Server", ["url", "common/js/Utils", "common/js/DataModel", "co
             }
 
             return promise
-
             .then(function (httpot) {
                 self.ready = true;
                 self.http = httpot;
                 httpot.listen(self.port);
             })
-            .catch((e) => { console.error(e); });
+            .catch((e) => {
+				Utils.TRACE(TAG, `Server error ${e}`);
+			});
         };
 
 		/**
@@ -154,14 +155,14 @@ define("server/js/Server", ["url", "common/js/Utils", "common/js/DataModel", "co
          * @private
          */
         handle(spath, params, request, response) {
-
             if (spath.indexOf("/") !== 0 || spath.length === 0)
                 throw new Utils.exception(TAG, "Bad command ", spath);
             spath = spath.substring(1);
+            if (spath.length < 1 // default
+				|| spath === "browser.html") // Legacy
+                spath = 'index.html';
+			
             let path = spath.split(/\/+/);
-
-            if (path.length < 1)
-                throw new Utils.exception(TAG, "Bad command ", spath);
 
             if (!this.ready) {
                 // Not ready
@@ -180,7 +181,7 @@ define("server/js/Server", ["url", "common/js/Utils", "common/js/DataModel", "co
             if (path[0] === "ajax") {
                 // AJAX command, destined for the dispatcher
                 path.shift();
-
+                Utils.TRACE(TAG, `ajax ${path.join("/")}`);
                 promise = this.dispatch(path, params)
 
                 .then(function (reply) {
@@ -240,9 +241,9 @@ define("server/js/Server", ["url", "common/js/Utils", "common/js/DataModel", "co
                 let req = Url.parse("" + request.url, true);
                 this.handle(req.pathname, req.query, request, response);
             } catch (e) {
-                Utils.TRACE(TAG, e, " in ", request.url, "\n",
+                Utils.TRACE(TAG, `${e} in ${request.url}\n`,
                             typeof e.stack !== "undefined" ? e.stack : e);
-                response.write(e + " in " + request.url + "\n");
+                response.write(`${e} in ${request.url}\n`);
                 response.statusCode = 400;
                 response.end();
             }

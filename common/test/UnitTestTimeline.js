@@ -22,7 +22,7 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
         ]
     };
 
-    let tr = new TestRunner("Utils");
+    let tr = new TestRunner("Timeline");
     let assert = tr.assert;
 
     tr.addTest('constructs', function() {

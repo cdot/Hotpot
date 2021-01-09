@@ -9,7 +9,7 @@ requirejs.config({
 
 requirejs(["test/TestRunner", "common/js/Vec"], function(TestRunner, Vec) {
 
-    let tr = new TestRunner("Utils");
+    let tr = new TestRunner("Vec");
     let assert = tr.assert;
 
     tr.addTest('sub', function() {

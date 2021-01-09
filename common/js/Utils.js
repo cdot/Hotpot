@@ -275,8 +275,9 @@ define("common/js/Utils", function() {
             setTimeout(func, diff);
     };
 
-	// 'until' value that indicates a boost
-	Utils.BOOST = 0;
+	// 'until' values that indicate commands
+	Utils.BOOST = -274;
+	Utils.CLEAR = -275;
 
     return Utils;
 });

@@ -4,6 +4,8 @@
 
 define("common/js/Location", ["common/js/Utils"], function(Utils) {
 
+	const TAG = "Location";
+	
     const EARTH_RADIUS = 6371000; // metres
 
     // Somewhere in the Gulf of Guinea
@@ -41,8 +43,7 @@ define("common/js/Location", ["common/js/Utils"], function(Utils) {
                     lat = lat.latitude;
                 } else {
                     throw new Utils.exception(
-                        "Location",
-                        "Cannot initialise from ", lat);
+                        TAG, `Cannot initialise from ${lat}`);
                 }
             } // else Constructor (1.)
             this.latitude = lat;
