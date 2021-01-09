@@ -5,7 +5,7 @@
 /**
  * Main module for managing the browser interface to a hotpot server.
  */
-define("browser/js/Hotpot", ["common/js/Time", "common/js/Timeline", "common/js/DataModel", "browser/js/TimelineEditor", "browser/js/Spinner"], function(Time, Timeline, DataModel, TimelineEditor) {
+define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Timeline", "common/js/DataModel", "browser/js/TimelineEditor", "browser/js/Spinner"], function(Utils, Time, Timeline, DataModel, TimelineEditor) {
 
     const UPDATE_BACKOFF = 10; // seconds
 
@@ -111,7 +111,7 @@ define("browser/js/Hotpot", ["common/js/Time", "common/js/Timeline", "common/js/
             let self = this;
             for (let req of obj.thermostat[service].requests) {
                 let $div = $("<div></div>").addClass("request");
-                let u = (!req.until || req.until === "boost")
+                let u = (!req.until || req.until === Utils.BOOST)
                     ? "boosted" : new Date(req.until);
                 $div.append("<span>" + req.source + " is requesting " +
                     req.target + " </span>°C until " + u + " ");
@@ -121,8 +121,9 @@ define("browser/js/Hotpot", ["common/js/Time", "common/js/Timeline", "common/js/
                 .on("click", () => {
                     self.sendRequest({
                         service: service,
-                        source: re.source,
-                        until: "now"
+                        source: req.source,
+						target: req.target,
+                        until: req.until
                     });
                     $div.remove();
                 });
@@ -138,9 +139,9 @@ define("browser/js/Hotpot", ["common/js/Time", "common/js/Timeline", "common/js/
                 let ce = cal.events[service];
                 if (ce) {
                     $caldiv.find(".cal-name").text(cal);
-                    $caldiv.find(".cal-state").text(ce.state);
+                    $caldiv.find(".cal-temperature").text(ce.temperature);
                     $caldiv.find(".cal-start").text(new Date(ce.start));
-                    $caldiv.find(".cal-end").text(new Date(ce.start + ce.length));
+                    $caldiv.find(".cal-end").text(ce.end === "boost" ? "boosted" : new Date(ce.end));
                     $caldiv.show();
                 }
             }
@@ -392,11 +393,10 @@ define("browser/js/Hotpot", ["common/js/Time", "common/js/Timeline", "common/js/
             .on("click",
                 {
                     service: service,
-                    until: "boost"
+                    until: Utils.BOOST
                 },
                 function (e) {
-                    e.data.target =
-                    $div.find(".boost-target").val();
+                    e.data.target = $div.find(".boost-target").val();
                     self.sendRequest(e.data);
                 });
             $div.find(".timeline").hide();
