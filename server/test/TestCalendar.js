@@ -1,14 +1,26 @@
-// Test for Calendar. Supports listing of available calendars, useful
-// for setting up initial config.
+/**
+ * Test for Calendars. Supports listing of available calendars, useful
+ * for setting up initial config.
+ *
+ * First use AuthoriseCalendars.js to authorise access to Google calendars.
+ * This can be done with the hotpot.cfg you intend to use live,
+ * or with a test hotpot.cfg, an example of which can be found in this
+ * directory.
+ *
+ * You can then run this program stand-alone to test access to those
+ * calendars. Test with no parameters and with -l.
+ */
+
 /*eslint-env node */
-const Getopt = require("node-getopt");
-const Q = require("q");
 
-const Utils = require("../../common/Utils.js");
-const DataModel = require("../../common/DataModel.js");
+let requirejs = require('requirejs');
+requirejs.config({
+    baseUrl: "../.."
+});
 
-const Controller = require("../Controller.js");
-const Calendar = require("../Calendar.js");
+requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/Controller", "server/js/GoogleCalendar"], function(Getopt, Utils, DataModel, Controller, GoogleCalendar) {
+
+
 Controller.Model.thermostat = { $skip: true };
 Controller.Model.pin = { $skip: true };
 const HOTPOT_MODEL = {
@@ -19,8 +31,8 @@ const HOTPOT_MODEL = {
 var getopt = new Getopt([
     [ "h", "help", "Show this help" ],
     [ "l", "list", "List available calendars" ],
-    [ "c", "calendar=ARG", "Name of calendar (default is first)" ],
-    [ "f", "config=ARG", "Configuration file (default ./hotpot.cfg)" ]
+    [ "d", "calendar=ARG", "Name of calendar (default is first)" ],
+    [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ]
 ])
     .bindHelp()
     .parseSystem();
@@ -28,10 +40,8 @@ var getopt = new Getopt([
 var cliopt = getopt.options;
 
 if (typeof cliopt.config === "undefined") {
-    cliopt.config = "./server/test/simulated_hotpot.cfg";
+    cliopt.config = "simulated_hotpot.cfg";
 }
-
-Q.longStackSupport = true;
 
 Utils.setTRACE("all");
 
@@ -65,7 +75,7 @@ function listCalendars(cal) {
 }
 
 DataModel.loadData(cliopt.config, HOTPOT_MODEL)
-    .done(function(config) {
+    .then(function(config) {
         if (!cliopt.calendar) {
             for (cliopt.calendar in config.controller.calendar)
                 break;
@@ -77,10 +87,11 @@ DataModel.loadData(cliopt.config, HOTPOT_MODEL)
                                       clipopt.calendar, " in config");
         console.log("Using calendar '" + cliopt.calendar + "'");
 
-        var cal = new Calendar(cfg, cliopt.calendar);
+        var cal = new GoogleCalendar(cfg, cliopt.calendar);
 
         if (cliopt.list)
             listCalendars(cal);
         else
             showCalendar(cal);
     });
+});
