@@ -11,7 +11,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 
     // Singleton driver interface to DS18x20 thermometers
     let ds18x20;
-
+	
     /**
      * Interface to a DS18x20 thermostat. This object takes care of polling the
      * device for regular temperature updates that can then be read from the
@@ -21,7 +21,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
      * record a requirement for a target temperature for a thermostat:
      * ```
      * Request {
-     *   until: epoch ms || "boost",
+     *   until: epoch ms
      *   target: number,
      *   source: string
      * }
@@ -29,7 +29,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
      * Requests have an `until` field that is used to set the expiry of the
      * request.
      *
-     * "boost" is a special until value that is used to bring a thermostat up
+     * If 'until' is Utils.BOOST, then that is used to bring a thermostat up
      * to a target temperature and then revert to the rules.
      *
      * target gives the target temperature for the thermostat, overriding the
@@ -194,7 +194,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
             this.purgeRequests();
             if (this.requests.length > 0) {
                 for (let i = this.requests.length - 1; i >= 0; i--)
-                    if (this.requests[i].until == "boost")
+                    if (this.requests[i].until == Utils.BOOST)
                         // The current boost request
                         return this.requests[i].target;
                 // Otherwise the most recently-added request
@@ -221,7 +221,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
             // honour it.
             if (this.requests.length > 0) {
                 for (let i = this.requests.length - 1; i >= 0; i--)
-                    if (this.requests[i].until == "boost" &&
+                    if (this.requests[i].until == Utils.BOOST &&
                         this.requests[i].target > max)
                         max = this.requests[i].target;
             }
@@ -237,7 +237,6 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
          * before adding the new request.
          * Where multiple sources have active request on the same service, then the
          * service resolves which requests win.
-         * @private
          */
         addRequest(source, target, until) {
             if (source)
@@ -276,7 +275,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
                         break;
                     }
                 }
-                if (r.until == "boost") {
+                if (r.until == Utils.BOOST) {
                     if (this.temperature >= r.target ||
                         this.temperature >= this.timeline.max) {
                         purge = true;

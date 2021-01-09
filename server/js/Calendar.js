@@ -2,93 +2,17 @@
 
 /*eslint-env node */
 
-define("server/js/Calendar", ["fs-extra", "common/js/Utils", "common/js/Time", "common/js/DataModel"], function(Fs, Utils, Time, DataModel) {
+define("server/js/Calendar", ["fs-extra", "common/js/Utils", "common/js/Time", "common/js/DataModel", "server/js/ScheduledEvent", "server/js/Thermostat"], function(Fs, Utils, Time, DataModel, ScheduledEvent, Thermostat) {
 
     // MS in an hour
     const HOURS = 60 * 60 * 1000;
 
     const TAG = "Calendar";
-    
-    /**
-     * Calendar event cache entry. Events stored here are filtered; only central
-     * heating events are cached. The cache size is limited by the config.
-     * Longer means less frequent automatic updates, and larger memory
-     * footprint for the server, but less network traffic.
-     * Hotpot events are read from the summary and description fields of calendar
-     * events. They are of the form
-     * ```
-     * <event> : <prefix> <service> [=] <command>? <target>
-     * ```
-     * where <prefix> is an optional prefix (HOTPOT:), <service> is a service
-     * name e.g. CH, <command> is an optional command e.g. BOOST and
-     * target is a temperature in  degrees C. For example,
-     * ```
-     * Hotpot:CH BOOST 18
-     * ```
-     * is a command to boost the central heating up to 18C. The prefix and
-     * <command> are case-insensitive.
-     *
-     * @ignore
+
+	/**
+	 * Base class of calendars. Specific calendar implementations should subclass,
+     * e.g. GoogleCalendar
      */
-    
-    class ScheduledEvent {
-        constructor(cal, id, start, end, service, state) {
-            // Reference to container {Calendar}
-            this.calendar = cal;
-            // Event ID
-            this.id = id;
-            // Service the event applies to e.g. "CH"
-            this.service = service;
-            // Required state
-            this.state = state;
-            // Start of the event, in epoch ms
-            this.startms = start;
-            // End of the event, in epoch ms
-            this.endms = end;
-
-            let self = this;
-            let now = Time.now();
-            if (start > now) {
-                Utils.TRACE(TAG, self.id, "(", service, ",", state, ") will start at ", new Date(start),
-                            " now is ", new Date());
-                this.event = setTimeout(function () {
-                    self.start();
-                }, start - now);
-            } else if (start <= now && end > now) {
-                Utils.TRACE(TAG, self.id, " began in the past");
-                this.start();
-            } else {
-                Utils.TRACE(TAG, self.id, " is already finished");
-            }
-        }
-
-        // Cancel this event. Will remove the event from the containing calendar.
-        cancel() {
-            Utils.TRACE(TAG, this.id, " cancelled");
-            if (typeof this.event !== "undefined") {
-                clearTimeout(this.event);
-                this.event = undefined;
-            }
-            if (typeof this.calendar.remove === "function") {
-                this.calendar.remove(this.id, this.service);
-            }
-        }
-
-        // Start this event. The calendar trigger will be called.
-        start() {
-            let self = this;
-
-            Utils.TRACE(TAG, this.id, " starting");
-            if (typeof this.calendar.trigger === "function")
-                this.calendar.trigger(this.id, this.service, this.state, this.endms);
-       
-            Utils.runAt(function () {
-                Utils.TRACE(TAG, self.id, " finished");
-                self.calendar.remove(self.id, self.service);
-            }, this.endms);
-        }
-    }
-
     class Calendar {
 
         /**
@@ -101,8 +25,6 @@ define("server/js/Calendar", ["fs-extra", "common/js/Utils", "common/js/Time", "
             Utils.extend(this, proto);
             // @property {String} name name of the calendar
             this.name = name;
-            // GoogleAuthClient.OAuth2
-            this.oauth2Client = undefined;
             // Current events schedule
             this.schedule = [];
             // Trigger function called when an event starts
@@ -119,12 +41,12 @@ define("server/js/Calendar", ["fs-extra", "common/js/Utils", "common/js/Time", "
          * @param {function} trigger callback triggered when an event starts
          * (or after an update and the event has already started).
          * ```
-         * trigger(String id, String service, int state, int until)
+         * trigger(String id, String service, int target, int until)
          * ```
          * * `id` id of the event
          * * `service` service the event is for (or `ALL` for all services)
-         * * `state` required state 0|1|2
-         * * `until` when the event ends (epoch ms)
+         * * `target` target temperature
+         * * `until` when the event ends (epoch ms) or Utils.BOOST
          * @param {function} remove callback invoked when a scheduled event is removed.
          * ```
          */
@@ -143,111 +65,20 @@ define("server/js/Calendar", ["fs-extra", "common/js/Utils", "common/js/Time", "
         }
     
         /**
-         * Return a promise to start the calendar
-         * @private
-         */
-        authorise() {
-            if (typeof this.oauth2Client !== "undefined")
-                return Promise.resolve(); // already started
-
-            let self = this;
-
-            return Fs.readFile(Utils.expandEnvVars(self.auth_cache))
-
-            .then(function (token) {
-                let clientSecret = self.secrets.client_secret;
-                let clientId = self.secrets.client_id;
-                let redirectUrl = self.secrets.redirect_uris[0];
-                let googleAuth = require("google-auth-library");
-                let auth = new googleAuth();
-                self.oauth2Client = new auth.OAuth2(
-                    clientId, clientSecret, redirectUrl);
-                self.oauth2Client.credentials = JSON.parse(token);
-            });
-        }
-
-        /**
          * Return a promise that will update the list of the events
          * stored for the next 24 hours.
+		 * The cache size is limited by the config.
+		 * Longer means less frequent automatic updates, and larger memory
+		 * footprint for the server, but less network traffic.
+		 * Subclasses must define this to retrieve events from the calendar server.
          * @private
          */
-        fillCache() {
-            "use strict";
-            let self = this;
-
-            return this.authorise()
-
-            .then(function () {
-                let google = require("googleapis");
-                let calendar = google.calendar("v3");
-                let now = Time.now();
-
-                let params = {
-                    auth: self.oauth2Client,
-                    calendarId: self.id,
-                    // For reasons undocumented by google, if timeMin and
-                    // timeMax are the same time it returns no events. So
-                    // we need to offset them.
-                    timeMin: (new Date()).toISOString(),
-                    timeMax: (new Date(now + self.cache_length * HOURS))
-                    .toISOString(),
-                    // Expand recurring events
-                    singleEvents: true
-                };
-
-                // If a prefix is required, add a query
-                if (self.require_prefix)
-                    params.q = "Hotpot:";
-
-                self.pending_update = true;
-                return new Promise((ok, fail) => {
-                    calendar.events.list(
-                        params,
-                        function (err, response) {
-                            delete self.pending_update;
-                            if (err) {
-                                fail("'" + self.name + "' events list failed: " + err);
-                            } else {
-                                ok(response);
-                            }
-                        });
-                });
-            })
-
-            .then(function (response) {
-                self.clearSchedule();
-                let events = response.items;
-                let re = new RegExp(
-                    (self.require_prefix ? "HOTPOT:\\s*" : "") +
-                    "([A-Z]+)[=\\s]+((?:BOOST\\s+)?[\\d.]+)", "ig");
-                Utils.TRACE(TAG, "'" + self.name + "' has " +
-                            events.length + " events");
-                self.last_update = new Date();
-                for (let i = 0; i < events.length; i++) {
-                    let event = events[i];
-                    let start = Date.parse(event.start.dateTime || event.start.date);
-                    let end = Date.parse(event.end.dateTime || event.end.date);
-                    // Can have orders in the event summary or the description
-                    let fullText = event.summary + " " + event.description;
-                    let match;
-                    while ((match = re.exec(fullText)) !== null) {
-                        let service = match[1];
-                        let target = match[2].toUpperCase();
-                        self.schedule.push(new ScheduledEvent(
-                            self,
-                            "Calendar '" + self.name + "' event " + i,
-                            start, end, service, target));
-                    }
-                }
-                Utils.TRACE(TAG, self.name, " ready");
-            })
-
-            .catch(function (e) {
-                throw new Utils.exception(TAG, "error: ", e);
-            });
-        }
+        fillCache() {}
 
         /**
+         * Generate and return a promise for a serialisable version of the state
+         * of the object, suitable for use in an AJAX response.
+		 *
          * The serialisable state of a calendar is the current (or next) active
          * event in the calendar for each unique service in the calendar.
          * {
@@ -271,9 +102,9 @@ define("server/js/Calendar", ["fs-extra", "common/js/Utils", "common/js/Time", "
                 let event = this.schedule[i];
                 if (!state.events[event.service]) {
                     state.events[event.service] = {
-                        state: event.state,
-                        start: event.startms,
-                        length: event.endms - event.startms
+                        temperature: event.temperature,
+                        start: event.start,
+                        end: event.until
                     };
                 }
             }
@@ -297,7 +128,6 @@ define("server/js/Calendar", ["fs-extra", "common/js/Utils", "common/js/Time", "
          * @private
          */
         update(after) {
-            "use strict";
             let self = this;
 
             // Kill the old timer
@@ -317,64 +147,134 @@ define("server/js/Calendar", ["fs-extra", "common/js/Utils", "common/js/Time", "
             }, after);
         }
 
-        listCalendars() {
-            "use strict";
-            let self = this;
+		/**
+		 * Return a list of available calendars.
+		 * Subclasses must implement this.
+		 */
+        listCalendars() { return []; }
 
-            return this.authorise()
-            .then(function () {
-                requirejs(["googleapis"], function(google) {
-                    let calendar = google.calendar("v3");
-
-                    return new Promise(function (resolve, reject) {
-                        calendar.calendarList.list(
-                            {
-                                auth: self.oauth2Client
-                            },
-                            function (err, response) {
-                                if (err) {
-                                    reject("calendarList failed: " + err);
-                                } else {
-                                    resolve(response.items);
-                                }
-                            });
-                    });
-                });
-            });
-        }
+		/**
+		 * Hotpot events are read from the text of calendar
+		 * events. They are of the form
+		 * ```
+         * <events> = <event> [ ";" <events> ]
+		 * <event> = <service> [=] <specs>
+		 * <specs> = <spec> [ <specs> ]
+		 * <spec> = "boost" | <temperature> 
+		 * ```
+		 * where
+		 * + <prefix> is an optional prefix (e.g. HOTPOT:)
+		 * + <service> is a service name e.g. CH, or ALL for all services
+		 * + "boost" if present tells the service to revert to normal behaviour once the
+		 * target termperature has been met <target> is an optional command (e.g. BOOST) and
+		 * temperature is in  degrees C. For example,
+		 * ```
+		 * Hotpot:CH BOOST 18
+		 * hotpot: hw=50; ch=20
+		 * HotPot: HW=50 CH=20
+		 * ```
+		 * is a command to boost the central heating up to 18C. The <prefix> and
+		 * "boost" are case-insensitive.
+		 */
+		parseEvents(start, end, description) {
+			// Parse event instructions out of the calendar events
+			let self = this;
+			let events = [];
+			let state = 0;
+			let until = end;
+			let temperature = 0, service = "", spec = 1;
+			function commit() {
+				self.schedule.push(new ScheduledEvent(
+					self, `Calendar '${self.name}' ${spec++}`,
+					start, service, temperature, until));
+				until = end;
+			}
+			let match;
+			let re = new RegExp("\\s*([\\d.]+|[A-Z]+:?|;|=)", "gi");
+			let token = null;
+            while (true) {
+				if (token == null) { // need new token
+					if ((match = re.exec(description)) !== null)
+						token = match[1];
+					else
+						break;
+				}
+				if (state === 0) {
+					if (token == this.prefix) {
+						state = 1;
+						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						token = null;
+						continue;
+					}
+					if (this.prefix) {
+						token = null;
+						continue;
+					} else {
+						state = 1;
+						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						// drop through
+					}
+				}
+				if (state === 1) {
+					if (/^\w+$/.test(token)) {
+						service = token.toUpperCase();
+						state = 2;
+						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						token = null;
+					} else {
+						state = 0;
+						Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
+					}
+					
+				} else if (state >= 2) {
+					if (token == this.prefix) {
+						commit();
+						state = 1;
+						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						token = null;
+						
+					} else if (token === ";" && state === 3) {
+						commit();
+						state = 1;
+						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						token = null;
+						
+					} else if (/^boost$/i.test(token)) {
+						Utils.TRACE(TAG, "Boosted");
+						until = Utils.BOOST;
+						token = null;
+					
+					} else if ("=" == token) {
+						// Ignore it
+						token = null;
+						
+					} else if (/^\d/.test(token) && parseFloat(token) != NaN) {
+						temperature = parseFloat(token);
+						state = 3;
+						Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
+						token = null;
+						
+					} else {
+						if (state === 3)
+							commit();
+						state = 1;
+						Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
+					}
+				} else {
+					Utils.ERROR(`Calendar parse failed state ${state} '${token}'`);
+					state = 0;
+				}
+            }
+			if (state == 3)
+				commit();
+		}
     }
     
     Calendar.Model = {
         $class: Calendar,
-        id: {
-            $doc: "calendar id, as used by Google",
-            $class: String
-        },
-        secrets: {
-            $doc: "secrets used by google OAuth",
-            client_id: {
-                $doc: "see README.md",
-                $class: String
-            },
-            client_secret: {
-                $doc: "see README.md",
-                $class: String
-            },
-            redirect_uris: {
-                $doc: "see README.md",
-                $array_of: {
-                    $class: String
-                }
-            }
-        },
-        auth_cache: {
-            $doc: "File containing cached oauth authentication",
-            $class: DataModel.File,
-            $mode: "r"
-        },
-        require_prefix: {
-            $doc: "set true if a 'hotpot:' prefix is required in the calendar",
-            $class: Boolean,
+        prefix: {
+            $doc: "set to the prefix for hotpot instructions in the calendar",
+            $class: String,
             $optional: true
         },
         update_period: {

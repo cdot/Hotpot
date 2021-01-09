@@ -84,12 +84,10 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * Add a request to a thermostat.
          * @param service themostat to add the request to, or "ALL" to add the request
          * to all thermostats.
-         * @param id source of the request
-         * @param target number giving the target temperature, possibly prefixed
-         * by "BOOST ". If the boost prefix is present, a boost request is created.
-         * @param until time at which the request expires, a pareseable date string or
-         * if 'until' is "boost", then a boost request will be created, or if 'until'
-         * is "now" the request will expire immediately.
+         * @param id source of the request e.g. "ajax"
+         * @param target number giving the target temperature.
+         * @param until time at which the request expires (epoch ms) or
+		 * Utils.BOOST, in which case a boost request will be created.
          */
         addRequest(service, id, target, until) {
             let remove = false, tgt;
@@ -98,28 +96,16 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                         id, " ", target, "C until ", until);
 
             // Parse the until
-            if (typeof until === "string") {
-                if (until === "now")
-                    remove = true;
-                else if (until !== "boost")
-                    until = Date.parse(until);
-            }
+            if (typeof until !== "number")
+				throw new Utils.exception(TAG,
+										  "Cannot add request: ", service,
+										  " bad until '", until, "'");
 
-            // Parse the target
-            let m = /^BOOST\s*(.*)$/i.exec(target);
-            if (m) {
-                until = "boost";
-                tgt = m[1];
-            } else
-                tgt = target;
-
-            if (/^OFF$/i.test(tgt))
-                tgt = 0;
-            else if (parseFloat(tgt) == NaN)
+            target = parseFloat(tgt);
+            if (target == NaN)
                 throw new Utils.exception(TAG,
                                           "Cannot add request: ", service,
                                           " bad target temperature in '", target, "'");
-            target = parseFloat(tgt);
 
             if (/^ALL$/i.test(service)) {
                 for (let name in this.thermostat) {
@@ -494,8 +480,12 @@ Utils.TRACE(TAG, "Initialising pins " + this.pin);
                 break;
             case "request":
                 // Push a request onto a service (or all services). Requests may come
-                // from external sources such as mobiles or browsers.
+                // from external sources such as browsers.
                 // /request?source=;service=;target=;until=
+				// source is an arbitrary string
+				// service is the name of a thermostat, or "all"
+				// target is a temperature number
+				// until is an epoch-ms date, or Utils.BOOST
                 this.addRequest(data.service, data.source, data.target, data.until);
                 self.pollRules();
                 break;
