@@ -275,5 +275,8 @@ define("common/js/Utils", function() {
             setTimeout(func, diff);
     };
 
+	// 'until' value that indicates a boost
+	Utils.BOOST = 0;
+
     return Utils;
 });
