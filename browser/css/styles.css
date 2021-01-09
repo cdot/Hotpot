@@ -1,17 +1,17 @@
 .body-bg {
-    background-color: #C0BDA7;
+    background-color: #062F47;
 }
 
 .body-fg {
-    color: #4A4641/* darkgrey*/;
+    color: #FFFFFF
 }
 
 .banner-bg {
-    background-color: #4A4641;
+    background-color: #000000;
 }
 
 .banner-fg {
-    color: #CC988E;
+    color: #B82601;
 }
 
 .fonts {
@@ -39,8 +39,8 @@ button {
     padding: 1vmin;
     -webkit-border-radius: 1vmin;
     -moz-border-radius: 1vmin;
-    color: black;
-    background-color: #dfdced/*whiteish*/
+    color: #FFFFFF;
+    background-color: #B82601/*whiteish*/
 }
 
 input {
@@ -127,9 +127,7 @@ canvas {
     position: relative;
 }
 
-.trashcan {
-    /*background-image: url("browser/images/wastebin.svg");*/
-    /*    width: 5vmin;*/
+.image_button {
     height: 4vmin;
 }
 

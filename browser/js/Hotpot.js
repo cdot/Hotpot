@@ -330,7 +330,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             .on("click", function () {
                 te.removeSelectedPoint();
             });
-
+			
             $container
             .on("selection_changed", function () {
                 // Timeline editor selected point changed, update
