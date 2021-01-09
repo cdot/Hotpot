@@ -204,7 +204,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
     tr.addTest("serialise-simple", function() {
         return DataModel.getSerialisable(simpleProto, simpleModel)
             .then(function(s) {
-                assert.equal(Utils.dump(s), Utils.dump(simpleProto));
+                assert.deepEqual(s, simpleProto);
             });
     });
 
