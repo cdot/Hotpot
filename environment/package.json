@@ -1,0 +1,69 @@
+{
+    "name": "GetIP",
+    "version": "0.0.0",
+    "description": "IP redirect finder",
+    "main": {
+        "module-name": "./GetIP.js"
+    },
+    "bugs": {
+        "url": "https://github.com/cdot/hottie/issues"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Crawford Currie",
+    "bin": {
+        "module-name": "./GetIP.js"
+    },
+    "license": "MIT",
+    "keywords": [
+        "http"
+    ],
+    "dependencies": {
+        "follow-redirects": ">= 0.2.0",
+        "fs": ">= 0.0.2",
+        "fs-extra": "^9.0.1",
+        "http": ">= 0.0.0",
+        "jsftp": ">= 1.0.4",
+        "node-getopt": ">= 0.2.3",
+        "nvm": "0.0.4",
+        "q": ">= 1.4.1",
+        "telnet-client": ">= 0.0.0"
+    },
+    "analyze": true,
+    "eslintConfig": {
+        "parserOptions": {
+            "ecmaVersion": 6
+        },
+        "env": {
+            "node": true
+        },
+        "ecmaFeatures": {
+            "blockBindings": true
+        },
+        "globals": {
+            "module": true,
+            "Utils": true
+        },
+        "rules": {
+            "strict": 0,
+            "no-underscore-dangle": 0,
+            "curly": 0,
+            "camelcase": 0,
+            "eol-last": 0,
+            "no-unused-vars": 1,
+            "no-console": 0,
+            "no-debugger": 0,
+            "no-alert": 1,
+            "no-new": 0,
+            "new-cap": 0,
+            "dot-notation": 1,
+            "no-trailing-spaces": 0,
+            "no-use-before-define": 0,
+            "no-loop-func": 1,
+            "no-process-exit": 0,
+            "no-eval": 1,
+            "quotes": 0
+        }
+    }
+}
