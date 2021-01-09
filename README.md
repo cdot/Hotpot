@@ -7,7 +7,6 @@ controller can still be used (though not at the same time).
 The controller collates data from a number of sources to support rules that
 decide if the heating needs to come on.
 - Any number of DS18x20 temperature sensors, usually one for heating (CH) and one for hot water (HW), connected to GPIO.
-- Any number of mobile devices running the 'Hotpot' Android app,
 - Any number of Google calendars,
 - Any number of web browsers talking directly to the controller,
 - Weather information from the UK Meteorological Office data service.
@@ -44,12 +43,8 @@ system. It runs a HTTP(S) server that supports querying and changing the
 configuration of the system via AJAX requests from a browser or mobile
 device.
 
-The server is implemented using node.js. RPi will require an upgrade to the latest version, thus
-```
-sudo npm cache clean -f
-sudo npm install -g n
-sudo n stable
-```
+The server is implemented using node.js, version 11.15.0 (at time of
+writing this is the most recent version available for the RPi).
 
 ## Configuring the Server
 
@@ -156,20 +151,20 @@ Paste the copied fields from `client_secret` into the `secrets` object. The `pri
 Calendars are cached and updated as required. An update can be forced at any time by sending a `/refresh_calendars` request to the server.
 
 ## Controlling Hotpot from the Calendar
-Hotpot is controlled by events in the calendar which contain special commands in the event summary or description. For example, `Hotpot:HW=on` will raise a request for Hotpot to turn the hot water on for the duration of the event. Requests are handled in the rules - see `hw_rules.js` for an example.
+Hotpot is controlled by events in a Google calendar which contain special commands in the event summary or description. For example, `Hotpot:HW=on` will raise a request for Hotpot to turn the hot water on for the duration of the event. Requests are handled in the rules - see `hw_rules.js` for an example.
 
-The format of commands is `Hotpot: <pin> <state>` where `<pin>` can be the name of a pin in `hotpot.cfg` (e.g. `HW` or `CH`) and `<state>` can be a number (0=off, 1=on, 2=boost, 3=away) or one of the commands `on`, `off`, `boost` or `away'. `all` is special pin that will apply the command to all pins. Pin names are case sensitive; nothing else is. Examples:
+The format of commands is `Hotpot: <pin> = <state>` where `<pin>` can be the name of a pin in `hotpot.cfg` (e.g. `HW` or `CH`) and `<state>` can be a number (0=off, 1=on, 2=boost, 3=away) or one of the commands `on`, `off`, `boost` or `away'. `all` is special pin that will apply the command to all pins. Pin names are case sensitive; nothing else is. Examples:
 ```
-Hotpot: all off
-Hotpot: all 0
-Hotpot: HW away
-HOTPOT: CH boost
+Hotpot: ch=0
+HOTPOT: HW = 45
 ```
-The first and second turn everything ff ofor the duration of the event. The second puts HW into "away" state. The third turns CH to "boost".
+The first turns the central heating off for the duration of the event. The second sets hot water to 45 degrees.
 
 Note that calendar events are only used to generate requests. It is up to the
 rules whether and how those requests are interpreted. Rules should always
 contain conditions to stop runaway temperature rises and freezing.
+
+An option is to create a specific calendar for Hotpot control, in which case all event in the calendar relate to Hotpot. In this case you can modify the configuration to dispense with the prefix.
 
 ## Browser App
 The browser app is served automatically when `/browser.html` is loaded from

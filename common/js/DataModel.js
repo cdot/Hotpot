@@ -2,11 +2,13 @@
 
 /*eslint-env node */
 
+let Fs = require("fs-extra");
+
 define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
     /**
      * Provides a way to deserialise a datastructure from JSON data
-     * such that the resultant desrialised data obeys a specific data
+     * such that the resultant deserialised data obeys a specific data
      * model.
      *
      * The data is read from JSON. On load this data is post-processed
@@ -480,16 +482,12 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
     DataModel.loadData = function (file, model) {
         DataModel.check(model);
 
-        return new Promise((resolve) => {
-            requirejs(["fs-extra"], function(Fs) {
-                return Fs.readFile(file)
-                .then(function (code) {
-                    let data = Utils.eval(code, file);
-                    data = DataModel.remodel("", data, model);
-                    data._readFrom = file;
-                    resolve(data);
-                });
-            });
+        return Fs.readFile(file)
+        .then(function (code) {
+            let data = Utils.eval(code, file);
+            data = DataModel.remodel("", data, model);
+            data._readFrom = file;
+            return data;
         });
     };
 
@@ -510,15 +508,11 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         if (typeof file === "undefined")
             file = this._readFrom;
 
-        return new Promise((resolve) => {
-            requirejs(["fs-extra"], function(Fs) {
-                return DataModel.getSerialisable(data, model)
-                .then((remod) => {
-                    resolve(Fs.writeFile(
-                        Utils.expandEnvVars(file),
-                        JSON.stringify(remod, null, 2), "utf8"));
-                });
-            });
+        return DataModel.getSerialisable(data, model)
+        .then((remod) => {
+            return Fs.writeFile(
+                Utils.expandEnvVars(file),
+                JSON.stringify(remod, null, 2), "utf8");
         });      
     };
 
@@ -607,39 +601,37 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 if (typeof $mode === "undefined")
                     $mode = "r";
                 
-                requirejs(["fs-extra"], function(Fs) {
-                    let mode = Fs.constants.F_OK;
+                let mode = Fs.constants.F_OK;
 
-                    if ($mode.indexOf("r") >= 0)
-                        mode = mode | Fs.constants.R_OK;
+                if ($mode.indexOf("r") >= 0)
+                    mode = mode | Fs.constants.R_OK;
 
-                    if ($mode.indexOf("x") >= 0)
-                        mode = mode | Fs.constants.X_OK;
+                if ($mode.indexOf("x") >= 0)
+                    mode = mode | Fs.constants.X_OK;
 
-                    if ($mode.indexOf("e") >= 0 && !Fs.existsSync(fnm)) {
-                        throw new Utils.exception(
-                            "Bad ", index, ": ", filename, " does not exist");
+                if ($mode.indexOf("e") >= 0 && !Fs.existsSync(fnm)) {
+                    throw new Utils.exception(
+                        "Bad ", index, ": ", filename, " does not exist");
+                }
+
+                if ($mode.indexOf("w") >= 0) {
+                    mode = mode | Fs.constants.W_OK;
+
+                    if (Fs.existsSync(fnm)) {
+                        Fs.access(fnm, mode,
+                                  function (err) {
+                                      if (err)
+                                          throw new Utils.exception(
+                                              "Bad ", index, ": ", filename, " ",
+                                              $mode, " mode check failed: ", err);
+                                  });
                     }
-
-                    if ($mode.indexOf("w") >= 0) {
-                        mode = mode | Fs.constants.W_OK;
-
-                        if (Fs.existsSync(fnm)) {
-                            Fs.access(fnm, mode,
-                                      function (err) {
-                                          if (err)
-                                              throw new Utils.exception(
-                                                  "Bad ", index, ": ", filename, " ",
-                                                  $mode, " mode check failed: ", err);
-                                      });
-                        }
-                    } else if ($mode.indexOf("w") >= 0) {
-                        // Just make sure we can write, and clear down the file
-                        Fs.writeFileSync(fnm, "", {
-                            mode: mode
-                        });
-                    }
-                });
+                } else if ($mode.indexOf("w") >= 0) {
+                    // Just make sure we can write, and clear down the file
+                    Fs.writeFileSync(fnm, "", {
+                        mode: mode
+                    });
+                }
             }
         };
 
@@ -656,11 +648,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
          * @param value new data to write to the file
          */
         write(value) {
-            return new Promise((resolve) => {
-                requirejs(["fs-extra"], function(Fs) {
-                    resolve(Fs.writeFile(Utils.expandEnvVars(this.data), value, "utf8"));
-                });
-            });
+            return Fs.writeFile(Utils.expandEnvVars(this.data), value, "utf8");
         }
 
         /**
@@ -668,11 +656,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
          */
         read() {
             let self = this;
-            return new Promise((resolve) => {
-                requirejs(["fs-extra"], function(Fs) {
-                    resolve(Fs.readFile(Utils.expandEnvVars(self.data)));
-                });
-            });
+            return Fs.readFile(Utils.expandEnvVars(self.data));
         };
 
         getSerialisable() {
@@ -704,9 +688,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         constructor(data, index, model) {
             super(data, index, model);
             let self = this;
-            requirejs(["fs-extra"], function(Fs) {
-                self.is_file = Fs.existsSync(Utils.expandEnvVars(data));
-            });
+            self.is_file = Fs.existsSync(Utils.expandEnvVars(data));
         }
 
         /**

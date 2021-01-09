@@ -12,7 +12,7 @@ requirejs.config({
  * Stand-alone program to authorise calendars declared in hotpot.cfg
  * @module AuthoriseCalendars
  */
-requirejs(["node-getopt", "fs-extra", "google-auth-library", "readline", "common/Utils", "common/Time", "common/DataModel"], function(Getopt, Fs, googleAuth, readLine, Utils, Time, DataModel) {
+requirejs(["node-getopt", "fs-extra", "readline", "common/Utils", "common/Time", "common/DataModel"], function(Getopt, Fs, readLine, Utils, Time, DataModel) {
 
     const HELP = "Hotpot Google Calendar Authorisation\n" +
           "This program will cache the access token required to access " +
@@ -62,8 +62,9 @@ requirejs(["node-getopt", "fs-extra", "google-auth-library", "readline", "common
         let clientId = credentials.secrets.client_id;
         let redirectUrl = credentials.secrets.redirect_uris[0];
         let auth = new googleAuth();
-        let oauth2Client = new auth.OAuth2(clientId, clientSecret, redirectUrl);
-        let authUrl = oauth2Client.generateAuthUrl({
+        let {OAuth2Client} = require("google-auth-library");
+		let oAuth2Client = new OAuth2Client(clientId, clientSecret, redirectUrl);
+        let authUrl = oAuth2Client.generateAuthUrl({
             access_type: "offline",
             scope: ["https://www.googleapis.com/auth/calendar.readonly"]
         });
@@ -75,13 +76,13 @@ requirejs(["node-getopt", "fs-extra", "google-auth-library", "readline", "common
         });
         rl.question("Enter the code here: ", function (code) {
             rl.close();
-            oauth2Client.getToken(code, function (err, token) {
+            oAuth2Client.getToken(code, function (err, token) {
                 if (err) {
                     console.log("Error while trying to retrieve access token",
                                 err);
                     return;
                 }
-                oauth2Client.credentials = token;
+                oAuth2Client.credentials = token;
 
                 writeFile(Utils.expandEnvVars(credentials.auth_cache),
                           JSON.stringify(token))

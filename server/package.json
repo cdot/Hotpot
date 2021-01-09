@@ -85,5 +85,8 @@
             "no-eval": 1,
             "quotes": 0
         }
+    },
+    "devDependencies": {
+        "mocha": "^8.2.1"
     }
 }

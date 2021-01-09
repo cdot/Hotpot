@@ -1,10 +1,12 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
 let Fs = require("fs-extra");
 
-// Test support
+// Support for running a hotpot server without connected hardware.
+// Provides thin stubs for ds18x20 devices. The stubs return temperatures
+// that vary between samples according to the rates defined in RATES.
 
 // Heating and cooling rates, in degrees per minute
 const RATES = [
@@ -12,7 +14,7 @@ const RATES = [
     { HW: 0.333, CH: 0.1 }   // ON = WARM
 ];
 
-class TestSupport {
+class DebugSupport {
 
     constructor() {
         // Path for debug pin files
@@ -38,7 +40,7 @@ class TestSupport {
             .then((data) => {
                 var pState = parseInt(data);
                 if (isNaN(pState)) {
-                    console.error("TestSupport: pState from " + this.pin_path
+                    console.error("ebugSupport: pState from " + this.pin_path
                                   + this.name2gpio[sensor.name]
                                   + " was unparseable; '" + data + "'");
                     pState = 0;
@@ -69,5 +71,5 @@ class TestSupport {
     }
 }
 
-module.exports = new TestSupport();
+module.exports = new DebugSupport();
 
