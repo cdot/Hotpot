@@ -42,8 +42,8 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
         cliopt.config = "./hotpot.cfg";
 
     if (typeof cliopt.debug !== "undefined") {
-        // Development only
-        HOTPOT_DEBUG = require("../../server/test/TestSupport.js");
+        // Debug stubs for ds18x20 sensors
+        HOTPOT_DEBUG = require("../../server/js/DebugSupport.js");
     }
 
     if (cliopt.trace && cliopt.trace !== "")
