@@ -162,7 +162,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
             DataModel.remodel('', simpleProtoBad, simpleModel);
         } catch(s) {
             assert(s.name == "DataModel");
-            assert.equal(s.message, ".remodel: not optional and no default at cuthbert.dibble");
+            assert.equal(s.message, ".remodel: 'cuthbert.dibble' not optional and no default");
             return;
         }
         assert(false, "Failed");
@@ -180,7 +180,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
             DataModel.remodel("", builtInsProtoBad, builtInsModel);
         } catch(s) {
             assert.equal(s.name, "DataModel");
-            assert.equal(s.message, ".remodel: not optional and no default at fnaar");
+            assert.equal(s.message, ".remodel: 'fnaar' not optional and no default");
             return;
         }
         assert(false, "Failed");
