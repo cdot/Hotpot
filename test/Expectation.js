@@ -33,6 +33,8 @@ define("test/Expectation", function() {
 		 * Report that one of the expected events was seen
 		 */
 		saw(event) {
+			if (event < 0 || event >= this.state.length)
+				throw `Bad saw(${event})`
 			this.state[event] = true;
 		}
 

@@ -9,14 +9,14 @@ requirejs.config({
 
 let nextPort = 13198;
 
-requirejs(["chai-http", "test/TestRunner", "common/js/Utils", "server/js/Server"], function(chaiHttp, TestRunner, Utils, Server) {
+requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils", "server/js/Server"], function(chaiHttp, TestRunner, Expectation, Utils, Server) {
 
     /**
      * Simple test program to create an HTTP server
      * on nextPort
      */
 
-    let tr = new TestRunner("Historian");
+    let tr = new TestRunner("Server");
     let assert = tr.assert;
     tr.chai.use(chaiHttp);
 
@@ -39,18 +39,17 @@ requirejs(["chai-http", "test/TestRunner", "common/js/Utils", "server/js/Server"
         });
     }
 
-    tr.addTest("simple-request",function() {
+    tr.addTest("404",function() {
 		let server_config = newServerConfig();
-        return makeServer(server_config).then((server) => {
+		return makeServer(server_config).then((server) => {
             tr.chai
             .request('http://localhost:' + server_config.port)
-            .get('/')
+            .get('/') // should try to open index.html, which doesn't exist
             .auth(server_config.auth.user, server_config.auth.pass)
             .send()
             .end(function(err, res) {
-                assert.equal(err, null);
-                assert.equal(res.status,200);
-                return server.stop();
+                assert.equal(res.status,404);
+				server.stop();
             });
         });
     });
@@ -58,12 +57,12 @@ requirejs(["chai-http", "test/TestRunner", "common/js/Utils", "server/js/Server"
     tr.addTest("simple-ajax", function() {
 		let server_config = newServerConfig();
         return makeServer(server_config).then((server) => {
-            server.setDispatch(function(path, params) {
+            server.setDispatch((path, params) => {
                 assert.equal(path.length, 2);
                 assert.equal(path[0], "blah");
                 assert.equal(path[1], "doh");
                 assert.equal("bat", params.fruit);
-                return Promise.resolve();
+                return Promise.resolve({fnar:65});
             });
             tr.chai
             .request('http://localhost:' + server_config.port)
@@ -73,6 +72,7 @@ requirejs(["chai-http", "test/TestRunner", "common/js/Utils", "server/js/Server"
             .end(function(err, res) {
                 assert.equal(err, null);
                 assert.equal(res.status,200);
+                assert.equal(res.text,'{"fnar":65}');
                 server.setDispatch();
                 return server.stop();
             });
@@ -91,7 +91,7 @@ requirejs(["chai-http", "test/TestRunner", "common/js/Utils", "server/js/Server"
 				console.error(err);
                 assert.equal(err, null);
                 assert.equal(res.status,200);
-                assert.equal(res.text,"Test Data\n");
+                assert.equal(res.text,"Test Data for UnitTestServer\n");
                 return server.stop();
             });
         });

@@ -5,10 +5,12 @@
 // Yes, I could have used express, but I wrote this before I knew about
 // it, and it "just works".
 
-define("server/js/Server", ["url", "common/js/Utils", "common/js/DataModel", "common/js/Location"], function(Url, Utils, DataModel, Location) {
+define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel", "common/js/Location"], function(fs, Url, Utils, DataModel, Location) {
 
     const TAG = "Server";
 
+	const Fs = fs.promises;
+	
     /**
      * Super-lightweight HTTP(S) server with very few
      * dependencies. Only supports POST and GET and Basic auth
@@ -184,10 +186,13 @@ define("server/js/Server", ["url", "common/js/Utils", "common/js/DataModel", "co
                 Utils.TRACE(TAG, `ajax ${path.join("/")}`);
                 promise = this.dispatch(path, params)
 
-                .then(function (reply) {
-                    let s = (typeof reply !== "undefined" && reply !== null) ?
-                        JSON.stringify(reply) : "";
-                    return s;
+                .then((reply) => {
+                    if (typeof reply === "undefined" || reply === null)
+						return "";
+					else {
+						contentType = "application/json";
+						return JSON.stringify(reply);
+					}
                 });
             } else if (path.join("") === "") {
                 promise = Promise.resolve("");
@@ -202,32 +207,33 @@ define("server/js/Server", ["url", "common/js/Utils", "common/js/DataModel", "co
                     let Mime = require("mime-types");
                     contentType = Mime.lookup(m[1]);
                 }
-                promise = new Promise((resolve) => {
-                    requirejs(["fs"], (fs) => {
-                        resolve(fs.promises.readFile(filepath));
-                    });
-                });
+                promise = new Promise((resolve, reject) => {
+					Fs.readFile(filepath)
+					.then(resolve)
+					.catch((error) => {
+						// Treat as FNF
+						Utils.ERROR(TAG, error);
+						if (error.code === 'ENOENT')
+							error.status = 404;
+						reject(error);
+					});
+				});
             }
 
             promise
             .then((responseBody) => {
-                response.setHeader("Content-Type", contentType);
-                response.setHeader("Content-Length", Buffer.byteLength(responseBody));
                 response.statusCode = 200;
+                response.setHeader("Content-Type", contentType);
                 response.write(responseBody);
                 response.end();
             })
             .catch((error) => {
                 // Send the error message in the payload
-                console.error("ERROR " + error);
-                Utils.TRACE(TAG, error.stack);
-                let e = error.toString();
+                response.statusCode = error.status || 500;
                 response.setHeader("Content-Type", "text/plain");
-                response.setHeader("Content-Length", Buffer.byteLength(e));
-                response.statusCode = 500;
-                response.write(e);
-                response.end(e);
-            });
+                response.write(error.toString());
+                response.end();
+			});
         };
 
         /**
