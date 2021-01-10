@@ -402,7 +402,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 						.then(() => {
 							self.pending = true;
 							return new Promise((resolve) => {
-								setTimeout(resolve, this.valve_return);
+								setTimeout(resolve, self.valve_return);
 							}); // wait for spring
 						})
 						.then(() => {

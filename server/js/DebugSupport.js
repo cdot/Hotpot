@@ -2,15 +2,15 @@
 
 /*eslint-env node */
 
-const Fs = require("fs");
-const Fsp = Fs.promises;
+const fs = require("fs");
+const Fs = fs.promises;
 
 /**
  * Support for running a hotpot server without connected hardware.
  * Provides thin stubs for ds18x20 devices. The stubs return temperatures
  * that vary between samples according to the rates defined in RATES.
  */
-// Heating and cooling rates, in degrees per minute
+// Heating and cooling rates, in degrees per second
 const RATES = [
     { HW: -0.01, CH: -0.03 }, // OFF = COOL
     { HW: 0.333, CH: 0.1 }   // ON = WARM
@@ -26,6 +26,10 @@ class Service {
 
 	setPin(pin) {
 		this.pin = pin;
+		try {
+			fs.mkdirSync(`${this.ds.pin_path}/gpio${pin.gpio}`);
+		} catch(ignore) {}
+		fs.writeFileSync(`${this.ds.pin_path}/gpio${pin.gpio}/value`, 0);
 	}
 
 	setThermostat(th) {
@@ -51,24 +55,24 @@ class Service {
 		let self = this;
 		let ds = this.ds;
 		let gpio = this.pin.gpio;
-        if (gpio) {
-            Fsp.readFile(`${ds.pin_path}${gpio}/value`)
-            .then((data) => {
-                var pState = parseInt(data);
-                if (isNaN(pState)) {
-                    throw Error(`pState from ${ds.pin_path}${gpio}/value=${data} was unparseable`);
-                    pState = 0;
-                }
-                self.temperature += RATES[pState][th.name] / 120.0;
-            })
-            .catch((e) => {
-                self.temperature = 20;
-            });
-        }
+        Fs.readFile(`${ds.pin_path}/gpio${gpio}/value`)
+        .then((data) => {
+            var pState = parseInt(data.toString());
+            if (isNaN(pState)) {
+                throw Error(`pState from ${ds.pin_path}/gpio${gpio}/value=${data} was unparseable`);
+                pState = 0;
+            }
+            self.temperature += RATES[pState][self.thermostat.name];
+			if (self.temperature < 0)
+				self.temperature = 0;
+        })
+        .catch((e) => {
+			// No state in the value file yet
+        });
 		if (!this.interrupted) {
 			this.timer = setTimeout(() => {
 				self._getNextTemperature();
-			}, 500);
+			}, 1000);
 		}
 	}
 
@@ -88,8 +92,8 @@ class Service {
 class DebugSupport {
 
 	constructor() {
-		this.pin_path = "/tmp/gpio";
 		this.services = [];
+		this.setPinPath("gpio")
 	}
 
 	// Get the debug service that corresponds to the pin or thermostat
@@ -112,8 +116,13 @@ class DebugSupport {
 		return service;
     }
 
+	// Use from unit tests only
 	setPinPath(path) {
+		try {
+			fs.mkdirSync(path);
+		} catch (ignore) {}
 		this.pin_path = path;
+		GPIO_PATH = `${path}/`;
 	}
 
 	stop() {

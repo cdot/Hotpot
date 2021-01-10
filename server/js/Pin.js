@@ -37,11 +37,8 @@ define("server/js/Pin", ["fs", "common/js/Utils", "server/js/Historian"], functi
              * @public
              */
             this.reason = "";
-
             if (typeof HOTPOT_DEBUG !== "undefined")
                 HOTPOT_DEBUG.getServiceForPin(this);
-
-            this.value_path = `${GPIO_PATH}gpio${this.gpio}/value`;
 
             Utils.TRACE(TAG, `'${this.name}' constructed on gpio ${this.gpio}`);
         }
@@ -52,14 +49,15 @@ define("server/js/Pin", ["fs", "common/js/Utils", "server/js/Historian"], functi
         initialise() {
             let self = this;
             let exported = false;
+			let vp = `${GPIO_PATH}gpio${this.gpio}/value`; 
 
             // First check if the pin can be read. If it can, it is already
             // exported and we can move on to setting the direction, otherwise
             // we have to export it.
             function readCheck() {
-                let m = `${self.value_path} readCheck `;
-				Utils.TRACE(TAG, `readCheck ${m}`);
-                return Fs.readFile(self.value_path, "utf8")
+                let m =  `${vp} readCheck `;
+				Utils.TRACE(TAG, m);
+                return Fs.readFile(vp, "utf8")
                 .then(() => {
                     // Check passed, so we know it's exported
                     exported = true;
@@ -125,10 +123,10 @@ define("server/js/Pin", ["fs", "common/js/Utils", "server/js/Historian"], functi
 
             // Pin is exported and direction is set, should be OK to write
             function writeCheck(fallback) {
-				Utils.TRACE(TAG, `writeCheck ${self.value_path}`);
-                return Fs.writeFile(self.value_path, 0, "utf8")
-                .then(function () {
-                    Utils.TRACE(TAG, `${self.value_path} writeCheck OK for ${self.name}`);
+				Utils.TRACE(TAG, `writeCheck ${vp}`);
+                return Fs.writeFile(vp, 0, "utf8")
+                .then(() => {
+                    Utils.TRACE(TAG, `${vp} writeCheck OK for ${self.name}`);
                     if (self.history)
                         self.history.record(0);
 					return self;
@@ -136,7 +134,7 @@ define("server/js/Pin", ["fs", "common/js/Utils", "server/js/Historian"], functi
                 .catch(function (e) {
                     if (!fallback)
 						return fallBackToDebug(
-							`${self.value_path} writeCheck failed: ${e}`);
+							`${vp} writeCheck failed: ${e}`);
 					throw new Error(e);
                 });
             }
@@ -147,7 +145,6 @@ define("server/js/Pin", ["fs", "common/js/Utils", "server/js/Historian"], functi
                 if (typeof HOTPOT_DEBUG === "undefined")
                     throw new Utils.exception(TAG, `${self.name} setup failed: ${err}; try running with --debug`);
                 Utils.ERROR(TAG, `Falling back to debug for pin ${self.name}`);
-                self.value_path = `${HOTPOT_DEBUG.pin_path}${self.gpio}`;
                 return writeCheck(true);
             }
 
@@ -174,9 +171,9 @@ define("server/js/Pin", ["fs", "common/js/Utils", "server/js/Historian"], functi
         set(state) {
             let self = this;
 
-            Utils.TRACE(TAG, `${self.value_path} = ${state === 1 ? "ON" : "OFF"}`);
+            Utils.TRACE(TAG, `${GPIO_PATH}gpio${this.gpio}/value = ${state === 1 ? "ON" : "OFF"}`);
 
-            let promise = Fs.writeFile(self.value_path, state, "UTF8");
+            let promise = Fs.writeFile(`${GPIO_PATH}gpio${this.gpio}/value`, state, "UTF8");
             if (self.history)
                 promise = promise.then(function () {
                     return self.history.record(state);
@@ -190,7 +187,7 @@ define("server/js/Pin", ["fs", "common/js/Utils", "server/js/Historian"], functi
          * @public
          */
         getState() {
-            return Fs.readFile(this.value_path, "utf8")
+            return Fs.readFile(`${GPIO_PATH}gpio${this.gpio}/value`, "utf8")
             .then(function (data) {
                 return parseInt(data);
             });
