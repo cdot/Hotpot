@@ -48,6 +48,7 @@ class Service {
 	// In sampled mode, a set of samples supplied are stepped through on
 	// each call to get() on the DS18x20 simulation.
     _getNextTemperature() {
+		let self = this;
 		let ds = this.ds;
 		let gpio = this.pin.gpio;
         if (gpio) {
@@ -58,13 +59,12 @@ class Service {
                     throw Error(`pState from ${ds.pin_path}${gpio}/value=${data} was unparseable`);
                     pState = 0;
                 }
-                this.temperature += RATES[pState][th.name] / 120.0;
+                self.temperature += RATES[pState][th.name] / 120.0;
             })
             .catch((e) => {
-                th.sim_temp = 100;
+                self.temperature = 20;
             });
         }
-        let self = this;
 		if (!this.interrupted) {
 			this.timer = setTimeout(() => {
 				self._getNextTemperature();
@@ -88,7 +88,7 @@ class Service {
 class DebugSupport {
 
 	constructor() {
-		this.pin_path = "/tmp";
+		this.pin_path = "/tmp/gpio";
 		this.services = [];
 	}
 

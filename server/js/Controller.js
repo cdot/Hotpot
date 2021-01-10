@@ -221,7 +221,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             for (let name in this.thermostat) {
                 promises.push(
 					this.thermostat[name].initialise()
-					.then((th) => th.poll());
+					.then((th) => th.poll()));
             }
             return Promise.all(promises).then(() => {
                 Utils.TRACE(TAG, "Initialised thermostats");

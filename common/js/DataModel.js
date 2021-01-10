@@ -662,7 +662,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
          */
         write(value) {
 			_loadFs();
-            return fs.writeFile(Utils.expandEnvVars(this.data), value, "utf8");
+            return Fs.writeFile(Utils.expandEnvVars(this.data), value, "utf8");
         }
 
         /**
@@ -671,7 +671,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         read() {
             let self = this;
 			_loadFs();
-            return fs.readFile(Utils.expandEnvVars(self.data));
+            return Fs.readFile(Utils.expandEnvVars(self.data));
         };
 
         getSerialisable() {

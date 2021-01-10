@@ -145,7 +145,7 @@ define("server/js/Pin", ["fs", "common/js/Utils", "server/js/Historian"], functi
             function fallBackToDebug(err) {
                 Utils.ERROR(TAG, `${self.name}:${self.gpio} setup failed: ${err}`);
                 if (typeof HOTPOT_DEBUG === "undefined")
-                    throw new Utils.exception(TAG, `${self.name} setup failed: ${err}`);
+                    throw new Utils.exception(TAG, `${self.name} setup failed: ${err}; try running with --debug`);
                 Utils.ERROR(TAG, `Falling back to debug for pin ${self.name}`);
                 self.value_path = `${HOTPOT_DEBUG.pin_path}${self.gpio}`;
                 return writeCheck(true);
