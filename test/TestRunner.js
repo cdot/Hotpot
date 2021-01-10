@@ -7,7 +7,8 @@ if (typeof requirejs === "undefined") {
 /**
 * Common code for running mocha tests
 */
-define(["mocha", "chai"], function(maybeMocha, chai) {
+define(["mocha", "chai"], (maybeMocha, chai) => {
+	
     if (typeof Mocha === "undefined")
         Mocha = maybeMocha; // node.js
 
@@ -22,6 +23,7 @@ define(["mocha", "chai"], function(maybeMocha, chai) {
             if (typeof title === "string")
                 this.mocha.suite.title = title;
             this.debug = debug;
+			this.testDataDirs = [];
         }
 
         static samePath(a, b) {
@@ -61,11 +63,40 @@ define(["mocha", "chai"], function(maybeMocha, chai) {
             this.mocha.suite.addTest(test);
         }
 
+		rm_rf(path) {
+			let fs = requirejs("fs");
+			let Fs = fs.promises;
+			let self = this;
+			return Fs.readdir(path)
+			.then((files) => {
+				let promises = [];
+				files.forEach((file, index) => {
+					var curPath = path + "/" + file;
+					promises.push(Fs.lstat(curPath)
+					.then((stat) => {
+						if (stat.isDirectory())
+							return self.rm_rf(curPath);
+						else
+							return Fs.unlink(curPath);
+					}));
+				});
+				return Promise.all(promises);
+			})
+			.then(() => {
+				return Fs.rmdir(path);
+			});
+		}
+
         run() {
             return new Promise((resolve) => {
                 this.mocha.timeout(10000);
                 this.mocha.run(resolve);
-            });
+            })
+			.then(() => {
+				for (let i in self.testDataDirs) {
+					rmdir(self.testDataDirs[i]);
+				}
+			});
         }
     }
 

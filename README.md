@@ -29,6 +29,12 @@ thus:
 # 1-wire settings
 dtoverlay=w1-gpio,gpiopin=18
 ```
+Reboot your Pi.
+```
+modprobe w1-gpio
+modprobe w1-therm
+```
+(you will probably want to add these commands to the service script).
 You can see what sensors are configured using 
 ```
 ls /sys/bus/w1/devices/w1_bus_master1

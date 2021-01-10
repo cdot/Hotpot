@@ -2,10 +2,12 @@
 
 /*eslint-env node */
 
-define("server/js/Historian", ["fs-extra", "common/js/Time", "common/js/Utils", "common/js/DataModel"], function(Fs, Time, Utils, DataModel) {
+define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "common/js/DataModel"], function(fs, Time, Utils, DataModel) {
     
     const TAG = "Historian";
-    
+
+	const Fs = fs.promises;
+	
     /**
      * Logger. Can either log according to a time interval using a sampling
      * callback, or only on demand.

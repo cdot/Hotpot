@@ -27,25 +27,6 @@
         "pi"
     ],
     "dependencies": {
-        "basic-auth": ">= 1.0.4",
-        "ds18x20": "^0.2.0",
-        "events": ">= 1.1.0",
-        "extend": ">= 3.0.0",
-        "follow-redirects": ">= 0.2.0",
-        "fs": ">= 0.0.2",
-        "fs-extra": "^9.0.1",
-        "google-auth-library": "^6.1.4",
-        "googleapis": "^67.0.0",
-        "http": ">= 0.0.0",
-        "https": ">= 1.0.0",
-        "jquery": ">= 2.2.3",
-        "mime-types": ">= 2.1.11",
-        "node-getopt": "^0.3.2",
-        "q": ">= 1.4.1",
-        "requirejs": "^2.3.6",
-        "serialize-javascript": ">= 1.2.0",
-        "url": ">= 0.11.0",
-        "util": ">= 0.10.3"
     },
     "analyze": true,
     "eslintConfig": {

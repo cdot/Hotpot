@@ -2,16 +2,13 @@
 
 /*eslint-env node */
 
-define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/Timeline", "server/js/Historian"], function(Utils, Time, Timeline, Historian) {
+define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/Timeline", "server/js/DS18x20", "server/js/Historian"], function(Utils, Time, Timeline, DS18x20, Historian) {
 
     const TAG = "Thermostat";
 
     // Default interval between polls
     const DEFAULT_POLL_INTERVAL = 1; // seconds
 
-    // Singleton driver interface to DS18x20 thermometers
-    let ds18x20;
-	
     /**
      * Interface to a DS18x20 thermostat. This object takes care of polling the
      * device for regular temperature updates that can then be read from the
@@ -59,22 +56,11 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
              * (see #addRequest) */
             this.requests = [];
 
-            if (!ds18x20) {
-                // Load the driver asynchronously
-                if (typeof HOTPOT_DEBUG !== "undefined")
-                    ds18x20 = HOTPOT_DEBUG.ds18x20;
-                else
-                    ds18x20 = require("ds18x20");
-
-				try {
-					if (!ds18x20.isDriverLoaded())
-						ds18x20.loadDriver();
-				} catch (e) {
-					Utils.ERROR(TAG, "COULD NOT LOAD DS18X20 DRIVER\n", e, "\n",
-								typeof e.stack !== "undefined" ? e.stack : e);
-				}
-            }
-
+            // Load the driver asynchronously
+            if (typeof HOTPOT_DEBUG !== "undefined")
+                this.ds18x20 = HOTPOT_DEBUG.getServiceForThermostat(this);
+            else
+                this.ds18x20 = new DS18x20(this.id);
             // Last recorded temperature {float}
             this.temperature = 0;
 
@@ -89,43 +75,29 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
                     return Math.round(self.temperature * 10) / 10;
                 };
             }
-
-            if (typeof HOTPOT_DEBUG !== "undefined")
-                HOTPOT_DEBUG.mapThermostat(this);
         }
 
         /**
          * Return a promise to intiialise the thermostat with a valid value read
-         * from the probe
+         * from the probe. The promise resolves to the Thermostat.
          */
         initialise() {
             let self = this;
 
-            return new Promise(function (resolve, reject) {
-                ds18x20.get(self.id, (err, temp) => {
-                    if (err !== null) {
-                        Utils.ERROR(TAG, "d218x20 error: ", err);
-                        reject(err);
-                    } else {
-                        if (typeof temp !== "number") {
-                            // At least once this has been "boolean"!
-                            Utils.ERROR("Unexpected result from ds18x20.get");
-                            reject();
-                            return;
-                        }
-                        self.temperature = temp;
-                        // Start the polling loop
-                        self.pollTemperature();
-                        // Start the historian
-                        if (self.history)
-                            self.history.start(function () {
-                                return self.temperature;
-                            });
-                        Utils.TRACE(TAG, "'", self.name, "' initialised");
-                        resolve();
-                    }
-                });
-            });
+            return this.ds18x20.get()
+			.then((temp) => {
+                self.temperature = temp;
+                // Start the historian
+                if (self.history) {
+					Utils.TRACE(TAG, `starting historian for '${self.name}'`);
+                    self.history.start(function () {
+                        return self.temperature;
+                    });
+				}
+                Utils.TRACE(TAG, `'${self.name}' initialised`);
+                return self;
+            })
+			.catch((e) => Utils.TRACE(TAG, `${self.id} initialisation failed ${e}`));
         };
 
         /**
@@ -161,31 +133,43 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
         };
 
         /**
-         * Function for polling thermometers
-         * Thermostats are polled every second for new values; results are returned
-         * asynchronously and cached in the Thermostat object
-         * @private
+         * Return a promise to start polling thermometers
+         * Thermostats are polled every second for new values; results
+		 * are returned asynchronously and cached in the Thermostat object
+         * The promise resolves to the Thermostat.
          */
-        pollTemperature() {
-
+        poll() {
             let self = this;
 
-            ds18x20.get(self.id, function (err, temp) {
-                if (err !== null) {
-                    Utils.ERROR(TAG, "Sensor error: ", err);
-                } else {
-                    if (typeof temp === "number")
-                        // At least once this has been "boolean"!
-                        self.temperature = temp;
-                    setTimeout(function () {
-                        self.pollTemperature();
-                    }, typeof self.poll_interval === "undefined" ?
-                               DEFAULT_POLL_INTERVAL :
-                               self.poll_interval);
-                }
+            return this.ds18x20.get()
+			.then((temp) => {
+                self.temperature = temp;
+				return this;
+			})
+			
+			.catch((e) => Utils.TRACE(TAG, e))
+			
+			.finally(() => {
+				if (self.interrupted) {
+					Utils.TRACE(TAG, `'${self.name}' polling interrupted`);
+					self.interrupted = false;
+				} else {
+					setTimeout(function () {
+						self.poll();
+					}, typeof self.poll_interval === "undefined" ?
+							   DEFAULT_POLL_INTERVAL :
+							   self.poll_interval);
+				}
             });
         };
 
+		/**
+		 * Interrupt the temperature polling
+		 */
+		interrupt() {
+			this.interrupted = true;
+		}
+		
         /**
          * Get the target temperature specified by the timeline or active boost
          * request for this thermostat at the current time.

@@ -6,11 +6,13 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
 	const TAG = "DataModel";
 
-	// Demand-load fs-extra; it should never be loaded in the browser
-	var Fs = () => {
-		var fse = require("fs-extra");
-		Fs = () => fse;
-		return fse;
+	var fs, Fs;
+
+	function _loadFs() {
+		if (typeof fs === "undefined") {
+			fs = require("fs");
+			Fs = fs.promises;
+		}
 	}
 	
     /**
@@ -238,8 +240,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             if (typeof model.$default === "undefined")
                 throw new Utils.exception(
                     TAG,
-                    ".remodel: not optional and no default at "
-                    + context.join("."));
+                    `.remodel: '${context.join(".")}' not optional and no default`);
             else
                 data = model.$default;
         }
@@ -488,8 +489,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      */
     DataModel.loadData = function (file, model) {
         DataModel.check(model);
-
-        return Fs().readFile(file)
+		_loadFs();
+		
+        return Fs.readFile(file)
         .then(function (code) {
             let data = Utils.eval(code, file);
             data = DataModel.remodel("", data, model);
@@ -510,18 +512,18 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
     DataModel.saveData = function (data, model, file) {
         "use strict";
 
+		_loadFs();
+
         DataModel.check(model);
 
         if (typeof file === "undefined")
             file = this._readFrom;
 
         return DataModel.getSerialisable(data, model)
-        .then((remod) => {
-            return Fs().writeFile(
-                Utils.expandEnvVars(file),
-                JSON.stringify(remod, null, 2), "utf8");
-        });      
-    };
+        .then((remod) => Fs.writeFile(
+            Utils.expandEnvVars(file),
+            JSON.stringify(remod, null, 2), "utf8"));      
+    }
 
     /**
      * Generate the help string for the given model
@@ -600,6 +602,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
         constructor(filename, index, model) {
             this.data = filename;
+
+			_loadFs();
+			
             if (typeof model !== "undefined") {
                 // Got a model to check against. This should always be the case
                 // except in tests.
@@ -608,34 +613,35 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 if (typeof $mode === "undefined")
                     $mode = "r";
                 
-                let mode = Fs().constants.F_OK;
+                let mode = fs.constants.F_OK;
 
                 if ($mode.indexOf("r") >= 0)
-                    mode = mode | Fs().constants.R_OK;
+                    mode = mode | fs.constants.R_OK;
 
                 if ($mode.indexOf("x") >= 0)
-                    mode = mode | Fs().constants.X_OK;
+                    mode = mode | fs.constants.X_OK;
 
-                if ($mode.indexOf("e") >= 0 && !Fs().existsSync(fnm)) {
+                if ($mode.indexOf("e") >= 0 && !fs.existsSync(fnm)) {
                     throw new Utils.exception(
                         "Bad ", index, ": ", filename, " does not exist");
                 }
 
                 if ($mode.indexOf("w") >= 0) {
-                    mode = mode | Fs().constants.W_OK;
+                    mode = mode | fs.constants.W_OK;
 
-                    if (Fs().existsSync(fnm)) {
-                        Fs().access(fnm, mode,
-                                  function (err) {
-                                      if (err)
-                                          throw new Utils.exception(
-                                              "Bad ", index, ": ", filename, " ",
-                                              $mode, " mode check failed: ", err);
-                                  });
+                    if (fs.existsSync(fnm)) {
+                        fs.access(
+							fnm, mode,
+                            function (err) {
+                                if (err)
+                                    throw new Utils.exception(
+                                        "Bad ", index, ": ", filename, " ",
+                                        $mode, " mode check failed: ", err);
+                            });
                     }
                 } else if ($mode.indexOf("w") >= 0) {
                     // Just make sure we can write, and clear down the file
-                    Fs().writeFileSync(fnm, "", {
+                    fs.writeFileSync(fnm, "", {
                         mode: mode
                     });
                 }
@@ -655,7 +661,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
          * @param value new data to write to the file
          */
         write(value) {
-            return Fs().writeFile(Utils.expandEnvVars(this.data), value, "utf8");
+			_loadFs();
+            return fs.writeFile(Utils.expandEnvVars(this.data), value, "utf8");
         }
 
         /**
@@ -663,7 +670,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
          */
         read() {
             let self = this;
-            return Fs().readFile(Utils.expandEnvVars(self.data));
+			_loadFs();
+            return fs.readFile(Utils.expandEnvVars(self.data));
         };
 
         getSerialisable() {
@@ -695,7 +703,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         constructor(data, index, model) {
             super(data, index, model);
             let self = this;
-            self.is_file = Fs().existsSync(Utils.expandEnvVars(data));
+            self.is_file = fs.existsSync(Utils.expandEnvVars(data));
         }
 
         /**

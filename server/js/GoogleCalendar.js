@@ -5,11 +5,13 @@
 /**
  * Implementation of Calendar using Google calendar
  */
-define("server/js/GoogleCalendar", ["fs-extra", "common/js/Utils", "common/js/Time", "common/js/DataModel", "server/js/Calendar"], function(Fs, Utils, Time, DataModel, Calendar) {
+define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "common/js/DataModel", "server/js/Calendar"], function(fs, Utils, Time, DataModel, Calendar) {
 
     // MS in an hour
     const HOURS = 60 * 60 * 1000;
 
+	const Fs = fs.promises;
+	
     const TAG = "GoogleCalendar";
 
     function googleCalendarAPI() {

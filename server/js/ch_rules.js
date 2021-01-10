@@ -3,7 +3,7 @@ function () {
     let thermostat = self.thermostat.CH;
     let pin = self.pin.CH;
 
-    return pin.getStatePromise()
+    return pin.getState()
     .then(function(state) {
         if (thermostat.temperature > thermostat.getMaximumTemperature()) {
             if (state === 1) {

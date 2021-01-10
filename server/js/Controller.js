@@ -219,10 +219,9 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         initialiseThermostats() {
             let promises = [];
             for (let name in this.thermostat) {
-                promises.push(this.thermostat[name].initialise());
-            promises.push(() => {
-                return Promise.resolve();
-            });
+                promises.push(
+					this.thermostat[name].initialise()
+					.then((th) => th.poll());
             }
             return Promise.all(promises).then(() => {
                 Utils.TRACE(TAG, "Initialised thermostats");
@@ -359,7 +358,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             let self = this;
             let pins = self.pin;
 
-            // Duck race condition during initialisation
+            // Avoid race condition during initialisation
             if (pins[channel] === "undefined")
                 return Promise.resolve();
 
@@ -371,42 +370,46 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 });
             }
 
-            return pins[channel].getStatePromise()
+            return pins[channel].getState()
 
             .then(function (cur_state) {
                 if (cur_state === new_state) {
                     return Promise.resolve(); // already in the right state
                 }
 
-                // Y-plan systems have a state where if the heating is on but the
-                // hot water is off, and the heating is turned off, then the grey
-                // wire to the valve (the "hot water off" signal) is held high,
-                // stalling the motor and consuming power pointlessly. We need some
-                // special processing to avoid this state.
+                // Y-plan systems have a state where if the heating is
+				// on but the hot water is off, and the heating is
+				// turned off, then the grey wire to the valve (the
+				// "hot water off" signal) is held high, stalling the
+				// motor and consuming power pointlessly. We need some
+				// special processing to avoid this state.
 
                 if (cur_state === 1 && channel === "CH" && new_state === 0) {
                     // CH is on, and it's going off
-                    let hw_state = pins.HW.getState();
-                    if (hw_state === 0) {
-                        // HW is off, so switch off CH and switch on HW to kill
-                        // the grey wire.
-                        // This allows the spring to fully return. Then after a
-                        // timeout, turn the CH on.
-                        return pins.CH.set(0) // switch off CH
-                        .then(function () {
-                            return pins.HW.set(1); // switch on HW
-                        })
-                        .then(function () {
-                            self.pending = true;
-                            return new Promise((resolve) => {
-                                setTimeout(resolve, this.valve_return);
-                            }); // wait for spring
-                        })
-                        .then(function () {
-                            self.pending = false;
-                            return pins.CH.set(0); // switch off CH
-                        });
-                    }
+                    return pins.HW.getState()
+					.then((hw_state) => {
+						if (hw_state !== 0)
+							return pins[channel].set(new_state);
+							
+						// HW is off, so switch off CH and switch on HW to kill
+						// the grey wire.
+						// This allows the spring to fully return. Then after a
+						// timeout, turn the CH on.
+						return pins.CH.set(0) // switch off CH
+						.then(() => {
+							return pins.HW.set(1); // switch on HW
+						})
+						.then(() => {
+							self.pending = true;
+							return new Promise((resolve) => {
+								setTimeout(resolve, this.valve_return);
+							}); // wait for spring
+						})
+						.then(() => {
+							self.pending = false;
+							return pins.CH.set(0); // switch off CH
+						});
+					});
                 }
                 // Otherwise this is a simple state transition, just
                 // promise to set the appropriate pin

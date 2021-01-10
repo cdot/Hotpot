@@ -2,73 +2,128 @@
 
 /*eslint-env node */
 
-let Fs = require("fs-extra");
+const Fs = require("fs");
+const Fsp = Fs.promises;
 
-// Support for running a hotpot server without connected hardware.
-// Provides thin stubs for ds18x20 devices. The stubs return temperatures
-// that vary between samples according to the rates defined in RATES.
-
+/**
+ * Support for running a hotpot server without connected hardware.
+ * Provides thin stubs for ds18x20 devices. The stubs return temperatures
+ * that vary between samples according to the rates defined in RATES.
+ */
 // Heating and cooling rates, in degrees per minute
 const RATES = [
     { HW: -0.01, CH: -0.03 }, // OFF = COOL
     { HW: 0.333, CH: 0.1 }   // ON = WARM
 ];
 
-class DebugSupport {
+// Service object simulates a DS18x20
+class Service {
+	constructor(debugSupport) {
+		this.ds = debugSupport;
+		this.thermostat = null;
+		this.pin = null;
+	}
 
-    constructor() {
-        // Path for debug pin files
-        this.pin_path = "/tmp/gpio";
+	setPin(pin) {
+		this.pin = pin;
+	}
 
-        let self = this;
-        this.ds18x20 = {
-            get: function(id, fn) {
-                let sensor = self.thid2Sensor[id];
-                fn(null, sensor.temperature || 100);
-            },
+	setThermostat(th) {
+		this.thermostat = th;
+		this.temperature = th.getTargetTemperature() / 2;
+	}
 
-            isDriverLoaded: function() { return true; }
-        };
+	/**
+	 * Set an array of samples to grab from.
+	 */
+	setSamples(samples) {
+		this.samples = samples;
+		this.sampleCtr = -1;
+	}
 
-        this.thid2Sensor = {};
-        this.name2gpio = {};
-    }
-    
-    adjustSensor(sensor) {
-        if (typeof this.name2gpio[sensor.name] !== "undefined") {
-            Fs.readFile(this.pin_path + this.name2gpio[sensor.name])
+	// Thermostat simulation can operate in two modes; the default,
+	// where the temperature is sampled every 1/2 a second and varies
+	// according to the pin state as dictated by RATES.
+	//
+	// In sampled mode, a set of samples supplied are stepped through on
+	// each call to get() on the DS18x20 simulation.
+    _getNextTemperature() {
+		let ds = this.ds;
+		let gpio = this.pin.gpio;
+        if (gpio) {
+            Fsp.readFile(`${ds.pin_path}${gpio}/value`)
             .then((data) => {
                 var pState = parseInt(data);
                 if (isNaN(pState)) {
-                    console.error("ebugSupport: pState from " + this.pin_path
-                                  + this.name2gpio[sensor.name]
-                                  + " was unparseable; '" + data + "'");
+                    throw Error(`pState from ${ds.pin_path}${gpio}/value=${data} was unparseable`);
                     pState = 0;
                 }
-                sensor.temperature += RATES[pState][sensor.name] / 120.0;
+                this.temperature += RATES[pState][th.name] / 120.0;
             })
             .catch((e) => {
-                sensor.temperature = 100;
+                th.sim_temp = 100;
             });
         }
         let self = this;
-        setTimeout(() => {
-            self.adjustSensor(sensor);
-        }, 500);
+		if (!this.interrupted) {
+			this.timer = setTimeout(() => {
+				self._getNextTemperature();
+			}, 500);
+		}
+	}
+
+	// DS18x20 simulation
+	get() {
+		if (this.samples) {
+			this.sampleCtr = (this.sampleCtr + 1) % this.samples.length;
+			return Promise.resolve(this.samples[this.sampleCtr]);
+		} else {
+			if (!this.isSimulating)
+				this._getNextTemperature();
+			return Promise.resolve(this.temperature);
+		}
+	}
+}
+
+class DebugSupport {
+
+	constructor() {
+		this.pin_path = "/tmp";
+		this.services = [];
+	}
+
+	// Get the debug service that corresponds to the pin or thermostat
+	getServiceForThermostat(th) {
+		let service = this.services[th.name];
+		if (typeof service === "undefined")
+			service = new Service(this);
+		service.setThermostat(th);
+		this.services[th.name] = service;
+		return service;
+    }
+	
+	// Get the debug service that corresponds to the pin or thermostat
+	getServiceForPin(pin) {
+		let service = this.services[pin.name];
+		if (typeof service === "undefined")
+			service = new Service(this);
+		service.setPin(pin);
+		this.services[pin.name] = service;
+		return service;
     }
 
-    mapThermostat(th) {
-        var sensor = {
-            name: th.name,
-            temperature: th.getTargetTemperature()
-        };
-        this.thid2Sensor[th.id] = sensor;
-        this.adjustSensor(sensor);
-    }
+	setPinPath(path) {
+		this.pin_path = path;
+	}
 
-    mapPin(pin) {
-        this.name2gpio[pin.name] = pin.gpio;
-    }
+	stop() {
+		for (let k in this.services) {
+			let s = this.services[k];
+			s.interrupted = true;
+			if (s.timer)
+				clearTimeout(s.timer);
+		}
+	}
 }
 
 module.exports = new DebugSupport();

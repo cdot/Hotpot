@@ -3,7 +3,7 @@ function () {
     let thermostat = self.thermostat.HW;
     let pin = self.pin.HW;
 
-    return pin.getStatePromise()
+    return pin.getState()
     .then(function(state) {
         if (thermostat.temperature > thermostat.getMaximumTemperature()) {
             // Hot enough, so switch off regardless of other rules

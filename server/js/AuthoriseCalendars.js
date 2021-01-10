@@ -12,12 +12,14 @@ requirejs.config({
  * Stand-alone program to authorise calendars declared in hotpot.cfg
  * @module AuthoriseCalendars
  */
-requirejs(["node-getopt", "fs-extra", "readline", "common/Utils", "common/Time", "common/DataModel"], function(Getopt, Fs, readLine, Utils, Time, DataModel) {
+requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "common/DataModel"], function(Getopt, fs, readLine, Utils, Time, DataModel) {
 
     const HELP = "Hotpot Google Calendar Authorisation\n" +
           "This program will cache the access token required to access " +
           "a Google calendar that contains control events";
 
+	const Fs = fs.promises;
+	
     let cliopt = new Getopt([
         ["h", "help", "Show this help"],
         ["c", "config=ARG", "Configuration file (default ./hotpot.cfg)"]

@@ -22,7 +22,6 @@
     "dependencies": {
         "follow-redirects": ">= 0.2.0",
         "fs": ">= 0.0.2",
-        "fs-extra": "^9.0.1",
         "http": ">= 0.0.0",
         "jsftp": ">= 1.0.4",
         "node-getopt": ">= 0.2.3",

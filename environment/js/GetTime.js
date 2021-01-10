@@ -11,13 +11,14 @@ const DESCRIPTION = "DESCRIPTION\nSimple server time synchronisation";
 
 let requirejs = require('requirejs');
 
-let Fs = require("fs-extra"); // doesn't work in dependencies, for some reason
 requirejs.config({
     baseUrl: __dirname + "/../.."
 });
 
-requirejs(["node-getopt", "http", "common/js/DataModel"], function(Getopt, Http, DataModel) {
+requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt, Http, fs, DataModel) {
 
+	const Fs = fs.promises;
+	
 	let cliopt = Getopt.create([
 		["h", "help", "Show this help"],
 		["s", "set", "Set the time (must be root)"],

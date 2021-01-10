@@ -2,8 +2,10 @@
 
 /*eslint-env node */
 
-define("server/js/Calendar", ["fs-extra", "common/js/Utils", "common/js/Time", "common/js/DataModel", "server/js/ScheduledEvent", "server/js/Thermostat"], function(Fs, Utils, Time, DataModel, ScheduledEvent, Thermostat) {
+define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common/js/DataModel", "server/js/ScheduledEvent", "server/js/Thermostat"], function(fs, Utils, Time, DataModel, ScheduledEvent, Thermostat) {
 
+	const Fs = fs.promises;
+	
     // MS in an hour
     const HOURS = 60 * 60 * 1000;
 

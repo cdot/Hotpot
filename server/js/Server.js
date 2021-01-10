@@ -203,8 +203,8 @@ define("server/js/Server", ["url", "common/js/Utils", "common/js/DataModel", "co
                     contentType = Mime.lookup(m[1]);
                 }
                 promise = new Promise((resolve) => {
-                    requirejs(["fs-extra"], function(Fs) {
-                        resolve(Fs.readFile(filepath));
+                    requirejs(["fs"], (fs) => {
+                        resolve(fs.promises.readFile(filepath));
                     });
                 });
             }

@@ -14,8 +14,10 @@ requirejs.config({
     baseUrl: __dirname + "/../.."
 });
 
-requirejs(["node-getopt", "jsftp", "fs-extra", "common/js/Utils", "common/js/DataModel"], function(Getopt, JSFtp, Fs, Utils, DataModel) {
+requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel"], function(Getopt, JSFtp, fs, Utils, DataModel) {
 
+	const Fs = fs.promises;
+	
 	function Url(e) {
 		for (let i in e)
 			this[i] = e[i];
