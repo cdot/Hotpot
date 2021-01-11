@@ -60,11 +60,17 @@ The server can be run as follows:
 ```
 $ node server/js/Hotpot.js <options>
 ```
-The server supports command-line options as follows:
+Note that when running with real hardware, the user running the Hotpot script
+must have read/write access to gpio control files. The easiest way to do this is to add them to the gpio group. For example:
 ```
+$ sudo usermod -a -G gpio hotpot
+```
+Pass --help on the command-line to see options.
+```
+$ node server/js/Hotpot.js --help
   -h, --help        Show this help
   -c, --config=ARG  Configuration file (default ./hotpot.cfg)
-  -C, --confhelp    Configuration file help (requires a hotpot.cfg)
+  -C, --confhelp    Configuration file help
   -t, --trace[=ARG] Trace module e.g. --trace all
   -d, --debug       Run in debug mode - uses stubs for missing hardware
 ```
@@ -83,6 +89,13 @@ The server is configured by Javascript read from a file (default `./hotpot.cfg`)
 the configuration. If time the server configuration is changed from the browser interface, the configuration file will be automatically saved.
 
 An annotated example configuration file is given in `hotpot.cfg`.
+
+## Service startup script
+If you are using a Debian-based OS, you can customise the included 'environment/init.d_hotpot' script to assist with starting and stopping the service. The script is placed in /etc/init.d and will automatically start the service after every reboot.
+```
+chmod +x /etc/init.d/hotpot 
+update-rc.d hotpot defaults
+```
 
 ### History
 

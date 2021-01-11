@@ -21,13 +21,10 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 		 */
 		get() {
 			let self = this;
-			return _load()
-			.then(() => {
-				return Fs.readFile(
-					Path.resolve('/sys/bus/w1/devices/', self.id, 'w1_slave'))
-				.then((content) => {
-					return parseFloat(content.toString());
-				});
+			return Fs.readFile(
+				Path.resolve('/sys/bus/w1/devices/', self.id, 'w1_slave'))
+			.then((content) => {
+				return parseFloat(content.toString());
 			});
 		}
 	}
