@@ -35,34 +35,36 @@ modprobe w1-gpio
 modprobe w1-therm
 ```
 (you will probably want to add these commands to the service script).
-You can see what sensors are configured using 
+You can see what sensors are attached to the system using:
 ```
 ls /sys/bus/w1/devices/w1_bus_master1
 ```
-Expect to see devices such as 28-0316027f81ff
+Expect to see devices such as '28-0316027f81ff'.
+
+If you follow my wiring, it is safe to continue to use the existing controller
+and thermostats. Note that if your existing thermostats are set to a lower temperature than required by Hotpot, then the thermostats will always win. I recommend either switching the existing controller to an "always on" state, or programming in a simple "on-off" schedule that sets hot water and central heating are "on" during the time Hotpot is likely to be managing the temperature. This way if Hotpot fails for any reason, the original controller takes over.
 
 # Server Software
 
 The controller uses rules defined in javascript functions to control
 the temperature of the different services offered by the central heating
 system. It runs a HTTP(S) server that supports querying and changing the
-configuration of the system via AJAX requests from a browser or mobile
-device.
+configuration of the system from a browser.
 
 The server is implemented using node.js, version 11.15.0 (at time of
 writing this is the most recent version available for the RPi).
 
 ## Configuring the Server
 
-The server is run as follows:
+The server can be run as follows:
 ```
-$ cd server
-$ node Hotpot.js
+$ node server/js/Hotpot.js <options>
 ```
 The server supports command-line options as follows:
 ```
   -h, --help        Show this help
   -c, --config=ARG  Configuration file (default ./hotpot.cfg)
+  -C, --confhelp    Configuration file help (requires a hotpot.cfg)
   -t, --trace[=ARG] Trace module e.g. --trace all
   -d, --debug       Run in debug mode - uses stubs for missing hardware
 ```
@@ -80,7 +82,7 @@ installed, so that appropriate device stubs can be put in place.
 The server is configured by Javascript read from a file (default `./hotpot.cfg`)After the initial setup, the HTTP interface can be used to query and modify
 the configuration. If time the server configuration is changed from the browser interface, the configuration file will be automatically saved.
 
-An annotated example configuration file is given in `example.hotpot.cfg`.
+An annotated example configuration file is given in `hotpot.cfg`.
 
 ### History
 
@@ -100,17 +102,14 @@ The weather feature is considered experimental, and is likely to change.
 
 ## Rules
 
-Rules are Javascript functions.
-```Javascript
-function rule() => boolean
-```
-Each function is called in in a polling loop, and it it returns true,
-the evaluation will stop. Rule functions are called with 'this' set to
-the Controller.
+Rules are subclasses of the 'Rule' class that implement a test function.
+Each test function is called in in a polling loop, and they are able to
+control settings via the controller.
 
 Rule functions can interrogate any part of the system using the internal APIs.
-Annotated example rules are given for Hot Water `server/hw_rules.js` and
-Central Heating `server/ch_rules.js`.
+Default rules are given for Hot Water `server/js/HotWaterRule.js` and
+Central Heating `server/js/CentralHeatingRule.js`. You can derive your own
+rules and point your hotpot.cfg at them.
 
 # AJAX interface
 The AJAX interface gives access to the
@@ -157,7 +156,7 @@ Paste the copied fields from `client_secret` into the `secrets` object. The `pri
 Calendars are cached and updated as required. An update can be forced at any time by sending a `/refresh_calendars` request to the server.
 
 ## Controlling Hotpot from the Calendar
-Hotpot is controlled by events in a Google calendar which contain special commands in the event summary or description. For example, `Hotpot:HW=on` will raise a request for Hotpot to turn the hot water on for the duration of the event. Requests are handled in the rules - see `hw_rules.js` for an example.
+Hotpot is controlled by events in a calendar which contain special commands in the event summary or description. For example, `Hotpot:HW=on` will raise a request for Hotpot to turn the hot water on for the duration of the event. Requests are handled in the rules - see `hw_rules.js` for an example.
 
 The format of commands is `Hotpot: <pin> = <state>` where `<pin>` can be the name of a pin in `hotpot.cfg` (e.g. `HW` or `CH`) and `<state>` can be a number (0=off, 1=on, 2=boost, 3=away) or one of the commands `on`, `off`, `boost` or `away'. `all` is special pin that will apply the command to all pins. Pin names are case sensitive; nothing else is. Examples:
 ```
@@ -172,14 +171,13 @@ contain conditions to stop runaway temperature rises and freezing.
 
 An option is to create a specific calendar for Hotpot control, in which case all event in the calendar relate to Hotpot. In this case you can modify the configuration to dispense with the prefix.
 
+An implementation of the Calendar interface using Google Calendar is provided
+in 'server/js/GoogleCalendar.js'.
+
 ## Browser App
 The browser app is served automatically when `/browser.html` is loaded from
 a browser. The app provides control and monitoring capabilities in a portable
 interface that can be used fom desktops, laptops, tablets and smartphones.
-
-# GetIP
-
-GetIP is a program to help with accessing a home server that is hidden behind a DHCP server. See the README.md file in that subdirectory.
 
 # Debugging
 
@@ -188,4 +186,4 @@ node ../js/Hotpot.js -d --trace all -c simulated_hotpot.cfg
 
 This will start a debug mini-web-server listening on port 13196
 
-In a web browser on localhost, load http://localhost:13196/browser.html
+In a web browser on localhost, load http://localhost:13196/
