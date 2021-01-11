@@ -12,8 +12,9 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
     const TAG = "Calendar";
 
 	/**
-	 * Base class of calendars. Specific calendar implementations should subclass,
-     * e.g. GoogleCalendar
+	 * Abstract base class of calendars. Specific calendar implementations
+	 * should subclass, e.g. GoogleCalendar, this class should not be
+	 * instanted directly (or used in a .Model)
      */
     class Calendar {
 
@@ -273,9 +274,8 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
     }
     
     Calendar.Model = {
-        $class: Calendar,
         prefix: {
-            $doc: "set to the prefix for hotpot instructions in the calendar",
+            $doc: "Prefix for hotpot instructions in the calendar",
             $class: String,
             $optional: true
         },

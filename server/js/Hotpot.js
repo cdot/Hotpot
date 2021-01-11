@@ -53,15 +53,12 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
 
     let config, controller, server;
 
-    DataModel.loadData(cliopt.config, HOTPOT_MODEL)
+    if (cliopt.confhelp) {
+        Utils.LOG(TAG, " ", DataModel.help(HOTPOT_MODEL));
+        eval("process.exit(1)");
+    }
 
-    .then(function (cfg) {
-        if (cliopt.confhelp) {
-            Utils.LOG(TAG, " ", DataModel.help(Controller.Model));
-            eval("process.exit(1)");
-        }
-        return cfg;
-    })
+    DataModel.loadData(cliopt.config, HOTPOT_MODEL)
 
     .then((cfg) => {
         config = cfg;

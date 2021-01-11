@@ -14,7 +14,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 
     const mainfile = "/tmp/blah";
 
-    // Test with built-in types
+    // Test with built-in types String, Number
     let simpleModel = {
         pugh: { $class: String, $doc: "hugh" },
         barney: { $class: Number },
@@ -26,7 +26,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         array: { $array_of: { $class: String } }
     };
 
-    let simpleProto = {
+    let simpleData = {
         pugh: "hugh",
         barney: 99,
         cuthbert: {
@@ -35,7 +35,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         array: [ "a", "b", "c" ]
     };
 
-    let simpleProtoBad = {
+    let simpleDataBad = {
         pugh: "hugh",
         barney: 7,
         cuthbert: {
@@ -49,19 +49,19 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         phoar: { $class: DataModel.TextOrFile, $doc: "cor", $optional: true }
     };
 
-    let builtInsProto = {
+    let builtInsData = {
         fnaar: "/",
         phoar: "flab a dab\nsnooty\nwhoops a daisy\nclump\nratfink"
     };
 
-    let builtInsProtoBad = {
+    let builtInsDataBad = {
         // fnaar is missing
-        phoar: builtInsProto.phoar
+        phoar: builtInsData.phoar
     };
 
     let builtInsDump = {
-        fnaar: new DataModel.File(builtInsProto.fnaar),
-        phoar: new DataModel.TextOrFile(builtInsProto.phoar)
+        fnaar: new DataModel.File(builtInsData.fnaar),
+        phoar: new DataModel.TextOrFile(builtInsData.phoar),
     };
 
     let helpModel = {
@@ -118,7 +118,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         c: { $map_of: Toad.Model }
     };
 
-    let toadyProto = {
+    let toadyData = {
         a: "A",
         b: { data: { x: 1, y: true } },
         c: {one: { data: { x: 2, y: true } }, two: { data: { x: 3, y: true } }}
@@ -152,80 +152,82 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         toad: [{ data: { x: 4, y: false } }]
     };
 
-    tr.addTest("remodel-simple", function() {
-        let remodeled = DataModel.remodel('', simpleProto, simpleModel);
-        assert.equal(Utils.dump(remodeled), Utils.dump(simpleProto));
+    tr.deTest("remodel simple", function() {
+        return DataModel.remodel('', simpleData, simpleModel)
+		.then((remodeled) => {
+			assert.equal(Utils.dump(remodeled), Utils.dump(simpleData));
+		});
     });
 
-    tr.addTest("remodel-bad-simple", function() {
-        try {
-            DataModel.remodel('', simpleProtoBad, simpleModel);
-        } catch(s) {
-            assert(s.name == "DataModel");
-            assert.equal(s.message, ".remodel: 'cuthbert.dibble' not optional and no default");
-            return;
-        }
-        assert(false, "Failed");
+    tr.deTest("remodel bad simple", function() {
+        return DataModel.remodel('', simpleDataBad, simpleModel)
+		.then(() => assert.fail())
+		.catch((s) => {
+			// Unpredictable order from maps
+            assert(s.message == "'array' not optional and no default"
+				   || s.message == "'cuthbert.dibble' not optional and no default");
+        });
     });
 
-    tr.addTest("remodel-builtIns", function() {
-        let remodeled = DataModel.remodel("", builtInsProto, builtInsModel);
-        //Utils.LOG(remodeled, builtInsDump);
-        //assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
-        assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
+    tr.deTest("remodel builtIns", function() {
+        return DataModel.remodel("", builtInsData, builtInsModel)
+		.then((remodeled) => {
+			//Utils.LOG(remodeled, builtInsDump);
+			//assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
+			assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
+		});
     });
 
-    tr.addTest("remodel-bad-builtIns", function() {
-        try {
-            DataModel.remodel("", builtInsProtoBad, builtInsModel);
-        } catch(s) {
-            assert.equal(s.name, "DataModel");
-            assert.equal(s.message, ".remodel: 'fnaar' not optional and no default");
-            return;
-        }
-        assert(false, "Failed");
+    tr.deTest("remodel bad builtIns", function() {
+        return DataModel.remodel("", builtInsDataBad, builtInsModel)
+		.then(() => assert.fail())
+		.catch((s) => {
+            assert.equal(s.message, "'fnaar' not optional and no default");
+        });
     });
 
-    tr.addTest("remodel-toady", function() {
-        let remodeled = DataModel.remodel("", toadyProto, toadyModel);
-        assert.equal(Utils.dump(remodeled), Utils.dump(toadyDump));
-        remodeled.b.croak(1, true);
-        remodeled.c.one.croak(2, true);
-        remodeled.c.two.croak(3, true);
+    tr.deTest("remodel toady", function() {
+        return DataModel.remodel("", toadyData, toadyModel)
+		.then((remodeled) => {
+			assert.equal(Utils.dump(remodeled), Utils.dump(toadyDump));
+			remodeled.b.croak(1, true);
+			remodeled.c.one.croak(2, true);
+			remodeled.c.two.croak(3, true);
+		});
+	});
+
+    tr.deTest("remodel amphibian", function() {
+        return DataModel.remodel("", amphibianProto, Amphibian.Model)
+		.then((remodeled) => {
+			assert.equal(remodeled.constructor.name, "Amphibian");
+			assert.equal(remodeled.toad.constructor.name, "Array");
+			assert.equal(remodeled.toad[0].constructor.name, "Toad");
+		});
     });
 
-    tr.addTest("remodel-amphibian", function() {
-        let remodeled = DataModel.remodel("", amphibianProto, Amphibian.Model);
-        assert.equal(remodeled.constructor.name, "Amphibian");
-        assert.equal(remodeled.toad.constructor.name, "Array");
-        assert.equal(remodeled.toad[0].constructor.name, "Toad");
-    });
-
-    tr.addTest("serialise-simple", function() {
-        return DataModel.getSerialisable(simpleProto, simpleModel)
+    tr.deTest("serialise simple", function() {
+        return DataModel.getSerialisable(simpleData, simpleModel)
             .then(function(s) {
-                assert.deepEqual(s, simpleProto);
+                assert.deepEqual(s, simpleData);
             });
     });
 
-    tr.addTest("serialise-builtIns", function() {
-        let data = DataModel.remodel("", builtInsProto, builtInsModel);
-        return DataModel.getSerialisable(data, builtInsModel)
-            .then(function(s) {
-                assert.equal(Utils.dump(s), Utils.dump(builtInsProto));
-            });
+    tr.deTest("serialise builtIns", function() {
+        return DataModel.remodel("", builtInsData, builtInsModel)
+		.then((data) => DataModel.getSerialisable(data, builtInsModel))
+        .then((s) => assert.equal(Utils.dump(s), Utils.dump(builtInsData)));
+	});
+
+    tr.deTest("serialise toady", function() {
+        DataModel.remodel("", toadyData, toadyModel)
+        .then((data) => DataModel.getSerialisable(data, toadyModel))
+		.then(function(s) {
+			assert.equal(Utils.dump(s), Utils.dump(toadySerial));
+		});
     });
 
-    tr.addTest("serialise-toady", function() {
-        let data = DataModel.remodel("", toadyProto, toadyModel);
-        return DataModel.getSerialisable(data, toadyModel)
-            .then(function(s) {
-                assert.equal(Utils.dump(s), Utils.dump(toadySerial));
-            });
-    });
-
-    tr.addTest("saveload-simple", function() {
-        return DataModel.saveData(simpleProto, simpleModel, mainfile)
+    tr.deTest("saveload simple", function() {
+        return DataModel.saveData(simpleData, simpleModel, mainfile)
         .then(function() {
             return DataModel.loadData(mainfile, simpleModel);
         })
@@ -235,57 +237,81 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
             assert.equal(config.cuthbert.dibble, "grubb");
         });
     });
-    tr.addTest("saveload-builtIns", function() {
-        return DataModel.saveData(builtInsProto, builtInsModel, mainfile)
-            .then(function() {
-                return DataModel.loadData(mainfile, builtInsModel);
-            })
-            .then(function(config) {
-                assert.equal(config._readFrom, mainfile);
-                delete config._readFrom;
-                assert.equal(Utils.dump(config), Utils.dump(builtInsDump));
-                return Promise.resolve(config);
-            });
+	
+    tr.deTest("saveload builtIns", function() {
+        return DataModel.saveData(builtInsData, builtInsModel, mainfile)
+        .then(() => DataModel.loadData(mainfile, builtInsModel))
+        .then((config) => {
+            assert.equal(config._readFrom, mainfile);
+            delete config._readFrom;
+            assert.equal(Utils.dump(config), Utils.dump(builtInsDump));
+            return Promise.resolve(config);
+        });
     });
 
-    tr.addTest("at-simple", function() {
-        let remodeled = DataModel.remodel('', simpleProto, simpleModel);
-        DataModel.at(
-            remodeled, simpleModel, "/cuthbert/bob",
-            function(node, model, parent, key) {
-                assert(node === remodeled.cuthbert.bob);
-                assert(model === simpleModel.cuthbert.bob);
-                assert(parent === remodeled.cuthbert);
-                assert.equal(key, "bob");
-            });
-        try {
-            DataModel.at(
-                remodeled, simpleModel, "cuthbert/array",
-                function(node, model, parent, key) {
-                    assert(false, "Should never be called");
-                });
-            assert(false, "Should fail");
-        } catch (e) {
-        };
-        DataModel.at(remodeled, simpleModel, "array/1",
-             function(node, model, parent, key) {
-                 assert(node === remodeled.array[1]);
-                 assert(model === simpleModel.array.$array_of);
-                 assert(parent === remodeled.array);
-                 assert.equal(key, 1);
-             });
-        DataModel.at(remodeled, simpleModel, "array",
-             function(node, model, parent, key) {
-                 assert(node === remodeled.array);
-                 assert(model === simpleModel.array);
-                 assert(parent === remodeled);
-                 assert.equal(key, "array");
-             });
+    tr.deTest("simple proto, simple data", function() {
+        return DataModel.remodel('', simpleData, simpleModel)
+		.then((remodeled) => {
+			return DataModel.at(remodeled, simpleModel, "/cuthbert/bob")
+			.then((p) => {
+				assert.equal(p.node, remodeled.cuthbert.bob);
+				assert.equal(p.model, simpleModel.cuthbert.bob);
+				assert.equal(p.parent, remodeled.cuthbert);
+				assert.equal(p.key, "bob");
+			})
+			.then(() => {
+				return new Promise((resolve) => {
+					DataModel.at(remodeled, simpleModel, "cuthbert/array")
+					.then(() => {
+						assert.fail("Should never be called");
+					})
+					.catch((e) => {
+						resolve();
+					});
+				});
+			})
+			.then(() => DataModel.at(remodeled, simpleModel, "array/1"))
+			.then((p) => {
+				assert(p.node === remodeled.array[1]);
+				assert(p.model === simpleModel.array.$array_of);
+				assert(p.parent === remodeled.array);
+				assert.equal(p.key, 1);
+			})
+			.then(() => DataModel.at(remodeled, simpleModel, "array"))
+			.then((p) => {
+				assert(p.node === remodeled.array);
+				assert(p.model === simpleModel.array);
+				assert(p.parent === remodeled);
+				assert.equal(p.key, "array");
+			});
+		});
     });
 
-    tr.addTest("help", function() {
+    tr.deTest("help", function() {
         assert.equal(DataModel.help(helpModel), helpModelString);
     });
+
+	tr.addTest("require", function() {
+		let model = {
+			fleem: {
+				$instantiable: true,
+				data: { $class: String, $doc: "nerf" },
+				$doc: "meelf",
+			}
+		};
+		let data = {
+			fleem: {
+				$instance_of: "common/test/Instantiable",
+				data: "Sausages"
+			}
+		};
+
+		return DataModel.remodel("", data, model)
+		.then((d) => DataModel.getSerialisable(d, model))
+        .then((s) => {
+			assert.equal(Utils.dump(s), Utils.dump(data));
+		});
+	});
 
     tr.run();
 });

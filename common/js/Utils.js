@@ -181,7 +181,7 @@ define("common/js/Utils", function() {
      * Construct a slightly customised exception object
      * @param name Exception type name
      * @param args remaining args will be
-     * @return an Erro object
+     * @return an Error object
      */
     Utils.exception = function () {
         let e = new Error(Utils.joinArgs(arguments, 1));

@@ -39,15 +39,11 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             })
 
             .then(() => {
-                return this.initialiseRules();
-            })
-
-            .then(() => {
                 return this.initialiseCalendars();
             })
 
             .then(() => {
-                return this.createWeatherAgents();
+                return this.initialiseWeatherAgents();
             })
 
             .then(() => {
@@ -63,17 +59,12 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * promise, it will resolve immediately.
          * @private
          */
-        createWeatherAgents() {
+        initialiseWeatherAgents() {
             let self = this;
             let promises = [];
             for (let name in this.weather) {
                 let config = this.weather[name];
-                promises.push(new Promise((resolve) => {
-                    requirejs(["server/js/" + name], function(WeatherAgent) {
-                        self.weather[name] = new WeatherAgent(config);
-                        self.weather[name].initialise().then(resolve);
-                    });
-                }));
+                promises.push(self.weather[name].initialise());
             }
             return Promise.all(promises).then(() => {
                 Utils.TRACE(TAG, "Initialised Weather Agents");
@@ -225,24 +216,6 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             }
             return Promise.all(promises).then(() => {
                 Utils.TRACE(TAG, "Initialised thermostats");
-            });
-        };
-
-        /**
-         * Create the rules defined in the configuration
-         * @param {Array} configs array of rule configurations
-         * @return {Promise} a promise.
-         * @private
-         */
-        initialiseRules() {
-            let promises = [];
-            for (let name in this.rule) {
-                let rule = this.rule[name];
-                promises.push(rule.initialise());
-            }
-            return Promise.all(promises)
-            .catch((e) => {
-                Utils.ERROR(TAG, "Rule failed: ", e)
             });
         };
 
@@ -422,7 +395,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @params {array} path the url path components
          * @param {object} data structure containing parameters. These vary according
          * to the command (commands are documented in README.md)
-         * @return a promise, passed an object for serialisation in the response
+         * @return a promise that resolves to an object for serialisation in the response
          */
         dispatch(path, data) {
             let self = this;
@@ -451,25 +424,25 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             case "getconfig":
                 // /getconfig/path/to/config/node
                 Utils.TRACE(TAG, `getconfig ${path}`);
-                return DataModel.at(
-                    this, Controller.Model, path,
-                    (data, model) => DataModel.getSerialisable(data, model))
+                return DataModel.at(this, Controller.Model, path)
+				.then((p) => DataModel.getSerialisable(p.node, p.model));
             case "setconfig":
                 // /setconfig/path/to/config/node, data.value is new setting
-                DataModel.at(
-                    this, Controller.Model, path,
-                    function (item, model, parent, key) {
-                        if (typeof parent === "undefined" ||
-                            typeof key === "undefined" ||
-                            typeof item === "undefined")
-                            throw new Utils.exception(
-                                TAG,
-                                `Cannot update ${path}, insufficient context`);
-                        parent[key] = DataModel.remodel(key, data.value, model, path);
-                        Utils.TRACE(TAG, `setconfig ${path} = ${parent[key]}`);
-                        self.emit("config_change");
-                    });
-                break;
+                return DataModel.at(this, Controller.Model, path)
+				.then((p) => {
+                    if (typeof p.parent === "undefined" ||
+                        typeof p.key === "undefined" ||
+                        typeof p.node === "undefined")
+                        throw new Utils.exception(
+                            TAG,
+                            `Cannot update ${path}, insufficient context`);
+                    return DataModel.remodel(p.key, data.value, p.model, path);
+				}).then((rebuilt) => {
+					p.parent[p.key] = rebuilt;
+					Utils.TRACE(TAG, `setconfig ${path} = ${parent[p.key]}`);
+					self.emit("config_change");
+					return { status: "OK" };
+                });
             case "request":
                 // Push a request onto a service (or all services). Requests may come
                 // from external sources such as browsers.
@@ -524,29 +497,25 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             for (let name in self.thermostat)
                 self.thermostat[name].purgeRequests();
 
-            // Test each of the rules. Rule evaluation functions return a
-            // promise to set a pin state, which is decided by reading the
-            // thermostats. Requests in the thermostats may define a temperature
-            // target, or if not the timeline is used.
+            // Test each of the rules. Rule evaluation functions
+            // return a promise to set a pin state, which is decided
+            // by reading the thermostats. Requests in the thermostats
+            // may define a temperature target, or if not the timeline
+            // is used.
+			let promises = [];
             for (let name in self.rule) {
                 let rule = self.rule[name];
-                if (typeof rule.testfn !== "function") {
-                    Utils.ERROR(TAG, "'", rule.name, "' cannot be evaluated");
-                    return true;
-                }
-                rule.testfn.call(self, self.thermostat, self.pin)
-                .catch(function (e) {
-                    if (typeof e.stack !== "undefined")
-                        Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.stack);
-                    Utils.ERROR(TAG, "'", rule.name, "' failed: ", e.toString());
-                });
+                promises.push(rule.test(self));
             }
 
-            // Queue the next poll
-            self.poll.timer = setTimeout(() => {
-                self.poll.timer = undefined;
-                self.pollRules();
-            }, self.rule_interval);
+			Promise.all(promises)
+			.then(() => {
+				// Queue the next poll
+				self.poll.timer = setTimeout(() => {
+					self.poll.timer = undefined;
+					self.pollRules();
+				}, self.rule_interval);
+			});
         }
     }
     
@@ -572,18 +541,16 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         },
         rule: {
             $doc: "Set of Rules",
-            $map_of: Rule.Model
+            $map_of: { $instantiable: true }
         },
         calendar: {
-            $doc: "Set of Calendars",
-            $map_of: Calendar.Model
+            $doc: "Set of Calendars e.g. $instance_of:`GoogleCalendar`",
+            $map_of: { $instantiable: true }
         },
         weather: {
-            $doc: "Array of weather agents",
+            $doc: "Set of weather agents e.g. $instance_of:`MetOffice`",
             // We don't know what class the agents are yet
-            $map_of: {
-                $skip: true
-            }
+            $map_of: { $instantiable: true }
         }
     };
 

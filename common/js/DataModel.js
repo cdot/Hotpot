@@ -128,16 +128,23 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * @namespace
      */
     let DataModel = {
-        private_key: {
-            $map_of: true,
+		// meta keys valid in the model
+        modelMetaKeys: {
             $array_of: true,
             $checked: true,
             $class: true,
             $default: true,
             $doc: true,
+			$instantiable: true,
+            $map_of: true,
             $optional: true,
             $skip: true
         },
+		// meta keys valid in data
+		dataMetaKeys: {
+			$instance_of: true
+		},
+		// basic types
         builtin_types: [
             Boolean,
             Number,
@@ -148,7 +155,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
     };
 
     /**
-     * Check the model for correct construction
+     * Check the model for correct construction. Not recursive.
      * @param model the model to check
      * @param context undefined or an array
      * @private
@@ -161,23 +168,29 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             context = [];
 
         if (typeof model !== "object")
-            throw new Utils.exception(
-				TAG, "Illegal model type", model, "at", context.join('.'));
+            throw new Error(
+				`typeof=="${typeof model}" at '${context.join('.')}'`);
 
         //Utils.LOG("check <",context.join('.'),"> {");
 
+		if (model.$instantiable && typeof model.$class !== "undefined")
+            throw new Error(`$instantiable and $class are mutually exclusive at '${context.join('.')}'`);
+
         let is_base = false;
         if (typeof model.$class === "function") {
+				
             if (DataModel.builtin_types.indexOf(model.$class) >= 0) {
                 // Internal fields not supported
                 is_base = true;
             }
             // Currently cannot have both $array_of and $class
             if (typeof model.$array_of !== "undefined")
-                throw new Utils.exception(TAG, ".check: cannot have $array_of and $class");
+                throw new Error(
+					"Cannot have both $array_of and $class");
+
         } else if (typeof model.$class !== "undefined") {
-            throw new Utils.exception(TAG, ".check: $class is ",
-                                      typeof model.$class, " at ", context.join('.'));
+            throw new Error(
+				`$class is ${typeof model.$class} at '${context.join('.')}'`);
         }
 
         model.$checked = true;
@@ -185,8 +198,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         if (!model.$skip) {
             if (typeof model.$array_of !== "undefined") {
                 if (typeof model.$map_of !== "undefined")
-                    throw new Utils.exception(
-                        TAG, ".check: cannot have $array_of and $map_of");
+                    throw new Error(
+						`Cannot have $array_of and $map_of at '${context.join('.')}'`);
                 DataModel.check(model.$array_of, context.concat("[]"));
             } else if (typeof model.$map_of !== "undefined")
                 DataModel.check(model.$map_of, context.concat("{}"));
@@ -194,10 +207,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 for (let i in model) {
                     if (i.charAt(0) !== '$') {
                         if (is_base)
-                            throw new Utils.exception(
-                                TAG, ".check: $class ",
-                                model.$class.name, " has field ", i, " at ",
-                                context.join('.'));
+                            throw new Error(
+								`Bad model: ${model.$class.name} has field ${i} at '${context.join('.')}'`);
                         DataModel.check(model[i], context.concat(i));
                     }
                 }
@@ -207,115 +218,176 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
     };
 
     /**
-     * Test the given model against the given data structure, checking data
-     * against the model and constructing objects as required.
+     * Return a promise to test the given model against the given
+	 * data structure, checking data against the model and constructing
+	 * objects as required.
      * @param {object} data The data being loaded
      * @param {index} The index of the structure in the parent object. This
      * will be a number for an array entry, or a key for a hash, and is used
      * to pass to constructors for named objects.
      * @param {object} model the model
      * @param {string[]} context The context of the check, used in messages only
-     * @return the data (or the default, if one was applied)
+     * @return a promise that resolves to the data (or the default, if one
+	 * was applied)
      */
     DataModel.remodel = function (index, data, model, context) {
-        let i;
 
         DataModel.check(model);
 
         if (index === "_readFrom")
-            return data;
+            return Promise.resolve(data);
 
         if (typeof context === "undefined")
             context = [];
 
-        let details = false;//(context.indexOf("rule") >= 0);
+        let details = true;//(context.indexOf("rule") >= 0);
         
-        if (details) Utils.LOG("Remodel ", context.join('.'));
+        if (details) Utils.LOG(`Remodel '${context.join('.')}'`, data);
 
         // Got a data definition
         if (typeof data === "undefined") {
-            if (model.$optional) {
-                return data;
-            }
+            if (model.$optional)
+				return Promise.resolve(data);
+
             if (typeof model.$default === "undefined")
-                throw new Utils.exception(
-                    TAG,
-                    `.remodel: '${context.join(".")}' not optional and no default`);
+                return Promise.reject(new Error(
+					`'${context.join(".")}' not optional and no default`));
             else
                 data = model.$default;
         }
 
         if (model.$skip) {
-            return data;
-        }
+			if (details) Utils.LOG(`\t$skip '${context.join('.')}'`);
+            return Promise.resolve(data);
+		}
         
         if (typeof model.$map_of !== "undefined") {
+			if (details) Utils.LOG(`\t$map_of ${model.$map_of}`);
             // Object with keys that don't have to match the model,
             // and values that can be undefined
-            let rebuilt = {};
-            for (let i in data) {
-                rebuilt[i] = DataModel.remodel(
-                    i, data[i], model.$map_of, context.concat(i));
+			let promises = [];
+			let keys = [];
+            for (let key in data) {
+				promises.push(DataModel.remodel(
+					key, data[key], model.$map_of, context.concat(key)));
+				keys.push(key);
             }
-            return rebuilt;
-        } else if (typeof model.$array_of !== "undefined") {
-            let rebuilt = [];
+			return Promise.all(promises)
+			.then((result) => {
+				let rebuilt = {};
+				for (let i in result)
+					rebuilt[keys[i]] = result[i];
+				return rebuilt;
+			});
 
+        }
+
+		if (typeof model.$array_of !== "undefined") {
+			if (details) Utils.LOG(`\t$array_of ${model.$array_of}`);
+			let promises = [];
             for (let i in data) {
                 // undefined is allowed in array data
-                rebuilt[i] = DataModel.remodel(
-                    i, data[i], model.$array_of, context.concat(i));
+                promises.push(DataModel.remodel(
+                    i, data[i], model.$array_of, context.concat(i)));
             }
-            return rebuilt;
+			// Promise.all will rebuild to an array, exactly what we want
+            return Promise.all(promises);
         }
 
-        if (DataModel.builtin_types.indexOf(model.$class) >= 0) {
-            return data;
-        }
+        if (DataModel.builtin_types.indexOf(model.$class) >= 0)
+            return Promise.resolve(data);
         
         // Not a base type, so the model describes what has to be passed
         // to the constructor (if there is one)
-        let rebuilt = data;
-
+		let promise;
+		
         if (typeof data === "object") {
-            // Rebuild the sub-structure for this object. The rebuilt object
-            // will either be placed in the result or passed to a constructor.
+			
+			let promises = [];
+            // Keep data meta-keys, and make sure the data doesn't
+			// carry any hidden payload
+            for (let i in data) {
+                if (model[i])
+					continue;
+				// If $instance_of is set we have no way of validating the
+				// fields yet, so preserve them all. Also preserve all
+				// meta-keys. Anything else is regarded as hidden payload.
+				if (data.$instance_of || DataModel.dataMetaKeys[i])
+					promises.push({ key: i, data: data[i]});
+				else
+					return Promise.reject(
+						new Error(
+							`Hidden payload '${i}' in ` + Utils.dump(data) + ` at ${context.join('.')}`));
+            }
 
-            // Note that fields not listed in the model are not copied
-            // into rebuilt.
-            rebuilt = {};
-
-            for (let i in model) {
-                if (!DataModel.private_key[i]) {
-                    let datum = DataModel.remodel(
-                        i, data[i], model[i],
-                        context.concat(i));
-                    if (typeof datum !== "undefined")
-                        // undefined is skipped in objects
-                        rebuilt[i] = datum;
-                    if (details) Utils.LOG("Rebuilt ",data[i]," to ",rebuilt[i]);
+			// Promise to rebuild each data field
+            for (let key in model) {
+                if (!DataModel.modelMetaKeys[key]) {
+                    promises.push(
+						DataModel.remodel(
+							key, data[key], model[key], context.concat(key))
+						.then((rebuilt) => {
+							return { key: key, data: rebuilt }
+						}));
                 }
             }
-            // Make sure the data doesn't carry any hidden payload
-            for (let i in data) {
-                if (!model[i])
-                    throw new Utils.exception(
-                        TAG, ".remodel: Hidden payload ", i, " in ", data,
-                        " at ", context.join('.'));
-            }
-        }
+			
+			promise = Promise.all(promises)
+			.then((result) => {
+				let rebuilt = {};
+				for (let i in result) {
+					let res = result[i];
+					
+                    if (typeof res.data !== "undefined") {
+                        // undefined is skipped in objects
+                        rebuilt[res.key] = res.data;
+						if (details) Utils.LOG(
+							`Rebuilt ${res.key}`);
+					} else if (details)
+						 Utils.LOG(`Filtered ${res.key}`);
+				}
+				return rebuilt;
+			});
+        } else
+			promise = Promise.resolve(data);
 
-        if (typeof model.$class === "function") {
-            if (details) Utils.LOG("Instantiate ", model.$class.name, " ", index," on ", rebuilt);
-            // Have to pass index first for building native types such
-            // as String, Number, Date
-            // Could call remodel, this is fractionally quicker
-            rebuilt = new model.$class(rebuilt, index, model);
+		return promise
+		.then((rebuilt) => {
 
-        }
+			if (model.$instantiable) {
+				console.log(rebuilt);
+				let t = rebuilt.$instance_of;
+				if (typeof t !== "string")
+					throw new Error(`Expected $instance_of at '${context.join(".")}'`);
+				
+				if (details)
+					Utils.LOG(TAG, `Instantiate a ${rebuilt.$instance_of}`);
+				
+				// Building a type defined in the data. When we serialise,
+				// it will record the type loaded, not the type in the
+				// original data
+				return new Promise((resolve, reject) => {
+					requirejs([rebuilt.$instance_of], (module) => {
+						let sub = new module(rebuilt, index, module.Model);
+						// Hack in where it came from
+						sub.$instantiated_from = rebuilt.$instance_of;
+						resolve(sub);
+					});
+				});
+			}
+			
+			if (typeof model.$class === "undefined")
+				return Promise.resolve(rebuilt);
 
-        if (details) Utils.LOG("Gives",rebuilt,model);
-        return rebuilt;
+			if (details)
+				Utils.LOG(`Instantiate ${model.$class.name} ${index} on `,
+						  rebuilt);
+
+			// Have to pass index for building native types such
+			// as String, Number, Date
+			// Could call remodel, this is fractionally quicker
+			return Promise.resolve(new model.$class(rebuilt, index, model));
+		});
     };
 
     /**
@@ -337,8 +409,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             if (typeof model !== "undefined" && model.$optional) {
                 return Promise.resolve();
             }
-            throw new Utils.exception(TAG, ".getSerialisable: non-optional at ",
-                                      context.join('.'));
+            throw new Error(
+				`${context.join('.')} is not optional`);
         }
 
         //Utils.LOG("Serialise ", data, " using ",model);
@@ -356,14 +428,11 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         if (typeof data !== "object")
             return Promise.resolve(data);
 
-        let serialisable;
-
         if (typeof model.$array_of !== "undefined") {
             // Serialise all entries in the object, it's an array
             if (typeof data[Symbol.iterator] !== 'function')
-                throw new Utils.exception(
-                    TAG, ".getSerialisable: iterable expected at ",
-                    context.join('.'), data);
+                throw new Error(
+					`Iterable expected at ${context.join('.')}=${data}`);
             let promises = [];
             for (let index in data) {
                 promises.push(
@@ -371,28 +440,28 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                         data[index], model.$array_of,
                         context.concat(index)));
             }
-            return Promise.all(promises).then((serialisable) => serialisable);
+            return Promise.all(promises);
 
         } else if (typeof model.$map_of !== "undefined") {
             if (typeof data !== "object")
-                throw new Utils.exception(
-                    TAG, ".getSerialisable: map expected at ",
-                    context.join('.'), data);
-            serialisable = {};
-            let promise = Promise.resolve();
-            for (let index in data) {
-                promise = promise.then(() => {
-                    return DataModel.getSerialisable(
-                        data[index], model.$map_of,
-                        context.concat(index));
-                })
-                .then((ser) => {
-                    serialisable[index] = ser;
-                });
+                throw new Error(
+					`Map expected at ${context.join('.')}=${data}`);
+            let promises = [];
+            for (let key in data) {
+                promises.push(
+					DataModel.getSerialisable(
+						data[index], model.$map_of,
+						context.concat(index))
+					.then((ser) => { return { key: key, serialised: ser }; }));
             }
-            return promise.then(() => serialisable);
-            
-        } else if (typeof model.$class === "function" &&
+			return Promise.all(promises).then((s) => {
+				let res = {};
+				for (let i in s)
+					res[s[i].key] = s[i].serialised;
+				return res;
+			});
+ 
+		} else if (typeof model.$class === "function" &&
                    typeof data.getSerialisable === "function") {
             // objects can override getSerialisable
             // Could also use model.prototype.getSerialisable
@@ -401,32 +470,35 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             return Promise.resolve(data);
         }
 
-        serialisable = {};
-        let promises = [];
+		let promises = [];
+		if (model.$instantiable)
+			promises.push(Promise.resolve({
+				key: "$instance_of", serialised: data.$instantiated_from}));
         // Only serialise fields described in the model. All other fields
-        // in the object are ignored.
+        // in the object (except $instance_of) are ignored.
         for (let key in model) {
-            if (DataModel.private_key[key])
+            if (DataModel.modelMetaKeys[key])
                 continue;
             promises.push(
                 DataModel.getSerialisable(
                     data[key], model[key],
                     context.concat(key))
-                .then(function (c) {
-                    if (typeof c !== "undefined") {
-                        serialisable[key] = c;
-                    }
-                }));
-        }
+				.then((ser) => { return { key: key, serialised: ser };}));
+		}
 
-        return Promise.all(promises).then(function () {
-            return serialisable;
-        });
+		return Promise.all(promises)
+		.then((s) => {
+			let res = {};
+			for (let i in s)
+				if (typeof s[i].serialised !== "undefined")
+					res[s[i].key] = s[i].serialised;
+			return res;
+		});
     };
 
     /**
      * Follow the path from the root to the node at the end of the path,
-     * and call a function on the the root of the subtree there and the
+     * and call a function on the the root of the subtree there, and the
      * model that describes it. Will throw if the path does not describe a
      * node with a corresponding model.
      * @param {object} root the root of the tree
@@ -438,7 +510,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * subtree, parentnode is the node that contains the subtree and key is
      * the key for the subtree in the parent. parentnode and key will be
      * undefined if the path is empty.
-     * @return the result of the call to fn
+     * @return a promise with the result of the call to fn
      */
     DataModel.at = function (root, model, path, fn) {
         if (typeof path === "string") {
@@ -459,11 +531,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         let i = 0;
         while (i < path.length) {
             if (typeof node === "undefined")
-                throw new Utils.exception(
-                    TAG, ".at: no node at ", path, "[", i, "]");
+                throw new Error(`No node at ${path.join('.')}[${i}]`);
             if (typeof node_model === "undefined")
-                throw new Utils.exception(
-                    TAG, ".at: no model at ", path, "[", i, "]");
+                throw new Error(`No model at ${path.join('.')}[${i}]`);
             parent = node;
             key = path[i++];
             node = node[key];
@@ -475,8 +545,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 node_model = node_model[key];
         }
         if (i < path.length)
-            throw new Utils.exception(TAG, ".at: could not find ", path);
-        return fn(node, node_model, parent, key);
+            throw new Error(`Could not find '${path.join('.')}'`);
+        return Promise.resolve({node: node, model: node_model, parent: parent, key: key});
     };
 
     /**
@@ -490,13 +560,12 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
     DataModel.loadData = function (file, model) {
         DataModel.check(model);
 		_loadFs();
-		
+		Utils.TRACE(TAG, `Loading ${file}`);
         return Fs.readFile(file)
-        .then(function (code) {
-            let data = Utils.eval(code, file);
-            data = DataModel.remodel("", data, model);
-            data._readFrom = file;
-            return data;
+        .then((code) => DataModel.remodel("", Utils.eval(code, file), model))
+		.then((rebuilt) => {
+			rebuilt._readFrom = file;
+			return rebuilt;
         });
     };
 
@@ -531,9 +600,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      */
     DataModel.help = function (model, index) {
         DataModel.check(model);
-
+		
         // index is used for formatting and is not visible to callers
-        function shift_right(s) {
+        function indent(s) {
             return s.replace(/\n/g, "\n ");
         }
 
@@ -547,6 +616,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
         if (model.$optional)
             docstring.push("(optional)");
+		let recurse = true;
         if (typeof model.$class !== "undefined") {
             if (typeof model.$class === "string")
                 docstring.push('<' + model.$class + '>');
@@ -554,38 +624,49 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 docstring.push('<' + model.$class.name + '>');
             else
                 docstring.push(model.$class); // wtf?
+
+			recurse = (DataModel.builtin_types.indexOf(model.$class) < 0);
         }
 
+		if (model.$instantiable)
+			docstring.push('(instantiable)');
+		
         if (typeof model.$doc === "string")
             docstring.push(model.$doc);
 
-        if (typeof model.$class === "undefined" || model.$class === "object") {
-            if (typeof model.$array_of !== "undefined") {
-                docstring.push('[\n');
-                docstring.push(shift_right(DataModel.help(model.$array_of)));
-                docstring.push("\n]");
-            } else if (typeof model.$map_of !== "undefined") {
-                docstring.push('{*\n');
-                docstring.push(shift_right(DataModel.help(model.$map_of)));
-                docstring.push("\n*}");
-            } else {
-                docstring.push("{\n");
-                let sub = [];
-                for (let i in model) {
-                    if (i.charAt(0) !== '$')
-                        sub.push(DataModel.help(model[i], i));
-                }
-                docstring.push(shift_right(sub.join('\n')));
-                docstring.push("\n}");
-            }
-        }
+		if (recurse) {
+			if (typeof model.$array_of !== "undefined") {
+				docstring.push('[\n');
+				docstring.push(indent(DataModel.help(model.$array_of)));
+				docstring.push("\n]");
+			} else if (typeof model.$map_of !== "undefined") {
+				let sub = DataModel.help(model.$map_of);
+				if (sub.length > 0) {
+					docstring.push('{\n');
+					docstring.push(indent(sub));
+					docstring.push("}\n");
+				}
+			} else {
+				let sub = [];
+				for (let i in model) {
+					if (i.charAt(0) !== '$')
+						sub.push(DataModel.help(model[i], i));
+				}
+				if (sub.length > 0) {
+					docstring.push("{\n");
+					docstring.push(indent(sub.join('\n')));
+					docstring.push("\n}");
+				}
+			}
+		}
         return docstring.join(' ').replace(/ +\n/g, "\n");
     }
 
     /* Inner classes, helpers for file operations */
 
     /**
-     * DataModel inner class for handling filenames specified in serialisable data.
+     * DataModel inner class for handling filenames specified in serialisable
+	 * data.
      * The constructor uses the $mode (default "r") specified in the
      * model to verify the status of the target file. This supports the
      * following modes:
@@ -605,48 +686,47 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
 			_loadFs();
 			
-            if (typeof model !== "undefined") {
-                // Got a model to check against. This should always be the case
-                // except in tests.
-                let fnm = Utils.expandEnvVars(filename);
-                let $mode = model.$mode;
-                if (typeof $mode === "undefined")
-                    $mode = "r";
-                
-                let mode = fs.constants.F_OK;
+            if (typeof model === "undefined")
+				return;
+			
+            // Got a model to check against. This should always be the case
+            // except in tests.
+            let fnm = Utils.expandEnvVars(filename);
+            let $mode = model.$mode;
+            if (typeof $mode === "undefined")
+                $mode = "r";
+            
+            let mode = fs.constants.F_OK;
 
-                if ($mode.indexOf("r") >= 0)
-                    mode = mode | fs.constants.R_OK;
+            if ($mode.indexOf("r") >= 0)
+                mode = mode | fs.constants.R_OK;
 
-                if ($mode.indexOf("x") >= 0)
-                    mode = mode | fs.constants.X_OK;
+            if ($mode.indexOf("x") >= 0)
+                mode = mode | fs.constants.X_OK;
 
-                if ($mode.indexOf("e") >= 0 && !fs.existsSync(fnm)) {
-                    throw new Utils.exception(
-                        "Bad ", index, ": ", filename, " does not exist");
-                }
-
-                if ($mode.indexOf("w") >= 0) {
-                    mode = mode | fs.constants.W_OK;
-
-                    if (fs.existsSync(fnm)) {
-                        fs.access(
-							fnm, mode,
-                            function (err) {
-                                if (err)
-                                    throw new Utils.exception(
-                                        "Bad ", index, ": ", filename, " ",
-                                        $mode, " mode check failed: ", err);
-                            });
-                    }
-                } else if ($mode.indexOf("w") >= 0) {
-                    // Just make sure we can write, and clear down the file
-                    fs.writeFileSync(fnm, "", {
-                        mode: mode
-                    });
-                }
+            if ($mode.indexOf("e") >= 0 && !fs.existsSync(fnm)) {
+                throw new Error(`Bad ${index}: '${filename}' does not exist`);
             }
-        };
+
+            if ($mode.indexOf("w") >= 0) {
+                mode = mode | fs.constants.W_OK;
+
+                if (fs.existsSync(fnm)) {
+                    fs.access(
+						fnm, mode,
+                        function (err) {
+                            if (err)
+                                throw new Error(
+                                    `Bad ${index}: '${filename}' '$mode' mode check failed: ${err}`);
+                        });
+                }
+            } else if ($mode.indexOf("w") >= 0) {
+                // Just make sure we can write, and clear down the file
+                fs.writeFileSync(fnm, "", {
+                    mode: mode
+                });
+            }
+        }
 
         /**
          * Generate a simple string representation of this object suitable
@@ -654,7 +734,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
          */
         toString() {
             return this.data;
-        };
+        }
 
         /**
          * Promise to write a new value to the file
@@ -700,10 +780,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      */
     class TextOrFile extends File {
         
-        constructor(data, index, model) {
-            super(data, index, model);
-            let self = this;
-            self.is_file = fs.existsSync(Utils.expandEnvVars(data));
+        constructor(textOrFile, index, model) {
+            super(textOrFile, index, model);
+            this.is_file = fs.existsSync(Utils.expandEnvVars(textOrFile));
         }
 
         /**
@@ -715,7 +794,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             else {
                 return Promise.resolve(this.data);
             }
-        };
+        }
 
         /**
          * Promise to update the datum
@@ -728,7 +807,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 this.data = value;
                 return Promise.resolve(true);
             }
-        };
+        }
     }
 
     TextOrFile.Model = {

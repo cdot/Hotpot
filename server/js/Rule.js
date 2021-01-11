@@ -6,7 +6,7 @@ define("server/js/Rule", ["common/js/Utils", "common/js/Time", "common/js/DataMo
     const TAG = "Rule";
 
     /**
-     * A rule governing when/if a function is to be turned on/off based on the
+     * Abstract base class of rules governing when/if a function is to be turned on/off based on the
      * state of one or more thermostats.
      * @class
      */
@@ -24,55 +24,16 @@ define("server/js/Rule", ["common/js/Utils", "common/js/Time", "common/js/DataMo
              */
             this.name = name;
 
-            /**
-             * Test function. () where `this` is the Controller, 
-             * @type {function}
-             * @public
-             */
-            this.test = undefined;
-
             Utils.extend(this, proto);
         }
 
         /**
          * Promise to initialise a new rule.
          */
-        initialise() {
-            var self = this;
-
-            return this.test.read()
-            .then(function (fn) {
-                if (typeof fn !== "function") {
-                    // Compile the function
-                    try {
-                        fn = Utils.eval(fn);
-                    } catch (e) {
-                        if (e instanceof SyntaxError)
-                            Utils.ERROR(TAG, "Syntax error in '" + self.name +
-                                        "': " + e.stack);
-                        else
-                            Utils.ERROR(TAG, "'" + self.name +
-                                        "' compilation failed: " + e.stack);
-                    }
-                    if (typeof self.testfn !== "undefined" &&
-                        self.testfn === fn) {
-                        Utils.TRACE(TAG, self.name, " unchanged");
-                        return;
-                    }
-                }
-                self.testfn = fn;
-                Utils.TRACE(TAG, self.name, " initialised");
-            });
+        test() {
+			throw new Error("Subclasses must implement");
         };
     }
-
-    Rule.Model = {
-        $class: Rule,
-        test: Utils.extend({}, DataModel.TextOrFile.Model, {
-            $doc: "Rule function (Text or File)",
-            $mode: "r"
-        })
-    };
 
     return Rule;
 });
