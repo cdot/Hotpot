@@ -456,7 +456,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 this.addRequest(data.service, data.source, data.target, data.until);
                 self.pollRules();
                 break;
-            case "settime":
+            /*case "settime":
                 let tim = data.value;
                 if (path[0] === "time") {
                     if (!tim || tim === "")
@@ -464,7 +464,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                     else
                         Time.force(tim);
                 }
-                break;
+                break;*/
             case "refresh_calendars":
                 // Force the refresh of all calendars (sent manually when one changes)
                 // SMELL: could use push notification to do this, but that requires

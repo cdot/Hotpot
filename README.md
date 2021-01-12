@@ -21,11 +21,11 @@ Aside from the Raspberry Pi, the only additional hardware required are two
 DS18x20 temperature sensors, and two relays. A dual SRD-05VDC-SL-C relay module
 is ideal for this. The wiring capitalises on the fact that when the controller
 for a Y system is powered on, but set to "off", the "Hot water off" control line
-is held high (at 250V). See the [wiring diagram](Hardware/Mains.svg) for details
+is held high (at 250V). See the [wiring diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Mains.svg) for details
 of the mains level wiring.
 
 The wiring of the temperature sensors and the control side of the relays is
-the [[pinout diagram](Hardware/5V-3.5V control.svg).
+the [pinout diagram]((https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/5V-3.5V%20control.svg).
 
 If you follow my wiring, it is safe to continue to use the existing controller
 and thermostats. It is designed such that if the relays are left unpowered, the
@@ -46,17 +46,15 @@ that existing thermostats are kept at sensible levels.
 
 DS18x20 temperature sensors use a 1-wire bus that allows multiple sensors
 to be daisy-chained on a single GPIO pin. I use GPIO 18 (header pin 12) for
-this. Configure the operating system as follows.
-
-First, the pin used for the 1-wire temperature sensors has to be set in
-`/boot/config.txt`:
+this. This has to be set in `/boot/config.txt` as follows:
 
 ```
 # 1-wire settings
 dtoverlay=w1-gpio,gpiopin=18
 ```
 Add the following to `/etc/modules-load.d/modules.conf`
-(or the appropriate alternative on your distribution) to load the drivers.
+(or the appropriate alternative on your distribution) to load the drivers
+on boot.
 ```
 w1-gpio
 w1-therm
@@ -66,7 +64,7 @@ are attached to the system using:
 ```
 $ ls /sys/bus/w1/devices/w1_bus_master1
 ```
-Expect to see devices such as '28-0316027f81ff'.
+Expect to see devices such as `28-0316027f81ff`
 
 ### Set up a user
 
@@ -74,13 +72,13 @@ Select a user to run the server. This could be the `root` user on your Pi, or th
 
 You can check if your user has access to the gpio by logging in as them and:
 ```
-cat /sys/bus/w1/devices/28-0316027f81ff/w1_slave
+$ cat /sys/bus/w1/devices/28-0316027f81ff/w1_slave
 ```
 (substitute the id of one of your sensors for `28-0316027f81ff`). This should tell you the temperature currently being reported by the sensor.
 
 If your user doesn't have access, you can add them to the gpio group.
 ```
-sudo adduser hotpot gpio
+$ sudo adduser hotpot gpio
 ```
 The Hotpot server is implemented using node.js, version 11.15.0 (at time of
 writing this is the most recent version available for the RPi). This is
@@ -91,8 +89,8 @@ the ony version that has been tested. If you have a different version of
 
 If you are using a Debian-based OS, you can customise the included 'environment/init.d_hotpot' script to assist with starting and stopping the service. The script is placed in /etc/init.d and will automatically start the service after every reboot.
 ```
-chmod +x /etc/init.d/hotpot 
-update-rc.d hotpot defaults
+$ chmod +x /etc/init.d/hotpot 
+$ update-rc.d hotpot defaults
 ```
 Other distributions will offer similar functionailty.
 
@@ -131,6 +129,19 @@ the configuration. If the server configuration is changed from the browser inter
 
 # Configuration
 
+## Rules
+
+Rules are Javascript functions that are able to adjust settings via the
+controller.
+
+Rule functions can interrogate any part of the system using the internal APIs.
+Default rules are given for Hot Water `server/js/HotWaterRule.js` and
+Central Heating `server/js/CentralHeatingRule.js`. You can derive your own
+rules and point your hotpot.cfg at them.
+
+Rules should always contain conditions to stop runaway temperature rises
+and freezing.
+
 ## Histories
 
 System change events, such as temperature and pin state, can be logged to files
@@ -146,20 +157,9 @@ Weather information can be retrieved from the UK Meteorological Office data serv
 An API key is required to access weather information from the Met Office. These
 are available for free.
 
-The weather feature is considered experimental, and is likely to change.
-
-## Rules
-
-Rules are Javascript functions that are able to adjust settings via the
-controller.
-
-Rule functions can interrogate any part of the system using the internal APIs.
-Default rules are given for Hot Water `server/js/HotWaterRule.js` and
-Central Heating `server/js/CentralHeatingRule.js`. You can derive your own
-rules and point your hotpot.cfg at them.
-
-Rules should always contain conditions to stop runaway temperature rises
-and freezing.
+The weather feature is considered experimental, and is likely to change. It's
+up to you how you use weather information in the rules; the default rules
+don't use it.
 
 ## Calendars
 
@@ -202,7 +202,7 @@ and `<temperature>` is a target temperature in °C. For example, `hotpot:CH=18`
 instructs the server to set a target of 18°C for the CH thermostat for the duration
 of the calendar event. Note that requests are case-sensitive.
 
-`ALL` is a meta-themostat that will apply the request to all thermostats. It is
+`ALL` applies the request to all thermostats. It is
 usually used to turn everything off, for example when away on holiday
 e.g. `hotpot:ALL=0`.
 
@@ -217,8 +217,8 @@ them with semiclons e.g. `hotpot:CH=16 boost;HW=45`
 Calendar events are only used to generate requests. It is ultimately up to the
 rules functions whether and how those requests are interpreted.
 
-A recommended option is to create a specific calendar for Hotpot control, in
-which case all event in the calendar are assumed to relate to Hotpot. This is
+I recommend you create a specific calendar for Hotpot control, in
+which case all events in the calendar are assumed to relate to Hotpot. This is
 useful when yo uwant to share control over the system with other people.
 In this case you can modify the `hotpot.cfg` to dispense with the `hotpot:`
 prefix.
@@ -238,10 +238,10 @@ as a pull request on github.
 
 ## Running a Debug Server
 ```
-cd Hotpot/server/test
-node ../js/Hotpot.js --debug --trace all -c simulated_hotpot.cfg
+$ cd Hotpot/server/test
+$ node ../js/Hotpot.js --debug --trace all -c simulated_hotpot.cfg
 ```
-This will start a debug mini-web-server listening on port 13196 with full tracing
+This will start a debug server listening on localhost:13196 with full tracing.
 
 In a web browser on localhost, load http://localhost:13196/
 
@@ -283,14 +283,18 @@ The AJAX interface to the server gives access to the functions of the controller
 It can be used to review temperature logs, and perform simple overrides such as
 boosting temperature. Requests are sent to the server as GET requests.
 
-### `/ajax/config`
+### `/ajax/getconfig`
 Will retrieve the configuration of the controller (JSON)
 
-### `/ajax/reconfig`
-Will write a new config. Doesn't restart the server, just saves the current configiuration to `hotpot.cfg`
+### `/ajax/setconfig`
+Set a configuration item. The usage of this is risky and complex, you
+are recommended to read the code to understand it.
 
 ### `/ajax/state`
 Retrieves the current state of the controller (JSON)
+
+### `/ajax/trace?trace=`
+Set the trace level of the server
 
 ### `/ajax/log`
 Retrieve all logs. Add `/{thermostat|pin|weather}` to retrieve logs for those service types. Add `/{thermostat|pin|weather}/{name}` to retrieve logs for a specific service e.g. `/ajax/log/thermostat/CH`.
@@ -300,9 +304,3 @@ Adds a request on behalf of the given `source` (an arbitrary string) for the giv
 
 ### `/ajax/refresh_calendars`
 Force a calendar refresh from the calendar server(s), useful if an event has been added/removed from the calendar (there is no support for push notifications)
-
-### `/ajax/restart`
-Restarts the server.
-
-
-perl -e 'print `date +%s`*1000 - 48*60*60*1000;'
