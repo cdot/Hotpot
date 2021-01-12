@@ -25,7 +25,7 @@ is held high (at 250V). See the [wiring diagram](https://raw.githubusercontent.c
 of the mains level wiring.
 
 The wiring of the temperature sensors and the control side of the relays is
-the [pinout diagram]((https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/5V-3.5V%20control.svg).
+the [pinout diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/5V-3.5V%20control.svg).
 
 If you follow my wiring, it is safe to continue to use the existing controller
 and thermostats. It is designed such that if the relays are left unpowered, the
