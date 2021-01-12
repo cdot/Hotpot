@@ -451,6 +451,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 				// service is the name of a thermostat, or "all"
 				// target is a temperature number
 				// until is an epoch-ms date, or Utils.BOOST
+				if (data.until == "boost") data.until = Utils.BOOST;
+				else if (data.until == "clear") data.until = Utils.CLEAR;
                 this.addRequest(data.service, data.source, data.target, data.until);
                 self.pollRules();
                 break;
