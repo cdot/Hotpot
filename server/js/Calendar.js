@@ -205,7 +205,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 				if (state === 0) {
 					if (token == this.prefix) {
 						state = 1;
-						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
 						token = null;
 						continue;
 					}
@@ -214,36 +214,36 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 						continue;
 					} else {
 						state = 1;
-						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
 						// drop through
 					}
 				}
 				if (state === 1) {
 					if (/^\w+$/.test(token)) {
-						service = token.toUpperCase();
+						service = token;
 						state = 2;
-						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
 						token = null;
 					} else {
 						state = 0;
-						Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
+						//Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
 					}
 					
 				} else if (state >= 2) {
 					if (token == this.prefix) {
 						commit();
 						state = 1;
-						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
 						token = null;
 						
 					} else if (token === ";" && state === 3) {
 						commit();
 						state = 1;
-						Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
 						token = null;
 						
 					} else if (/^boost$/i.test(token)) {
-						Utils.TRACE(TAG, "Boosted");
+						//Utils.TRACE(TAG, "Boosted");
 						until = Utils.BOOST;
 						token = null;
 					
@@ -254,14 +254,14 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 					} else if (/^\d/.test(token) && parseFloat(token) != NaN) {
 						temperature = parseFloat(token);
 						state = 3;
-						Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
+						//Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
 						token = null;
 						
 					} else {
 						if (state === 3)
 							commit();
 						state = 1;
-						Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
+						//Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
 					}
 				} else {
 					Utils.ERROR(`Calendar parse failed state ${state} '${token}'`);
