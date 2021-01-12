@@ -45,8 +45,6 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
     class MetOffice {
 
         constructor(proto) {
-            proto.history = DataModel.remodel(
-                'history', proto.history, Historian.Model, ['Metoffice', 'history']);
             Utils.extend(this, proto);
             this.url = Url.parse("http://datapoint.metoffice.gov.uk");
             this.name = "MetOffice";
@@ -261,8 +259,9 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                     }
                     // Convert baseline from minutes into epoch ms
                     report.$ = baseline + report.$ * 60 * 1000;
-                    if (this.history)
+                    if (this.history) {
                         this.history.record(report.Temperature, report.$);
+					}
                     if (!rebased) {
                         // Delete log entries after the time of the current report
                         for (k = 0; k < this.log.length; k++) {
