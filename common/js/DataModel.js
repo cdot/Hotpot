@@ -240,9 +240,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         if (typeof context === "undefined")
             context = [];
 
-        let details = true;//(context.indexOf("rule") >= 0);
-        
-        if (details) Utils.LOG(`Remodel '${context.join('.')}'`, data);
+        Utils.TRACE(`${TAG}Details`, `Remodel '${context.join('.')}'`, data);
 
         // Got a data definition
         if (typeof data === "undefined") {
@@ -257,12 +255,13 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         }
 
         if (model.$skip) {
-			if (details) Utils.LOG(`\t$skip '${context.join('.')}'`);
+			Utils.TRACE(`${TAG}Details`, `\t$skip '${context.join('.')}'`);
             return Promise.resolve(data);
 		}
         
         if (typeof model.$map_of !== "undefined") {
-			if (details) Utils.LOG(`\t$map_of ${model.$map_of}`);
+			Utils.TRACE(`${TAG}Details`, `\t$map_of ${model.$map_of}`);
+			
             // Object with keys that don't have to match the model,
             // and values that can be undefined
 			let promises = [];
@@ -283,7 +282,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         }
 
 		if (typeof model.$array_of !== "undefined") {
-			if (details) Utils.LOG(`\t$array_of ${model.$array_of}`);
+			Utils.TRACE(`${TAG}Details`, `\t$array_of ${model.$array_of}`);
 			let promises = [];
             for (let i in data) {
                 // undefined is allowed in array data
@@ -341,10 +340,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                     if (typeof res.data !== "undefined") {
                         // undefined is skipped in objects
                         rebuilt[res.key] = res.data;
-						if (details) Utils.LOG(
-							`Rebuilt ${res.key}`);
-					} else if (details)
-						 Utils.LOG(`Filtered ${res.key}`);
+						Utils.TRACE(`${TAG}Details`, `Rebuilt ${res.key}`);
+					}
+					else Utils.TRACE(`${TAG}Details`, `Filtered ${res.key}`);
 				}
 				return rebuilt;
 			});
@@ -355,23 +353,32 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 		.then((rebuilt) => {
 
 			if (model.$instantiable) {
-				console.log(rebuilt);
 				let t = rebuilt.$instance_of;
 				if (typeof t !== "string")
 					throw new Error(`Expected $instance_of at '${context.join(".")}'`);
 				
-				if (details)
-					Utils.LOG(TAG, `Instantiate a ${rebuilt.$instance_of}`);
+				Utils.TRACE(`${TAG}Details`,
+							`Instantiate a ${rebuilt.$instance_of}`, rebuilt);
 				
 				// Building a type defined in the data. When we serialise,
 				// it will record the type loaded, not the type in the
 				// original data
 				return new Promise((resolve, reject) => {
 					requirejs([rebuilt.$instance_of], (module) => {
-						let sub = new module(rebuilt, index, module.Model);
-						// Hack in where it came from
-						sub.$instantiated_from = rebuilt.$instance_of;
-						resolve(sub);
+						let promise;
+						if (typeof module.Model !== "undefined")
+							promise = DataModel.remodel(
+								index, rebuilt, module.Model, context);
+						else
+							promise = Promise.resolve(rebuilt);
+						
+						return promise
+						.then((rebuilt) => {
+							let sub = new module(rebuilt, index, module.Model);
+							// Hack in where it came from
+							sub.$instantiated_from = rebuilt.$instance_of;
+							resolve(sub);
+						});
 					});
 				});
 			}
@@ -379,9 +386,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			if (typeof model.$class === "undefined")
 				return Promise.resolve(rebuilt);
 
-			if (details)
-				Utils.LOG(`Instantiate ${model.$class.name} ${index} on `,
-						  rebuilt);
+			Utils.TRACE(`${TAG}Details`,
+						`Instantiate ${model.$class.name} ${index}`);
 
 			// Have to pass index for building native types such
 			// as String, Number, Date
@@ -412,8 +418,6 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             throw new Error(
 				`${context.join('.')} is not optional`);
         }
-
-        //Utils.LOG("Serialise ", data, " using ",model);
 
         if (model.$skip) {
             if (typeof data === "object" &&
