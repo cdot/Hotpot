@@ -61,6 +61,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
     DataModel.loadData(cliopt.config, HOTPOT_MODEL)
 
     .then((cfg) => {
+		Utils.TRACE(TAG, "Configuration loaded");
         config = cfg;
         controller = config.controller;
         server = config.server;

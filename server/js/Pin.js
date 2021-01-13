@@ -48,7 +48,9 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
 				}
 				// Fall back to debug
 				this.Gpio = HOTPOT_DEBUG.getService(this.name);
-				Utils.TRACE(TAG, `Falling back to ${Utils.dump(this.Gpio)}`);
+				Utils.TRACE(
+					TAG, `Falling back to debug service '${this.name}'`);
+				return this;
 			});
 		}
 

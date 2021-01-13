@@ -245,6 +245,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 let block = this[field];
                 for (let key in block) {
                     let item = block[key];
+					if (typeof item === "undefined")
+						continue;
                     if (typeof item.getSerialisableState === "function") {
                         if (typeof state[field] === "undefined")
                             state[field] = {};
@@ -404,8 +406,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             switch (command) {
             case "state": // Return the current system state
                 // /state
-                self.pollRules();
-                return self.getSerialisableState();
+                this.pollRules();
+                return this.getSerialisableState();
             case "trace": // Set tracing level
                 // Set trace level
                 Utils.setTRACE(data.trace);
@@ -415,12 +417,12 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 Utils.TRACE(TAG, `log ${path}`);
                 if (typeof path[0] === "undefined")
                     // Get all logs
-                    return self.getSerialisableLog(data.since);
+                    return this.getSerialisableLog(data.since);
                 if (typeof path[1] === "undefined")
                     // Get the logs of the given type
-                    return self.getSetLogs(self[path[0]], data.since);
+                    return this.getSetLogs(self[path[0]], data.since);
                 // Get the log for the given object of the given type
-                return self[path[0]][path[1]].getSerialisableLog(data.since);
+                return this[path[0]][path[1]].getSerialisableLog(data.since);
             case "getconfig":
                 // /getconfig/path/to/config/node
                 Utils.TRACE(TAG, `getconfig ${path}`);

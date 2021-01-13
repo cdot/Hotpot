@@ -89,7 +89,9 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 				}
 				// Fall back to debug
 				this.sensor = HOTPOT_DEBUG.getService(this.name);
-				Utils.TRACE(TAG, `Falling back to ${Utils.dump(this.sensor)}`);
+				Utils.TRACE(
+					TAG, `Falling back to debug service '${this.name}'`);
+				return this;
 			})
 			.finally((temp) => {
                 this.temperature = temp;
@@ -101,7 +103,6 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
                     });
 				}
                 Utils.TRACE(TAG, `'${this.name}' initialised`);
-                return this;
             })
         };
 

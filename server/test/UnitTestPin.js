@@ -19,6 +19,7 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
 		.then((p) => {
 			assert(p instanceof Pin);
 			return p.initialise()
+			.then((p) => { assert(p instanceof Pin); })
 			.then(() => p.getState())
 			.then((v) => assert.equal(v, 0))
 			.then(() => p.setState(1))

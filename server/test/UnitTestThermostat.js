@@ -39,7 +39,8 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
 			assert.isUndefined(th.history);
 
 			return th.initialise()
-			.then(() => {
+			.then((th) => {
+				assert(th instanceof Thermostat);
 				assert(th.getTargetTemperature() <= 10);
 				assert(th.getTargetTemperature() >= 0);
 				assert.equal(th.getMaximumTemperature(), 10);
