@@ -352,9 +352,12 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let self = this;
             $.getJSON("/ajax/getconfig/thermostat/" + service + "/timeline")
             .done((tl) => {
-                te.timeline = DataModel.remodel(service, tl, Timeline.Model);
-                te.changed = false;
-                te.$main_canvas.trigger("redraw");
+				DataModel.remodel(service, tl, Timeline.Model)
+                .then((timel) => {
+					te.timeline = timel;
+					te.changed = false;
+					te.$main_canvas.trigger("redraw");
+				});
             })
             .fail(function (jqXHR, textStatus, err) {
                 self.log("Could not contact server: " + err);
