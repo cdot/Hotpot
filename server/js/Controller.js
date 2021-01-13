@@ -348,44 +348,45 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             return pins[channel].getState()
 
             .then(function (cur_state) {
-                if (cur_state === new_state) {
+                if (cur_state === new_state)
                     return Promise.resolve(); // already in the right state
-                }
 
                 // Y-plan systems have a state where if the heating is
 				// on but the hot water is off, and the heating is
 				// turned off, then the grey wire to the valve (the
 				// "hot water off" signal) is held high, stalling the
-				// motor and consuming power pointlessly. We need some
-				// special processing to avoid this state.
+				// motor. They are designed for this so it's not a big
+				// problem, but we can resolve it by briefly turning
+				// on the hot water while we turn the heating off,
+				// then turning it off again. That will allow the spring
+				// to return, powering down the motor.
 
-                if (cur_state === 1 && channel === "CH" && new_state === 0) {
+                if (channel === "CH" && cur_state === 1 && new_state === 0) {
                     // CH is on, and it's going off
                     return pins.HW.getState()
 					.then((hw_state) => {
+						// HW is on, so just turn CH off
 						if (hw_state !== 0)
-							return pins[channel].setState(new_state);
+							return pins.CH.setState(new_state);
 							
-						// HW is off, so switch off CH and switch on HW to kill
-						// the grey wire.
+						// HW is 0 but CH is 1, so we're in state 3 (grey
+						// live and white live).
+						// Need to switch on HW to kill the grey wire.
 						// This allows the spring to fully return. Then after a
-						// timeout, turn the CH on.
+						// timeout, turn CH off.
+						self.pending = true;
 						return pins.CH.setState(0) // switch off CH
+						.then(() => pins.HW.setState(1)) // switch on HW
 						.then(() => {
-							return pins.HW.setState(1); // switch on HW
-						})
-						.then(() => {
-							self.pending = true;
 							return new Promise((resolve) => {
 								setTimeout(resolve, self.valve_return);
-							}); // wait for spring
+							}); // wait for spring return
 						})
-						.then(() => {
-							self.pending = false;
-							return pins.CH.setState(0); // switch off CH
-						});
+						.then(() => pins.HW.setState(0)) // switch off HW
+						.then(() => { self.pending = false;	});
 					});
                 }
+				
                 // Otherwise this is a simple state transition, just
                 // promise to set the appropriate pin
                 return pins[channel].setState(new_state);

@@ -12,6 +12,10 @@
     "bin": {
         "module-name": "Hotpot.js"
     },
+	"repository": {
+		"type" : "git",
+		"url" : "https://github.com/cdot/Hotpot.git"
+	}
     "license": "MIT",
     "keywords": [
         "gpio",
@@ -24,6 +28,7 @@
         "pi"
     ],
     "dependencies": {
+        "basic-auth": "^2.0.1",
         "follow-redirects": "^1.13.1",
         "fs": "0.0.1-security",
         "google-auth-library": "^6.1.4",

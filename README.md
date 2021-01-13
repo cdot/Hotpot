@@ -46,8 +46,8 @@ that you will have to work this bit out for yourself.
 Aside from the Raspberry Pi, the only additional hardware required are
 two DS18x20 one-wire temperature sensors, and two relays. A dual
 SRD-05VDC-SL-C relay module is ideal for this. See the
-[wiring diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Mains.svg)
-for details of the mains level wiring.
+[general wiring diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Mains.svg)
+for details of the mains level wiring, and the [circuit diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Circuit.svg) which gives a schematic overview.
 
 The wiring of the temperature sensors and the control side of the relays
 is shown in the [Pi pinout diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/5V-3.5V%20control.svg).
@@ -63,6 +63,13 @@ The wiring shown capitalises on the fact that when the controller for a
 Y-plan system is powered on, but set to "off", the "Hot water off"
 control line is held high (at 250V). This means we can draw the power
 for the Pi from that line if the existing controller is set to "off".
+
+Note that the motorised valve ina Y-plan system is a very clever piece of
+design that uses the minimum number of components to fulfil its function.
+This does mean that [there is a state the valve can get into](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Mid%20position%20explanation.svg) which causes
+the valve to draw power continuously when both hot water and heating are off.
+While the valve is deigned for it, and the power consumption is very low,
+Hotpot is designed to eliminate this state.
 
 Alternatively you can power the Pi from a separate power source if you
 choose to do so. In this case you have the option of keeping the existing
