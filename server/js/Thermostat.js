@@ -57,10 +57,8 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
             this.requests = [];
 
             // Load the driver asynchronously
-            if (typeof HOTPOT_DEBUG !== "undefined")
-                this.ds18x20 = HOTPOT_DEBUG.getServiceForThermostat(this);
-            else
-                this.ds18x20 = new DS18x20(this.id);
+            this.sensor = new DS18x20(this.id);
+
             // Last recorded temperature {float}
             this.temperature = 0;
 
@@ -82,22 +80,29 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
          * from the probe. The promise resolves to the Thermostat.
          */
         initialise() {
-            let self = this;
-
-            return this.ds18x20.get()
-			.then((temp) => {
-                self.temperature = temp;
+            return this.sensor.initialiseSensor()
+			.catch((e) => {
+				Utils.TRACE(TAG, `${this.id} initialisation failed ${e}`);
+				if (typeof HOTPOT_DEBUG === "undefined") {
+					Utils.TRACE(TAG, "No HOTPOT_DEBUG");
+					throw new Error(e);
+				}
+				// Fall back to debug
+				this.sensor = HOTPOT_DEBUG.getService(this.name);
+				Utils.TRACE(TAG, `Falling back to ${Utils.dump(this.sensor)}`);
+			})
+			.finally((temp) => {
+                this.temperature = temp;
                 // Start the historian
-                if (self.history) {
-					Utils.TRACE(TAG, `starting historian for '${self.name}'`);
-                    self.history.start(function () {
-                        return self.temperature;
+                if (this.history) {
+					Utils.TRACE(TAG, `starting historian for '${this.name}'`);
+                    this.history.start(function () {
+                        return this.temperature;
                     });
 				}
-                Utils.TRACE(TAG, `'${self.name}' initialised`);
-                return self;
+                Utils.TRACE(TAG, `'${this.name}' initialised`);
+                return this;
             })
-			.catch((e) => Utils.TRACE(TAG, `${self.id} initialisation failed ${e}`));
         };
 
         /**
@@ -141,7 +146,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
         poll() {
             let self = this;
 
-            return this.ds18x20.get()
+            return this.sensor.getTemperature()
 			.then((temp) => {
                 self.temperature = temp;
 				return this;
@@ -156,9 +161,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 				} else {
 					setTimeout(function () {
 						self.poll();
-					}, typeof self.poll_interval === "undefined" ?
-							   DEFAULT_POLL_INTERVAL :
-							   self.poll_interval);
+					}, 1000 * (self.poll_interval || DEFAULT_POLL_INTERVAL));
 				}
             });
         };

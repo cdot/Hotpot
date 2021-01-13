@@ -19,7 +19,7 @@ define("server/js/HotWaterRule", ["common/js/Utils", "server/js/Rule"], (Utils, 
 									"°C so turning off");
 						pin.reason = "Overheat";
 					}
-					// Use setPromise rather than pins.set() because setPromise
+					// Use setPromise rather than Pin.setState() because setPromise
 					// handles the interaction between HW and CH in Y-plan systems
 					return controller.setPromise("HW", 0);
 				}
@@ -33,7 +33,7 @@ define("server/js/HotWaterRule", ["common/js/Utils", "server/js/Rule"], (Utils, 
 									"°C so turning off");
 						pin.reason = "Hot enough";
 					}
-					// Use setPromise rather than pins.set() because setPromise
+					// Use setPromise rather than Pin.setState() because setPromise
 					// handles the interaction between HW and CH in Y-plan systems
 					return controller.setPromise("HW", 0);
 				}

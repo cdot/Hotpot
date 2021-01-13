@@ -107,7 +107,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
         }
 
         handleMouseDown(e) {
-            //Utils.LOG("E: mousedown ", this.hit_pt_ix);
+            //console.log("E: mousedown ", this.hit_pt_ix);
             e.preventDefault();
             let xy = this.e2xy(e);
             let selpt = this.overPoint(xy, POINT_RADIUS2);
@@ -157,7 +157,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
         handleMouseUp(e) {
             let xy = this.e2xy(e);
-            //Utils.LOG("E: mouseup ", xy);
+            //console.log("E: mouseup ", xy);
             this.last_tip_xy = xy;
             if (this.isDragging) {
                 // We have dragged a point at least POINT_RADIUS away from
@@ -242,14 +242,14 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 let pt = this.tvi2xy(i);
                 let d = Vec.sub(xy, pt);
                 let dist2 = Vec.mag2(d);
-                //Utils.LOG("Test ", i, " at ", pt, " dist ", Math.sqrt(dist2));
+                //console.log("Test ", i, " at ", pt, " dist ", Math.sqrt(dist2));
                 if (dist2 <= min2 || typeof selected === "undefined") {
-                    //Utils.LOG("< ", min2);
+                    //console.log("< ", min2);
                     min2 = dist2;
                     selected = i;
                 }
             }
-            //Utils.LOG("Closest ", selected, " at ",
+            //console.log("Closest ", selected, " at ",
             //          this.tv2xy(this.timeline.getPoint(selected)),
             //          " dist ", Math.sqrt(min2));
             if (min2 > r2)
@@ -286,9 +286,9 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 else
                     cp = Vec.add(p1, Vec.mul(vLine, d)); // closest point
                 let dist2 = Vec.mag2(Vec.sub(cp, xy));
-                //Utils.LOG("Test ", i, " dist ", Math.sqrt(dist2));
+                //console.log("Test ", i, " dist ", Math.sqrt(dist2));
                 if (dist2 < min2 || typeof selected === "undefined") {
-                    //Utils.LOG("< ", Math.sqrt(min2));
+                    //console.log("< ", Math.sqrt(min2));
                     min2 = dist2;
                     selected = {
                         next: i,
@@ -297,7 +297,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 }
                 p1 = p2;
             }
-            //Utils.LOG("Closest ", selected, " dist ", Math.sqrt(min2));
+            //console.log("Closest ", selected, " dist ", Math.sqrt(min2));
             if (min2 > r2)
                 return undefined;
             return selected;
@@ -449,7 +449,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 this.$tip_canvas.trigger("redraw");
                 this.$selection_canvas.trigger("redraw");
             } catch (e) {
-                Utils.ERROR(e);
+                Utils.TRACE(e);
             }
             return this;
         }

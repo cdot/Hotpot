@@ -145,7 +145,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
                     },
                     function (err) {
                         // Report, but don't propagate, the error
-                        Utils.ERROR(TAG, err);
+                        Utils.TRACE(TAG, err);
                     });
             }, after);
         }
@@ -264,7 +264,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 						//Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
 					}
 				} else {
-					Utils.ERROR(`Calendar parse failed state ${state} '${token}'`);
+					Utils.TRACE(TAG, `Parse failed state ${state} '${token}'`);
 					state = 0;
 				}
             }

@@ -171,7 +171,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             throw new Error(
 				`typeof=="${typeof model}" at '${context.join('.')}'`);
 
-        //Utils.LOG("check <",context.join('.'),"> {");
+        //Utils.TRACE(TAG, "check <",context.join('.'),"> {");
 
 		if (model.$instantiable && typeof model.$class !== "undefined")
             throw new Error(`$instantiable and $class are mutually exclusive at '${context.join('.')}'`);
@@ -214,7 +214,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 }
             }
         }
-        //Utils.LOG("} <",context.join('.'),">");
+        //Utils.TRACE(TAG, "} <",context.join('.'),">");
     };
 
     /**

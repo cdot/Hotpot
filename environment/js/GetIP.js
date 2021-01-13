@@ -136,19 +136,19 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 		url.ipaddr = ip;
 
 		if (url.equals(current)) {
-			Utils.LOG("Existing ", current, " is correct");
+			console.log("Existing ", current, " is correct");
 			if (!config.force) {
-				Utils.LOG("No update required");
+				console.log("No update required");
 				return;
 			}
 		} else
-			Utils.LOG("Old target ", current);
+			console.log("Old target ", current);
 
 		current.ipaddr = ip;
 		current.port = config.target.port;
 		current.protocol = config.target.protocol;
 		current.path = config.target.path;
-		Utils.LOG("New target ", current);
+		console.log("New target ", current);
 
 		Fs.readFile(Utils.expandEnvVars(config.template))
         .then(function (buf) {
@@ -161,7 +161,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
             return update(html);
         })
         .catch(function (e) {
-            Utils.ERROR("Update failed", e);
+            Utils.TRACE("Update failed", e);
         });
 	}
 
@@ -258,7 +258,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
                 let m;
                 while ((m = scan.exec(data)) != null) {
                     if (!/^192\.168/.test(m[1])) {
-                        Utils.LOG("Got ", m[1], " from Netgear Router");
+                        console.log("Got ", m[1], " from Netgear Router");
                         finish(m[1]);
                         resolve();
                         return;
@@ -302,7 +302,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
             finish(JSON.parse(data).ip);
         },
               function (err) {
-                  Utils.ERROR("Failed to fetch new IP address: " + err);
+                  Utils.TARCE("Failed to fetch new IP address: " + err);
               });
 	}
 });

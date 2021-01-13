@@ -212,7 +212,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 					.then(resolve)
 					.catch((error) => {
 						// Treat as FNF
-						Utils.ERROR(TAG, error);
+						Utils.TRACE(TAG, error);
 						if (error.code === 'ENOENT')
 							error.status = 404;
 						reject(error);

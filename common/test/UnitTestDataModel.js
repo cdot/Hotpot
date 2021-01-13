@@ -172,8 +172,6 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
     tr.addTest("remodel builtIns", function() {
         return DataModel.remodel("", builtInsData, builtInsModel)
 		.then((remodeled) => {
-			//Utils.LOG(remodeled, builtInsDump);
-			//assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
 			assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
 		});
     });

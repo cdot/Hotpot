@@ -52,7 +52,7 @@ function showCalendar(cal) {
             return cal.fillCache();
         })
         .then(function() {
-            Utils.LOG(cal.schedule);
+            Utils.TRACE("Schedule", cal.schedule);
         })
         .catch(function(e) {
             console.error(e.stack);

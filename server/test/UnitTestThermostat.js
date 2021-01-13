@@ -12,12 +12,11 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
     let assert = tr.assert;
 	const Fs = fs.promises;
 
-	Utils.setTRACE("all");
+	//Utils.setTRACE("Thermostat");
 	
 	tr.addTest("initialise", () => {
 		HOTPOT_DEBUG = require('../js/DebugSupport.js');
-		HOTPOT_DEBUG.getServiceForPin({name: "test", gpio: 6});
-		let th = DataModel.remodel(
+		return DataModel.remodel(
 			"test",
 			{ id: "FF-C04EFECAFEBABE",
 			  "timeline": {
@@ -35,25 +34,26 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
 					  }
 				  ]
 			  }
-			}, Thermostat.Model, []);
-		assert.isUndefined(th.history);
-		
-		return th.initialise()
+			}, Thermostat.Model, [])
 		.then((th) => {
-			assert(th.getTargetTemperature() <= 10);
-			assert(th.getTargetTemperature() >= 0);
-			assert.equal(th.getMaximumTemperature(), 10);
-			return th.poll();
-		})
-		.then((th) => th.getSerialisableState())
-		.then((st) => {
-			assert(st.temperature <= 10);
-			assert(st.temperature >= 0);
-			assert.equal(st.target, th.getTargetTemperature());
+			assert.isUndefined(th.history);
+
+			return th.initialise()
+			.then(() => {
+				assert(th.getTargetTemperature() <= 10);
+				assert(th.getTargetTemperature() >= 0);
+				assert.equal(th.getMaximumTemperature(), 10);
+				return th.poll();
+			})
+			.then(() => th.getSerialisableState())
+			.then((st) => {
+				assert(st.temperature <= 12);
+				assert(Math.abs(st.target - th.getTargetTemperature()) < 0.1);
 			assert.equal(st.requests.length, 0);
-			th.interrupt();
-		})
-		.then(() => HOTPOT_DEBUG.stop());
+				th.interrupt();
+			})
+			.then(() => HOTPOT_DEBUG.stop());
+		});
 	});
 
 	tr.run();

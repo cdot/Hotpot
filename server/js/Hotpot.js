@@ -42,7 +42,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
         cliopt.config = "./hotpot.cfg";
 
     if (typeof cliopt.debug !== "undefined") {
-        // Debug stubs for ds18x20 sensors
+        // Debug for missing hardware
         HOTPOT_DEBUG = require("../../server/js/DebugSupport.js");
     }
 
@@ -54,7 +54,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
     let config, controller, server;
 
     if (cliopt.confhelp) {
-        Utils.LOG(TAG, " ", DataModel.help(HOTPOT_MODEL));
+        console.log(DataModel.help(HOTPOT_MODEL));
         eval("process.exit(1)");
     }
 
@@ -93,7 +93,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
     })
 
     .catch(function (e) {
-        Utils.ERROR(TAG, "Controller initialisation failed: ",
+        Utils.TRACE(TAG, "Controller initialisation failed: ",
                     typeof e.stack !== "undefined" ? e.stack : e);
         eval("process.exit(1)");
     });

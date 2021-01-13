@@ -175,7 +175,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 			let valve_back = this.valve_return;
 			
             Utils.TRACE(TAG, "Resetting valve");
-            return pins.HW.set(1, "Reset")
+            return pins.HW.setState(1, "Reset")
 
             .then(() => {
                 Utils.TRACE(TAG, "Reset: HW(1) done");
@@ -186,12 +186,12 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
             .then(() => {
                 Utils.TRACE(TAG, "Reset: delay done");
-                return pins.CH.set(0, "Reset");
+                return pins.CH.setState(0, "Reset");
             })
 
             .then(() => {
                 Utils.TRACE(TAG, "Reset: CH(0) done");
-                return pins.HW.set(0, "Reset");
+                return pins.HW.setState(0, "Reset");
             })
 
             .then(() => {
@@ -199,7 +199,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             })
 
             .catch(function (e) {
-                Utils.ERROR(TAG, "Failed to reset valve: ", e);
+                Utils.TRACE(TAG, "Failed to reset valve: ", e);
             });
         }
 
@@ -321,7 +321,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Get a promise to set the on/off state of a pin, suitable for
          * calling from Rules. This is more
-         * sophisticated than a simple `Pin.set()` call, because there is a
+         * sophisticated than a simple `Pin.setState()` call, because there is a
          * relationship between the state of the pins in Y-plan systems
          * that must be respected.
          * @param {String} channel e.g. "HW" or "CH"
@@ -362,15 +362,15 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                     return pins.HW.getState()
 					.then((hw_state) => {
 						if (hw_state !== 0)
-							return pins[channel].set(new_state);
+							return pins[channel].setState(new_state);
 							
 						// HW is off, so switch off CH and switch on HW to kill
 						// the grey wire.
 						// This allows the spring to fully return. Then after a
 						// timeout, turn the CH on.
-						return pins.CH.set(0) // switch off CH
+						return pins.CH.setState(0) // switch off CH
 						.then(() => {
-							return pins.HW.set(1); // switch on HW
+							return pins.HW.setState(1); // switch on HW
 						})
 						.then(() => {
 							self.pending = true;
@@ -380,13 +380,13 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 						})
 						.then(() => {
 							self.pending = false;
-							return pins.CH.set(0); // switch off CH
+							return pins.CH.setState(0); // switch off CH
 						});
 					});
                 }
                 // Otherwise this is a simple state transition, just
                 // promise to set the appropriate pin
-                return pins[channel].set(new_state);
+                return pins[channel].setState(new_state);
             });
         };
 

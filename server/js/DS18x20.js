@@ -3,26 +3,37 @@
 /*eslint-env node */
 
 /**
- * Find and read DS18x20 temperature sensors on Respberry Pi
+ * Interface to DS18x20 temperature sensors
  */
+
 define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils) => {
 
 	const Fs = fs.promises;
 	const TAG = "DS18x20";
-	
+
+	// Base path of all one-wire device paths. This is declared as static so it
+	// can be overridded in DebugSupport.js
+	const ONE_WIRE_PATH = Path.resolve('sys', 'bus', 'w1', 'devices');
+
 	class DS18x20 {
 
 		constructor(id) {
 			this.id = id;
 		}
+
+		/**
+		 * Ensure the sensor exists and can be read.
+		 */
+		initialiseSensor() {
+			return this.getTemperature();
+		}
 		
 		/**
 		 * Return a promise to get the temperature from the sensor
 		 */
-		get() {
-			let self = this;
+		getTemperature() {
 			return Fs.readFile(
-				Path.resolve('/sys/bus/w1/devices/', self.id, 'w1_slave'))
+				Path.resolve(ONE_WIRE_PATH, this.id, 'w1_slave'))
 			.then((content) => {
 				return parseFloat(content.toString());
 			});

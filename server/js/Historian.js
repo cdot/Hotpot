@@ -220,7 +220,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             return promise.then(function () {
                 return Fs.appendFile(self.path(), time + "," + sample + "\n")
                 .catch(function (ferr) {
-                    Utils.ERROR(TAG, "failed to append to '",
+                    Utils.TRACE(TAG, "failed to append to '",
                                 self.path(), "': ", ferr);
                 });
             });

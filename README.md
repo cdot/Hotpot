@@ -1,52 +1,95 @@
 # Hotpot
 
 Hotpot is a controller for a Y-plan central heating system, using
-node.js on Raspberry Pi. It piggybacks on the existing system so that the existing
-controller can still be used (though not at the same time).
+node.js on Raspberry Pi. It piggybacks on the existing system so that
+the existing controller acts as a backup.
 
-The controller collates data from a number of sources to support user-defined
-rules to decide whether the heating needs to come on.
-- Any number of DS18x20 temperature sensors, usually one for heating (CH) and one for hot water (HW), connected to GPIO
+The controller can collate data from a number of sources to support
+user-defined rules to decide whether the heating needs to come on.
+- Any number of thermostats, usually one for heating (CH) and one for hot water (HW)
 - A detailed timeline that allows fine control over target temperatures
 - Any number of Google calendars
-- Weather information from the UK Meteorological Office data service.
+- Any other sources you can think of
 
-The controller can also be accessed and manually controlled from a web browser.
+Because the system is controlled by rules written in Javascript, it is easy
+to derive and add new rules. Experiments have included rules using data from:
+- location reports from household mobile devices
+- weather information from the UK Meteorological Office data service
+
+The controller can be used stand-alone without being connected to the
+internet, though we have found the real power is in the ability is
+control the system remotely from a web browser. This means the system
+is never heating the house when nobody is home, and it's easy to boost
+the heating in anticipation of a warm house and a hot shower when you
+are about to head home.
+
+Unlike commercial alternatives, such as Google Nest, no third-party
+servers are involved, and only simple low-cost hardware is required.
+All the parts can be purchased for around £40.
 
 # Installation
 
+## Assumptions
+
+The following assumes a standard Y-plan central heating system. This
+is the most common type of system in modern homes, though there are
+several alternatives that may require further research.
+
+It's also assumed that you have some way to access your Pi from the
+internet.  This is simplest if you have a router with a fixed IP
+address that can be programmed to forward incoming requests to the
+Pi. There are so many possible hardware options and configurations
+that you will have to work this bit out for yourself.
+
 ## Hardware
 
-Aside from the Raspberry Pi, the only additional hardware required are two
-DS18x20 temperature sensors, and two relays. A dual SRD-05VDC-SL-C relay module
-is ideal for this. The wiring capitalises on the fact that when the controller
-for a Y system is powered on, but set to "off", the "Hot water off" control line
-is held high (at 250V). See the [wiring diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Mains.svg) for details
-of the mains level wiring.
+Aside from the Raspberry Pi, the only additional hardware required are
+two DS18x20 one-wire temperature sensors, and two relays. A dual
+SRD-05VDC-SL-C relay module is ideal for this. See the
+[wiring diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Mains.svg)
+for details of the mains level wiring.
 
-The wiring of the temperature sensors and the control side of the relays is
-the [pinout diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/5V-3.5V%20control.svg).
+The wiring of the temperature sensors and the control side of the relays
+is shown in the [Pi pinout diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/5V-3.5V%20control.svg).
 
-If you follow my wiring, it is safe to continue to use the existing controller
-and thermostats. It is designed such that if the relays are left unpowered, the
-system defaults to the existing controller.
+If you follow the described wiring the existing thermostats are kept
+in series with the Hotpot relays. Hotpot is designed such that if the
+relays are left unpowered, the existing thermostats are still in place
+to prevent the system from overheating. If they are set to a lower
+temperature than required by Hotpot, then the thermostats will always
+win. Make sure they are kept at sensible levels.
 
-Note that if your existing thermostats are set to a lower temperature than
-required by Hotpot, then the thermostats will always win. 
+The wiring shown capitalises on the fact that when the controller for a
+Y-plan system is powered on, but set to "off", the "Hot water off"
+control line is held high (at 250V). This means we can draw the power
+for the Pi from that line if the existing controller is set to "off".
 
-I recommend either switching the existing controller to an "always on" state, 
-or programming in a simple schedule that ensures hot water and central heating
-are "on" during the time Hotpot is likely to be managing the temperature. This
-way if Hotpot fails for any reason, the original controller takes over. Ensure
-that existing thermostats are kept at sensible levels.
+Alternatively you can power the Pi from a separate power source if you
+choose to do so. In this case you have the option of keeping the existing
+controller "live" and using it as a backup in case the Pi fails. 
+
+Note that we have observed isolated cases where Raspbian has "frozen"
+leaving the OS dead but the GPIO powered up. If anyone has a solution
+to this, please raise an issue or a pull request on github.
 
 ## Software
 
 ### Enable OS support for 1-wire
 
-DS18x20 temperature sensors use a 1-wire bus that allows multiple sensors
-to be daisy-chained on a single GPIO pin. I use GPIO 18 (header pin 12) for
-this. This has to be set in `/boot/config.txt` as follows:
+The following assumes you are using a Linux distribution on your
+Pi. At time of writing [DietPi](https://dietpi.com/) is a good choice
+as it's small.
+
+The Hotpot server is implemented using node.js, version 11.15.0 (at
+time of writing this is the version installed with DietPi). This is
+the only version that has been tested. If you have a different version
+of `node.js` installed, you can always use `nvm` to switch between
+versions.
+
+DS18x20 temperature sensors use a 1-wire bus that allows multiple
+sensors to be daisy-chained on a single GPIO pin. GPIO 18 (header pin
+12) is the pin used in all the examples. Whatever pin you choose has
+to be set in `/boot/config.txt` as follows:
 
 ```
 # 1-wire settings
@@ -68,26 +111,30 @@ Expect to see devices such as `28-0316027f81ff`
 
 ### Set up a user
 
-Select a user to run the server. This could be the `root` user on your Pi, or the default user (usually e.g. `pi` or `dietpi`), or you can create a special user to run the server software (recommended). In the following we will assume you have created a special user `hotpot`.
+Select a user to run the server. This could be the `root` user on your
+Pi, or the default user (usually e.g. `pi` or `dietpi`), or
+(recommended) you can create a special user to run the server
+software. In the following we will assume you have created a
+user `hotpot`.
 
 You can check if your user has access to the gpio by logging in as them and:
 ```
 $ cat /sys/bus/w1/devices/28-0316027f81ff/w1_slave
 ```
-(substitute the id of one of your sensors for `28-0316027f81ff`). This should tell you the temperature currently being reported by the sensor.
+(substitute the id of one of your sensors for `28-0316027f81ff`). This
+should tell you the temperature currently being reported by the sensor.
 
 If your user doesn't have access, you can add them to the gpio group.
 ```
 $ sudo adduser hotpot gpio
 ```
-The Hotpot server is implemented using node.js, version 11.15.0 (at time of
-writing this is the most recent version available for the RPi). This is
-the ony version that has been tested. If you have a different version of
-`node.js` installed, you can always use `nvm` to switch between versions.
 
 ### Service startup script
 
-If you are using a Debian-based OS, you can customise the included 'environment/init.d_hotpot' script to assist with starting and stopping the service. The script is placed in /etc/init.d and will automatically start the service after every reboot.
+You can derive from the included `environment/init.d_hotpot` example
+script to assist with starting and stopping the service. The script is
+placed in `/etc/init.d` and will automatically start the service after
+every reboot. Don't forget to:
 ```
 $ chmod +x /etc/init.d/hotpot 
 $ update-rc.d hotpot defaults
@@ -104,14 +151,14 @@ configuration of the system from a browser.
 The easiest way to install the software is to clone the git repository
 direct from github, then run the server install:
 ```
-git clone https://github.com/cdot/Hotpot.git
-(cd Hotpot/server; npm install)
+$ git clone https://github.com/cdot/Hotpot.git
+$ (cd Hotpot/server; npm install)
 ```
 The server can then be run as follows:
 ```
 node Hotpot/server/js/Hotpot.js <options>
 ```
-Pass --help on the command-line to see options e.g.
+Pass `--help` on the command-line to see the options e.g.
 ```
 $ node Hotpot/server/js/Hotpot.js --help
   -h, --help        Show this help
@@ -120,12 +167,18 @@ $ node Hotpot/server/js/Hotpot.js --help
   -t, --trace[=ARG] Trace module e.g. --trace all
   -d, --debug       Run in debug mode - uses stubs for missing hardware
 ```
-Note that the server can only be run on platforms that do not have gpio hardware if you have enabled the `--debug` option. In this case the missing sensors will be simulated.
+Note that the server can only be run on platforms that do not have
+gpio hardware if you have enabled the `--debug` option. In this case
+the missing sensors will be simulated.
 
-The server is configured by Javascript read from a file (default `./hotpot.cfg`). You can find an annotated example in `Hotpot/hotpot.cfg`.
+The server is configured by Javascript read from a file (default
+`./hotpot.cfg`). The repository has an
+[annotated example](https://github.com/cdot/Hotpot/blob/master/hotpot.cfg).
 
-Once the server is running, the HTTP interface can be used to query and modify
-the configuration. If the server configuration is changed from the browser interface, the configuration file will be automatically saved.
+Once the server is running, the HTTP interface can be used to query
+and modify the configuration. If the server configuration is changed
+from the browser interface, the configuration file will be
+automatically saved.
 
 # Configuration
 
@@ -135,8 +188,8 @@ Rules are Javascript functions that are able to adjust settings via the
 controller.
 
 Rule functions can interrogate any part of the system using the internal APIs.
-Default rules are given for Hot Water `server/js/HotWaterRule.js` and
-Central Heating `server/js/CentralHeatingRule.js`. You can derive your own
+Default rules are given for [Hot Water](https://github.com/cdot/Hotpot/blob/master/server/js/HotWaterRule.js) and
+[Central Heating](https://github.com/cdot/Hotpot/blob/master/server/js/CentralHeatingRule.js). You can derive your own
 rules and point your hotpot.cfg at them.
 
 Rules should always contain conditions to stop runaway temperature rises
@@ -257,7 +310,9 @@ or you can enable `all` and then choose which modules to *ignore* by prepending 
 There are a number of unit test module scattered around the code; these are all
 named using the `UnitTest` prefix. They can all be run stand-alone; e.g.
 ```
-hotpot@pi:~/Hotpot/common/test$ node UnitTestDataModel.js 
+$ cd ~/Hotpot/common/test
+$ node install # make sure required test modules are installed
+$ node UnitTestDataModel.js 
 
 DataModel
   ✓ remodel simple
@@ -279,9 +334,8 @@ DataModel
 ```
 ## AJAX interface
 
-The AJAX interface to the server gives access to the functions of the controller.
-It can be used to review temperature logs, and perform simple overrides such as
-boosting temperature. Requests are sent to the server as GET requests.
+The browser interface uses an AJAX interface to the server to gain access
+to the functions of the controller.
 
 ### `/ajax/getconfig`
 Will retrieve the configuration of the controller (JSON)

@@ -212,7 +212,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                         });
                     })
                 .on("error", function (err) {
-                    Utils.ERROR(TAG, "Failed to GET sitelist: ", err.toString());
+                    Utils.TRACE(TAG, "Failed to GET sitelist: ", err.toString());
                     reject(err);
                 });
             });
@@ -312,7 +312,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                         });
                     })
                 .on("error", function (err) {
-                    Utils.ERROR(TAG, "Failed to GET weather: ", err.toString());
+                    Utils.TRACE(TAG, "Failed to GET weather: ", err.toString());
                     fail(err);
                 });
             });

@@ -88,7 +88,6 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
             .auth(server_config.auth.user, server_config.auth.pass)
             .send()
             .end(function(err, res) {
-				console.error(err);
                 assert.equal(err, null);
                 assert.equal(res.status,200);
                 assert.equal(res.text,"Test Data for UnitTestServer\n");

@@ -206,38 +206,10 @@ define("common/js/Utils", function() {
             (Utils.trace.indexOf("all") >= 0 ||
              Utils.trace.indexOf(level) >= 0) &&
             (Utils.trace.indexOf("-" + level) < 0)) {
-            Utils.LOG(new Date().toISOString(), " ", level, ": ",
+            console.log(new Date().toISOString(), " ", level, ": ",
                       Utils.joinArgs(arguments, 1));
         }
     };
-
-    Utils.LOG = function () {
-        console.log(Utils.joinArgs(arguments));
-    };
-
-    /**
-     * Produce a tagged error message.
-     */
-    Utils.ERROR = function () {
-		console.error(Utils.joinArgs("*", arguments[0], "*") + Utils.joinArgs(arguments, 1));
-    };
-
-    /**
-     * Call a function on each property of an object (but not on inherited
-     * properties) NOT USED
-    Utils.each = function(object, callback) {
-        if (typeof jQuery !== "undefined")
-            Utils.each = jQuery.each;
-        else
-            Utils.each = function(object, callback) {
-                for (let key in object) {
-                    if (object.hasOwnProperty(key))
-                        callback(object[key], key);
-                }
-            }
-        return Utils.each(object, callback);
-    }
-     */
 
     /**
      * eval() the code, generating meaningful syntax errors (with line numbers)
@@ -245,18 +217,9 @@ define("common/js/Utils", function() {
      * @param {String} context the context of the code e.g. a file name
      */
     Utils.eval = function (code, context) {
-//        if (typeof context === "undefined")
-//            context = "eval";
-//       if (context === "browser") {
-            let compiled;
-            eval("compiled=" + code);
-            return compiled;
-//        } else {
-//            let Module = require("module");
-//            let m = new Module();
-//            m._compile("module.exports=\n" + code + "\n;", context);
-//            return m.exports;
-//        }
+        let compiled;
+        eval(`compiled=${code}`);
+        return compiled;
     };
 
     /**
