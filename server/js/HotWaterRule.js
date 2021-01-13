@@ -1,5 +1,10 @@
 define("server/js/HotWaterRule", ["common/js/Utils", "server/js/Rule"], (Utils, Rule) => {
 
+	// How close to the target temperature we want to be. Water will
+	// be turned on if temp drops lower than this below the target. You
+	// could set this to 0, but there is the risk of the system oscillating.
+	const PRECISION = 2;
+
 	class HotWaterRule extends Rule {
 
 		constructor(proto, name) {
@@ -38,8 +43,7 @@ define("server/js/HotWaterRule", ["common/js/Utils", "server/js/Rule"], (Utils, 
 					return controller.setPromise("HW", 0);
 				}
 
-				// Stay within 5 degrees of the target
-				if (thermostat.temperature < target - 5) {
+				if (thermostat.temperature < target - PRECISION) {
 					if (state === 0) {
 						Utils.TRACE("Rules", "HW only ",
 									thermostat.temperature,
