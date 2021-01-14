@@ -36,7 +36,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
                   // If we don't set the pin active_low, then writing
                   // a 1 to /value sets the pin low, and vice-versa.
                   Fs.writeFile(Path.resolve(GPIO_PATH, `gpio${this.gpio}`,
-                                            'active_low'), 1));
+                                            'active_low'), 1))
             .catch((e) => {
                 Utils.TRACE(TAG, `Failed to initialise ${this.gpio} ${e}`);
             });

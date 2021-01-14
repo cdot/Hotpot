@@ -12,10 +12,10 @@
     "bin": {
         "module-name": "Hotpot.js"
     },
-	"repository": {
-		"type" : "git",
-		"url" : "https://github.com/cdot/Hotpot.git"
-	}
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/cdot/Hotpot.git"
+    },
     "license": "MIT",
     "keywords": [
         "gpio",
@@ -81,6 +81,7 @@
         }
     },
     "devDependencies": {
+        "chai": "^4.2.0",
         "chai-http": "^4.3.0",
         "mocha": "^8.2.1"
     }

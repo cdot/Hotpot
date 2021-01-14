@@ -13,24 +13,23 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
 	const Fs = fs.promises;
 	const GPIO_PATH = "/sys/class/gpio";
 	const PIN = 23;
-	
-	Fs.stat(`$GPIO_PATH}/gpio${PIN}`)
-	.then((stat) => {
-		tr.addTest("basic functionality", async function() {
-			let gpio = new Gpio(IN);
-			return Fs.writeFile(`${GPIO_PATH}/unexport`, PIN)
-			.then(() => gpio.initialiseIO())
-			.then(() => gpio.setState(1))
-			.then(() => gpio.getState())
-			.then((s) => { assert.equal(s, 1); })
-			.then(() => gpio.setState(0))
-			.then(() => gpio.getState())
-			.then((s) => { assert.equal(0, s); });
-		});
 
-		tr.run();
-	})
-	.catch((e) => {
-		console.error(`UnitTestGpio require GPIO pin ${PIN} to be exported to run`);
+	Utils.setTRACE("Gpio");
+	tr.addTest("basic functionality", async function() {
+		let gpio = new Gpio(PIN);
+		try {
+			fs.writeFileSync(`${GPIO_PATH}/unexport`, PIN);
+		} catch (e) {
+			console.error(e);
+		}
+		return gpio.initialiseIO()
+		.then(() => gpio.setValue(1))
+		.then(() => gpio.getValue())
+		.then((s) => { assert.equal(s, 1); })
+		.then(() => gpio.setValue(0))
+		.then(() => gpio.getValue())
+		.then((s) => { assert.equal(0, s); });
 	});
+
+	tr.run();
 });
