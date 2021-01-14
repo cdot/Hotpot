@@ -11,15 +11,15 @@ user-defined rules to decide whether the heating needs to come on.
 - Any number of Google calendars
 - Any other sources you can think of
 
-Because the system is controlled by rules written in Javascript, it is easy
+Because the system is controlled by rules written in Javascript, it is easy (and fun)
 to derive and add new rules. Experiments have included rules using data from:
 - location reports from household mobile devices
 - weather information from the UK Meteorological Office data service
 
 The controller can be used stand-alone without being connected to the
-internet, though we have found the real power is in the ability is
+internet, though we have found the real power of Hotpot is in the ability is
 control the system remotely from a web browser. This means the system
-is never heating the house when nobody is home, and it's easy to boost
+need never be heating the house when nobody is home, and it's easy to boost
 the heating in anticipation of a warm house and a hot shower when you
 are about to head home.
 
@@ -31,12 +31,12 @@ All the parts can be purchased for around £40.
 
 ## Assumptions
 
-The following assumes a standard Y-plan central heating system. This
-is the most common type of system in modern homes, though there are
-several alternatives that may require further research.
+The following assumes a [standard Y-plan](https://boilerboffin.com/how-does-a-y-plan-heating-system-work/)
+central heating system. This used to be the most common type of system, though
+there are more modern alternatives.
 
 It's also assumed that you have some way to access your Pi from the
-internet.  This is simplest if you have a router with a fixed IP
+internet. This is simplest if you have a router with a fixed IP
 address that can be programmed to forward incoming requests to the
 Pi. There are so many possible hardware options and configurations
 that you will have to work this bit out for yourself.
@@ -44,8 +44,8 @@ that you will have to work this bit out for yourself.
 ## Hardware
 
 Aside from the Raspberry Pi, the only additional hardware required are
-two DS18x20 one-wire temperature sensors, and two relays. A dual
-SRD-05VDC-SL-C relay module is ideal for this. See the
+two DS18x20 one-wire temperature sensors, and a couple of relays -
+SRD-05VDC-SL-C relays are ideal for this. See the
 [general wiring diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Mains.svg)
 for details of the mains level wiring, and the [circuit diagram](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Circuit.svg) which gives a schematic overview.
 
@@ -54,29 +54,29 @@ is shown in the [Pi pinout diagram](https://raw.githubusercontent.com/cdot/Hotpo
 
 If you follow the described wiring the existing thermostats are kept
 in series with the Hotpot relays. Hotpot is designed such that if the
-relays are left unpowered, the existing thermostats are still in place
-to prevent the system from overheating. If they are set to a lower
-temperature than required by Hotpot, then the thermostats will always
-win. Make sure they are kept at sensible levels.
+relays are left unpowered, the existing thermostats are still in place.
+This way the traditional controller remains as a backup. Make sure
+the traditional thermostats are kept at sensible levels.
 
 The wiring shown capitalises on the fact that when the controller for a
 Y-plan system is powered on, but set to "off", the "Hot water off"
 control line is held high (at 250V). This means we can draw the power
 for the Pi from that line if the existing controller is set to "off".
 
-Note that the motorised valve ina Y-plan system is a very clever piece of
-design that uses the minimum number of components to fulfil its function.
-This does mean that [there is a state the valve can get into](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Mid%20position%20explanation.svg) which causes
-the valve to draw power continuously when both hot water and heating are off.
-While the valve is deigned for it, and the power consumption is very low,
-Hotpot is designed to eliminate this state.
-
 Alternatively you can power the Pi from a separate power source if you
 choose to do so. In this case you have the option of keeping the existing
 controller "live" and using it as a backup in case the Pi fails. 
 
-Note that we have observed isolated cases where Raspbian has "frozen"
-leaving the OS dead but the GPIO powered up. If anyone has a solution
+Note that the motorised valve in a Y-plan system is a very clever piece of
+design that uses the minimum number of components to fulfil its function.
+This does mean that [there is a state the valve can get into](https://raw.githubusercontent.com/cdot/Hotpot/master/Hardware/Mid%20position%20explanation.svg) which causes
+the valve to draw power continuously when both hot water and heating are off.
+While the valve is designed for it, and the power consumption is low (a few watts),
+Hotpot is designed to eliminate this state.
+
+Note that there have been isolated cases where Raspbian has "frozen"
+leaving the OS dead but the GPIO powered up. It can be resolved by power-cycling the Pi,
+but there is nothing in the logs to indicate a problem. If anyone has a solution
 to this, please raise an issue or a pull request on github.
 
 ## Software
