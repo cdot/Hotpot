@@ -15,7 +15,7 @@
    version="1.1"
    id="svg8"
    inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
-   sodipodi:docname="Y-plan State 1 - All Off.svg">
+   sodipodi:docname="Y-plan States 1 to 2.svg">
   <defs
      id="defs2" />
   <sodipodi:namedview
@@ -25,9 +25,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.962008"
-     inkscape:cx="499.17053"
-     inkscape:cy="713.39226"
+     inkscape:zoom="0.80981533"
+     inkscape:cx="442.52181"
+     inkscape:cy="663.99828"
      inkscape:document-units="mm"
      inkscape:current-layer="layer2"
      showgrid="true"
@@ -45,7 +45,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -777,23 +777,23 @@
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.3499999px;line-height:125%;font-family:sans-serif;-inkscape-font-specification:sans-serif;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        x="65.481827"
-       y="154.62473"
+       y="163.09128"
        id="text6905"><tspan
          sodipodi:role="line"
          id="tspan6903"
          x="65.481827"
-         y="154.62473"
+         y="163.09128"
          style="text-align:start;text-anchor:start;stroke-width:0.26458332px">to State 2 (HW demand)</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52777767px;line-height:125%;font-family:sans-serif;-inkscape-font-specification:sans-serif;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        x="77.307289"
-       y="165.05717"
+       y="136.30577"
        id="text6936"><tspan
          sodipodi:role="line"
          id="tspan6934"
          x="77.307289"
-         y="165.05717"
+         y="136.30577"
          style="text-align:start;text-anchor:start;stroke-width:0.26458332px">Red = 230V, Magenta = 150V</tspan></text>
     <g
        id="g10611"
@@ -1504,7 +1504,7 @@
            height="587.31323"
            x="-75.882942"
            y="428.13873" /></flowRegion><flowPara
-         id="flowPara10489"></flowPara></flowRoot>  </g>
+         id="flowPara10489" /></flowRoot>  </g>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;line-height:125%;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
