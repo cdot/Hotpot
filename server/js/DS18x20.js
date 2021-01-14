@@ -13,7 +13,7 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 
 	// Base path of all one-wire device paths. This is declared as static so it
 	// can be overridded in DebugSupport.js
-	const ONE_WIRE_PATH = Path.resolve('sys', 'bus', 'w1', 'devices');
+	const ONE_WIRE_PATH = "/sys/bus/w1/devices";
 
 	class DS18x20 {
 

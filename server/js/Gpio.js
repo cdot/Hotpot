@@ -12,7 +12,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
 	const Fs = fs.promises;
 
 	// Base path of all GPIO paths.
-	const GPIO_PATH = Path.resolve('sys', 'class', 'gpio');
+	const GPIO_PATH = "/sys/class/gpio";
 
 	class Gpio {
 
