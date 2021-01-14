@@ -81,18 +81,21 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
          */
         initialise() {
             return new Promise((resolve) => {
-				return this.sensor.initialiseSensor()
+				this.sensor.initialiseSensor()
+				.then((t) => resolve(t))
 				.catch((e) => {
 					Utils.TRACE(TAG, `${this.id} initialisation failed ${e}`);
-					if (typeof HOTPOT_DEBUG === "undefined") {
+					if (typeof HOTPOT_DEBUG === "undefined")
 						Utils.TRACE(TAG, "No HOTPOT_DEBUG");
-						throw new Error(e);
+					// Proceed with the sensor, even though it's not been initialised
+					
+					else {
+						// Fall back to debug
+						this.sensor = HOTPOT_DEBUG.getService(this.name);
+						Utils.TRACE(
+							TAG, `Falling back to debug service '${this.name}'`);
 					}
-					// Fall back to debug
-					this.sensor = HOTPOT_DEBUG.getService(this.name);
-					Utils.TRACE(
-						TAG, `Falling back to debug service '${this.name}'`);
-					resolve(12);
+					resolve(15);
 				});
 			})
 			.then((temp) => {
