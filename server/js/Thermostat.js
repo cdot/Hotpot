@@ -80,20 +80,22 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
          * from the probe. The promise resolves to the Thermostat.
          */
         initialise() {
-            return this.sensor.initialiseSensor()
-			.catch((e) => {
-				Utils.TRACE(TAG, `${this.id} initialisation failed ${e}`);
-				if (typeof HOTPOT_DEBUG === "undefined") {
-					Utils.TRACE(TAG, "No HOTPOT_DEBUG");
-					throw new Error(e);
-				}
-				// Fall back to debug
-				this.sensor = HOTPOT_DEBUG.getService(this.name);
-				Utils.TRACE(
-					TAG, `Falling back to debug service '${this.name}'`);
-				return this;
+            return new Promise((resolve) => {
+				return this.sensor.initialiseSensor()
+				.catch((e) => {
+					Utils.TRACE(TAG, `${this.id} initialisation failed ${e}`);
+					if (typeof HOTPOT_DEBUG === "undefined") {
+						Utils.TRACE(TAG, "No HOTPOT_DEBUG");
+						throw new Error(e);
+					}
+					// Fall back to debug
+					this.sensor = HOTPOT_DEBUG.getService(this.name);
+					Utils.TRACE(
+						TAG, `Falling back to debug service '${this.name}'`);
+					resolve(12);
+				});
 			})
-			.finally((temp) => {
+			.then((temp) => {
                 this.temperature = temp;
                 // Start the historian
                 if (this.history) {
@@ -103,6 +105,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
                     });
 				}
                 Utils.TRACE(TAG, `'${this.name}' initialised`);
+				return this;
             })
         };
 
