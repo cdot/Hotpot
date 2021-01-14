@@ -40,10 +40,11 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
         }
 
 		initialise() {
+			Utils.TRAC(TAG, `Initialising pin ${this.name}`);
 			return this.Gpio.initialiseIO()
 			.catch((e) => {
 				if (typeof HOTPOT_DEBUG === "undefined") {
-					Utils.TRACE(TAG, "No HOTPOT_DEBUG");
+					Utils.TRACE(TAG, `Initialise ${this.name} failed, and no HOTPOT_DEBUG`);
 					throw e;
 				}
 				// Fall back to debug

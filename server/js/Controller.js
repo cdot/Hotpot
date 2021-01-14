@@ -158,7 +158,6 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          */
         initialisePins() {
             let promises = [];
-			Utils.TRACE(TAG, "Initialising Pins", this.pin);
             for (let name in this.pin)
                 promises.push(this.pin[name].initialise());
             return Promise.all(promises).then(() => {

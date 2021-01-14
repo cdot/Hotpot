@@ -12,13 +12,13 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
     let assert = tr.assert;
 	const Fs = fs.promises;
 	const GPIO_PATH = "/sys/class/gpio";
-	const PIN = 18;
+	const PIN = 23;
 	
 	Fs.stat(`$GPIO_PATH}/gpio${PIN}`)
 	.then((stat) => {
 		tr.addTest("basic functionality", async function() {
 			let gpio = new Gpio(IN);
-			return Fs.writeFile(`${GPIO_PATH}/gpio${PIN}/unexport`, PIN)
+			return Fs.writeFile(`${GPIO_PATH}/unexport`, PIN)
 			.then(() => gpio.initialiseIO())
 			.then(() => gpio.setState(1))
 			.then(() => gpio.getState())

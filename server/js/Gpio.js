@@ -9,81 +9,71 @@
  */
 define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, Utils) {
 
-	const Fs = fs.promises;
+    const Fs = fs.promises;
 
-	// Base path of all GPIO paths.
-	const GPIO_PATH = "/sys/class/gpio";
+    // Base path of all GPIO paths.
+    const GPIO_PATH = "/sys/class/gpio";
 
-	class Gpio {
+    const TAG = "Gpio";
+    
+    class Gpio {
 
-		constructor(gpio) {
-			this.gpio = gpio;
-		}
+        constructor(gpio) {
+            this.gpio = gpio;
+        }
 
-		/**
-		 * Promise to initialise the pin. All this is intended to so
-		 * is determine if there is support for this GPIO pin, and
-		 * ensure future getValue() and setValue() calls succeed.
-		 */
-		initialiseIO(exported) {
-			// First check if the pin can be read. If it can, it is already
-			// exported and we can move on to setting the direction, otherwise
-			// we have to export it.
-			return this.getValue()
-            .then(() => this._setDirection())
-            .catch(() => this._exportGpio(exported));
+        /**
+         * Promise to initialise the pin. This will export the pin if necessary.
+         */
+        initialiseIO(exported) {
+            // First check if the pin is already exported
+            return Fs.access(Path.resolve(GPIO_PATH, `gpio{$this.gpio}`, 'value'), fs.constants.R_OK)
+            .catch(() => this._exportGpio(exported))
+            .then(() => Fs.writeFile(
+                    Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'direction'),
+                    "out"))
+            .then(() =>
+                  // If we don't set the pin active_low, then writing
+                  // a 1 to /value sets the pin low, and vice-versa.
+                  Fs.writeFile(Path.resolve(GPIO_PATH, `gpio${this.gpio}`,
+                                            'active_low'), 1));
+            .catch((e) => {
+                Utils.TRACE(TAG, `Failed to initialise ${this.gpio} ${e}`);
+            });
         }
 
         // Try and export the pin
         _exportGpio(exported) {
-            if (exported)
-                // Already exported, no point trying again
-                throw new Error("GPIO setup failed");
-
+            Utils.TRACE(TAG, `${this.gpio} is not exported; exporting`);
             return Fs.writeFile(
-				Path.resolve(GPIO_PATH, 'export'), this.gpio, "utf8")
+                Path.resolve(GPIO_PATH, 'export'), this.gpio, "utf8")
             .then(() => {
-                // Use a timeout to give it time to get set up
+                // Use a timeout to give it time to get set up; it takes a while
                 return new Promise((resolve) => {
-                    setTimeout(resolve, 500);
+                    setTimeout(resolve, 1000);
                 })
-			})
-			// Re-do the read check
-            .then(() => this.initialise(true));
+            })
         }
 
-        // The pin is known to be exported, set the direction
-        _setDirection() {
+        /**
+         * Return a promise to set the current state of the pin to the
+         * given state
+         */
+        setValue(state) {
             return Fs.writeFile(
-				Path.resolve(GPIO_PATH, `gpio${self.gpio}`, 'direction'),
-				"out")
-            .then(() =>
-				  // If we don't set the pin active_low, then writing
-				  // a 1 to /value sets the pin low, and vice-versa.
-				  Fs.writeFile(Path.resolve(GPIO_PATH, `gpio${self.gpio}`,
-											'active_low'), 1))
-			.then(() => this.set(0));
-		}
+                Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'value'),
+                state, "utf8");
+        }
 
-		/**
-		 * Return a promise to set the current state of the pin to the
-		 * given state
-		 */
-		setValue(state) {
-			return Fs.writeFile(
-				Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'value'),
-				state, "utf8");
-		}
-
-		/**
-		 * Return a promise that resolves to the current state of the pin
-		 */
-		getValue() {
-			return Fs.readFile(
-				Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'value'), "utf8")
-			.then((data) => parseInt(data));
-		}
-	}
-			
-	return Gpio;
+        /**
+         * Return a promise that resolves to the current state of the pin
+         */
+        getValue() {
+            return Fs.readFile(
+                Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'value'), "utf8")
+            .then((data) => parseInt(data));
+        }
+    }
+            
+    return Gpio;
 });
