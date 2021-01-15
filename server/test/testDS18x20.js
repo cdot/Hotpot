@@ -7,9 +7,9 @@ requirejs.config({
     baseUrl: "../.."
 });
 
-requirejs(["node-getopt", "common/js/Utils", "server/js/Gpio"], function(Getopt, Utils, Gpio) {
+requirejs(["node-getopt", "common/js/Utils", "server/js/DS18x20"], function(Getopt, Utils, DS18x20) {
 
-	var getopt = new Getopt([
+	let getopt = new Getopt([
 		[ "h", "help", "Show this help" ],
 		[ "p", "poll", "Poll the device(s) continuously" ]
 	])
@@ -19,32 +19,36 @@ requirejs(["node-getopt", "common/js/Utils", "server/js/Gpio"], function(Getopt,
     .bindHelp()
     .parseSystem();
 
-	var cliopt = getopt.options;
+	let cliopt = getopt.options;
 
-	var sensor = getopt.argv[0];
-	let sensors = [];
-	if (typeof sensor === "undefined") {
-		sensors = DS18x20.list();
-	} else
-		sensors.push(sensor);
-
-	function poll() {
-		let promises = [];
-		for (let i in sensors) {
-			promises.push((id) => {
-				let sensor = new DS18x20(id);
-				return sensor.initialiseSensor()
-				.then((t) => {
-					console.log(`${id}: ${t}`);
-				});
-			});
-		}
-		Promise.all(promises)
+	function poll(sensors) {
+		Promise.all(sensors.map((sensor) => 
+			sensor.getTemperature()
+			.then((t) => { console.log(`${sensor.id}: ${t}`); })))
 		.then(() => {
 			if (cliopt.poll)
 				setTimeout(() => poll(), 2000);
-		});
+		})
+		.catch((e) => {console.error(e);});
 	}
 
-	poll();
+	let id = getopt.argv[0];
+	let promise;
+	if (typeof id === "undefined")
+		promise = DS18x20.list();
+	else
+		promise = Promise.resolve(id);
+
+	promise
+	.then((ids) => {
+		console.log("Sensors ", ids);
+		Promise.all(ids.map(id => {
+			let sensor = new DS18x20(id);
+			return sensor.initialiseSensor();
+		}))
+		.then((sensors) => {
+			poll(sensors);
+		});
+	})
+	.catch((e) => {console.error(e);});
 });
