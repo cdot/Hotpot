@@ -36,9 +36,10 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 			return Fs.readFile(
 				Path.resolve(ONE_WIRE_PATH, this.id, 'w1_slave'))
 			.then((content) => {
-				let lines = content.toString().split("\n");
+				let str = content.toString();
+				let lines = str.split("\n");
 				if (lines[0].substr(-3) != "YES")
-					throw new Error("DS18x20 w1_slave CRC check failed");
+					throw new Error("DS18x20 w1_slave CRC check failed ${str}");
 				let parts = lines[1].split('t=');
 				if (parts.length !== 2)
 					throw new Error("DS18x20 w1_slave format error");
