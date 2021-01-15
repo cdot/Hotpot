@@ -74,6 +74,8 @@ the valve to draw power continuously when both hot water and heating are off.
 While the valve is designed for it, and the power consumption is low (a few watts),
 Hotpot is designed to eliminate this state.
 
+Once your hardware is set up you can use the test programs in `server/test` to check hardware functionality: `TestGpio.js` will let you query and set GPIO pins, while `TestDS18x20` will let you query temperature sensors.
+
 Note that there have been isolated cases where Raspbian has "frozen"
 leaving the OS dead but the GPIO powered up. It can be resolved by power-cycling the Pi,
 but there is nothing in the logs to indicate a problem. If anyone has a solution
