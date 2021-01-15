@@ -74,7 +74,7 @@ the valve to draw power continuously when both hot water and heating are off.
 While the valve is designed for it, and the power consumption is low (a few watts),
 Hotpot is designed to eliminate this state.
 
-Once your hardware is set up you can use the test programs in `server/test` to check hardware functionality: `TestGpio.js` will let you query and set GPIO pins, while `TestDS18x20` will let you query temperature sensors.
+Once your hardware is set up you can use the test programs in `server/test` to check hardware functionality: `testGpio.js` will let you query and set GPIO pins, while `testDS18x20` will let you query temperature sensors.
 
 Note that there have been isolated cases where Raspbian has "frozen"
 leaving the OS dead but the GPIO powered up. It can be resolved by power-cycling the Pi,
@@ -248,7 +248,7 @@ calendar: {
   }
 }
 ```
-Paste the copied fields from `client_secret` into the `secrets` object. The `primary` id will access your main calendar. The `node TestCalendars.js` command-line program in the `test` subdirectory can be used to list all the available calendars.
+Paste the copied fields from `client_secret` into the `secrets` object. The `primary` id will access your main calendar. The `testCalendars.js` command-line program in the `server/test` subdirectory can be used to list all the available calendars.
 
 `cd` to the `server` subdirectory and run the command-line program `node AuthoriseCalendar.js` and follow the instructions. Note that this requires an existing `hotpot.cfg`.
 

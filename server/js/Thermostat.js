@@ -82,6 +82,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
         initialise() {
             return new Promise((resolve) => {
 				this.sensor.initialiseSensor()
+				.then((s) => s.getTemperature())
 				.then((t) => resolve(t))
 				.catch((e) => {
 					Utils.TRACE(TAG, `${this.id} initialisation failed ${e}`);
