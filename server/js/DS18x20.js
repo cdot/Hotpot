@@ -25,7 +25,8 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 		 * Ensure the sensor exists and can be read.
 		 */
 		initialiseSensor() {
-			return this.getTemperature();
+			return this.getTemperature()
+			.then(() => this);
 		}
 		
 		/**
