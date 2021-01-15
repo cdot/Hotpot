@@ -47,8 +47,8 @@ class Service {
 		}
 	}
 
-	initialiseIO() {
-		Utils.TRACE(TAG, "${this.name} pin simulation initialised");
+	initialiseGpio(dirn, active) {
+		Utils.TRACE(TAG, "${this.name} ${dirn}pin active ${active} simulation initialised");
 	}
 	
 	// DS18x20 simulation

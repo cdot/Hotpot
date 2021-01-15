@@ -4,8 +4,9 @@
 
 /**
  * This module provides an interface to GPIO pins.
- * It uses the sysfs interface, which is deprecated. However support for
- * libgpiod is confused, so sticking with sysfs for now.
+ * It uses the "integer" sysfs interface, which is deprecated. However
+ * support for libgpiod requires cross-compilation, so sticking with
+ * sysfs for now.
  */
 define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, Utils) {
 
@@ -24,29 +25,29 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
 
         /**
          * Promise to initialise the pin. This will export the pin if necessary.
+		 * direction=in|out will set the pin direction
+		 * active=0 will write 1 to active_low
+		 * active=1 will write 0 to active_low
          */
-        initialiseIO(exported) {
+        initialiseGpio(direction, active, exported) {
             // First check if the pin is already exported
-            return Fs.access(Path.resolve(GPIO_PATH, `gpio{$this.gpio}`, 'value'), fs.constants.R_OK)
-            .catch(() => this._exportGpio(exported))
-            .then(() => Fs.writeFile(
-                    Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'direction'),
-                    "out"))
-            .then(() =>
-                  // If we don't set the pin active_low, then writing
-                  // a 1 to /value sets the pin low, and vice-versa.
-                  Fs.writeFile(Path.resolve(GPIO_PATH, `gpio${this.gpio}`,
-                                            'active_low'), 1))
+            return this.isExported()
+            .catch(() => this.export(exported))
+            .then(() => this.setDirection(direction))
+            .then(() => this.setActive(active))
             .catch((e) => {
                 Utils.TRACE(TAG, `Failed to initialise ${this.gpio} ${e}`);
             });
         }
 
+		isExported() {
+			return Fs.access(`${GPIO_PATH}/gpio${this.gpio}`);
+		}
+		
         // Try and export the pin
-        _exportGpio(exported) {
-            Utils.TRACE(TAG, `${this.gpio} is not exported; exporting`);
+        export() {
             return Fs.writeFile(
-                Path.resolve(GPIO_PATH, 'export'), this.gpio, "utf8")
+                Path.resolve(GPIO_PATH, 'export'), `${this.gpio}`, "utf8")
             .then(() => {
                 // Use a timeout to give it time to get set up; it takes a while
                 return new Promise((resolve) => {
@@ -54,6 +55,18 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
                 })
             })
         }
+
+		setDirection(dirn) {
+			return Fs.writeFile(
+                Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'direction'),
+				dirn);
+		}
+
+		setActive(lohi) {
+			let path = Path.resolve(
+				GPIO_PATH, `gpio${this.gpio}`, 'active_low');
+            return Fs.writeFile(path, (lohi == "low") ? 1 : 0);
+		}
 
         /**
          * Return a promise to set the current state of the pin to the

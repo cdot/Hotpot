@@ -20,33 +20,32 @@ requirejs.config({
 
 requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/Controller", "server/js/GoogleCalendar"], function(Getopt, Utils, DataModel, Controller, GoogleCalendar) {
 
+	Controller.Model.thermostat = { $skip: true };
+	Controller.Model.pin = { $skip: true };
+	const HOTPOT_MODEL = {
+		server: { $skip: true },
+		controller: Controller.Model
+	};
 
-Controller.Model.thermostat = { $skip: true };
-Controller.Model.pin = { $skip: true };
-const HOTPOT_MODEL = {
-    server: { $skip: true },
-    controller: Controller.Model
-};
+	var getopt = new Getopt([
+		[ "h", "help", "Show this help" ],
+		[ "l", "list", "List available calendars" ],
+		[ "d", "calendar=ARG", "Name of calendar (default is first)" ],
+		[ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ]
+	])
+		.bindHelp()
+		.parseSystem();
 
-var getopt = new Getopt([
-    [ "h", "help", "Show this help" ],
-    [ "l", "list", "List available calendars" ],
-    [ "d", "calendar=ARG", "Name of calendar (default is first)" ],
-    [ "c", "config=ARG", "Configuration file (default ./hotpot.cfg)" ]
-])
-    .bindHelp()
-    .parseSystem();
+	var cliopt = getopt.options;
 
-var cliopt = getopt.options;
+	if (typeof cliopt.config === "undefined") {
+		cliopt.config = "simulated_hotpot.cfg";
+	}
 
-if (typeof cliopt.config === "undefined") {
-    cliopt.config = "simulated_hotpot.cfg";
-}
+	Utils.setTRACE("all");
 
-Utils.setTRACE("all");
-
-function showCalendar(cal) {
-    cal
+	function showCalendar(cal) {
+		cal
         .authorise()
         .then(function() {
             return cal.fillCache();
@@ -57,10 +56,10 @@ function showCalendar(cal) {
         .catch(function(e) {
             console.error(e.stack);
         });
-}
+	}
 
-function listCalendars(cal) {
-    cal.authorise()
+	function listCalendars(cal) {
+		cal.authorise()
         .then(function() {
             return cal.listCalendars();
         })
@@ -72,23 +71,23 @@ function listCalendars(cal) {
         .catch(function(e) {
             console.error(e.stack);
         });
-}
+	}
 
-DataModel.loadData(cliopt.config, HOTPOT_MODEL)
+	DataModel.loadData(cliopt.config, HOTPOT_MODEL)
     .then(function(config) {
         if (!cliopt.calendar) {
             for (cliopt.calendar in config.controller.calendar)
                 break;
         }
         var cfg = config.controller.calendar[cliopt.calendar];
-
+		
         if (!cfg)
             throw new Utils.exception("Calendar", "No calendar ",
                                       clipopt.calendar, " in config");
         console.log("Using calendar '" + cliopt.calendar + "'");
-
+		
         var cal = new GoogleCalendar(cfg, cliopt.calendar);
-
+		
         if (cliopt.list)
             listCalendars(cal);
         else
