@@ -118,6 +118,14 @@ $ ls /sys/bus/w1/devices/w1_bus_master1
 ```
 Expect to see devices such as `28-0316027f81ff`
 
+Note that there are issues with the 1-wire driver with multiple sensors
+being asynchronously accessed. The w1 driver seems to get confused by
+multiple overlapping requests. There are three things that can be done to
+overcome this:
+- Use a 5V Vdd to supply the DS18b20s. The signal line must still be pulled up to 3.3V, however (don't pull it to 5V or you'll fry the GPIO)
+- Disable IRQs in the `wire` module (`sudo sh -c "echo options wire disable_irqs=1 >> /etc/modprobe.d/wire.conf"` and reboot)
+- 
+
 ### Set up a user
 
 Select a user to run the server. This could be the `root` user on your

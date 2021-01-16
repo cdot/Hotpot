@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -62,6 +62,9 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
             // Last recorded temperature {float}
             this.temperature = 0;
 
+			// Remember the time of the last known good sample
+			this.lastKnownGood = Date.now();
+			
             // Temperature history, sample on a time schedule
             let self = this;
             let hc = this.history;
@@ -88,7 +91,8 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 					Utils.TRACE(TAG, `${this.id} initialisation failed ${e}`);
 					if (typeof HOTPOT_DEBUG === "undefined")
 						Utils.TRACE(TAG, "No HOTPOT_DEBUG");
-					// Proceed with the sensor, even though it's not been initialised
+					// Proceed, even though it's not been initialised.
+					// It might come on line later.
 					
 					else {
 						// Fall back to debug
@@ -123,6 +127,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
             this.purgeRequests();
             return Promise.resolve({
                 temperature: this.temperature,
+				lastKnownGood: this.lastKnownGood,
                 target: this.getTargetTemperature(),
                 requests: this.requests
             });
@@ -147,29 +152,36 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 
         /**
          * Return a promise to start polling thermometers
-         * Thermostats are polled every second for new values; results
-		 * are returned asynchronously and cached in the Thermostat object
+         * Thermostats are polled every <poll interval> seconds for
+		 * new values; results are cached in the Thermostat object.
+		 * 
          * The promise resolves to the Thermostat.
          */
         poll() {
-            let self = this;
-
             return this.sensor.getTemperature()
 			.then((temp) => {
-                self.temperature = temp;
+                this.temperature = temp;
+				this.lastKnownGood = Date.now();
+				return this;
+			})
+
+			// If we didn't get a useable reading, use the last
+			// temperature returned. Log how long it's been since we
+			// last got a known-good reading.
+			.catch((e) => {
+				console.error(`Error polling ${this.id} ${e}`);
 				return this;
 			})
 			
-			.catch((e) => Utils.TRACE(TAG, e))
-			
 			.finally(() => {
-				if (self.interrupted) {
+				if (this.interrupted) {
 					Utils.TRACE(TAG, `'${self.name}' polling interrupted`);
-					self.interrupted = false;
+					this.interrupted = false;
 				} else {
+					let self = this;
 					setTimeout(function () {
 						self.poll();
-					}, 1000 * (self.poll_interval || DEFAULT_POLL_INTERVAL));
+					}, 1000 * (this.poll_interval || DEFAULT_POLL_INTERVAL));
 				}
             });
         };

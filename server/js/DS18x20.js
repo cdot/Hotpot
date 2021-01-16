@@ -32,14 +32,13 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 		/**
 		 * Return a promise to get the temperature from the sensor
 		 */
-		getTemperature() {
-			return Fs.readFile(
-				Path.resolve(ONE_WIRE_PATH, this.id, 'w1_slave'))
+		async getTemperature() {
+			return await Fs.readFile(
+				Path.resolve(ONE_WIRE_PATH, this.id, 'w1_slave'), 'latin1')
 			.then((content) => {
-				let str = content.toString();
-				let lines = str.split("\n");
+				let lines = content.split("\n");
 				if (lines[0].substr(-3) != "YES")
-					throw new Error(`DS18x20 ${this.id} CRC check failed '${str}'`);
+					throw new Error(`DS18x20 ${this.id} CRC check failed '${content}'`);
 				let parts = lines[1].split('t=');
 				if (parts.length !== 2)
 					throw new Error("DS18x20 ${this.id} format error");
