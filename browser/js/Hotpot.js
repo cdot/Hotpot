@@ -92,6 +92,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let $div = $("#" + service);
             let tcur = Math.round(
                 10 * obj.thermostat[service].temperature) / 10;
+            let deltat = (Date.now() - obj.thermostat[service].lastKnownGood) / 1000;
             let ttgt = Math.round(
                 10 * obj.thermostat[service].target) / 10;
             if (tcur > ttgt)
@@ -101,6 +102,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             else
                 $div.find(".th-diff").html("&eq;");
             $div.find(".th-temp").text(tcur);
+            $div.find(".th-lkg").text(Math.floor(deltat));
             $div.find(".th-target").text(ttgt);
             let ptext = (obj.pin[service].state === 0) ? "OFF" : "ON";
             $div.find(".pin-state").text(ptext);
