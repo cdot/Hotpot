@@ -9,6 +9,8 @@ requirejs.config({
 
 requirejs(["node-getopt", "common/js/Utils", "server/js/DS18x20"], function(Getopt, Utils, DS18x20) {
 
+const ASYNC = true;
+
 	let getopt = new Getopt([
 		[ "h", "help", "Show this help" ],
 		[ "p", "poll=ARG", "Poll the device(s) every ARG seconds" ]
@@ -27,7 +29,11 @@ requirejs(["node-getopt", "common/js/Utils", "server/js/DS18x20"], function(Geto
 	let lastKnownGood = [];
 
 	function poll(sensors) {
-		Promise.all(sensors.map((sensor) => {
+		// This could (might but probably won't) result in asynchronous reads from the
+		// 1-wire bus. 
+		let promise;
+if (ASYNC) {
+		promise = Promise.all(sensors.map((sensor) => {
 			sensor.getTemperature()
 			.then((t) => {
 				let now = Date.now();
@@ -41,8 +47,27 @@ requirejs(["node-getopt", "common/js/Utils", "server/js/DS18x20"], function(Geto
 					longestWait[sensor.id] = wait;
 				console.error(`Nothing from ${sensor.id} for ${wait} (${longestWait[sensor.id]})`);
 	 		});
-		}))
-		.finally(() => {
+		}));
+} else {
+		promise = Promise.resolve();
+		for (let i in sensors) {
+			let sensor = sensors[i];
+			promise = promise.then(() => sensor.getTemperature())
+			.then((t) => {
+				let now = Date.now();
+				let diff = (now - lastKnownGood[sensor.id]) / 1000;
+				console.log(`${sensor.id}: ${t} ${diff}`);
+				lastKnownGood[sensor.id] = now;
+			 })
+			.catch((e) => {
+				let wait = (Date.now() - lastKnownGood[sensor.id]) / 1000;
+				if (wait > longestWait[sensor.id])
+					longestWait[sensor.id] = wait;
+				console.error(`Nothing from ${sensor.id} for ${wait} (${longestWait[sensor.id]})`);
+	 		});
+		}
+}
+		promise.finally(() => {
 			if (freq > 0)
 				setTimeout(() => poll(sensors), freq * 1000);
 		});
