@@ -39,10 +39,10 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 				let str = content.toString();
 				let lines = str.split("\n");
 				if (lines[0].substr(-3) != "YES")
-					throw new Error("DS18x20 w1_slave CRC check failed ${str}");
+					throw new Error(`DS18x20 ${this.id} CRC check failed '${str}'`);
 				let parts = lines[1].split('t=');
 				if (parts.length !== 2)
-					throw new Error("DS18x20 w1_slave format error");
+					throw new Error("DS18x20 ${this.id} format error");
 				return parseFloat(parts[1]) / 1000;
 			});
 		}
