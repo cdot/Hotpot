@@ -7,7 +7,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
     const TAG = "Thermostat";
 
     // Default interval between polls
-    const DEFAULT_POLL_INTERVAL = 1; // seconds
+    const DEFAULT_POLL_INTERVAL = 5; // seconds
 
     /**
      * Interface to a DS18x20 thermostat. This object takes care of polling the
@@ -100,7 +100,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 						Utils.TRACE(
 							TAG, `Falling back to debug service '${this.name}'`);
 					}
-					resolve(15);
+					resolve(20);
 				});
 			})
 			.then((temp) => {
@@ -160,6 +160,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
         poll() {
             return this.sensor.getTemperature()
 			.then((temp) => {
+				Utils.TRACE(TAG, `${this.id} now ${temp}`);
                 this.temperature = temp;
 				this.lastKnownGood = Date.now();
 				return this;
@@ -179,9 +180,9 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 					this.interrupted = false;
 				} else {
 					let self = this;
-					setTimeout(function () {
-						self.poll();
-					}, 1000 * (this.poll_interval || DEFAULT_POLL_INTERVAL));
+					setTimeout(
+						() => self.poll(),
+						1000 * (this.poll_every || DEFAULT_POLL_INTERVAL));
 				}
             });
         };
@@ -306,6 +307,11 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
             $class: String,
             $doc: "unique ID used to communicate with this thermostat"
         },
+		poll_every: {
+			$class: Number,
+			$doc: "Polling frequency, in seconds",
+			$options: true
+		},
         timeline: Timeline.Model,
         history: Utils.extend({
             $optional: true

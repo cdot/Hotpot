@@ -271,13 +271,14 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @param since optional param giving start of logs as a ms datime
          * @private
          */
-        getSetLogs(set, since) {
+        getLogsFor(set, since) {
             let promises = [];
             let logset;
 
             for (let key in set) {
                 let item = set[key];
-                if (typeof item.getSerialisableLog === "function") {
+				if (typeof item !== "undefined"
+					&& typeof item.getSerialisableLog === "function") {
                     promises.push(
                         item.getSerialisableLog(since)
                         .then((value) => {
@@ -306,7 +307,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             for (let field in this) {
                 let block = this[field];
                 promises.push(
-                    self.getSetLogs(self[field], since)
+                    self.getLogsFor(self[field], since)
                     .then(function (logset) {
                         if (logset)
                             logs[field] = logset;
@@ -420,7 +421,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                     return this.getSerialisableLog(data.since);
                 if (typeof path[1] === "undefined")
                     // Get the logs of the given type
-                    return this.getSetLogs(self[path[0]], data.since);
+                    return this.getLogsFor(this[path[0]], data.since);
                 // Get the log for the given object of the given type
                 return this[path[0]][path[1]].getSerialisableLog(data.since);
             case "getconfig":
@@ -442,7 +443,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 				}).then((rebuilt) => {
 					p.parent[p.key] = rebuilt;
 					Utils.TRACE(TAG, `setconfig ${path} = ${parent[p.key]}`);
-					self.emit("config_change");
+					this.emit("config_change");
 					return { status: "OK" };
                 });
             case "request":
@@ -475,7 +476,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 Utils.TRACE(TAG, "Refresh calendars");
                 for (let cal in this.calendar)
                     this.calendar[cal].update(100);
-                self.pollRules();
+                this.pollRules();
                 break;
             default:
                 throw new Utils.exception(TAG, `Unrecognised command ${command}`);

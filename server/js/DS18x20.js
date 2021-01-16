@@ -33,6 +33,10 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 		 * Return a promise to get the temperature from the sensor
 		 */
 		async getTemperature() {
+			// Javascript is single-threaded, so the await should be
+			// enough to block any other attempt to read from the wire
+			// bus.
+			Utils.TRACE(TAG, `Polling ${this.id}`);
 			return await Fs.readFile(
 				Path.resolve(ONE_WIRE_PATH, this.id, 'w1_slave'), 'latin1')
 			.then((content) => {
