@@ -102,7 +102,11 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             else
                 $div.find(".th-diff").html("&eq;");
             $div.find(".th-temp").text(tcur);
-            $div.find(".th-lkg").text(Math.floor(deltat));
+            if (deltat < 60)
+				$div.find(".th-lkg").hide();
+			else {
+				$div.find(".th-lkg").show().text(Math.floor(deltat));
+			}
             $div.find(".th-target").text(ttgt);
             let ptext = (obj.pin[service].state === 0) ? "OFF" : "ON";
             $div.find(".pin-state").text(ptext);
