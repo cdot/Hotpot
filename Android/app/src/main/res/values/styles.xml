@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="padStart">
+        <item name="android:layout_marginStart">@dimen/row_item_padding</item>
+    </style>
+    <style name="padEnd">
+        <item name="android:layout_marginEnd">@dimen/row_item_padding</item>
+    </style>
+    <style name="padBoth">
+        <item name="android:layout_marginStart">@dimen/row_item_padding</item>
+        <item name="android:layout_marginEnd">@dimen/row_item_padding</item>
+    </style>
+</resources>

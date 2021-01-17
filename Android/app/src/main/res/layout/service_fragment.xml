@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/constraintLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".ui.main.ServiceFragment">
+
+    <TextView
+        android:id="@+id/serviceName"
+        style="@style/padStart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Central Heating"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            style="@style/padStart"
+            android:id="@+id/currentTempTV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Temp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="°C" />
+
+        <TextView
+            style="@style/padBoth"
+            android:id="@+id/conditionTV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="=" />
+
+        <TextView
+            style="@style/padStart"
+            android:id="@+id/targetTempTV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Target" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="°C" />
+
+        <TextView
+            style="@style/padStart"
+            android:id="@+id/lastKnownGoodTV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="(lkg))"
+            app:layout_constraintStart_toEndOf="@id/targetTempTV"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            style="@style/padStart"
+            android:id="@+id/pinStateTV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PinState" />
+
+        <TextView
+            style="@style/padStart"
+            android:id="@+id/reasonTV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reason" />
+
+    </LinearLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/boostCL"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
+        <Button
+            style="@style/padStart"
+            android:id="@+id/boostButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Boost"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            style="@style/padStart"
+            android:id="@+id/toTV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="to"
+            app:layout_constraintBaseline_toBaselineOf="@id/boostButton"
+            app:layout_constraintStart_toEndOf="@id/boostButton" />
+
+        <EditText
+            style="@style/padStart"
+            android:id="@+id/boostToET"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="numberDecimal"
+            app:layout_constraintBaseline_toBaselineOf="@id/boostButton"
+            app:layout_constraintStart_toEndOf="@id/toTV" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <ListView
+        android:id="@+id/requestsLV"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>
