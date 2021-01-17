@@ -100,7 +100,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             else if (tcur < ttgt)
                 $div.find(".th-diff").html("&lt;");
             else
-                $div.find(".th-diff").html("&eq;");
+                $div.find(".th-diff").text("=");
             $div.find(".th-temp").text(tcur);
             if (deltat < 60)
 				$div.find(".th-lkg").hide();
