@@ -4,8 +4,6 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.cdot.hotpot.databinding.MainActivityBinding
-import com.cdot.hotpot.ui.main.SectionsPagerAdapter
-import com.cdot.hotpot.ui.main.ServicesModel
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,6 +18,7 @@ class MainActivity : AppCompatActivity() {
         val viewPager = binding.viewPager
         viewPager.adapter = SectionsPagerAdapter(this)
         val model = ViewModelProvider(this).get(ServicesModel::class.java)
+        model.hotpot = application as Hotpot
         model.pollState()
     }
 }

@@ -1,4 +1,4 @@
-package com.cdot.hotpot.ui.main
+package com.cdot.hotpot
 
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
@@ -17,13 +17,14 @@ class SectionsPagerAdapter(fa: FragmentActivity)
      * @return The total number of items in this adapter.
      */
     override fun getItemCount(): Int {
-        return ServiceFragment.SERVICE_NAMES.size
+        return ServicesModel.SERVICE_NAMES.size + 1
     }
 
     /**
      * Provide a new Fragment associated with the specified position.
      */
     override fun createFragment(position: Int): Fragment {
-        return ServiceFragment(position)
+        return if (position < ServicesModel.SERVICE_NAMES.size) ServiceFragment(position)
+        else PreferencesFragment()
     }
 }
