@@ -1,38 +1,29 @@
 package com.cdot.hotpot.ui.main
 
-import android.content.Context
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentPagerAdapter
-import com.cdot.hotpot.R
-
-private val TAB_TITLES = arrayOf(
-        R.string.tab_CH,
-        R.string.tab_HW
-)
+import androidx.viewpager2.adapter.FragmentStateAdapter
 
 /**
  * A [FragmentPagerAdapter] that returns a fragment corresponding to
  * one of the sections/tabs/pages.
  */
-class SectionsPagerAdapter(private val context: Context, fm: FragmentManager)
-    : FragmentPagerAdapter(fm) {
+class SectionsPagerAdapter(fa: FragmentActivity)
+    : FragmentStateAdapter(fa) {
 
-    override fun getItem(position: Int): Fragment {
-        // getItem is called to instantiate the fragment for the given page.
-        // Return a PlaceholderFragment (defined as a static inner class below).
-        return when (position) {
-            0 -> ServiceFragment.newInstance("CH")
-            else ->  ServiceFragment.newInstance("HW")
-        }
+    /**
+     * Returns the total number of items in the data set held by the adapter.
+     * @return The total number of items in this adapter.
+     */
+    override fun getItemCount(): Int {
+        return ServiceFragment.SERVICE_NAMES.size
     }
 
-    override fun getPageTitle(position: Int): CharSequence? {
-        return context.resources.getString(TAB_TITLES[position])
-    }
-
-    override fun getCount(): Int {
-        // Show 2 total pages.
-        return 2
+    /**
+     * Provide a new Fragment associated with the specified position.
+     */
+    override fun createFragment(position: Int): Fragment {
+        return ServiceFragment(position)
     }
 }
