@@ -1,0 +1,34 @@
+#!/bin/sh
+# hotpot
+### BEGIN INIT INFO
+# Provides:          hotpot
+# Required-Start:    $local_fs
+# Required-Stop:
+# Default-Start:     3 5
+# Default-Stop:      
+# Short-Description: Hotpot service init script
+# Description:       Start the hotpot server
+### END INIT INFO
+
+# Assumes the service will be run as user "hotpot" and the install is a
+# git clone in /home/hotpot/Hotpot, with the customised hotpot.cfg in
+# /home/hotspot/hotspot.cfg
+
+USER=hotpot
+RUN_PATH=/home/$USER/Hotpot/server/js/Hotpot.js
+CONFIG_PATH=/home/$USER/hotpot.cfg
+
+case "$1" in
+  start)
+    sudo -u $USER node $RUN_PATH --config $CONFIG_PATH \
+		2>&1 >> /var/log/hotpot_server.log
+    ;;
+  stop)
+    pid=`ps -Af | grep $RUN_PATH | grep -v grep | sed -e 's/^[^0-9]*//;s/\s.*//'
+`
+    if [ "$pid"!="" ]; then
+		( echo "Service stopping $pid"; kill -9 $pid ) 2>&1 \
+			  >> /var/log/hotpot_server.log
+    fi
+    ;;
+esac
