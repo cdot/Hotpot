@@ -148,7 +148,7 @@ $ sudo adduser hotpot gpio
 
 ### Service startup script
 
-On systems that use `systemd`, as root, create `/etc/systemd/system/hotpot.service` with
+On systems that use `systemd`, create `/etc/systemd/system/hotpot.service` with
 content:
 ```
 [Unit]
@@ -167,12 +167,12 @@ Nice=2
 [Install]
 WantedBy=multi-user.target
 ```
-Still as root,
+Still as root:
 ```
 # systemctl daemon-reload
 # systemctl enable hotpot
 ```
-You should see a link being created. Then
+You should see a link being created. Then:
 ```
 # systemctl start hotpot
 ```
@@ -336,7 +336,7 @@ This will start a debug server listening on localhost:13196 with full tracing.
 In a web browser on localhost, load http://localhost:13196/
 
 Trace output is written to STDOUT by default. You can also configure it to
-write tracing to a file in `hotpot.cfg`.
+write tracing to a file by setting a `tracefile` in `hotpot.cfg`.
 
 All trace and debug statements are tagged with the time and the module e.g 
 ```
@@ -382,13 +382,15 @@ Will retrieve the configuration of the controller (JSON)
 
 ### `/ajax/setconfig`
 Set a configuration item. The usage of this is risky and complex, you
-are recommended to read the code to understand it.
+are recommended to read the code to understand it. It is used to write
+new timelines from the browser UI, but could potnetially be used to write
+other configuration.
 
 ### `/ajax/state`
 Retrieves the current state of the controller (JSON)
 
 ### `/ajax/trace?trace=`
-Set the trace level of the server
+Set the trace level of the server (see the description of `--trace` above)
 
 ### `/ajax/log`
 Retrieve all logs. Add `/{thermostat|pin|weather}` to retrieve logs for those service types. Add `/{thermostat|pin|weather}/{name}` to retrieve logs for a specific service e.g. `/ajax/log/thermostat/CH`.
