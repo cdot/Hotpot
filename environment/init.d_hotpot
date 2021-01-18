@@ -17,18 +17,48 @@
 USER=hotpot
 RUN_PATH=/home/$USER/Hotpot/server/js/Hotpot.js
 CONFIG_PATH=/home/$USER/hotpot.cfg
+PID=`ps -Af | grep $RUN_PATH | grep -v grep | sed -e 's/^[^0-9]*//;s/\s.*//'`
+
+start() {
+    if [ "$PID"!="" ]; then
+	   echo "Hotpot is already running, pid $pid"
+    else
+	   ( sudo -u $USER node $RUN_PATH --config $CONFIG_PATH ) \
+	   		  2>&1 >> /var/log/hotpot_server.log
+	fi
+}
+
+stop() {
+    if [ "$PID"="" ]; then
+		echo "Hotpot is not running, pid $pid"
+	else
+	    ( kill -9 $pid ) 2>&1 >> /var/log/hotpot_server.log
+    fi
+}
 
 case "$1" in
   start)
-    sudo -u $USER node $RUN_PATH --config $CONFIG_PATH \
-		2>&1 >> /var/log/hotpot_server.log
-    ;;
+      echo "Starting Hotpot..."
+      start
+	  ;;
+
   stop)
-    pid=`ps -Af | grep $RUN_PATH | grep -v grep | sed -e 's/^[^0-9]*//;s/\s.*//'
-`
-    if [ "$pid"!="" ]; then
-		( echo "Service stopping $pid"; kill -9 $pid ) 2>&1 \
-			  >> /var/log/hotpot_server.log
-    fi
-    ;;
+      echo "Stopping Hotpot..."
+	  stop
+      ;;
+
+  restart)
+      echo "Restarting Hotpot..."
+	  stop
+	  start
+	  ;;
+
+  status)
+      if [ "$PID"!="" ]; then
+		  echo "Hotpot is running in process $PID"
+	  else
+		  echo "Hotpot is not running"
+	  fi
+	  ;;
+ 
 esac

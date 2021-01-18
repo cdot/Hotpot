@@ -3,10 +3,23 @@ plugins {
     id 'kotlin-android'
 }
 
+def localProperties = new Properties()
+localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.3"
     buildFeatures.viewBinding = true
+
+    signingConfigs {
+        release {
+            // Set the following in your local.properties
+            storeFile file(localProperties['KEY_STORE_FILE'])
+            storePassword localProperties['KEY_STORE_PASSWORD']
+            keyAlias localProperties['KEY_ALIAS']
+            keyPassword localProperties['KEY_PASSWORD']
+        }
+    }
 
     defaultConfig {
         applicationId "com.cdot.hotpot"
@@ -14,14 +27,22 @@ android {
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
+        buildConfigField "long", "BUILD_TIME",  System.currentTimeMillis() + "L"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            signingConfig signingConfigs.release
+        }
+
+        debug {
+            applicationIdSuffix ".debug"
+            debuggable true
+            signingConfig signingConfigs.debug
+            versionNameSuffix '.debug'
         }
     }
     compileOptions {
