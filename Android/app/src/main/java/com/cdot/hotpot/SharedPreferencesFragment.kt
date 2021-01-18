@@ -1,5 +1,5 @@
 /*
- * Copyright © 2020 C-Dot Consultants
+ * Copyright © 2021 C-Dot Consultants
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -19,23 +19,24 @@
 package com.cdot.hotpot
 
 import android.os.Bundle
-import android.view.View
+import androidx.preference.EditTextPreference
+import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 
 /**
- * Intermediate simply to allow us access to the root view of a Preference screen so we can
- * Snackbar on it.
+ * Simple preferences fragment
  */
-class PreferencesFragment : PreferenceFragmentCompat() {
-    var rootView: View? = null
-        private set
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        rootView = view
-    }
-
+class SharedPreferencesFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.shared_preferences, rootKey)
+        for (prefName in listOf("url", "username")) {
+            val pref = findPreference<EditTextPreference>(prefName)!!
+            val hotpot = requireActivity().application as Hotpot
+            pref.summary = hotpot.prefs.getString(prefName, null)
+            pref.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { preference: Preference, value: Any ->
+                preference.summary = value.toString()
+                true
+            }
+        }
     }
 }

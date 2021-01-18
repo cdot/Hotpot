@@ -84,7 +84,7 @@
 
     </LinearLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:id="@+id/boostCL"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
@@ -94,18 +94,14 @@
             android:id="@+id/boostButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Boost"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:text="Boost" />
 
         <TextView
             style="@style/padStart"
             android:id="@+id/toTV"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="to"
-            app:layout_constraintBaseline_toBaselineOf="@id/boostButton"
-            app:layout_constraintStart_toEndOf="@id/boostButton" />
+            android:text="to" />
 
         <EditText
             style="@style/padStart"
@@ -113,11 +109,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ems="10"
-            android:inputType="numberDecimal"
-            app:layout_constraintBaseline_toBaselineOf="@id/boostButton"
-            app:layout_constraintStart_toEndOf="@id/toTV" />
+            android:imeOptions="actionDone"
+            android:singleLine="true"
+            android:inputType="numberDecimal" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
     <ListView
         android:id="@+id/requestsLV"

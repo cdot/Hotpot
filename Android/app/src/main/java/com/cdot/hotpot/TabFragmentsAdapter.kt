@@ -2,15 +2,13 @@ package com.cdot.hotpot
 
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.FragmentPagerAdapter
 import androidx.viewpager2.adapter.FragmentStateAdapter
 
 /**
- * A [FragmentPagerAdapter] that returns a fragment corresponding to
- * one of the sections/tabs/pages.
+ * A [FragmentStateAdapter] that manages the fragments corresponding to
+ * one of the tabs.
  */
-class SectionsPagerAdapter(fa: FragmentActivity)
-    : FragmentStateAdapter(fa) {
+class TabFragmentsAdapter(fa: FragmentActivity) : FragmentStateAdapter(fa) {
 
     /**
      * Returns the total number of items in the data set held by the adapter.
@@ -25,6 +23,6 @@ class SectionsPagerAdapter(fa: FragmentActivity)
      */
     override fun createFragment(position: Int): Fragment {
         return if (position < ServicesModel.SERVICE_NAMES.size) ServiceFragment(position)
-        else PreferencesFragment()
+        else SharedPreferencesFragment()
     }
 }

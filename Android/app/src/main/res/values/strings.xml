@@ -2,4 +2,8 @@
     <string name="app_name">Hotpot</string>
     <string name="tab_CH">Central Heating</string>
     <string name="tab_HW">Hot Water</string>
+    <string name="is_requesting">requesting</string>
+    <string name="until">until</string>
+    <string name="clear">Clear</string>
+    <string name="requestDetails">%1$s is requesting %2$.4g°C until %3$s</string>
 </resources>

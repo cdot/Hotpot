@@ -1,35 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="horizontal"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/sourceTV" />
+    <ImageButton
+        style="@style/padStart"
+        android:id="@+id/clearButton"
+        android:layout_width="32sp"
+        android:layout_height="32sp"
+        app:srcCompat="@drawable/ic_action_delete"
+        android:contentDescription="Clear request" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="is requesting" />
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/targetTV" />
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="°C" />
+        android:layout_toEndOf="@id/clearButton"
+        android:text="@string/requestDetails"
+        android:id="@+id/requestTV" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/untilTV" />
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/clearButton" />
-
-</LinearLayout>
+</RelativeLayout>

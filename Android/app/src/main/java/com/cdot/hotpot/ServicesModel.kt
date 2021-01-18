@@ -1,7 +1,9 @@
 package com.cdot.hotpot
 
-import android.content.SharedPreferences
+import android.app.Activity
+import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import okhttp3.*
@@ -45,13 +47,8 @@ class ServicesModel : ViewModel() {
             val rl : MutableList<Request> = mutableListOf()
             for (i in 0 until reqs.length()) {
                 val req = reqs.getJSONObject(i)
-                rl.add(
-                    Request(
-                        req.getString("source"),
-                        req.getDouble("target"),
-                        req.getLong("until")
-                    )
-                )
+                val r = Request(req.getString("source"), req.getDouble("target"), req.getLong("until"))
+                rl.add(r);
             }
             requests.postValue(rl)
         }
@@ -66,17 +63,17 @@ class ServicesModel : ViewModel() {
         fun sendRequest(target: Double, until_: Long) {
             val job = JSONObject()
             job.put("service", SERVICE_NAMES[serviceIndex])
-            job.put("source", "android")
+            job.put("source", hotpot.deviceName)
             job.put("target", target)
             job.put("until", until_)
-            hotpot.postJSON("/ajax/request", job, object : Callback {
+            hotpot.POST("/ajax/request", job, object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    Log.e(TAG, "POST", e)
+                    Log.e(TAG, "POST /ajax/request", e)
                 }
 
                 override fun onResponse(call: Call, response: Response) {
                     if (response.code != 200) {
-                        Log.e(TAG, "POST returned ${response.code}")
+                        Log.e(TAG, "POST /ajax/request returned ${response.code}")
                     }
                 }
             })
@@ -93,19 +90,22 @@ class ServicesModel : ViewModel() {
         }
     }
 
-    fun pollState() {
+    fun pollState(activity: Activity) {
         Timer().schedule(object : TimerTask() {
             override fun run() {
-                hotpot.getJSON("/ajax/state", object : Callback {
+                hotpot.GET("/ajax/state", object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
-                        Log.e(TAG, "GET", e)
+                        Log.e(TAG, "GET /ajax/state", e)
                     }
 
                     override fun onResponse(call: Call, response: Response) {
-                        if (response.code != 200)
-                            throw Error(response.message)
-                        val json = JSONObject(response.body!!.string())
-                        setState(json)
+                        if (response.code == 200) {
+                            val json = response.body!!.string()
+                            setState(JSONObject(json))
+                        } else
+                            activity.runOnUiThread {
+                                Toast.makeText(activity, response.message, Toast.LENGTH_SHORT).show()
+                            }
                     }
                 })
             }

@@ -1,12 +1,16 @@
 package com.cdot.hotpot
 
-import android.content.Context
+import android.app.Activity
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.cdot.hotpot.databinding.RequestViewBinding
@@ -21,39 +25,48 @@ class ServiceFragment(private val serviceIndex: Int) : Fragment() {
         private val TAG = ServiceFragment::class.simpleName
 
         val SERVICE_TITLES = arrayOf(
-            R.string.tab_CH,
-            R.string.tab_HW
+                R.string.tab_CH,
+                R.string.tab_HW
         )
-
     }
 
-    private lateinit var serviceViewModel: ServicesModel.Service
+    private lateinit var servicesModel: ServicesModel.Service
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        serviceViewModel = ViewModelProvider(requireActivity()).get(ServicesModel::class.java).services[serviceIndex]
+        servicesModel = ViewModelProvider(requireActivity()).get(ServicesModel::class.java).services[serviceIndex]
     }
 
-    inner class RequestView(private val req: ServicesModel.Request, cxt: Context) : LinearLayout(cxt) {
+    inner class RequestView : LinearLayout(requireActivity()) {
         private val binding = RequestViewBinding.inflate(LayoutInflater.from(requireActivity()), this, true)
+        lateinit var request: ServicesModel.Request
 
         fun updateView() {
-            binding.sourceTV.text = req.source
-            binding.targetTV.text = "%.02g".format(req.target)
-            binding.untilTV.text =
-                if (req.until_ == ServicesModel.BOOST) "boosted" else Date(req.until_).toString()
+            binding.requestTV.text = resources.getString(R.string.requestDetails, request.source, request.target,
+                    if (request.until_ == ServicesModel.BOOST) "boosted" else Date(request.until_).toString())
+            val hotpot = requireActivity().application as Hotpot
+            binding.clearButton.visibility = if (request.source == hotpot.deviceName) View.VISIBLE else View.GONE
             binding.clearButton.setOnClickListener {
-                serviceViewModel.sendRequest(0.0, ServicesModel.CLEAR)
+                servicesModel.sendRequest(0.0, ServicesModel.CLEAR)
             }
         }
     }
 
     inner class RequestAdapter : ArrayAdapter<ServicesModel.Request>(requireActivity(), 0) {
         override fun getView(i: Int, convertView: View?, viewGroup: ViewGroup): View {
-            val v = if (convertView != null) convertView as RequestView
-                else RequestView(serviceViewModel.requests.value?.get(i)!!, requireActivity())
-            v.updateView()
-            return v
+            val r = servicesModel.requests
+            val v = r.value!!
+            val view = if (convertView == null) RequestView() else convertView as RequestView
+            view.request = v.get(i)
+            view.updateView()
+            return view
+        }
+
+        override fun getCount(): Int {
+            val r = servicesModel.requests
+            val v = r.value
+            if (v == null) return 0
+            return v.size
         }
     }
 
@@ -63,23 +76,34 @@ class ServiceFragment(private val serviceIndex: Int) : Fragment() {
     ): View {
         val binding = ServiceFragmentBinding.inflate(layoutInflater)
         binding.serviceName.text = resources.getString(SERVICE_TITLES[serviceIndex])
-        serviceViewModel.curTemp.observe(viewLifecycleOwner, { binding.currentTempTV.text = it })
-        serviceViewModel.condition.observe(viewLifecycleOwner, { binding.conditionTV.text = it })
-        serviceViewModel.targetTemp.observe(viewLifecycleOwner, { binding.targetTempTV.text = it })
-        serviceViewModel.lastKnownGood.observe(viewLifecycleOwner, { binding.lastKnownGoodTV.text = it })
-        serviceViewModel.boostTarget.observe(viewLifecycleOwner, { binding.boostToET.setText(it.toString()) })
-        serviceViewModel.pinState.observe(viewLifecycleOwner, { binding.pinStateTV.text = it })
-        serviceViewModel.reason.observe(viewLifecycleOwner, { binding.reasonTV.text = it })
+        servicesModel.curTemp.observe(viewLifecycleOwner, { binding.currentTempTV.text = it })
+        servicesModel.condition.observe(viewLifecycleOwner, { binding.conditionTV.text = it })
+        servicesModel.targetTemp.observe(viewLifecycleOwner, { binding.targetTempTV.text = it })
+        servicesModel.lastKnownGood.observe(viewLifecycleOwner, { binding.lastKnownGoodTV.text = it })
+        servicesModel.boostTarget.observe(viewLifecycleOwner, { binding.boostToET.setText(it.toString()) })
+        servicesModel.pinState.observe(viewLifecycleOwner, { binding.pinStateTV.text = it })
+        servicesModel.reason.observe(viewLifecycleOwner, { binding.reasonTV.text = it })
 
         binding.boostButton.setOnClickListener {
-            serviceViewModel.sendRequest(binding.boostToET.text.toString().toDouble(),
-                ServicesModel.BOOST
-            )
+            val s = binding.boostToET.text.toString()
+            servicesModel.sendRequest(s.toDouble(), ServicesModel.BOOST)
+        }
+        binding.boostButton.setEnabled(false) // remember this in prefs
+        binding.boostToET.setOnEditorActionListener { textView: TextView?, i: Int, keyEvent: KeyEvent? ->
+            if (i == EditorInfo.IME_ACTION_DONE) {
+                val imm = textView!!.getContext().getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(textView.getWindowToken(), 0)
+                val s = binding.boostToET.text.toString()
+                binding.boostButton.setEnabled(s.isNotEmpty())
+            }
+            false
         }
 
         val arrayAdapter = RequestAdapter()
         binding.requestsLV.adapter = arrayAdapter
-        serviceViewModel.requests.observe(viewLifecycleOwner, { arrayAdapter.notifyDataSetChanged() })
+        servicesModel.requests.observe(viewLifecycleOwner, {
+            arrayAdapter.notifyDataSetChanged()
+        })
         return binding.root
     }
 }
