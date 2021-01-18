@@ -48,7 +48,7 @@ class ServicesModel : ViewModel() {
             for (i in 0 until reqs.length()) {
                 val req = reqs.getJSONObject(i)
                 val r = Request(req.getString("source"), req.getDouble("target"), req.getLong("until"))
-                rl.add(r);
+                rl.add(r)
             }
             requests.postValue(rl)
         }

@@ -57,15 +57,14 @@ class ServiceFragment(private val serviceIndex: Int) : Fragment() {
             val r = servicesModel.requests
             val v = r.value!!
             val view = if (convertView == null) RequestView() else convertView as RequestView
-            view.request = v.get(i)
+            view.request = v[i]
             view.updateView()
             return view
         }
 
         override fun getCount(): Int {
             val r = servicesModel.requests
-            val v = r.value
-            if (v == null) return 0
+            val v = r.value ?: return 0
             return v.size
         }
     }
@@ -88,13 +87,13 @@ class ServiceFragment(private val serviceIndex: Int) : Fragment() {
             val s = binding.boostToET.text.toString()
             servicesModel.sendRequest(s.toDouble(), ServicesModel.BOOST)
         }
-        binding.boostButton.setEnabled(false) // remember this in prefs
-        binding.boostToET.setOnEditorActionListener { textView: TextView?, i: Int, keyEvent: KeyEvent? ->
+        binding.boostButton.isEnabled = false // remember this in prefs
+        binding.boostToET.setOnEditorActionListener { textView: TextView?, i: Int, _: KeyEvent? ->
             if (i == EditorInfo.IME_ACTION_DONE) {
-                val imm = textView!!.getContext().getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.hideSoftInputFromWindow(textView.getWindowToken(), 0)
+                val imm = textView!!.context.getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(textView.windowToken, 0)
                 val s = binding.boostToET.text.toString()
-                binding.boostButton.setEnabled(s.isNotEmpty())
+                binding.boostButton.isEnabled = s.isNotEmpty()
             }
             false
         }

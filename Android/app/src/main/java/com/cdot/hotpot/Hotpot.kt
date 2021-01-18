@@ -19,9 +19,9 @@ class Hotpot : Application() {
     val deviceName: String
         get() {
             // https://medium.com/capital-one-tech/how-to-get-an-android-device-nickname-d5eab12f4ced
-            var dn: String = ""
+            var dn: String
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
-                dn = Settings.Global.getString(getContentResolver(), Settings.Global.DEVICE_NAME)
+                dn = Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)
                 if (dn != null && dn.isNotEmpty()) return dn
             }
             dn = Settings.System.getString(contentResolver, "device_name")
