@@ -74,7 +74,6 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 		 * Longer means less frequent automatic updates, and larger memory
 		 * footprint for the server, but less network traffic.
 		 * Subclasses must define this to retrieve events from the calendar server.
-         * @private
          */
         fillCache() {}
 
@@ -136,17 +135,18 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
             // Kill the old timer
             if (this.timeoutId)
                 clearTimeout(this.timeoutId);
-            this.timeoutId = setTimeout(function () {
+            this.timeoutId = setTimeout(() => {
                 Utils.TRACE(TAG, "Updating '", self.name, "'");
-                self.fillCache().then(
-                    function () {
-                        self.timeoutId = undefined;
-                        self.update(self.update_period * HOURS);
-                    },
-                    function (err) {
-                        // Report, but don't propagate, the error
-                        Utils.TRACE(TAG, err);
-                    });
+                self.fillCache()
+				.then(() => {
+					Utils.TRACE(TAG, "Updated '", self.name, "'");
+                    self.timeoutId = undefined;
+                    self.update(self.update_period * HOURS);
+                })
+				.catch((e) => {
+					console.error(this, e);
+					console.error(`${TAG} '${self.name}' error ${e.message}`);
+				});
             }, after);
         }
 
@@ -205,7 +205,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 				if (state === 0) {
 					if (token == this.prefix) {
 						state = 1;
-						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						Utils.TRACE(`${TAG}Parser`, `0 -> 1 on '${token}'`);
 						token = null;
 						continue;
 					}
@@ -214,7 +214,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 						continue;
 					} else {
 						state = 1;
-						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						Utils.TRACE(`${TAG}Parser`, `0 -> 1 on '${token}'`);
 						// drop through
 					}
 				}
@@ -222,28 +222,29 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 					if (/^\w+$/.test(token)) {
 						service = token;
 						state = 2;
-						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
+						Utils.TRACE(`${TAG}Parser`, `1 -> 2 on '${token}'`);
 						token = null;
 					} else {
 						state = 0;
-						//Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
+						Utils.TRACE(`${TAG}Parser`, `1 -> 0 on '${token}'`);
+						token = null;
 					}
 					
 				} else if (state >= 2) {
 					if (token == this.prefix) {
 						commit();
+						Utils.TRACE(`${TAG}Parser`, `${state} -> 1 on '${token}'`);
 						state = 1;
-						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
 						token = null;
 						
 					} else if (token === ";" && state === 3) {
 						commit();
+						Utils.TRACE(`${TAG}Parser`, `${state} -> 1 on '${token}'`);
 						state = 1;
-						//Utils.TRACE(TAG, "Move to state ", state, " on ", token);
 						token = null;
 						
 					} else if (/^boost$/i.test(token)) {
-						//Utils.TRACE(TAG, "Boosted");
+						Utils.TRACE(`${TAG}Parser`, "Boosted");
 						until = Utils.BOOST;
 						token = null;
 					
@@ -253,18 +254,18 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 						
 					} else if (/^\d/.test(token) && parseFloat(token) != NaN) {
 						temperature = parseFloat(token);
+						Utils.TRACE(`${TAG}Parser`, `${state} -> 3 on '${token}'`);
 						state = 3;
-						//Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
 						token = null;
 						
 					} else {
 						if (state === 3)
 							commit();
+						Utils.TRACE(`${TAG}Parser`, `${state} -> 1 on '${token}'`);
 						state = 1;
-						//Utils.TRACE(TAG, "Move to state ", state, " on ", token, temperature);
 					}
 				} else {
-					Utils.TRACE(TAG, `Parse failed state ${state} '${token}'`);
+					Utils.TRACE(`${TAG}Parser`, `Parse failed state ${state} '${token}'`);
 					state = 0;
 				}
             }

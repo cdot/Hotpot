@@ -51,7 +51,7 @@ requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/C
             return cal.fillCache();
         })
         .then(function() {
-            Utils.TRACE("Schedule", cal.schedule);
+            console.log("Schedule", cal.schedule);
         })
         .catch(function(e) {
             console.error(e.stack);

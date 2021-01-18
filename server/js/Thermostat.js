@@ -88,19 +88,15 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 				.then((s) => s.getTemperature())
 				.then((t) => resolve(t))
 				.catch((e) => {
-					Utils.TRACE(TAG, `${this.id} initialisation failed ${e}`);
-					if (typeof HOTPOT_DEBUG === "undefined")
-						Utils.TRACE(TAG, "No HOTPOT_DEBUG");
-					// Proceed, even though it's not been initialised.
-					// It might come on line later.
-					
-					else {
-						// Fall back to debug
-						this.sensor = HOTPOT_DEBUG.getService(this.name);
-						Utils.TRACE(
-							TAG, `Falling back to debug service '${this.name}'`);
+					console.error(`Thermostat ${this.id} initialisation failed ${e}`);
+					if (typeof HOTPOT_DEBUG === "undefined") {
+						console.error("--debug not enabled");
+						throw e;
 					}
-					resolve(20);
+					// Fall back to debug
+					this.sensor = HOTPOT_DEBUG.getService(this.name);
+					console.error(`Falling back to debug service for thermostat '${this.name}'`);
+					resolve(this.sensor.getTemperature());
 				});
 			})
 			.then((temp) => {
@@ -225,12 +221,10 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
          */
         getMaximumTemperature() {
             let max = this.timeline.getMaxValue();
-            // If there's a promise to boost to a higher temperature,
-            // honour it.
+            // If there's a promise to a higher temperature, honour it.
             if (this.requests.length > 0) {
                 for (let i = this.requests.length - 1; i >= 0; i--)
-                    if (this.requests[i].until == Utils.BOOST &&
-                        this.requests[i].target > max)
+                    if (this.requests[i].target > max)
                         max = this.requests[i].target;
             }
             return max;
@@ -265,38 +259,39 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
         /**
          * Purge requests that have timed out, or are force-purged by matching
          * the parameters.
-         * @param match map of request fields to match
-         * @private
+         * @param match map of request fields to match e.g. { source: id } All fields must match
+		 * @param clear true if requests are to be deleted even if they are under targets
          */
-        purgeRequests(match) {
+        purgeRequests(match, clear) {
             if (match)
-                Utils.TRACE(TAG, "Purge ", this.name, match);
+                Utils.TRACE(TAG, "Purge ", this.name, match, clear);
             match = match || {};
             let reqs = this.requests;
             for (let i = 0; i < reqs.length; i++) {
                 let r = reqs[i];
-                let purge = false;
+                let matched = true;
                 for (let k in match) {
-                    purge = true;
-                    if (k !== "service" && r[k] !== match[k]) {
-                        purge = false;
-                        break;
+                    if (r[k] !== match[k]) {
+						matched = false; // all fields must match
+						break;
                     }
                 }
-                if (r.until == Utils.BOOST) {
-                    if (this.temperature >= r.target ||
-                        this.temperature >= this.timeline.max) {
-                        purge = true;
-                        Utils.TRACE(TAG, "Purge because over temp");
-                    }
-                } else if (r.until < Time.nowSeconds()) {
-                    purge = true;
-                    Utils.TRACE(TAG, "Purge because old");
-                }
-                if (purge) {
-                    Utils.TRACE(TAG, "Purge ", this.name, " request ", r);
-                    reqs.splice(i--, 1);
-                }
+				if (matched) {
+					let purge = clear;
+					if (!purge && r.until == Utils.BOOST) {
+						if (this.temperature >= r.target) {
+							purge = true;
+							Utils.TRACE(TAG, `Purge because boost ${this.temperature} over ${r.target}`);
+						}
+					} else if (!purge && r.until < Time.nowSeconds()) {
+						purge = true;
+						Utils.TRACE(TAG, "Purge because until was in the past");
+					}
+					if (purge) {
+						Utils.TRACE(TAG, `Purge ${this.name} request ${r}`);
+						reqs.splice(i--, 1);
+					}
+				}
             }
         };
     }

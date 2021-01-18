@@ -183,7 +183,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
             if (path[0] === "ajax") {
                 // AJAX command, destined for the dispatcher
                 path.shift();
-                Utils.TRACE(TAG, `ajax ${path.join("/")}`);
+                Utils.TRACE(TAG, `/ajax/${path.join("/")}`);
                 promise = this.dispatch(path, params)
 
                 .then((reply) => {

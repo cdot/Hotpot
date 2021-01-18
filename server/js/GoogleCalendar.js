@@ -106,7 +106,7 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
                 });
             })
 
-            .then(function (response) {
+            .then((response) => {
                 self.clearSchedule();
                 let events = response.data.items;
                 Utils.TRACE(TAG, `'${self.name}' has ${events.length} events`);
@@ -116,14 +116,9 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
                     let start = Date.parse(event.start.dateTime || event.start.date);
                     let end = Date.parse(event.end.dateTime || event.end.date);
                     // Can have orders in the event summary or the description
-                    let fullText = event.summary + ";" + event.description;
-					parseEvents(start, end, fullText);
+                    let fullText = event.summary + ";" + event.description;							self.parseEvents(start, end, fullText);
                 }
-                Utils.TRACE(TAG, `${self.name} ready`);
-            })
-
-            .catch(function (e) {
-                throw new Utils.exception(TAG, "error: ", e);
+                Utils.TRACE(TAG, `'${self.name}' ready`);
             });
         }
 

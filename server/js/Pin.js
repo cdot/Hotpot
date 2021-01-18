@@ -43,14 +43,14 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
 			Utils.TRACE(TAG, `Initialising pin ${this.name}`);
 			return this.Gpio.initialiseGpio("out", "low")
 			.catch((e) => {
+				console.error(`Pin ${this.name} initialisation failed ${e}`);
 				if (typeof HOTPOT_DEBUG === "undefined") {
-					Utils.TRACE(TAG, `Initialise ${this.name} failed, and no HOTPOT_DEBUG`);
+					console.error("--debug not enabled");
 					throw e;
 				}
 				// Fall back to debug
 				this.Gpio = HOTPOT_DEBUG.getService(this.name);
-				Utils.TRACE(
-					TAG, `Falling back to debug service '${this.name}'`);
+				console.error(`Falling back to debug service for pin '${this.name}'`);
 				return this;
 			});
 		}

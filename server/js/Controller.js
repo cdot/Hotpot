@@ -93,7 +93,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                     if (remove)
                         th.purgeRequests({
                             source: id
-                        });
+                        }, true);
                     else
                         th.addRequest(id, target, until);
                 }
@@ -103,7 +103,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             else if (remove)
                 this.thermostat[service].purgeRequests({
                     source: id
-                });
+                }, true);
             else
                 this.thermostat[service].addRequest(id, target, until);
         };
@@ -116,7 +116,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @private
          */
         initialiseCalendars() {
-
+			let self = this;
+			
             Utils.TRACE(TAG, "Initialising Calendars");
 
             for (let name in this.calendar) {
@@ -132,12 +133,12 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                                 let th = this.thermostat[name];
                                 th.purgeRequests({
                                     source: id
-                                });
+                                }, true);
                             }
                         } else if (self.thermostat[service]) {
                             self.thermostat[service].purgeRequests({
                                 source: id
-                            });
+                            }, true);
                         }
 
                     });
