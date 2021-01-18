@@ -11,8 +11,6 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
     let tr = new TestRunner("Calendar");
     let assert = tr.assert;
 
-	Utils.setTRACE("none");
-
 	tr.addTest("parse unprefixed events", function() {
 		let now = Time.now() + 250;
 		let cal = new Calendar({}, "Unprefixed");

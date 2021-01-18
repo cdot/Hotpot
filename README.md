@@ -148,15 +148,35 @@ $ sudo adduser hotpot gpio
 
 ### Service startup script
 
-You can derive from the included `environment/init.d_hotpot` example
-script to assist with starting and stopping the service. The script is
-placed in `/etc/init.d` and will automatically start the service after
-every reboot. Don't forget to:
+On systems that use `systemd`, as root, create `/etc/systemd/system/hotpot.service` with
+content:
 ```
-$ chmod +x /etc/init.d/hotpot 
-$ update-rc.d hotpot defaults
+[Unit]
+Description=Hotpot
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+LogsDirectory=hotpot
+User=hotpot
+WorkingDirectory=~
+ExecStart=node Hotpot/server/js/Hotpot.js --config hotpot.cfg
+Nice=2
+
+[Install]
+WantedBy=multi-user.target
 ```
-Other distributions will offer similar functionailty.
+Still as root,
+```
+# systemctl daemon-reload
+# systemctl enable hotpot
+```
+You should see a link being created. Then
+```
+# systemctl start hotpot
+```
+should start the service.
 
 ### Configure Hotpot
 
@@ -237,6 +257,7 @@ Hotpot can interface to any number of Calendars. By default only Google Calendar
 is supported, but the software is designed to make it easy to add alternatives.
 
 ### Setting up a Google calendar
+
 Follow the instructions in https://developers.google.com/google-apps/calendar/quickstart/nodejs for configuring the calendar API.
 
 Open the downloaded `client_secret` file and copy the following fields:
@@ -312,17 +333,19 @@ $ cd Hotpot/server/test
 $ node ../js/Hotpot.js --debug --trace all -c simulated_hotpot.cfg
 ```
 This will start a debug server listening on localhost:13196 with full tracing.
-
 In a web browser on localhost, load http://localhost:13196/
 
-You can control tracing statements so you can follow the activity in
-the server on the console. All trace and debug statements are tagged with the
-time and the module e.g 
+Trace output is written to STDOUT by default. You can also configure it to
+write tracing to a file in `hotpot.cfg`.
+
+All trace and debug statements are tagged with the time and the module e.g 
 ```
 2016-08-13T08:37:08.694Z Server: HTTP starting on port 13196
 ```
 You can choose just to monitor just particular modules e.g. `--trace=Server`,
 or you can enable `all` and then choose which modules to *ignore* by prepending a minus sign e.g. `--trace=all,-Historian,-Server`
+
+## Unit Tests
 
 There are a number of unit test module scattered around the code; these are all
 named using the `UnitTest` prefix. They can all be run stand-alone; e.g.

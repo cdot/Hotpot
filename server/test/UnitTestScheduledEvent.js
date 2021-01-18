@@ -11,8 +11,6 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "server/js/
     let tr = new TestRunner("ScheduledEvent");
     let assert = tr.assert;
 
-	//Utils.setTRACE("ScheduledEvent,Calendar");
-
 	tr.addTest("an event in the future", async function() {
 		let t = Time.now();
 		let e = new Expectation(2);

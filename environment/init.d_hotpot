@@ -1,11 +1,11 @@
-#!/bin/sh
+!/bin/sh
 # hotpot
 ### BEGIN INIT INFO
 # Provides:          hotpot
 # Required-Start:    $local_fs
 # Required-Stop:
 # Default-Start:     3 5
-# Default-Stop:      
+# Default-Stop:
 # Short-Description: Hotpot service init script
 # Description:       Start the hotpot server
 ### END INIT INFO
@@ -17,48 +17,49 @@
 USER=hotpot
 RUN_PATH=/home/$USER/Hotpot/server/js/Hotpot.js
 CONFIG_PATH=/home/$USER/hotpot.cfg
-PID=`ps -Af | grep $RUN_PATH | grep -v grep | sed -e 's/^[^0-9]*//;s/\s.*//'`
+PID=`ps -Af | grep $RUN_PATH | grep -P "^$USER" | sed -e 's/^[^0-9]*//;s/\s.*//'`
 
 start() {
-    if [ "$PID"!="" ]; then
-	   echo "Hotpot is already running, pid $pid"
+    if [ "$PID" = "" ]; then
+       ( sudo -u $USER node $RUN_PATH --config $CONFIG_PATH ) \
+                          2>&1 >> /var/log/hotpot_server.log
     else
-	   ( sudo -u $USER node $RUN_PATH --config $CONFIG_PATH ) \
-	   		  2>&1 >> /var/log/hotpot_server.log
-	fi
+        echo "Hotpot service is already running, pid '$PID'"
+    fi
 }
 
 stop() {
-    if [ "$PID"="" ]; then
-		echo "Hotpot is not running, pid $pid"
-	else
-	    ( kill -9 $pid ) 2>&1 >> /var/log/hotpot_server.log
+    if [ "$PID" = "" ]; then
+        echo "Hotpot service is not running"
+    else
+        echo "Killing $PID"
+        ( kill -9 $PID ) 2>&1 >> /var/log/hotpot_server.log
     fi
 }
 
 case "$1" in
   start)
-      echo "Starting Hotpot..."
+      echo "Starting Hotpot service..."
       start
-	  ;;
+  ;;
 
   stop)
-      echo "Stopping Hotpot..."
-	  stop
-      ;;
+      echo "Stopping Hotpot service..."
+      stop
+  ;;
 
   restart)
-      echo "Restarting Hotpot..."
-	  stop
-	  start
-	  ;;
+      echo "Restarting Hotpot service..."
+      stop
+      start
+  ;;
 
   status)
-      if [ "$PID"!="" ]; then
-		  echo "Hotpot is running in process $PID"
-	  else
-		  echo "Hotpot is not running"
-	  fi
-	  ;;
- 
+      if [ "$PID" != "" ]; then
+          echo "Hotpot is running in process $PID"
+      else
+          echo "Hotpot is not running"
+      fi
+  ;;
+
 esac

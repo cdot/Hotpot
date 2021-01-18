@@ -22,6 +22,12 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
     HOTPOT_DEBUG = undefined;
 
     const HOTPOT_MODEL = {
+		tracefile: {
+            $doc: "Full path to the trace file",
+            $class: DataModel.File,
+            $mode: "w",
+			$optional: true
+        },
         server: Server.Model,
         controller: Controller.Model
     };
@@ -47,9 +53,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
     }
 
     if (cliopt.trace && cliopt.trace !== "")
-        Utils.setTRACE(cliopt.trace);
-    else
-        Utils.TRACE = function () {};
+        Utils.TRACEwhat(cliopt.trace);
 
     let config, controller, server;
 
@@ -61,6 +65,9 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
     DataModel.loadData(cliopt.config, HOTPOT_MODEL)
 
     .then((cfg) => {
+		if (cfg.tracefile)
+			Utils.TRACEto(cfg.tracefile.getPath());
+		
 		Utils.TRACE(TAG, "Configuration loaded");
         config = cfg;
         controller = config.controller;
@@ -94,7 +101,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
     })
 
     .catch(function (e) {
-        Utils.TRACE(TAG, "Controller initialisation failed: ",
+        console.error("Controller initialisation failed: ",
                     typeof e.stack !== "undefined" ? e.stack : e);
         eval("process.exit(1)");
     });

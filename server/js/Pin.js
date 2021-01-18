@@ -46,6 +46,8 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
 				console.error(`Pin ${this.name} initialisation failed ${e}`);
 				if (typeof HOTPOT_DEBUG === "undefined") {
 					console.error("--debug not enabled");
+					// if we can't talk to GPIO and we can't start debug,
+					// then this is something the sysadmin has to resolve.
 					throw e;
 				}
 				// Fall back to debug

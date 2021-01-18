@@ -12,8 +12,6 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
     let assert = tr.assert;
 	const Fs = fs.promises;
 
-	//Utils.setTRACE("Thermostat");
-	
 	tr.addTest("initialise", () => {
 		HOTPOT_DEBUG = require('../js/DebugSupport.js');
 		return DataModel.remodel(

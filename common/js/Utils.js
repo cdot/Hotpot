@@ -190,27 +190,48 @@ define("common/js/Utils", function() {
     };
 
     /**
-     * Set the string that defines what tags are traced
+     * Set the string that defines what tags are traced.
+	 * @param t comma-separated string with module names e.g. "all,Rules,Controller,-DataModel"
      */
-    Utils.setTRACE = function (t) {
-        Utils.trace = t;
+    Utils.TRACEwhat = function (t) {
+        Utils.traceWhat = t.split(",");
     };
 
+	// Private function to write tracing info
+	Utils.writeTrace = console.log;
+	
     /**
      * Produce a tagged log message, if the tag is included in the string
-     * passed to Utils.setTRACE
+     * passed to Utils.TRACEwhat
      */
     Utils.TRACE = function () {
-        let level = arguments[0];
-        if (typeof Utils.trace !== "undefined" &&
-            (Utils.trace.indexOf("all") >= 0 ||
-             Utils.trace.indexOf(level) >= 0) &&
-            (Utils.trace.indexOf("-" + level) < 0)) {
-            console.log(new Date().toISOString(), " ", level, ": ",
-                      Utils.joinArgs(arguments, 1));
+		var args = [].slice.call(arguments);
+        let module = args.shift();
+        if (typeof Utils.traceWhat !== "undefined" &&
+            (Utils.traceWhat.indexOf("all") >= 0 ||
+             Utils.traceWhat.indexOf(module) >= 0) &&
+            (Utils.traceWhat.indexOf("-" + module) < 0)) {
+			args.unshift(new Date().toISOString(), " ", module, ": ");
+            Utils.writeTrace(Utils.joinArgs(args));
         }
     };
 
+	/**
+	 * Set where to write trace output to. Requires fs, so not available on browsers.
+	 * @param {string} where path to the file to use for logging
+	 */
+	Utils.TRACEto = (where) => {
+		if (typeof where === "undefined") {
+			Utils.writeTrace = console.log;
+			return;
+		}
+		requirejs(["fs"], (fs) => {
+			Utils.writeTrace = async (s) => {
+				await fs.promises.writeFile(where, `${s}\n`, { encoding: "utf8", flag: "a+"});
+			}
+		});
+	};
+	
     /**
      * eval() the code, generating meaningful syntax errors (with line numbers)
      * @param {String} code the code to eval

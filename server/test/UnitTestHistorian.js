@@ -14,7 +14,6 @@ requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], f
 	let logfile = "/tmp/unordered_historian.log";
 	let logfile2 = "/tmp/sampled_historian.log";
 	
-    //Utils.setTRACE("all");
     if (Fs.existsSync(logfile))
 		Fs.unlinkSync(logfile);
     

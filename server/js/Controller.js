@@ -411,8 +411,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 this.pollRules();
                 return this.getSerialisableState();
             case "trace": // Set tracing level
-                // Set trace level
-                Utils.setTRACE(data.trace);
+                // Set tracing
+                Utils.TRACEwhat(data.trace);
                 break;
             case "log":
                 // /log[/{type}[/{name}]]

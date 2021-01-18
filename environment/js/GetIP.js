@@ -53,7 +53,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 		cliopt.config = "./GetIP.cfg";
 	
 	if (cliopt.debug)
-		Utils.setTRACE("all");
+		Utils.TRACEwhat("all");
 
 	let config, current = {};
 

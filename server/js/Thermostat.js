@@ -91,12 +91,19 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 					console.error(`Thermostat ${this.id} initialisation failed ${e}`);
 					if (typeof HOTPOT_DEBUG === "undefined") {
 						console.error("--debug not enabled");
-						throw e;
+						// Don't do this, it raises an unhandled reject
+						// throw e;
+						// Do this instead:
+						resolve(100);
+						// that will make hotpot turn the relevant service on.
+						// The temperature ultimately is limited by the hard
+						// thermostats, so we don't risk anything by this.
+					} else {
+						// Fall back to debug
+						this.sensor = HOTPOT_DEBUG.getService(this.name);
+						console.error(`Falling back to debug service for thermostat '${this.name}'`);
+						resolve(this.sensor.getTemperature());
 					}
-					// Fall back to debug
-					this.sensor = HOTPOT_DEBUG.getService(this.name);
-					console.error(`Falling back to debug service for thermostat '${this.name}'`);
-					resolve(this.sensor.getTemperature());
 				});
 			})
 			.then((temp) => {

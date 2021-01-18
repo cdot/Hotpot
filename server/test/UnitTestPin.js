@@ -11,8 +11,6 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
     let tr = new TestRunner("Pin");
     let assert = tr.assert;
 
-	//Utils.setTRACE("Pin");
-	
 	tr.addTest("initialise/get/set", async function() {
 		HOTPOT_DEBUG = require('../js/DebugSupport.js');
 		return DataModel.remodel("test", {gpio:6}, Pin.Model, [])

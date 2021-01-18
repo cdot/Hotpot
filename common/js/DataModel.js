@@ -671,6 +671,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
     /**
      * DataModel inner class for handling filenames specified in serialisable
 	 * data.
+	 * 
      * The constructor uses the $mode (default "r") specified in the
      * model to verify the status of the target file. This supports the
      * following modes:
@@ -696,6 +697,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             // Got a model to check against. This should always be the case
             // except in tests.
             let fnm = Utils.expandEnvVars(filename);
+			this.path = fnm;
+			
             let $mode = model.$mode;
             if (typeof $mode === "undefined")
                 $mode = "r";
@@ -746,18 +749,24 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
          */
         write(value) {
 			_loadFs();
-            return Fs.writeFile(Utils.expandEnvVars(this.data), value, "utf8");
+            return Fs.writeFile(this.path, value, "utf8");
         }
 
         /**
          * Promise to read the file
          */
         read() {
-            let self = this;
 			_loadFs();
-            return Fs.readFile(Utils.expandEnvVars(self.data));
+            return Fs.readFile(this.path);
         };
 
+		/**
+		 * Get the expanded pathname to the file
+		 */
+		getPath() {
+			return this.path;
+		}
+		
         getSerialisable() {
             return Promise.resolve(this.data);
         }
