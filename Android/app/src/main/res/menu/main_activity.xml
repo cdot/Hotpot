@@ -4,6 +4,6 @@
 
     <item
         android:id="@+id/updateCalendars"
-        android:title="Update Calendars"
+        android:title="@string/updateCalendars"
         app:showAsAction="never" />
 </menu>

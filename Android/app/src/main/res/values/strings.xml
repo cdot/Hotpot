@@ -6,4 +6,7 @@
     <string name="until">until</string>
     <string name="clear">Clear</string>
     <string name="requestDetails">%1$s is requesting %2$.4g°C until %3$s</string>
+    <string name="no_contact">Could not contact server</string>
+    <string name="clear_request">Clear request</string>
+    <string name="updateCalendars">Update Calendars</string>
 </resources>

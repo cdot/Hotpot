@@ -36,7 +36,7 @@ central heating system. This used to be the most common type of system, though
 there are more modern alternatives.
 
 It's also assumed that you have some way to access your Pi from the
-internet. This is simplest if you have a router with a fixed IP
+internet. This is simplest if you have a router with a static IP
 address that can be programmed to forward incoming requests to the
 Pi. There are so many possible hardware options and configurations
 that you will have to work this bit out for yourself.
@@ -118,13 +118,21 @@ $ ls /sys/bus/w1/devices/w1_bus_master1
 ```
 Expect to see devices such as `28-0316027f81ff`
 
-Note that there are issues with the 1-wire driver with multiple sensors
-being asynchronously accessed. The w1 driver seems to get confused by
-multiple overlapping requests. There are three things that can be done to
-overcome this:
+Note that there are issues with the 1-wire driver. This is implemented using bit
+twiddling on GPIO pins and is not very robust; specifically it breaks when
+the Pi is very busy, for example when serving web pages. There are also power issues
+when communicating with sensors over long wires.
+
+The software is written to be robust to failed or infrequent sensor readings, but
+ultimately you need the occasional accurate result! You can see the effect in the
+server log, in the form of messages such as this:
+```
+Error polling 28-0115914ff5ff CRC check failed ''
+```
+There are a number of things you can try to improve performance:
 - Use a 5V Vdd to supply the DS18b20s. The signal line must still be pulled up to 3.3V, however (don't pull it to 5V or you'll fry the GPIO)
 - Disable IRQs in the `wire` module (`sudo sh -c "echo options wire disable_irqs=1 >> /etc/modprobe.d/wire.conf"` and reboot)
-- 
+- Reduce the frequency with which UIs (browser or Android) poll the server.
 
 ### Set up a user
 
@@ -321,6 +329,11 @@ a browser. The app provides control and monitoring capabilities from a web
 interface that can be used fom desktops, laptops, tablets and smartphones.
 
 The interface includes full help information.
+
+# Android App
+
+There is also an Android app that offers a subset of the functionality of the
+browser UI. It can be installed from [github](https://github.com/cdot/Hotpot/releases).
 
 # Development
 

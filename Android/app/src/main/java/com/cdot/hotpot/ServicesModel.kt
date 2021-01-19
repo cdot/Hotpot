@@ -1,12 +1,14 @@
 package com.cdot.hotpot
 
 import android.app.Activity
-import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import okhttp3.*
+import com.google.android.material.snackbar.Snackbar
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
 import java.util.*
@@ -44,7 +46,7 @@ class ServicesModel : ViewModel() {
             condition.postValue(if (temp < tgt) "<" else ">")
             lastKnownGood.postValue(if (deltaT < 60) "" else "(%ds)".format(deltaT))
             val reqs = job.getJSONArray("requests")
-            val rl : MutableList<Request> = mutableListOf()
+            val rl: MutableList<Request> = mutableListOf()
             for (i in 0 until reqs.length()) {
                 val req = reqs.getJSONObject(i)
                 val r = Request(req.getString("source"), req.getDouble("target"), req.getLong("until"))
@@ -80,8 +82,8 @@ class ServicesModel : ViewModel() {
         }
     }
 
-    var services : Array<Service> =  Array(SERVICE_NAMES.size) { i -> Service(i) }
-    private var name2service : MutableMap<String, Service> = mutableMapOf()
+    var services: Array<Service> = Array(SERVICE_NAMES.size) { i -> Service(i) }
+    private var name2service: MutableMap<String, Service> = mutableMapOf()
     lateinit var hotpot: Hotpot
 
     init {
@@ -90,12 +92,34 @@ class ServicesModel : ViewModel() {
         }
     }
 
+    // Public count of listeners who want state updates (should never exceed 1)
+    var stateListeners = mutableSetOf<ServiceFragment>()
+
+    fun addStateListener(f: ServiceFragment) {
+        Log.d(TAG, "Adding state listener ${f.serviceIndex}")
+        stateListeners.add(f);
+    }
+
+    fun removeStateListener(f: ServiceFragment) {
+        Log.d(TAG, "Removing state listener ${f.serviceIndex}")
+        stateListeners.remove(f);
+    }
+
+    // Poll the server for the current state and display
     fun pollState(activity: Activity) {
         Timer().schedule(object : TimerTask() {
             override fun run() {
+                // Don't query state unless there is at least one state listener active
+                if (stateListeners.size == 0)
+                    return
+
                 hotpot.GET("/ajax/state", object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
                         Log.e(TAG, "GET /ajax/state", e)
+                        activity.runOnUiThread {
+                            Snackbar.make(activity.findViewById(R.id.view_pager),
+                                    activity.getString(R.string.no_contact), Snackbar.LENGTH_SHORT).show()
+                        }
                     }
 
                     override fun onResponse(call: Call, response: Response) {

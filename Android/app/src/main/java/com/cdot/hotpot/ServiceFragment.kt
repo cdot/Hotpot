@@ -20,7 +20,7 @@ import java.util.*
 /**
  * A placeholder fragment containing a simple view.
  */
-class ServiceFragment(private val serviceIndex: Int) : Fragment() {
+class ServiceFragment(val serviceIndex: Int) : Fragment() {
     companion object {
         private val TAG = ServiceFragment::class.simpleName
 
@@ -30,11 +30,13 @@ class ServiceFragment(private val serviceIndex: Int) : Fragment() {
         )
     }
 
-    private lateinit var servicesModel: ServicesModel.Service
+    private lateinit var services : ServicesModel
+    private lateinit var service: ServicesModel.Service
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        servicesModel = ViewModelProvider(requireActivity()).get(ServicesModel::class.java).services[serviceIndex]
+        services = ViewModelProvider(requireActivity()).get(ServicesModel::class.java)
+        service = services.services[serviceIndex]
     }
 
     inner class RequestView : LinearLayout(requireActivity()) {
@@ -47,14 +49,14 @@ class ServiceFragment(private val serviceIndex: Int) : Fragment() {
             val hotpot = requireActivity().application as Hotpot
             binding.clearButton.visibility = if (request.source == hotpot.deviceName) View.VISIBLE else View.GONE
             binding.clearButton.setOnClickListener {
-                servicesModel.sendRequest(0.0, ServicesModel.CLEAR)
+                service.sendRequest(0.0, ServicesModel.CLEAR)
             }
         }
     }
 
     inner class RequestAdapter : ArrayAdapter<ServicesModel.Request>(requireActivity(), 0) {
         override fun getView(i: Int, convertView: View?, viewGroup: ViewGroup): View {
-            val r = servicesModel.requests
+            val r = service.requests
             val v = r.value!!
             val view = if (convertView == null) RequestView() else convertView as RequestView
             view.request = v[i]
@@ -63,7 +65,7 @@ class ServiceFragment(private val serviceIndex: Int) : Fragment() {
         }
 
         override fun getCount(): Int {
-            val r = servicesModel.requests
+            val r = service.requests
             val v = r.value ?: return 0
             return v.size
         }
@@ -75,17 +77,17 @@ class ServiceFragment(private val serviceIndex: Int) : Fragment() {
     ): View {
         val binding = ServiceFragmentBinding.inflate(layoutInflater)
         binding.serviceName.text = resources.getString(SERVICE_TITLES[serviceIndex])
-        servicesModel.curTemp.observe(viewLifecycleOwner, { binding.currentTempTV.text = it })
-        servicesModel.condition.observe(viewLifecycleOwner, { binding.conditionTV.text = it })
-        servicesModel.targetTemp.observe(viewLifecycleOwner, { binding.targetTempTV.text = it })
-        servicesModel.lastKnownGood.observe(viewLifecycleOwner, { binding.lastKnownGoodTV.text = it })
-        servicesModel.boostTarget.observe(viewLifecycleOwner, { binding.boostToET.setText(it.toString()) })
-        servicesModel.pinState.observe(viewLifecycleOwner, { binding.pinStateTV.text = it })
-        servicesModel.reason.observe(viewLifecycleOwner, { binding.reasonTV.text = it })
+        service.curTemp.observe(viewLifecycleOwner, { binding.currentTempTV.text = it })
+        service.condition.observe(viewLifecycleOwner, { binding.conditionTV.text = it })
+        service.targetTemp.observe(viewLifecycleOwner, { binding.targetTempTV.text = it })
+        service.lastKnownGood.observe(viewLifecycleOwner, { binding.lastKnownGoodTV.text = it })
+        service.boostTarget.observe(viewLifecycleOwner, { binding.boostToET.setText(it.toString()) })
+        service.pinState.observe(viewLifecycleOwner, { binding.pinStateTV.text = it })
+        service.reason.observe(viewLifecycleOwner, { binding.reasonTV.text = it })
 
         binding.boostButton.setOnClickListener {
             val s = binding.boostToET.text.toString()
-            servicesModel.sendRequest(s.toDouble(), ServicesModel.BOOST)
+            service.sendRequest(s.toDouble(), ServicesModel.BOOST)
         }
         binding.boostButton.isEnabled = false // remember this in prefs
         binding.boostToET.setOnEditorActionListener { textView: TextView?, i: Int, _: KeyEvent? ->
@@ -100,9 +102,19 @@ class ServiceFragment(private val serviceIndex: Int) : Fragment() {
 
         val arrayAdapter = RequestAdapter()
         binding.requestsLV.adapter = arrayAdapter
-        servicesModel.requests.observe(viewLifecycleOwner, {
+        service.requests.observe(viewLifecycleOwner, {
             arrayAdapter.notifyDataSetChanged()
         })
         return binding.root
+    }
+
+    override fun onResume() {
+        services.addStateListener(this)
+        super.onResume()
+    }
+
+    override fun onPause() {
+        services.removeStateListener(this)
+        super.onPause()
     }
 }
