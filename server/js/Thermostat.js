@@ -71,10 +71,8 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
             if (typeof hc !== "undefined") {
                 if (typeof hc.interval === "undefined")
                     hc.interval = 300; // 5 minutes
-                hc.sample = function () {
-                    // Only log temperatures to one decimal place
-                    return Math.round(self.temperature * 10) / 10;
-                };
+                // Only log temperatures to one decimal place
+                hc.sample = () => Math.round(this.temperature * 10) / 10;
             }
         }
 
@@ -110,10 +108,8 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
                 this.temperature = temp;
                 // Start the historian
                 if (this.history) {
-					Utils.TRACE(TAG, `starting historian for '${this.name}'`);
-                    this.history.start(function () {
-                        return this.temperature;
-                    });
+					Utils.TRACE(TAG, `starting historian for '${this.name}' at ${temp}`);
+                    this.history.start(() => this.temperature);
 				}
                 Utils.TRACE(TAG, `'${this.name}' initialised`);
 				return this;
