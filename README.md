@@ -97,13 +97,17 @@ versions.
 
 DS18x20 temperature sensors use a 1-wire bus that allows multiple
 sensors to be daisy-chained on a single GPIO pin. GPIO 18 (header pin
-12) is the pin used in all the examples. Whatever pin you choose has
-to be set in `/boot/config.txt` as follows:
+12) is the pin used in all the examples. Hotpot uses the (deprecated)
+`sysfs` interface to talk to the one-wire bus, which is configured
+in `/boot/config.txt` as follows:
 
 ```
 # 1-wire settings
 dtoverlay=w1-gpio,gpiopin=18
 ```
+(If you have issues with using multiple sensors on one GPIO pin, you can always
+allocate a second GPIO pin. Just add another `dtoverlay` line.)
+
 Add the following to `/etc/modules-load.d/modules.conf`
 (or the appropriate alternative on your distribution) to load the drivers
 on boot.
@@ -114,9 +118,9 @@ w1-therm
 Reboot your Pi and log in. You should now be able to see what 1-wire sensors
 are attached to the system using:
 ```
-$ ls /sys/bus/w1/devices/w1_bus_master1
+$ ls /sys/bus/w1/devices
 ```
-Expect to see devices such as `28-0316027f81ff`
+Expect to see devices such as `28-0316027f81ff`, and a `w1_bus_master*` subdirectory for each GPIO pin configured as a 1-wire bus.
 
 Note that there are issues with the 1-wire driver. This is implemented using bit
 twiddling on GPIO pins and is not very robust; specifically it breaks when

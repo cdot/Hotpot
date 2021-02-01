@@ -240,7 +240,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         if (typeof context === "undefined")
             context = [];
 
-        Utils.TRACE(`${TAG}Details`, `Remodel '${context.join('.')}'`, data);
+        Utils.TRACE(`${TAG}Details`, `Remodel '${context.join('.')}' `, data);
 
         // Got a data definition
         if (typeof data === "undefined") {
@@ -400,8 +400,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * Promise to extract a serialisable version of a data structure
      * under guidance of the model as text, such that the data can be
      * reloaded using DataModel.load
-     * @param {object} data data to save
+     * @param {object} data data to get a serialisable version of
      * @param {object{ model data model to follow
+	 * @return a promise that resolves to the serialisable data structure
      */
     DataModel.getSerialisable = function (data, model, context) {
         DataModel.check(model);
