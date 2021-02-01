@@ -44,10 +44,10 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
         rewriteFile(report) {
             let s = "";
             for (let i = 0; i < report.length; i++)
-                s += report[i].time + "," + report[i].sample + "\n";
+                s += `${report[i].time},${report[i].sample}\n`;
             let self = this;
             return Fs.writeFile(this.path(), s)
-            .then(function () {
+            .then(() => {
                 Utils.TRACE(TAG, "Wrote ", self.path());
             });
         };
@@ -60,7 +60,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             let self = this;
             
             return Fs.readFile(this.path())
-            .then(function (data) {
+            .then((data) => {
                 let lines = data.toString().split("\n");
                 let report = [];
                 let i;
@@ -83,7 +83,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                     report = [];
                     for (i = 0; i < doomed.length; i++)
                         doomed[i].index = i;
-                    doomed.sort(function (a, b) {
+                    doomed.sort((a, b) => {
                         if (a.time < b.time)
                             return -1;
                         if (a.time > b.time)
@@ -107,7 +107,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                 
                 return report;
             })
-            .catch(function (e) {
+            .catch((e) => {
                 Utils.TRACE(TAG, "Failed to open history ", e);
                 return [];
             });
@@ -123,7 +123,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          */
         getSerialisableHistory(since) {
             return this.loadFromFile()
-            .then(function (report) {
+            .then((report) => {
                 let basetime = report.length > 0 ? report[0].time : Time.now();
                 let res = [basetime];
                 for (let i in report) {
@@ -151,8 +151,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             if (typeof this.interval === "undefined")
                 throw new Utils.exception(TAG, "Cannot start; interval not defined");
             // Polling will continue until the timer is deleted
-            let self = this;
-            this.timeout = setTimeout(() => { self._poll(); }, 100);
+            this.timeout = setTimeout(() => this._poll(), 100);
         }
 
         /**
@@ -165,16 +164,14 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             // Don't record repeat of same sample
             if (typeof datum === "number" && datum !== this.last_sample)
                 p = this.record(datum);
-            else
+			else
                 p = Promise.resolve();
 
             p.then(() => {
                 if (this.timeout) {
                     // Existance of a timer indicates we must continue
                     // to poll
-                    this.timeout = setTimeout(() => {
-                        this._poll();
-                    }, this.interval);
+                    this.timeout = setTimeout(() => this._poll(), this.interval);
                 }
             });
         }
@@ -205,21 +202,21 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             
             // If we've skipped recording an interval since the last
             // recorded sample, pop in a checkpoint
-            if (typeof this.last_time !== "undefined" &&
-                time > this.last_time + 5 * this.interval / 4)
+            if (typeof this.last_time === "undefined" ||
+                time > this.last_time + 5 * this.interval / 4) {
                 promise = Fs.appendFile(
                     this.path(),
-                    (time - this.interval) + "," + this.last_sample + "\n");
-            else
+                    `${time - this.interval},${this.last_sample}\n`);
+            } else
                 promise = Promise.resolve();
             
             this.last_time = time;
             this.last_sample = sample;
             
             let self = this;
-            return promise.then(function () {
-                return Fs.appendFile(self.path(), time + "," + sample + "\n")
-                .catch(function (ferr) {
+            return promise.then(() => {
+                return Fs.appendFile(self.path(), `${time},${sample}\n`)
+                .catch((ferr) => {
                     Utils.TRACE(TAG, "failed to append to '",
                                 self.path(), "': ", ferr);
                 });

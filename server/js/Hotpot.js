@@ -77,7 +77,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
                 return controller.dispatch(path, params);
             });
         return controller.initialise()
-        .then(function () {
+        .then(() => {
             let loc = new Location(server.location);
             controller.setLocation(loc);
         });
@@ -92,15 +92,15 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
         // same state
         controller.on(
             "config_change",
-            function () {
+            () => {
                 DataModel.saveData(config, HOTPOT_MODEL, cliopt.config)
-                .done(function () {
+                .done(() => {
                     Utils.TRACE(TAG, cliopt.config, " updated");
                 });
             });
     })
 
-    .catch(function (e) {
+    .catch((e) => {
         console.error("Controller initialisation failed: ",
                     typeof e.stack !== "undefined" ? e.stack : e);
         eval("process.exit(1)");

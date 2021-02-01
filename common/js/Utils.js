@@ -110,10 +110,10 @@ define("common/js/Utils", function() {
         cache.push(data);
 
         if (typeof data === "function")
-            return "<" + data.name + ">";
+            return `<${data.name}>`;
 
         if (typeof data === "string")
-            return '"' + data + '"';
+            return `"${data}"`;
 
         if (typeof data !== "object" || data === null)
             return data;
@@ -133,9 +133,9 @@ define("common/js/Utils", function() {
                 return data;
             } else if (STANDARD_TYPES.indexOf(data.constructor.name) >= 0) {
                 // Use <typed>toString
-                return "<" + data.constructor.name + ">" + data;
+                return `<${data.constructor.name}>${data}`;
             } else if (data.constructor.name !== "Object") {
-                s += "<" + data.constructor.name + ">";
+                s += `<${data.constructor.name}>`;
             }
         }
         if (data.toString !== Object.prototype.toString &&
@@ -147,10 +147,10 @@ define("common/js/Utils", function() {
             for (let i in data) {
                 let val = Utils.dump(data[i], cache);
                 if (ob === "{")
-                    val = i + ": " + val;
+                    val = `${i}: ${val}`;
                 values.push(indent("" + val))
             }
-            s += "\n" + values.join(",\n") + "\n" + cb;
+            s += `\n${values.join(",\n")}\n${cb}`;
         }
         return s;
     };
@@ -210,7 +210,7 @@ define("common/js/Utils", function() {
         if (typeof Utils.traceWhat !== "undefined" &&
             (Utils.traceWhat.indexOf("all") >= 0 ||
              Utils.traceWhat.indexOf(module) >= 0) &&
-            (Utils.traceWhat.indexOf("-" + module) < 0)) {
+            (Utils.traceWhat.indexOf(`-${module}`) < 0)) {
 			args.unshift(new Date().toISOString(), " ", module, ": ");
             Utils.writeTrace(Utils.joinArgs(args));
         }

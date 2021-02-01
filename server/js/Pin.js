@@ -71,9 +71,7 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
 
             let promise = this.Gpio.setValue(state);
             if (self.history)
-                promise = promise.then(function () {
-                    return self.history.record(state);
-                });
+                promise = promise.then(() => this.history.record(state));
             return promise;
         };
 
@@ -95,12 +93,9 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
         getSerialisableState() {
             let self = this;
             return this.getState()
-            .then(function (value) {
-                return {
-                    reason: self.reason,
-                    state: value
-                };
-            });
+            .then((value) => {
+				return { reason: self.reason, state: value }
+			});
         };
 
         /**

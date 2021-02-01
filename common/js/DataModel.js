@@ -617,7 +617,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             docstring.push(index + ":");
 
         if (typeof model === "function")
-            return "<" + model.name + ">";
+            return `<${model.name}>`;
 
         if (model.$optional)
             docstring.push("(optional)");

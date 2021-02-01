@@ -123,11 +123,11 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             for (let name in this.calendar) {
                 let cal = this.calendar[name];
                 cal.setTrigger(
-                    function (id, service, target, until) {
+                    (id, service, target, until) => {
                         self.addRequest(service, id, target, until);
                     });
                 cal.setRemove(
-                    function (id, service) {
+                    (id, service) => {
                         if (/^ALL$/i.test(service)) {
                             for (let name in this.thermostat) {
                                 let th = this.thermostat[name];
@@ -198,7 +198,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 Utils.TRACE(TAG, "Valve reset");
             })
 
-            .catch(function (e) {
+            .catch((e) => {
                 Utils.TRACE(TAG, "Failed to reset valve: ", e);
             });
         }
@@ -252,7 +252,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                             state[field] = {};
                         promises.push(
                             item.getSerialisableState()
-                            .then(function (value) {
+                            .then((value) => {
                                 state[field][key] = value;
                                 return field;
                             }));
@@ -308,17 +308,15 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             for (let field in this) {
                 let block = this[field];
                 promises.push(
-                    self.getLogsFor(self[field], since)
-                    .then(function (logset) {
+                    this.getLogsFor(this[field], since)
+                    .then((logset) => {
                         if (logset)
                             logs[field] = logset;
                     }));
             }
 
             return Promise.all(promises)
-            .then(function () {
-                return logs;
-            });
+            .then(() => logs);
         };
 
         /**
@@ -348,7 +346,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
             return pins[channel].getState()
 
-            .then(function (cur_state) {
+            .then((cur_state) => {
                 if (cur_state === new_state)
                     return Promise.resolve(); // already in the right state
 

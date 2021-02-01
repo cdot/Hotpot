@@ -71,8 +71,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
                     if (!self.authenticate(request)) {
                         Utils.TRACE(TAG, "Authentication failed ", request.url);
                         response.statusCode = 401;
-                        response.setHeader('WWW-Authenticate', 'Basic realm="' +
-                                           self.auth.realm + '"');
+                        response.setHeader('WWW-Authenticate', `Basic realm="${self.auth.realm}"`);
                         response.end('Access denied');
                         return;
                     }
@@ -81,7 +80,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
                     self[request.method].call(self, request, response);
                 } else {
                     response.statusCode = 405;
-                    response.write("No support for " + request.method);
+                    response.write(`No support for ${request.method}`);
                     response.end();
                 }
             };
@@ -199,8 +198,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
             } else {
                 // Handle file lookup
                 Utils.TRACE(TAG, "GET ", path.join("/"));
-                let filepath = Utils.expandEnvVars(this.docroot +
-                                                   "/" + path.join("/"));
+                let filepath = Utils.expandEnvVars(`${this.docroot}/${path.join("/")}`);
 
                 let m = /\.([A-Z0-9]+)$/i.exec(filepath);
                 if (m) {
@@ -278,7 +276,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
                     self.handle(request.url, object, request, response);
                 } catch (e) {
                     Utils.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
-                    response.write(e + " in " + request.url + "\n");
+                    response.write(`${e} in ${request.url}\n`);
                     response.statusCode = 400;
                 }
             });

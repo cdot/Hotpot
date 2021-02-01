@@ -98,7 +98,7 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
                         function (err, response) {
                             delete self.pending_update;
                             if (err) {
-                                fail("'" + self.name + "' events list failed: " + err);
+                                fail(`'${self.name}' events list failed: ${err}`);
                             } else {
                                 ok(response);
                             }
@@ -116,7 +116,8 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
                     let start = Date.parse(event.start.dateTime || event.start.date);
                     let end = Date.parse(event.end.dateTime || event.end.date);
                     // Can have orders in the event summary or the description
-                    let fullText = event.summary + ";" + event.description;							self.parseEvents(start, end, fullText);
+                    let fullText = `${event.summary};${event.description}`;
+					self.parseEvents(start, end, fullText);
                 }
                 Utils.TRACE(TAG, `'${self.name}' ready`);
             });
@@ -137,7 +138,7 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
                         },
                         function (err, response) {
                             if (err) {
-                                reject("calendarList failed: " + err);
+                                reject(`calendarList failed: ${err}`);
                             } else {
                                 resolve(response.data.items);
                             }

@@ -184,7 +184,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
         findNearestLocation(loc) {
             let self = this;
 
-            let path = USUAL_PATH + "sitelist?key=" + this.api_key;
+            let path = `${USUAL_PATH}sitelist?key=${this.api_key}`;
             let options = {
                 protocol: this.url.protocol,
                 hostname: this.url.hostname,
