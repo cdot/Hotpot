@@ -160,7 +160,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * @param context undefined or an array
      * @private
      */
-    DataModel.check = function (model, context) {
+    DataModel.check = (model, context) => {
         if (model.$checked)
             return;
 
@@ -230,7 +230,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * @return a promise that resolves to the data (or the default, if one
 	 * was applied)
      */
-    DataModel.remodel = function (index, data, model, context) {
+    DataModel.remodel = (index, data, model, context) => {
 
         DataModel.check(model);
 
@@ -404,7 +404,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * @param {object{ model data model to follow
 	 * @return a promise that resolves to the serialisable data structure
      */
-    DataModel.getSerialisable = function (data, model, context) {
+    DataModel.getSerialisable = (data, model, context) => {
         DataModel.check(model);
 
         // context is an internal parameter used for generating
@@ -517,7 +517,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * undefined if the path is empty.
      * @return a promise with the result of the call to fn
      */
-    DataModel.at = function (root, model, path, fn) {
+    DataModel.at = (root, model, path, fn) => {
         if (typeof path === "string") {
             // Convert string path to array of path components
             path = path.split(/\/+/);
@@ -562,7 +562,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * @return {promise} promise that returns the loaded data
      * @public
      */
-    DataModel.loadData = function (file, model) {
+    DataModel.loadData = (file, model) => {
         DataModel.check(model);
 		_loadFs();
 		Utils.TRACE(TAG, `Loading ${file}`);
@@ -583,7 +583,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * file the data was read from.
      * @return {promise} promise that returns after saving
      */
-    DataModel.saveData = function (data, model, file) {
+    DataModel.saveData = (data, model, file) => {
         "use strict";
 
 		_loadFs();
@@ -603,7 +603,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * Generate the help string for the given model
      * @param {object} model the data model to generate help for
      */
-    DataModel.help = function (model, index) {
+    DataModel.help = (model, index) => {
         DataModel.check(model);
 		
         // index is used for formatting and is not visible to callers
@@ -722,7 +722,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 if (fs.existsSync(fnm)) {
                     fs.access(
 						fnm, mode,
-                        function (err) {
+                        (err) => {
                             if (err)
                                 throw new Error(
                                     `Bad ${index}: '${filename}' '$mode' mode check failed: ${err}`);

@@ -47,23 +47,17 @@ requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/C
 	function showCalendar(cal) {
 		cal
         .authorise()
-        .then(function() {
-            return cal.fillCache();
-        })
-        .then(function() {
-            console.log("Schedule", cal.schedule);
-        })
-        .catch(function(e) {
+        .then(() => cal.fillCache())
+        .then(() => console.log("Schedule", cal.schedule))
+        .catch((e) => {
             console.error(e.stack);
         });
 	}
 
 	function listCalendars(cal) {
 		cal.authorise()
-        .then(function() {
-            return cal.listCalendars();
-        })
-        .then(function(data) {
+        .then(() => cal.listCalendars())
+        .then((data) => {
             for (var i in data) {
                 console.log(data[i].summary + " - '" + data[i].id + "'");
             }

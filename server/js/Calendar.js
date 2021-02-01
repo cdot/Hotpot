@@ -130,22 +130,20 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
          * @private
          */
         update(after) {
-            let self = this;
-
             // Kill the old timer
             if (this.timeoutId)
                 clearTimeout(this.timeoutId);
             this.timeoutId = setTimeout(() => {
-                Utils.TRACE(TAG, "Updating '", self.name, "'");
-                self.fillCache()
+                Utils.TRACE(TAG, "Updating '", this.name, "'");
+                this.fillCache()
 				.then(() => {
-					Utils.TRACE(TAG, "Updated '", self.name, "'");
-                    self.timeoutId = undefined;
-                    self.update(self.update_period * HOURS);
+					Utils.TRACE(TAG, "Updated '", this.name, "'");
+                    this.timeoutId = undefined;
+                    this.update(this.update_period * HOURS);
                 })
 				.catch((e) => {
 					console.error(this, e);
-					console.error(`${TAG} '${self.name}' error ${e.message}`);
+					console.error(`${TAG} '${this.name}' error ${e.message}`);
 				});
             }, after);
         }
@@ -181,17 +179,16 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 		 */
 		parseEvents(start, end, description) {
 			// Parse event instructions out of the calendar events
-			let self = this;
 			let events = [];
 			let state = 0;
 			let until = end;
 			let temperature = 0, service = "", spec = 1;
-			function commit() {
-				self.schedule.push(new ScheduledEvent(
-					self, `Calendar '${self.name}' ${spec++}`,
+			let commit = () => {
+				this.schedule.push(new ScheduledEvent(
+					this, `Calendar '${this.name}' ${spec++}`,
 					start, service, temperature, until));
 				until = end;
-			}
+			};
 			let match;
 			let re = new RegExp("\\s*([\\d.]+|[A-Z]+:?|;|=)", "gi");
 			let token = null;
@@ -199,8 +196,10 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 				if (token == null) { // need new token
 					if ((match = re.exec(description)) !== null)
 						token = match[1];
-					else
+					else {
+						Utils.TRACE(`${TAG}Parser`, "No further matches");
 						break;
+					}
 				}
 				if (state === 0) {
 					if (token == this.prefix) {
@@ -227,7 +226,6 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 					} else {
 						state = 0;
 						Utils.TRACE(`${TAG}Parser`, `1 -> 0 on '${token}'`);
-						token = null;
 					}
 					
 				} else if (state >= 2) {

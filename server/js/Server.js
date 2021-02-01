@@ -27,16 +27,15 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 
             Utils.extend(this, proto);
 
-            let self = this;
-            self.ready = false;
+            this.ready = false;
             if (typeof this.auth !== "undefined") {
-                self.authenticate = function (request) {
+                this.authenticate = (request) => {
                     let BasicAuth = require("basic-auth");
                     let credentials = BasicAuth(request);
                     if (typeof credentials === "undefined")
                         return false;
-                    return (credentials.name === self.auth.user &&
-                            credentials.pass === self.auth.pass);
+                    return (credentials.name === this.auth.user &&
+                            credentials.pass === this.auth.pass);
                 };
             }
         }
@@ -64,20 +63,18 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
          * @return {Promise} a promise to start the server
          */
         start() {
-            let self = this;
-
-            let handler = function (request, response) {
-                if (typeof self.authenticate !== "undefined") {
-                    if (!self.authenticate(request)) {
+            let handler = (request, response) => {
+                if (typeof this.authenticate !== "undefined") {
+                    if (!this.authenticate(request)) {
                         Utils.TRACE(TAG, "Authentication failed ", request.url);
                         response.statusCode = 401;
-                        response.setHeader('WWW-Authenticate', `Basic realm="${self.auth.realm}"`);
+                        response.setHeader('WWW-Authenticate', `Basic realm="${this.auth.realm}"`);
                         response.end('Access denied');
                         return;
                     }
                 }
-                if (self[request.method]) {
-                    self[request.method].call(self, request, response);
+                if (this[request.method]) {
+                    this[request.method].call(this, request, response);
                 } else {
                     response.statusCode = 405;
                     response.write(`No support for ${request.method}`);
@@ -92,45 +89,42 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 
                 promise = promise
 
-                .then(function () {
-                    return self.ssl.key.read();
+                .then(() => {
+                    return this.ssl.key.read();
                 })
 
-                .then(function (k) {
+                .then((k) => {
                     options.key = k;
                     Utils.TRACE(TAG, "SSL key loaded");
                 })
 
-                .then(function () {
-                    return self.ssl.cert.read();
+                .then(() => {
+                    return this.ssl.cert.read();
                 })
 
-                .then(function (c) {
+                .then((c) => {
                     options.cert = c;
                     Utils.TRACE(TAG, "SSL certificate loaded");
-                    if (typeof self.auth !== "undefined")
+                    if (typeof this.auth !== "undefined")
                         Utils.TRACE(TAG, "Requires authentication");
-                    Utils.TRACE(TAG, "HTTPS starting on port ", self.port);
+                    Utils.TRACE(TAG, "HTTPS starting on port ", this.port);
                 })
 
-                .then(function () {
-                    return require("https").createServer(options, handler);
-                });
+                .then(() => require("https").createServer(options, handler));
+
             } else {
-                if (typeof self.auth !== "undefined")
+                if (typeof this.auth !== "undefined")
                     Utils.TRACE(TAG, "Requires authentication");
-                Utils.TRACE(TAG, "HTTP starting on port ", self.port);
+                Utils.TRACE(TAG, "HTTP starting on port ", this.port);
                 promise = promise
-                .then(function () {
-                    return require("http").createServer(handler);
-                });
+                .then(() => require("http").createServer(handler));
             }
 
             return promise
-            .then(function (httpot) {
-                self.ready = true;
-                self.http = httpot;
-                httpot.listen(self.port);
+            .then((httpot) => {
+                this.ready = true;
+                this.http = httpot;
+                httpot.listen(this.port);
             })
             .catch((e) => {
 				Utils.TRACE(TAG, `Server error ${e}`);
@@ -260,11 +254,10 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
         POST(request, response) {
             "use strict";
 
-            let body = [],
-                self = this;
-            request.on("data", function (chunk) {
-                body.push(chunk);
-            }).on("end", function () {
+            let body = [];
+            request
+			.on("data", (chunk) => body.push(chunk))
+			.on("end", () => {
                 try {
                     // Parse the JSON body and pass as the data
                     let object;
@@ -273,7 +266,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
                         //Utils.TRACE(TAG, "Parsing message ", sbody);
                         object = JSON.parse(sbody);
                     }
-                    self.handle(request.url, object, request, response);
+                    this.handle(request.url, object, request, response);
                 } catch (e) {
                     Utils.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
                     response.write(`${e} in ${request.url}\n`);

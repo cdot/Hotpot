@@ -152,14 +152,14 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         toad: [{ data: { x: 4, y: false } }]
     };
 
-    tr.addTest("remodel simple", function() {
+    tr.addTest("remodel simple", () => {
         return DataModel.remodel('', simpleData, simpleModel)
 		.then((remodeled) => {
 			assert.equal(Utils.dump(remodeled), Utils.dump(simpleData));
 		});
     });
 
-    tr.addTest("remodel bad simple", function() {
+    tr.addTest("remodel bad simple", () => {
         return DataModel.remodel('', simpleDataBad, simpleModel)
 		.then(() => assert.fail())
 		.catch((s) => {
@@ -169,14 +169,14 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         });
     });
 
-    tr.addTest("remodel builtIns", function() {
+    tr.addTest("remodel builtIns", () => {
         return DataModel.remodel("", builtInsData, builtInsModel)
 		.then((remodeled) => {
 			assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
 		});
     });
 
-    tr.addTest("remodel bad builtIns", function() {
+    tr.addTest("remodel bad builtIns", () => {
         return DataModel.remodel("", builtInsDataBad, builtInsModel)
 		.then(() => assert.fail())
 		.catch((s) => {
@@ -184,7 +184,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         });
     });
 
-    tr.addTest("remodel toady", function() {
+    tr.addTest("remodel toady", () => {
         return DataModel.remodel("", toadyData, toadyModel)
 		.then((remodeled) => {
 			assert.equal(Utils.dump(remodeled), Utils.dump(toadyDump));
@@ -194,7 +194,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 		});
 	});
 
-    tr.addTest("remodel amphibian", function() {
+    tr.addTest("remodel amphibian", () => {
         return DataModel.remodel("", amphibianProto, Amphibian.Model)
 		.then((remodeled) => {
 			assert.equal(remodeled.constructor.name, "Amphibian");
@@ -203,20 +203,20 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 		});
     });
 
-    tr.addTest("serialise simple", function() {
+    tr.addTest("serialise simple", () => {
         return DataModel.getSerialisable(simpleData, simpleModel)
             .then(function(s) {
                 assert.deepEqual(s, simpleData);
             });
     });
 
-    tr.addTest("serialise builtIns", function() {
+    tr.addTest("serialise builtIns", () => {
         return DataModel.remodel("", builtInsData, builtInsModel)
 		.then((data) => DataModel.getSerialisable(data, builtInsModel))
         .then((s) => assert.equal(Utils.dump(s), Utils.dump(builtInsData)));
 	});
 
-    tr.addTest("serialise toady", function() {
+    tr.addTest("serialise toady", () => {
         DataModel.remodel("", toadyData, toadyModel)
         .then((data) => DataModel.getSerialisable(data, toadyModel))
 		.then(function(s) {
@@ -224,9 +224,9 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 		});
     });
 
-    tr.addTest("saveload simple", function() {
+    tr.addTest("saveload simple", () => {
         return DataModel.saveData(simpleData, simpleModel, mainfile)
-        .then(function() {
+        .then(() => {
             return DataModel.loadData(mainfile, simpleModel);
         })
         .then(function(config) {
@@ -236,7 +236,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         });
     });
 	
-    tr.addTest("saveload builtIns", function() {
+    tr.addTest("saveload builtIns", () => {
         return DataModel.saveData(builtInsData, builtInsModel, mainfile)
         .then(() => DataModel.loadData(mainfile, builtInsModel))
         .then((config) => {
@@ -247,7 +247,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
         });
     });
 
-    tr.addTest("simple proto, simple data", function() {
+    tr.addTest("simple proto, simple data", () => {
         return DataModel.remodel('', simpleData, simpleModel)
 		.then((remodeled) => {
 			return DataModel.at(remodeled, simpleModel, "/cuthbert/bob")
@@ -285,11 +285,11 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 		});
     });
 
-    tr.addTest("help", function() {
+    tr.addTest("help", () => {
         assert.equal(DataModel.help(helpModel), helpModelString);
     });
 
-	tr.addTest("require", function() {
+	tr.addTest("require", () => {
 		let model = {
 			fleem: {
 				$instantiable: true,

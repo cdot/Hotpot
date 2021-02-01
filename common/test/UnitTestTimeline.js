@@ -25,7 +25,7 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
     let tr = new TestRunner("Timeline");
     let assert = tr.assert;
 
-    tr.addTest('constructs', function() {
+    tr.addTest('constructs', () => {
         var tl;
         try {
             tl = new Timeline({ period: -1 });
@@ -33,7 +33,7 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
         } catch (e) {
             assert(e instanceof Error);
             assert.equal(e.name, "Timeline");
-            assert.equal(e.message, "Bad model");
+            assert.equal(e.message, "Bad configuration");
         }
         tl = new Timeline({
             min: 0,
@@ -50,7 +50,7 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
         assert.equal(p.value, 50);
     });
     
-    tr.addTest('handles points', function() {
+    tr.addTest('handles points', () => {
         var tl = new Timeline(test_line_proto);
         assert.equal(tl.nPoints, 4);
         assert.equal(tl.getPointAfter(0), 1);
@@ -105,7 +105,7 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
         }
     });
 
-    tr.addTest('interpolates', function() {
+    tr.addTest('interpolates', () => {
         var tl = new Timeline(test_line_proto);          
         var p = tl.getPoint(2);
         assert.equal(p.time, 20);
@@ -131,7 +131,7 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
         }
     });
 
-    tr.addTest('supports insertion', function() {
+    tr.addTest('supports insertion', () => {
         var tl = new Timeline({
             min: 0,
             max: 100,
@@ -169,7 +169,7 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
 
     });
 
-    tr.addTest('handles constrained points', function() {
+    tr.addTest('handles constrained points', () => {
         var tl = new Timeline(test_line_proto);
         try {
             tl.setPointConstrained(5, { time: 1000, value: 50});

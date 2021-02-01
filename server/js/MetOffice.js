@@ -65,13 +65,10 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          * @param {Location} loc where
          */
         setLocation(loc) {
-            let self = this;
             loc = new Location(loc);
             Utils.TRACE(TAG, "Set location ", loc);
             return this.findNearestLocation(loc)
-            .then(function () {
-                return self.update(true);
-            });
+            .then(() => this.update(true));
         };
 
         /**
@@ -89,13 +86,12 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          * Promise to get serialisable configuration. See common/DataModel
          */
         getSerialisable(context) {
-            let self = this;
             return DataModel.getSerialisable(
                 this.history, Historian.Model, context.concat('history'))
 
-            .then(function (h) {
+            .then((h) => {
                 return {
-                    api_key: self.api_key,
+                    api_key: this.api_key,
                     history: h
                 }
             });
@@ -108,7 +104,6 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          * current outside temperature
          */
         getSerialisableState() {
-            let self = this;
             return Promise.resolve({ temperature: this.get("Temperature") });
         };
 
@@ -121,7 +116,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
             if (!this.history)
                 return Promise.resolve();
             return this.history.getSerialisableHistory(since)
-            .then(function (h) {
+            .then((h) => {
                 // Clip to the current time
                 let before = -1,
                     after = -1;
@@ -182,8 +177,6 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          * @private
          */
         findNearestLocation(loc) {
-            let self = this;
-
             let path = `${USUAL_PATH}sitelist?key=${this.api_key}`;
             let options = {
                 protocol: this.url.protocol,
@@ -192,10 +185,10 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                 path: path
             };
 
-            return new Promise(function (resolve, reject) {
+            return new Promise((resolve, reject) => {
                 Http.get(
                     options,
-                    function (res) {
+                    (res) => {
                         let result = "";
                         if (res.statusCode < 200 || res.statusCode > 299) {
                             reject(new Error(
@@ -203,15 +196,15 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                                 res.statusCode));
                             return;
                         }
-                        res.on("data", function (chunk) {
+                        res.on("data", (chunk) => {
                             result += chunk;
                         });
-                        res.on("end", function () {
-                            self.findClosest(JSON.parse(result), loc);
+                        res.on("end", () => {
+                            this.findClosest(JSON.parse(result), loc);
                             resolve();
                         });
                     })
-                .on("error", function (err) {
+                .on("error", (err) => {
                     Utils.TRACE(TAG, "Failed to GET sitelist: ", err.toString());
                     reject(err);
                 });
@@ -289,7 +282,6 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                 return Promise.resolve();
             }
 
-            let self = this;
             let options = {
                 protocol: this.url.protocol,
                 hostname: this.url.hostname,
@@ -298,20 +290,20 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                 this.api_key + "&res=3hourly"
             };
 
-            return new Promise(function (fulfill, fail) {
+            return new Promise((fulfill, fail) => {
                 Http.get(
                     options,
-                    function (res) {
+                    (res) => {
                         let result = "";
-                        res.on("data", function (chunk) {
+                        res.on("data", (chunk) => {
                             result += chunk;
                         });
-                        res.on("end", function () {
-                            self.buildLog(JSON.parse(result));
+                        res.on("end", () => {
+                            this.buildLog(JSON.parse(result));
                             fulfill();
                         });
                     })
-                .on("error", function (err) {
+                .on("error", (err) => {
                     Utils.TRACE(TAG, "Failed to GET weather: ", err.toString());
                     fail(err);
                 });
@@ -341,18 +333,17 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          * @private
          */
         update() {
-            let self = this;
-            if (self.timeout)
-                clearTimeout(self.timeout);
-            delete self.timeout;
+            if (this.timeout)
+                clearTimeout(this.timeout);
+            delete this.timeout;
             Utils.TRACE(TAG, "Updating from MetOffice website");
             return this.getWeather()
-            .then(function () {
-                let br = self.bracket();
-                self.last_update = Time.now();
-                let wait = br.after.$ - self.last_update;
+            .then(() => {
+                let br = this.bracket();
+                this.last_update = Time.now();
+                let wait = br.after.$ - this.last_update;
                 Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
-                self.timeout = setTimeout(() => { self.update(); }, wait);
+                this.timeout = setTimeout(() => { this.update(); }, wait);
             });
         };
 

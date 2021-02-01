@@ -2,7 +2,7 @@
 
 /*eslint-env browser,node */
 
-define("common/js/Utils", function() {
+define("common/js/Utils", () => {
     /**
      * Useful utilities
      * @namespace
@@ -220,13 +220,13 @@ define("common/js/Utils", function() {
 	 * Set where to write trace output to. Requires fs, so not available on browsers.
 	 * @param {string} where path to the file to use for logging
 	 */
-	Utils.TRACEto = (where) => {
+	Utils.TRACEto = function (where) {
 		if (typeof where === "undefined") {
 			Utils.writeTrace = console.log;
 			return;
 		}
-		requirejs(["fs"], (fs) => {
-			Utils.writeTrace = async (s) => {
+		requirejs(["fs"], function (fs) {
+			Utils.writeTrace = async function (s) {
 				await fs.promises.writeFile(where, `${s}\n`, { encoding: "utf8", flag: "a+"});
 			}
 		});
@@ -252,9 +252,7 @@ define("common/js/Utils", function() {
         let then = typeof date === "object" ? date.getTime() : date;
         let diff = Math.max((then - now), 0);
         if (diff > 0x7FFFFFFF) // setTimeout limit is MAX_INT32=(2^31-1)
-            setTimeout(function () {
-                Utils.runAt(func, date);
-            }, 0x7FFFFFFF);
+            setTimeout(() => Utils.runAt(func, date), 0x7FFFFFFF);
         else
             setTimeout(func, diff);
     };

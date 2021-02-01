@@ -17,7 +17,7 @@ requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], f
     if (Fs.existsSync(logfile))
 		Fs.unlinkSync(logfile);
     
-    tr.addTest('unordered', function() {
+    tr.addTest('unordered', () => {
         let h = new Historian({
             unordered: true,
             file: "/tmp/unordered_historian.log"
@@ -31,7 +31,7 @@ requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], f
         let p = Promise.resolve();
 
         function do_record(t, s) {
-            p = p.then(function() {
+            p = p.then(() => {
                 return h.record(s, t);
             });
         }
@@ -44,7 +44,7 @@ requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], f
         for (i = 1; i < 3; i++)
             do_record(i, -i);
 
-        return p.then(function() {
+        return p.then(() => {
             return h.getSerialisableHistory()
             .then(function(report) {
                 assert.equal(report.length, 7);
@@ -59,7 +59,7 @@ requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], f
         });
     });
 
-    tr.addTest('sampled', function() {
+    tr.addTest('sampled', () => {
         let INTERVAL = 50;
         let COUNT = 7;
         let nsamples = 0;

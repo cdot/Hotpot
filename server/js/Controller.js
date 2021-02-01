@@ -23,33 +23,22 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         initialise() {
             Utils.TRACE(TAG, "Initialising Controller");
 
-            let self = this;
-            self.poll = {
+            this.poll = {
                 timer: undefined
             };
 
             return this.initialisePins()
 
-            .then(() => {
-                return this.resetValve();
-            })
+            .then(() => this.resetValve())
 
-            .then(() => {
-                return this.initialiseThermostats();
-            })
+            .then(() => this.initialiseThermostats())
 
-            .then(() => {
-                return this.initialiseCalendars();
-            })
+            .then(() => this.initialiseCalendars())
 
-            .then(() => {
-                return this.initialiseWeatherAgents();
-            })
+            .then(() => this.initialiseWeatherAgents())
 
-            .then(() => {
-                // Start the poll loop
-                self.pollRules();
-            });
+            // Start the poll loop
+            .then(() => this.pollRules());
         };
 
         /**
@@ -60,11 +49,10 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @private
          */
         initialiseWeatherAgents() {
-            let self = this;
             let promises = [];
             for (let name in this.weather) {
                 let config = this.weather[name];
-                promises.push(self.weather[name].initialise());
+                promises.push(this.weather[name].initialise());
             }
             return Promise.all(promises).then(() => {
                 Utils.TRACE(TAG, "Initialised Weather Agents");
@@ -116,15 +104,13 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @private
          */
         initialiseCalendars() {
-			let self = this;
-			
             Utils.TRACE(TAG, "Initialising Calendars");
 
             for (let name in this.calendar) {
                 let cal = this.calendar[name];
                 cal.setTrigger(
                     (id, service, target, until) => {
-                        self.addRequest(service, id, target, until);
+                        this.addRequest(service, id, target, until);
                     });
                 cal.setRemove(
                     (id, service) => {
@@ -135,8 +121,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                                     source: id
                                 }, true);
                             }
-                        } else if (self.thermostat[service]) {
-                            self.thermostat[service].purgeRequests({
+                        } else if (this.thermostat[service]) {
+                            this.thermostat[service].purgeRequests({
                                 source: id
                             }, true);
                         }
@@ -302,7 +288,6 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         getSerialisableLog(since) {
 
             let logs = {};
-            let self = this;
             let promises = [];
             
             for (let field in this) {
@@ -329,8 +314,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @param {number} state 1 (on) or 0 (off)
          */
         setPromise(channel, new_state) {
-            let self = this;
-            let pins = self.pin;
+            let pins = this.pin;
 
             // Avoid race condition during initialisation
             if (pins[channel] === "undefined")
@@ -338,9 +322,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
             if (this.pending) {
                 return new Promise((resolve) => {
-                    setTimeout(() => {
-                        resolve(self.setPromise(channel, new_state));
-                    }, self.valve_return);
+                    setTimeout(() => resolve(this.setPromise(channel, new_state)),
+							   this.valve_return);
                 });
             }
 
@@ -373,16 +356,13 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 						// Need to switch on HW to kill the grey wire.
 						// This allows the spring to fully return. Then after a
 						// timeout, turn CH off.
-						self.pending = true;
+						this.pending = true;
 						return pins.CH.setState(0) // switch off CH
 						.then(() => pins.HW.setState(1)) // switch on HW
-						.then(() => {
-							return new Promise((resolve) => {
-								setTimeout(resolve, self.valve_return);
-							}); // wait for spring return
-						})
+						// wait for spring return
+						.then(() => new Promise((resolve) => setTimeout(resolve, this.valve_return)))
 						.then(() => pins.HW.setState(0)) // switch off HW
-						.then(() => { self.pending = false;	});
+						.then(() => { this.pending = false;	});
 					});
                 }
 				
@@ -400,7 +380,6 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @return a promise that resolves to an object for serialisation in the response
          */
         dispatch(path, data) {
-            let self = this;
             let command = path.shift();
 
             switch (command) {
@@ -457,7 +436,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 				if (data.until == "boost") data.until = Utils.BOOST;
 				else if (data.until == "clear") data.until = Utils.CLEAR;
                 this.addRequest(data.service, data.source, data.target, data.until);
-                self.pollRules();
+                this.pollRules();
                 break;
             /*case "settime":
                 let tim = data.value;
@@ -491,16 +470,15 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @private
          */
         pollRules() {
-            let self = this;
             
-            if (typeof self.poll.timer !== "undefined") {
-                clearTimeout(self.poll.timer);
-                self.poll.timer = undefined;
+            if (typeof this.poll.timer !== "undefined") {
+                clearTimeout(this.poll.timer);
+                this.poll.timer = undefined;
             }
 
             // Purge completed requests
-            for (let name in self.thermostat)
-                self.thermostat[name].purgeRequests();
+            for (let name in this.thermostat)
+                this.thermostat[name].purgeRequests();
 
             // Test each of the rules. Rule evaluation functions
             // return a promise to set a pin state, which is decided
@@ -508,18 +486,18 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             // may define a temperature target, or if not the timeline
             // is used.
 			let promises = [];
-            for (let name in self.rule) {
-                let rule = self.rule[name];
-                promises.push(rule.test(self));
+            for (let name in this.rule) {
+                let rule = this.rule[name];
+                promises.push(rule.test(this));
             }
 
 			Promise.all(promises)
 			.then(() => {
 				// Queue the next poll
-				self.poll.timer = setTimeout(() => {
-					self.poll.timer = undefined;
-					self.pollRules();
-				}, self.rule_interval);
+				this.poll.timer = setTimeout(() => {
+					this.poll.timer = undefined;
+					this.pollRules();
+				}, this.rule_interval);
 			});
         }
     }

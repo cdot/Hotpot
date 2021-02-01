@@ -34,12 +34,10 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
 	
     function makeServer(config) {
         let server = new Server(config);
-        return server.start().then(function() {
-            return server;
-        });
+        return server.start().then(() => server);
     }
 
-    tr.addTest("404",function() {
+    tr.addTest("404",() => {
 		let server_config = newServerConfig();
 		return makeServer(server_config).then((server) => {
             tr.chai
@@ -54,7 +52,7 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
         });
     });
 
-    tr.addTest("simple-ajax", function() {
+    tr.addTest("simple-ajax", () => {
 		let server_config = newServerConfig();
         return makeServer(server_config).then((server) => {
             server.setDispatch((path, params) => {
@@ -79,7 +77,7 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
         });
     });
 
-    tr.addTest("simple-file", function() {
+    tr.addTest("simple-file", () => {
 		let server_config = newServerConfig();
         return makeServer(server_config).then((server) => {
             tr.chai
@@ -96,7 +94,7 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
         });
     });
 
-    tr.addTest("should stop the server", function() {
+    tr.addTest("should stop the server", () => {
 		let server_config = newServerConfig();
         return makeServer(server_config).then((server) => {
             return server.stop();

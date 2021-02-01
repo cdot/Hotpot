@@ -34,7 +34,7 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
 
     function configureCalendar(credentials) {
         let cfn = Utils.expandEnvVars(credentials.auth_cache);
-        Fs.stat(cfn, function (e, stats) {
+        Fs.stat(cfn, (e, stats) => {
             if (e) {
                 authorise(credentials);
             } else if (stats.isFile()) {
@@ -44,7 +44,7 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
                     input: process.stdin,
                     output: process.stdout
                 });
-                rl.question("Continue [Y/n]?: ", function (ans) {
+                rl.question("Continue [Y/n]?: ", (ans) => {
                     rl.close();
                     if (ans === "" || /^[Yy]/.test(ans))
                         authorise(credentials);
@@ -76,9 +76,9 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
             input: process.stdin,
             output: process.stdout
         });
-        rl.question("Enter the code here: ", function (code) {
+        rl.question("Enter the code here: ", (code) => {
             rl.close();
-            oAuth2Client.getToken(code, function (err, token) {
+            oAuth2Client.getToken(code, (err, token) => {
                 if (err) {
                     console.log("Error while trying to retrieve access token",
                                 err);
@@ -89,12 +89,12 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
                 writeFile(Utils.expandEnvVars(credentials.auth_cache),
                           JSON.stringify(token))
 
-                .then(function () {
+                .then(() => {
                     console.log("Token cached in '" + credentials.auth_cache +
                                 "'");
                 })
 
-                .catch(function (e) {
+                .catch((e) => {
                     console.error("Failed to write '" +
                                   credentials.auth_cache + "': " + e);
                 });
@@ -106,7 +106,7 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
         $skip: true
     })
 
-    .then(function (config) {
+    .then((config) => {
         for (let cal in config.controller.calendar) {
             console.log("Configuring calendar '" + cal + "'");
             configureCalendar(config.controller.calendar[cal]);

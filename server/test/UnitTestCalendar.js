@@ -7,11 +7,11 @@ requirejs.config({
     baseUrl: "../.."
 });
 
-requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/Time", "server/js/Calendar"], function (TestRunner, Expectation, Utils, Time, Calendar) {
+requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/Time", "server/js/Calendar"], (TestRunner, Expectation, Utils, Time, Calendar) => {
     let tr = new TestRunner("Calendar");
     let assert = tr.assert;
 
-	tr.addTest("parse unprefixed events", function() {
+	tr.addTest("parse unprefixed events", () => {
 		let now = Time.now() + 250;
 		let cal = new Calendar({}, "Unprefixed");
 		let spec = 1;
@@ -51,11 +51,12 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 		return exp.expect();
 	});
 	
-	tr.addTest("parse prefixed events", function() {
+	tr.addTest("parse prefixed events", () => {
 		let now = Time.now() + 250;
 		let cal = new Calendar({ prefix: "Test:" }, "Prefixed");
 		let spec = 1;
 		let exp = new Expectation(5);
+		//Utils.TRACEwhat("all");
 		cal.setTrigger((id, s, t, u) => {
 			//console.log(`SAW ${id}, ${s}, ${t}, ${u}`);
 			if (/1$/.test(id)) {
@@ -91,7 +92,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 		return exp.expect();
 	});
 
-	tr.addTest("parse bad unprefixed events", function() {
+	tr.addTest("parse bad unprefixed events", () => {
 		let now = Time.now() + 250;
 		let cal = new Calendar({ }, "BAD");
 		cal.setTrigger((id, s, t, u) => {
@@ -101,7 +102,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 		cal.parseEvents(now + 250, now + 500, " 99");
 	});
 			   
-	tr.addTest("parse bad prefixed events", function() {
+	tr.addTest("parse bad prefixed events", () => {
 		let now = Time.now() + 250;
 		let cal = new Calendar({ prefix: "warm" }, "BAD");
 		cal.setTrigger((id, s, t, u) => {

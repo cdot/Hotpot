@@ -66,7 +66,6 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 			this.lastKnownGood = Date.now();
 			
             // Temperature history, sample on a time schedule
-            let self = this;
             let hc = this.history;
             if (typeof hc !== "undefined") {
                 if (typeof hc.interval === "undefined")
@@ -175,12 +174,11 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 			
 			.finally(() => {
 				if (this.interrupted) {
-					Utils.TRACE(TAG, `'${self.name}' polling interrupted`);
+					Utils.TRACE(TAG, `'${this.name}' polling interrupted`);
 					this.interrupted = false;
 				} else {
-					let self = this;
 					setTimeout(
-						() => self.poll(),
+						() => this.poll(),
 						1000 * (this.poll_every || DEFAULT_POLL_INTERVAL));
 				}
             });
@@ -308,7 +306,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 		poll_every: {
 			$class: Number,
 			$doc: "Polling frequency, in seconds",
-			$options: true
+			$optional: true
 		},
         timeline: Timeline.Model,
         history: Utils.extend({

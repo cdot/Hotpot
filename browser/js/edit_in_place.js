@@ -42,7 +42,7 @@
 
         let $editor;
 
-        let destroy = function() {
+        let destroy = () => {
             $editor.remove();
             $elf.show();
         };
@@ -64,7 +64,7 @@
 
             $tick = $("<div>&#9745;</div>")
                 .addClass("editable_button")
-                .on("click", function() {
+                .on("click", () => {
                     let fn = $ta.val();
                     if (fn !== $elf.text()) {
                         try {
@@ -85,7 +85,7 @@
             $cross = $("<div>&#9746;</div>")
                 .addClass("editable_button")
                 .css("float", "right")
-                .on("click", function() {
+                .on("click", () => {
                     if (options.cancel)
                         options.cancel.call($elf);
                     destroy();
@@ -97,12 +97,12 @@
             $controls.find(".editable_button")
                 .css("display", "inline")
                 .hover(
-                    function() {
+                    () => {
                         $(this)
                             .css("background-color", "yellow")
                             .css("color", "black");
                     },
-                    function() {
+                    () => {
                         $(this)
                             .css("background-color", "")
                             .css("color", "");
@@ -129,7 +129,7 @@
                     } else
                         return true;
                 })
-                .on("change", function() {
+                .on("change", () => {
                     let val = $editor.val();
                     destroy();
                     if (val !== $elf.text()) {

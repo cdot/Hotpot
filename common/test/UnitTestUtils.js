@@ -12,7 +12,7 @@ requirejs(["test/TestRunner", "common/js/Utils"], function(TestRunner, Utils) {
     let tr = new TestRunner("Utils");
     let assert = tr.assert;
 
-    tr.addTest('expands env vars', function() {
+    tr.addTest('expands env vars', () => {
         let q = process.env["HOME"];
         assert.equal(Utils.expandEnvVars("${HOME}"), q);
         assert.equal(Utils.expandEnvVars("~"), q);
@@ -21,7 +21,7 @@ requirejs(["test/TestRunner", "common/js/Utils"], function(TestRunner, Utils) {
                      q + "and" + q);
     });
 
-    tr.addTest('extends', function() {
+    tr.addTest('extends', () => {
         let a = { a: 1 };
         let b = { b: 2 };
         let c = Utils.extend(a, b);
@@ -30,7 +30,7 @@ requirejs(["test/TestRunner", "common/js/Utils"], function(TestRunner, Utils) {
         assert.deepEqual(c, { a:3, b:2 });
     });
 
-    tr.addTest("exceptions", function() {
+    tr.addTest("exceptions", () => {
         let t = new Utils.exception("A", {b: 1}, " flabdab");
         assert.equal(t.name, "A");
         assert.equal(t.message, "{\n b: 1\n} flabdab");

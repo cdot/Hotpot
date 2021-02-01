@@ -15,8 +15,7 @@ requirejs.config({
 });
 
 requirejs(["jquery", "jquery-ui", "../js/autoscale_graph"], function($) {
-	$(document).ready(function() {
-		console.log("NERFE");
+	$(document).ready(() => {
 		var $canvas = $("#graph_canvas");
 
 		$canvas.autoscale_graph({

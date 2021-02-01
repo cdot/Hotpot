@@ -46,19 +46,18 @@ define(["mocha", "chai"], (maybeMocha, chai) => {
         }
 
         addTest(title, fn) {
-            let self = this;
-            let test = new Mocha.Test(title, function() {
-                if (typeof self.before === "function")
-                    self.before();
+            let test = new Mocha.Test(title, () => {
+                if (typeof this.before === "function")
+                    this.before();
                 let res = fn.call(this);
                 if (res instanceof Promise) {
                     return res.then(() => {
-                        if (typeof self.after === "function")
-                            self.after();
+                        if (typeof this.after === "function")
+                            this.after();
                     });
                 }
-                else if (typeof self.after === "function")
-                    self.after()
+                else if (typeof this.after === "function")
+                    this.after()
             });
             this.mocha.suite.addTest(test);
         }
@@ -66,16 +65,15 @@ define(["mocha", "chai"], (maybeMocha, chai) => {
 		rm_rf(path) {
 			let fs = requirejs("fs");
 			let Fs = fs.promises;
-			let self = this;
 			return Fs.readdir(path)
 			.then((files) => {
 				let promises = [];
 				files.forEach((file, index) => {
-					var curPath = path + "/" + file;
+					var curPath = `${path}/${file}`;
 					promises.push(Fs.lstat(curPath)
 					.then((stat) => {
 						if (stat.isDirectory())
-							return self.rm_rf(curPath);
+							return this.rm_rf(curPath);
 						else
 							return Fs.unlink(curPath);
 					}));
@@ -93,8 +91,8 @@ define(["mocha", "chai"], (maybeMocha, chai) => {
                 this.mocha.run(resolve);
             })
 			.then(() => {
-				for (let i in self.testDataDirs) {
-					rmdir(self.testDataDirs[i]);
+				for (let i in this.testDataDirs) {
+					rmdir(this.testDataDirs[i]);
 				}
 			});
         }

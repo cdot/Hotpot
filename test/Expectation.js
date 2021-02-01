@@ -9,19 +9,18 @@ if (typeof requirejs === "undefined") {
  * asynchronous events will be seen, and promise to wait for them all.
  * All events must still complete within the mocha test timeout.
  */
-define("test/Expectation", function() {
+define("test/Expectation", () => {
 	class Expectation {
 		/**
 		 * Construct an expectation that nEvents will be seen
 		 */
 		constructor(nEvents) {
-			let self = this;
 			this.state = [];
 			this.promises = [];
 			for (let i = 0; i < nEvents; i++) {
 				this.state.push(false);
 				this.promises.push(new Promise(async (resolve, reject) => {
-					while (!self.state[i]) {
+					while (!this.state[i]) {
 						await new Promise(resolve => setTimeout(resolve, 100));
 					}
 					resolve(i);

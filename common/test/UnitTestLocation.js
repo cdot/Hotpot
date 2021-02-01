@@ -10,13 +10,13 @@ requirejs(["test/TestRunner", "common/js/Location"], function(TestRunner, Locati
     let tr = new TestRunner("Location");
     let assert = tr.assert;
 
-    tr.addTest('should handle numbers', function() {
+    tr.addTest('should handle numbers', () => {
         let l1 = new Location(53, -2);
         assert.equal(53, l1.latitude);
         assert.equal(-2, l1.longitude);
     });
     
-    tr.addTest('should handle another location', function() {
+    tr.addTest('should handle another location', () => {
         let l1 = new Location(53, -2);
         let l2 = new Location(l1);
         assert.equal(53, l1.latitude);
@@ -25,13 +25,13 @@ requirejs(["test/TestRunner", "common/js/Location"], function(TestRunner, Locati
         assert.equal(-2, l2.longitude);
     });
 
-    tr.addTest('should handle the same location', function() {
+    tr.addTest('should handle the same location', () => {
         let l1 = new Location(53, -2);
         let l2 = new Location(l1);
         assert(l2.equals(l1));
     });
     
-    tr.addTest('should handle almost the same location', function() {
+    tr.addTest('should handle almost the same location', () => {
         let l1 = new Location(53, -2);
         let l2 = new Location(l1.latitude + 0.00004, l1.longitude - 0.00004);
         assert(l2.equals(l1));
@@ -39,22 +39,22 @@ requirejs(["test/TestRunner", "common/js/Location"], function(TestRunner, Locati
         assert(!l2.equals(l1));
     });
 
-    tr.addTest('should handle almost the same location', function() {
+    tr.addTest('should handle almost the same location', () => {
         let l1 = new Location(53, -2);
         let l2 = new Location(l1.latitude + 0.00004, l1.longitude - 0.00004);
         assert.equal(5, Math.round(l1.haversine(l2)));
     });
-    tr.addTest('should handle almost the same location 2', function() {
+    tr.addTest('should handle almost the same location 2', () => {
         let l1 = new Location(53, -2);
         let l2 = new Location(l1.latitude + 0.00006, l1.longitude - 0.00006);
         assert.equal(8, Math.round(l1.haversine(l2)));
     });
-    tr.addTest('should handle a distant location', function() {
+    tr.addTest('should handle a distant location', () => {
         let l1 = new Location(53, -2);
         let l2 = new Location(50, 5);
         assert.equal(587856, Math.round(l1.haversine(l2)));
     });
-    tr.addTest('should stringify cleanly', function() {
+    tr.addTest('should stringify cleanly', () => {
         let l1 = new Location(53, -2);
         assert.equal("(53,-2)", l1.toString());
     });

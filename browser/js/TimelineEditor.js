@@ -57,44 +57,24 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
             $('.overlay').hide();
 
-            let self = this;
-
-            this.$main_canvas.on("mousedown",
-                                 (e) => { return self.handleMouseDown(e); });
-
-            this.$main_canvas.on("mousemove",
-                                 (e) => { return self.handleMouseMove(e); });
-
-            this.$main_canvas.on("mouseup",
-                                 (e) => { return self.handleMouseUp(e); });
+            this.$main_canvas.on("mousedown", (e) => this.handleMouseDown(e));
+            this.$main_canvas.on("mousemove", (e) => this.handleMouseMove(e));
+            this.$main_canvas.on("mouseup", (e) => this.handleMouseUp(e));
 
             this.$main_canvas.hover(
-                function () {
-                    self.$tip_canvas.show();
-                },
-                function () {
-                    self.$tip_canvas.hide();
-                });
+                () => this.$tip_canvas.show(), () => this.$tip_canvas.hide());
             
-            this.$main_canvas.on("redraw", function () {
-                self.drawMainCanvas();
-            });
-
-            this.$tip_canvas.on("redraw", function () {
-                self.drawTipCanvas();
-            });
-
-            this.$selection_canvas.on("redraw", function () {
-                self.drawSelectionCanvas();
-            });
+            this.$main_canvas.on("redraw", () => this.drawMainCanvas());
+            this.$tip_canvas.on("redraw", () => this.drawTipCanvas());
+            this.$selection_canvas.on("redraw", () => this.drawSelectionCanvas());
 
             let resizeTimer;
 
             // Debounce resizing
-            $(window) /*this.$main_canvas*/ .on('resize', function () {
+            $(window) /*this.$main_canvas*/ .on('resize', () => {
                 if (resizeTimer)
                     clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => { self.refresh_all(); }, 100);
+                resizeTimer = setTimeout(() => { this.refresh_all(); }, 100);
             });
 
             this.$main_canvas.trigger("redraw");
@@ -419,7 +399,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
          * @param v value to set. Will be constrained to the valid range.
          * @return this
          */
-        setSelectedValue = function (v) {
+        setSelectedValue = (v) => {
             let dp = this.timeline.getPoint(this.sel_pt_ix);
             dp = {
                 time: dp.time,

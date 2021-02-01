@@ -118,7 +118,7 @@ class ServicesModel : ViewModel() {
                         Log.e(TAG, "GET /ajax/state", e)
                         activity.runOnUiThread {
                             Snackbar.make(activity.findViewById(R.id.view_pager),
-                                    activity.getString(R.string.no_contact), Snackbar.LENGTH_SHORT).show()
+                            context.getString(R.string.no_contact), Snackbar.LENGTH_SHORT).show()
                         }
                     }
 

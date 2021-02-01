@@ -127,7 +127,7 @@ Trace.prototype.addPoint = function(t, s) {
 /**
  * Clip the data in the trace to the visible area in S-T space
  */
-Trace.prototype.clip = function() {
+Trace.prototype.clip = () => {
     "use strict";
     // TODO: do this properly. At the moment it assumes clipping
     // on the left and leaves all else unclipped.
@@ -146,7 +146,7 @@ Trace.prototype.clip = function() {
  * Get the limits of the points in the trace in S-T space
  * @return {object} {min:{t:,s:}, max:{t:,s:}}
  */
-Trace.prototype.getExtents = function() {
+Trace.prototype.getExtents = () => {
     "use strict";
     if (this.extents)
         return this.extents;
@@ -372,26 +372,23 @@ BinaryTrace.prototype.addPoint = function(t, s) {
  * @class
  */
 function Graph(options, $canvas) {
-    "use strict";
-    let self = this;
+    this.$canvas = $canvas;
+    this.ctx = $canvas[0].getContext("2d");
 
-    self.$canvas = $canvas;
-    self.ctx = $canvas[0].getContext("2d");
+    this.$tip_canvas = $("<canvas></canvas>");
+    $canvas.after(this.$tip_canvas);
+    this.$tip_canvas.css("display", "none");
+    this.$tip_canvas.css("position", "absolute");
+    this.$tip_canvas.css("background-color", "transparent");
+    this.$tip_canvas.css("color", "white");
 
-    self.$tip_canvas = $("<canvas></canvas>");
-    $canvas.after(self.$tip_canvas);
-    self.$tip_canvas.css("display", "none");
-    self.$tip_canvas.css("position", "absolute");
-    self.$tip_canvas.css("background-color", "transparent");
-    self.$tip_canvas.css("color", "white");
-
-    self.options = $.extend({
+    this.options = $.extend({
         background_col: "black",
         text_col: "white",
         font_height: 10 // px
     }, options);
 
-    $canvas.on("mousemove", function(e) {
+    $canvas.on("mousemove", (e) => {
         let targ;
         if (!e)
             e = window.event;
@@ -401,17 +398,12 @@ function Graph(options, $canvas) {
             targ = e.srcElement;
         if (targ.nodeType === 3) // defeat Safari bug
             targ = targ.parentNode;
-        self.handleMouse(e, targ);
+        this.handleMouse(e, targ);
     })
-    .hover(
-        function() {
-            self.$tip_canvas.show();
-        },
-        function() {
-            self.$tip_canvas.hide();
-        });
+    .hover(() => this.$tip_canvas.show(),
+           () => this.$tip_canvas.hide());
 
-    self.traces = [];
+    this.traces = [];
 }
 
 /**
@@ -426,7 +418,7 @@ Graph.prototype.addTrace = function(trace) {
 /**
  * Update (draw) the graph.
  */
-Graph.prototype.render = function() {
+Graph.prototype.render = () => {
     "use strict";
     let $canvas = this.$canvas;
     let options = this.options;

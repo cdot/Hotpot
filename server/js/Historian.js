@@ -45,10 +45,9 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             let s = "";
             for (let i = 0; i < report.length; i++)
                 s += `${report[i].time},${report[i].sample}\n`;
-            let self = this;
             return Fs.writeFile(this.path(), s)
             .then(() => {
-                Utils.TRACE(TAG, "Wrote ", self.path());
+                Utils.TRACE(TAG, "Wrote ", this.path());
             });
         };
         
@@ -57,8 +56,6 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          * @private
          */
         loadFromFile() {
-            let self = this;
-            
             return Fs.readFile(this.path())
             .then((data) => {
                 let lines = data.toString().split("\n");
@@ -76,7 +73,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                         report.push(point);
                     }
                 }
-                if (self.unordered && report.length > 1) {
+                if (this.unordered && report.length > 1) {
                     // Sort samples by time. If two samples occur at the same
                     // time, keep the most recently added.
                     let doomed = report;
@@ -102,7 +99,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                             });
                     }
                     if (report.length !== doomed.length)
-                        self.rewriteFile(report);
+                        this.rewriteFile(report);
                 }
                 
                 return report;
@@ -140,7 +137,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          * Start the history polling loop.
          * Records are written according to the interval set in the config.
          * Requires the `interval` option to be given.
-         * @param {function} sample sampling function (required)
+         * @param {function} sample sampling function - required
          */
         start(sample) {
             
@@ -213,12 +210,10 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             this.last_time = time;
             this.last_sample = sample;
             
-            let self = this;
             return promise.then(() => {
-                return Fs.appendFile(self.path(), `${time},${sample}\n`)
+                return Fs.appendFile(this.path(), `${time},${sample}\n`)
                 .catch((ferr) => {
-                    Utils.TRACE(TAG, "failed to append to '",
-                                self.path(), "': ", ferr);
+                    Utils.TRACE(TAG, `failed to append to '${this.path()}': `, ferr);
                 });
             });
         };

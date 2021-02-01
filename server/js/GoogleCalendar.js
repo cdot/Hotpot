@@ -42,18 +42,16 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
             if (typeof this.oauth2Client !== "undefined")
                 return Promise.resolve(); // already started
 
-            let self = this;
+            return Fs.readFile(Utils.expandEnvVars(this.auth_cache))
 
-            return Fs.readFile(Utils.expandEnvVars(self.auth_cache))
-
-            .then(function (token) {
-                let clientSecret = self.secrets.client_secret;
-                let clientId = self.secrets.client_id;
-                let redirectUrl = self.secrets.redirect_uris[0];
+            .then((token) => {
+                let clientSecret = this.secrets.client_secret;
+                let clientId = this.secrets.client_id;
+                let redirectUrl = this.secrets.redirect_uris[0];
                 let {OAuth2Client} = require("google-auth-library");
-                self.oauth2Client = new OAuth2Client(
+                this.oauth2Client = new OAuth2Client(
                     clientId, clientSecret, redirectUrl);
-                self.oauth2Client.credentials = JSON.parse(token);
+                this.oauth2Client.credentials = JSON.parse(token);
             });
         }
 
@@ -66,39 +64,38 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
          * @private
          */
         fillCache() {
-            let self = this;
 
             return this.authorise()
 
-            .then(function () {
+            .then(() => {
                 let calendarAPI = googleCalendarAPI()
                 let now = Time.now();
 
                 let params = {
-                    auth: self.oauth2Client,
-                    calendarId: self.id,
+                    auth: this.oauth2Client,
+                    calendarId: this.id,
                     // For reasons undocumented by google, if timeMin and
                     // timeMax are the same time it returns no events. So
                     // we need to offset them.
                     timeMin: (new Date()).toISOString(),
-                    timeMax: (new Date(now + self.cache_length * HOURS))
+                    timeMax: (new Date(now + this.cache_length * HOURS))
                     .toISOString(),
                     // Expand recurring events
                     singleEvents: true
                 };
 
                 // If a prefix is required, add a query
-                if (self.prefix)
-                    params.q = self.prefix;
+                if (this.prefix)
+                    params.q = this.prefix;
 
-                self.pending_update = true;
+                this.pending_update = true;
                 return new Promise((ok, fail) => {
                     calendarAPI.events.list(
                         params,
-                        function (err, response) {
-                            delete self.pending_update;
+                        (err, response) => {
+                            delete this.pending_update;
                             if (err) {
-                                fail(`'${self.name}' events list failed: ${err}`);
+                                fail(`'${this.name}' events list failed: ${err}`);
                             } else {
                                 ok(response);
                             }
@@ -107,36 +104,35 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
             })
 
             .then((response) => {
-                self.clearSchedule();
+                this.clearSchedule();
                 let events = response.data.items;
-                Utils.TRACE(TAG, `'${self.name}' has ${events.length} events`);
-                self.last_update = new Date();
+                Utils.TRACE(TAG, `'${this.name}' has ${events.length} events`);
+                this.last_update = new Date();
                 for (let i = 0; i < events.length; i++) {
                     let event = events[i];
                     let start = Date.parse(event.start.dateTime || event.start.date);
                     let end = Date.parse(event.end.dateTime || event.end.date);
                     // Can have orders in the event summary or the description
                     let fullText = `${event.summary};${event.description}`;
-					self.parseEvents(start, end, fullText);
+					this.parseEvents(start, end, fullText);
                 }
-                Utils.TRACE(TAG, `'${self.name}' ready`);
+                Utils.TRACE(TAG, `'${this.name}' ready`);
             });
         }
 
         listCalendars() {
-            let self = this;
 
             return this.authorise()
-            .then(function () {
+            .then(() => {
 				Utils.TRACE(TAG, "Listing calendars");
                 let calendar = googleCalendarAPI();
 
-                return new Promise(function (resolve, reject) {
+                return new Promise((resolve, reject) => {
                     calendar.calendarList.list(
                         {
-                            auth: self.oauth2Client
+                            auth: this.oauth2Client
                         },
-                        function (err, response) {
+                        (err, response) => {
                             if (err) {
                                 reject(`calendarList failed: ${err}`);
                             } else {

@@ -25,19 +25,16 @@ define("server/js/ScheduledEvent", ["common/js/Utils", "common/js/Time"], functi
             // End of the event, in epoch ms, or Utils.BOOST
             this.until = until;
 
-            let self = this;
             let now = Time.now();
             if (start > now) {
-                Utils.TRACE(TAG, self.id, "(", service, ",", temperature, ") will start at ", new Date(start),
+                Utils.TRACE(TAG, this.id, "(", service, ",", temperature, ") will start at ", new Date(start),
                             " now is ", new Date());
-                this.event = setTimeout(function () {
-                    self.begin();
-                }, start - now);
+                this.event = setTimeout(() => this.begin(), start - now);
             } else if (start <= now && until > 0 && until > now) {
-                Utils.TRACE(TAG, self.id, " began in the past");
+                Utils.TRACE(TAG, this.id, " began in the past");
                 this.begin();
             } else {
-                Utils.TRACE(TAG, self.id, " is already finished");
+                Utils.TRACE(TAG, this.id, " is already finished");
             }
         }
 
@@ -54,14 +51,10 @@ define("server/js/ScheduledEvent", ["common/js/Utils", "common/js/Time"], functi
 
         // Start this event. The calendar trigger will be called.
         begin() {
-            let self = this;
-
             if (typeof this.calendar.trigger === "function")
                 this.calendar.trigger(this.id, this.service, this.temperature, this.until);
        
-			Utils.runAt(function () {
-				self.end();
-			}, this.until);
+			Utils.runAt(() => this.end(), this.until);
         }
 
 		end() {

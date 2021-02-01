@@ -4,7 +4,7 @@
 
 const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
-define("common/js/Time", function() {
+define("common/js/Time", () => {
     /**
      * Functions for handling times within the current 24 hour period.
      * Use Time.now() rather than Date.now() so that tests can be written
@@ -20,9 +20,7 @@ define("common/js/Time", function() {
      */
     Time.force = function (now) {
         now = Date.parse(now);
-        Time.now = function () {
-            return now;
-        };
+        Time.now = () => now;
     };
 
     /**
@@ -37,7 +35,6 @@ define("common/js/Time", function() {
      * @return {number} midnight as number of ms since epoch
      */
     Time.midnight = function () {
-        "use strict";
         let d = new Date(Time.now());
         d.setHours(0, 0, 0, 0);
         return d.getTime();
@@ -51,7 +48,6 @@ define("common/js/Time", function() {
      * @return {number} number of ms since midnight
      */
     Time.parse = function (str) {
-        "use strict";
         let hms = str.split(":");
         let h = Number.parseInt(hms.shift());
         let m = Number.parseInt(hms.shift() || "0");
@@ -66,17 +62,12 @@ define("common/js/Time", function() {
      * Get the current time in s
      * @return current time in epoch seconds
      */
-    Time.nowSeconds = function () {
-        "use strict";
-        return Time.now() / 1000;
-    };
+    Time.nowSeconds = function () { return Time.now() / 1000; };
 
     /**
      * Get the current time as an offset in ms from the preceding midnight
      */
-    Time.time_of_day = function () {
-        return Time.now() - Time.midnight();
-    };
+    Time.time_of_day = function () { return Time.now() - Time.midnight(); };
 
     /**
      * Generate a string that gives the given number of ms since midnight as

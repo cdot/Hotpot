@@ -17,11 +17,11 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
 		return DataModel.remodel(
 			"test",
 			{ id: "FF-C04EFECAFEBABE",
-			  "timeline": {
-				  "min": 0,
-				  "max": 50,
-				  "period": 86400000,
-				  "points": [
+			  timeline: {
+				  min: 0,
+				  max: 50,
+				  period: 86400000,
+				  points: [
 					  {
 						  "times": "00:00",
 						  "value": 0

@@ -21,22 +21,21 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
         }
 
         log(mess) {
-			let t = new Date(data.time).toLocaleString();
+			let t = new Date().toLocaleString();
             $("#log").html(`<div>${t}: ${mess}</div>`);
         }
 
         refreshCalendars() {
             $("#refresh_calendars").attr("disabled", "disabled");
             $(".calendar").hide();
-            let self = this;
             $.get("/ajax/refresh_calendars")
             .done(() => {
                 $("#refresh_calendars").removeAttr("disabled");
-                self.log("Calendar refresh requested");
+                this.log("Calendar refresh requested");
                 $(document).trigger("poll");
             })
-            .fail(function (jqXHR, textStatus, err) {
-                self.log("Could not contact server for calendar update: " + err);
+            .fail((jqXHR, textStatus, err) => {
+                this.log("Could not contact server for calendar update: " + err);
             });
         }
 
@@ -49,10 +48,9 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                 params.source = "Browser";
 
             // Posting to the same server as hosts the html
-            let self = this;
             $.post("/ajax/request", JSON.stringify(params))
-            .fail(function (jqXHR, textStatus, err) {
-                self.log(`Could not contact server: ${textStatus}`);
+            .fail((jqXHR, textStatus, err) => {
+                this.log(`Could not contact server: ${textStatus}`);
             })
             .always(() => {
                 $(document).trigger("poll");
@@ -115,7 +113,6 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
 
             let $requests = $div.find(".requests");
             $requests.empty();
-            let self = this;
             for (let req of obj.thermostat[service].requests) {
                 let $div = $("<div></div>").addClass("request");
                 let u = (!req.until || req.until === Utils.BOOST)
@@ -126,7 +123,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                 $div.append($butt);
                 $butt
                 .on("click", () => {
-                    self.sendRequest({
+                    this.sendRequest({
                         service: service,
                         source: req.source,
 						target: req.target,
@@ -170,8 +167,6 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
          * Wake up on schedule and refresh the state
          */
         poll() {
-            let self = this;
-
             if (this.poller) {
                 clearTimeout(this.poller);
                 this.poller = null;
@@ -179,16 +174,14 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             $.getJSON("/ajax/state")
             .done((data) => {
                 $(".showif").hide(); // hide optional content
-                self.updateTraces(data);
-                self.updateState(data);
+                this.updateTraces(data);
+                this.updateState(data);
             })
-            .fail(function (jqXHR, status, err) {
-                self.log(`Could not contact server for update: ${status}`);
+            .fail((jqXHR, status, err) => {
+                this.log(`Could not contact server for update: ${status}`);
             })
             .always(() => {
-                self.poller = setTimeout(function () {
-                    $(document).trigger("poll");
-                }, UPDATE_BACKOFF * 1000)
+                this.poller = setTimeout(() => $(document).trigger("poll"), UPDATE_BACKOFF * 1000)
             });
         }
 
@@ -285,8 +278,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let te = new TimelineEditor(timeline, $container);
             this.timelineEditors[service] = te;
 
-            let self = this;
-            $container.on("redraw", () => { self.renderTraces(service); });
+            $container.on("redraw", () => this.renderTraces(service));
 
             let $div = $("#" + service);
             let $tp = $div.find(".tl-point");
@@ -294,7 +286,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let $th = $div.find(".tl-temp");
 
             $tp
-            .on("spin_up", function () {
+            .on("spin_up", () => {
                 let now = Number.parseInt($(this).val());
                 if (isNaN(now))
                     now = -1;
@@ -303,7 +295,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                     te.setSelectedPoint(now);
                 }
             })
-            .on("spin_down", function () {
+            .on("spin_down", () => {
                 let now = Number.parseInt($(this).val());
                 if (isNaN(now))
                     now = te.timeline.nPoints;
@@ -312,21 +304,21 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                     te.setSelectedPoint(now);
                 }
             })
-            .on("change", function () {
+            .on("change", () => {
                 let now = Number.parseInt($(this).val());
                 if (now >= 0 && now < te.timeline.nPoints) {
                     te.setSelectedPoint(now);
                 }
             });
 
-            $tt.on("change", function () {
+            $tt.on("change", () => {
                 try {
                     let now = Time.parse($(this).val());
                     te.setSelectedTime(now);
                 } catch (e) {}
             });
 
-            $th.on("change", function () {
+            $th.on("change", () => {
                 let now = Number.parseFloat($(this).val());
                 if (isNaN(now))
                     return;
@@ -334,12 +326,12 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             });
 
             $div.find(".tl-removepoint")
-            .on("click", function () {
+            .on("click", () => {
                 te.removeSelectedPoint();
             });
 			
             $container
-            .on("selection_changed", function () {
+            .on("selection_changed", () => {
                 // Timeline editor selected point changed, update
                 // other data fields
                 let dp = te.getSelectedPoint();
@@ -358,7 +350,6 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             $div.find(".tl-container").show();
 			$div.find(".tl-save").prop("disabled", true);
 			te.onChanged = () => { $div.find(".tl-save").prop("disabled", false) };
-            let self = this;
             $.getJSON("/ajax/getconfig/thermostat/" + service + "/timeline")
             .done((tl) => {
 				DataModel.remodel(service, tl, Timeline.Model)
@@ -367,9 +358,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
 					te.$main_canvas.trigger("redraw");
 				});
             })
-            .fail(function (jqXHR, textStatus, err) {
-                self.log("Could not contact server: " + err);
-            });
+            .fail((jqXHR, textStatus, err) => this.log(`Could not contact server: ${err}`));
         }
 
         closeTimeline(service) {
@@ -404,21 +393,20 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                     service: service,
                     until: Utils.BOOST
                 },
-                function (e) {
+                (e) => {
                     e.data.target = $div.find(".boost-target").val();
-                    self.sendRequest(e.data);
+                    this.sendRequest(e.data);
                 });
             $div.find(".timeline").hide();
 
             this.initialiseTimeline(service);
 
-            let self = this;
             $div.find(".tl-open")
-            .on("click", () => { self.openTimeline(service); });
+            .on("click", () => this.openTimeline(service));
             $div.find(".tl-save")
-            .on("click", () => { self.saveTimeline(service); });
+            .on("click", () => this.saveTimeline(service));
             $div.find(".tl-cancel")
-            .on("click", () => { self.closeTimeline(service); });
+            .on("click", () => this.closeTimeline(service));
         }
 
         /**
@@ -431,38 +419,37 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             this.configureService("HW");
             this.configureService("CH");
 
-            let self = this;
             $("#refresh_calendars")
-            .on("click", () => { self.refreshCalendars(); });
+            .on("click", () => this.refreshCalendars());
 
-            $("#open-twisty").on("click", function () {
+            $("#open-twisty").on("click", () => {
                 $("#help-twisty").show();
                 $(this).hide();
             });
 
-            $("#close-twisty").on("click", function () {
+            $("#close-twisty").on("click", () => {
                 $("#help-twisty").hide();
                 $("#open-twisty").show();
             });
 
-            $(".switcher").on("click", function () {
+            $(".switcher").on("click", () => {
                 $(".display").hide();
                 $("#" + $(this).data("to")).show();
             });
 
-            $(document).on("poll", () => { self.poll(); });
+            $(document).on("poll", () => this.poll());
 
-            self.poll();
+            this.poll();
 
             // Get the last 24 hours of logs
             let params = {
                 since: Date.now() - 24 * 60 * 60
             };
-            $.getJSON("/ajax/log", JSON.stringify(params), function(data) {
-                self.loadTraces(data);
+            $.getJSON("/ajax/log", JSON.stringify(params), (data) => {
+                this.loadTraces(data);
             })
-            .fail(function (jqXHR, textStatus, errorThrown) {
-                self.log("Could not contact server for logs: " + errorThrown);
+            .fail((jqXHR, textStatus, errorThrown) => {
+                this.log("Could not contact server for logs: " + errorThrown);
             })
             .always(() => {
                 $(document).trigger("poll");

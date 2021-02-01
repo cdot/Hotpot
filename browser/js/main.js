@@ -13,9 +13,7 @@ requirejs.config({
     baseUrl: ".",
     urlArgs: suppression, // caches suppression
     text: {
-        useXhr: function (url, protocol, hostname, port) {
-            return true;
-        }
+        useXhr: (url, protocol, hostname, port) => true
     },
     paths: {
         // text! plugin, used for importing css
@@ -33,9 +31,9 @@ requirejs.config({
     }
 });
 
-requirejs(["jquery", "jquery-ui"], function() {
-    $(function() {
-        requirejs(["browser/js/Hotpot"], function (Hotpot) {
+requirejs(["jquery", "jquery-ui"], () => {
+    $(() => {
+        requirejs(["browser/js/Hotpot"], (Hotpot) => {
             new Hotpot().begin();
         });
     });

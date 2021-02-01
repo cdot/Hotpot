@@ -40,10 +40,7 @@ class Service {
 		if (this.temperature < 0)
 			this.temperature = 0;
 		if (!this.interrupted) {
-			let self = this;
-			this.timer = setTimeout(() => {
-				self._getNextTemperature();
-			}, 1000);
+			this.timer = setTimeout(() => this._getNextTemperature(), 1000);
 		}
 	}
 

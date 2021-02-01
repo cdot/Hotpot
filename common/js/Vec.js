@@ -12,7 +12,7 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
      * @namespace
      */
     let Vec = {
-        _check: function() {
+        _check: function () {
             let v = arguments[0], i, j;
             if (v instanceof Array) {
                 for (i = 1; i < arguments.length; i++)
@@ -117,8 +117,8 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
          * @return scalar magnitude of the vector
          */
         mag: function (v) {
-            return Math.sqrt(Vec.mag2(v));
-        },
+			return Math.sqrt(Vec.mag2(v));
+		},
 
         /**
          * Normalise a vector. Optionally pass in the magnitude
@@ -128,8 +128,8 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
          * @return the normalised vector
          */
         normalise: function (v, d) {
-            return Vec.div(v, typeof d !== "undefined" ? d : Vec.mag(v));
-        }
+			return Vec.div(v, typeof d !== "undefined" ? d : Vec.mag(v));
+		}
     };
 
     return Vec;

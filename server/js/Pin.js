@@ -65,12 +65,10 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
          * @public
          */
         setState(state) {
-            let self = this;
-
             Utils.TRACE(TAG, `gpio${this.gpio}=${state === 1 ? "ON" : "OFF"}`);
 
             let promise = this.Gpio.setValue(state);
-            if (self.history)
+            if (this.history)
                 promise = promise.then(() => this.history.record(state));
             return promise;
         };
@@ -91,10 +89,9 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
          * @protected
          */
         getSerialisableState() {
-            let self = this;
             return this.getState()
             .then((value) => {
-				return { reason: self.reason, state: value }
+				return { reason: this.reason, state: value }
 			});
         };
 

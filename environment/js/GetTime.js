@@ -36,7 +36,7 @@ requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt,
 		let Sys = require('child_process');
 		return new Promise((resolve, reject) => {
 			Sys.execFile("/bin/date", ["-s", time],
-						 function (error, stdout, stderr) {
+						 (error, stdout, stderr) => {
 							 if (error) {
 								 console.error(addr + " error " + error);
 								 reject();
@@ -52,7 +52,7 @@ requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt,
 			console.debug("Trying " + addr);
 			Http.get(
 				addr,
-				function (res) {
+				(res) => {
 					console.log(res.statusCode + " received from " +
 								addr + " " + res.headers.date);
 					if (res.statusCode < 200 || res.statusCode > 299) {
@@ -70,7 +70,7 @@ requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt,
 					}
 				});
         })
-		.catch("error", function (err) {
+		.catch("error", (err) => {
 			console.error(addr + " failed " + err);
 			reject();
 		});
