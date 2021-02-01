@@ -40,7 +40,12 @@ button {
     -webkit-border-radius: 1vmin;
     -moz-border-radius: 1vmin;
     color: #FFFFFF;
-    background-color: #B82601/*whiteish*/
+    background-color: #B82601
+}
+
+button:disabled {
+    color: #B0B0B0
+    background-color: #B82601
 }
 
 input {

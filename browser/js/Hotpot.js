@@ -21,9 +21,10 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
         }
 
         log(mess) {
-            $("#log").append("<div>" + mess + "</div>");
+			let t = new Date(data.time).toLocaleString();
+            $("#log").html(`<div>${t}: ${mess}</div>`);
         }
-        
+
         refreshCalendars() {
             $("#refresh_calendars").attr("disabled", "disabled");
             $(".calendar").hide();
@@ -35,7 +36,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                 $(document).trigger("poll");
             })
             .fail(function (jqXHR, textStatus, err) {
-                self.log("Could not contact server: " + err);
+                self.log("Could not contact server for calendar update: " + err);
             });
         }
 
@@ -51,7 +52,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let self = this;
             $.post("/ajax/request", JSON.stringify(params))
             .fail(function (jqXHR, textStatus, err) {
-                self.log("Could not contact server: " + err);
+                self.log(`Could not contact server: ${textStatus}`);
             })
             .always(() => {
                 $(document).trigger("poll");
@@ -92,7 +93,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let $div = $("#" + service);
             let tcur = Math.round(
                 10 * obj.thermostat[service].temperature) / 10;
-            let deltat = (Date.now() - obj.thermostat[service].lastKnownGood) / 1000;
+            let deltat = (Date.now() - obj.thermostat[service].lastKnownGood)
             let ttgt = Math.round(
                 10 * obj.thermostat[service].target) / 10;
             if (tcur > ttgt)
@@ -105,7 +106,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             if (deltat < 60)
 				$div.find(".th-lkg").hide();
 			else {
-				$div.find(".th-lkg").show().text(Math.floor(deltat));
+				$div.find(".th-lkg").show().text(Time.formatDelta(deltat));
 			}
             $div.find(".th-target").text(ttgt);
             let ptext = (obj.pin[service].state === 0) ? "OFF" : "ON";
@@ -182,7 +183,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                 self.updateState(data);
             })
             .fail(function (jqXHR, status, err) {
-                self.log("Could not contact server for update: " + err);
+                self.log(`Could not contact server for update: ${status}`);
             })
             .always(() => {
                 self.poller = setTimeout(function () {
@@ -355,13 +356,14 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let te = this.timelineEditors[service];
             $div.find(".tl-open").hide();
             $div.find(".tl-container").show();
+			$div.find(".tl-save").prop("disabled", true);
+			te.onChanged = () => { $div.find(".tl-save").prop("disabled", false) };
             let self = this;
             $.getJSON("/ajax/getconfig/thermostat/" + service + "/timeline")
             .done((tl) => {
 				DataModel.remodel(service, tl, Timeline.Model)
                 .then((timel) => {
 					te.timeline = timel;
-					te.changed = false;
 					te.$main_canvas.trigger("redraw");
 				});
             })
@@ -377,23 +379,21 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
         };
 
         saveTimeline(service) {
-            closeTimeline(service);
+            this.closeTimeline(service);
             let te = this.timelineEditors[service];
-            if (te.changed) {
-                console.log("Send timeline update to server");
-                te.getSerialisable()
-                .then((serialisable) => {
-                    $.post(
-                        "/ajax/setconfig/thermostat/" + service + "/timeline",
-                        JSON.stringify(serialisable))
-                    .done(() => {
-                        te.changed = false;
-                    })
-                    .always(() => {
-                        $(document).trigger("poll");
-                    });
+            console.log("Send timeline update to server");
+            DataModel.getSerialisable(te.timeline, Timeline.Model)
+            .then((serialisable) => {
+                $.post(
+                    "/ajax/setconfig/thermostat/" + service + "/timeline",
+                    JSON.stringify(serialisable))
+                .done(() => {
+                    te.changed = false;
+                })
+                .always(() => {
+                    $(document).trigger("poll");
                 });
-            }
+            });
         }
 
         configureService(service) {

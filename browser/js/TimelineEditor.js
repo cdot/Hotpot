@@ -138,7 +138,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 }
                 if (this.isDragging
                     && this.timeline.setPointConstrained(this.hit_pt_ix, tv)) {
-                    this.changed = true;
+                    if (typeof this.onChanged == "function") this.onChanged();
                     // Update UI fields
                     this.$container.trigger("selection_changed");
                 }
@@ -190,7 +190,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 let nearpt = this.overPoint(xy, POINT_2RADIUS2);
                 if (nearpt >= 0) {
                     this.sel_pt_ix = this.timeline.insertBefore(selpt.next, tv);
-                    this.changed = true;
+                    if (typeof this.onChanged == "function") this.onChanged();
                 }
                 this.last_tip_xy = xy;
             }
@@ -407,7 +407,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 value: dp.value
             };
             if (this.timeline.setPointConstrained(this.sel_pt_ix, dp)) {
-                this.changed = true;
+                if (typeof this.onChanged == "function") this.onChanged();
                 this.$main_canvas.trigger("redraw");
                 this.$tip_canvas.trigger("redraw");
                 this.$selection_canvas.trigger("redraw");
@@ -426,7 +426,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 value: v
             };
             if (this.timeline.setPointConstrained(this.sel_pt_ix, dp)) {
-                this.changed = true;
+                if (typeof this.onChanged == "function") this.onChanged();
                 this.$main_canvas.trigger("redraw");
                 this.$tip_canvas.trigger("redraw");
                 this.$selection_canvas.trigger("redraw");
@@ -444,7 +444,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 this.timeline.remove(this.sel_pt_ix);
                 if (this.selectedPoint > this.timeline.nPoints - 1)
                     this.selectedPoint = this.timeline.nPoints - 1;
-                this.changed = true;
+                if (typeof this.onChanged == "function") this.onChanged();
                 this.$main_canvas.trigger("redraw");
                 this.$tip_canvas.trigger("redraw");
                 this.$selection_canvas.trigger("redraw");
