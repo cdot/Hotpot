@@ -440,12 +440,13 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                         throw new Utils.exception(
                             TAG,
                             `Cannot update ${path}, insufficient context`);
-                    return DataModel.remodel(p.key, data.value, p.model, path);
-				}).then((rebuilt) => {
-					p.parent[p.key] = rebuilt;
-					Utils.TRACE(TAG, `setconfig ${path} = ${parent[p.key]}`);
-					this.emit("config_change");
-					return { status: "OK" };
+                    return DataModel.remodel(p.key, data, p.model, path)
+					.then((rebuilt) => {
+						p.parent[p.key] = rebuilt;
+						Utils.TRACE(TAG, `setconfig ${path} = ${rebuilt}`);
+						this.emit("config_change");
+						return { status: "OK" };
+					});
                 });
             case "request":
                 // Push a request onto a service (or all services). Requests may come
