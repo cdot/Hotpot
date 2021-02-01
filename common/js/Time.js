@@ -108,6 +108,22 @@ define("common/js/Time", function() {
         }
         return ts;
     };
-    
+
+	/**
+	 * Generate a time difference as an HMS string
+	 * @param ms delta time in ms
+	 */
+	Time.formatDelta = function (ms) {
+		let h = Math.floor(ms / (60 * 60 * 1000))
+		ms %= 60 * 60 * 1000;
+		let m = Math.floor(ms / (60 * 1000));
+		ms %= 60 * 1000;
+		let s = Math.floor(ms / 1000);
+		let d = ((h > 0) ? `${h}h` : "")
+			+ ((m > 0) ? `${m}m` : "")
+			+ ((s > 0) ? `${s}s` : "");
+		return (d === "") ? "0s" : d;
+	}
+
     return Time;
 });
