@@ -49,7 +49,7 @@ requirejs(["test/TestRunner", "common/js/Utils", "common/js/Time", "common/js/Da
                 let last = 0;
                 for (let i = 1; i < result.length; i += 2) {
                     assert(result[i] >= last);
-                    assert(result[i] <= Time.now());
+                    assert(result[i] <= Date.now());
                     last = result[i];
                     assert(result[i + 1] > -10);
                     assert(result[i + 1] < 50);

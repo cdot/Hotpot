@@ -12,7 +12,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
     let assert = tr.assert;
 
 	tr.addTest("parse unprefixed events", () => {
-		let now = Time.now() + 250;
+		let now = Date.now() + 250;
 		let cal = new Calendar({}, "Unprefixed");
 		let spec = 1;
 		let exp = new Expectation(5);
@@ -52,7 +52,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 	});
 
 	tr.addTest("parse prefixed events", () => {
-		let now = Time.now() + 250;
+		let now = Date.now() + 250;
 		let cal = new Calendar({ prefix: "Test:" }, "Prefixed");
 		let spec = 1;
 		let exp = new Expectation(5);
@@ -93,7 +93,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 	});
 
 	tr.addTest("parse bad unprefixed events", () => {
-		let now = Time.now() + 250;
+		let now = Date.now() + 250;
 		let cal = new Calendar({ }, "BAD");
 		cal.setTrigger((id, s, t, u) => {
 			assert.fail();
@@ -103,7 +103,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 	});
 
 	tr.addTest("parse bad prefixed events", () => {
-		let now = Time.now() + 250;
+		let now = Date.now() + 250;
 		let cal = new Calendar({ prefix: "warm" }, "BAD");
 		cal.setTrigger((id, s, t, u) => {
 			assert.fail();

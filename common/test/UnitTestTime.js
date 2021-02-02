@@ -22,7 +22,7 @@ requirejs(["test/TestRunner", "common/js/Time"], function(TestRunner, Time) {
         assert.equal(0, d.getSeconds());
     });
     tr.addTest('should be before the current time', () => {
-        assert(Time.midnight() <= Time.now());
+        assert(Time.midnight() <= Date.now());
     });
 
     tr.addTest('should parse h, h:m, and h:m:s', () => {
@@ -73,33 +73,33 @@ requirejs(["test/TestRunner", "common/js/Time"], function(TestRunner, Time) {
     });
 
     tr.addTest("should unparse 1ms as 00:00:00.001", () => {
-        assert.equal(Time.unparse(1), "00:00:00.001");
+        assert.equal(Time.formatHMS(1), "00:00:00.001");
     });
-    tr.addTest("should unparse 0 as 00:00", () => {
-        assert.equal(Time.unparse(0), "00:00");
+    tr.addTest("should formatHMS 0 as 00:00", () => {
+        assert.equal(Time.formatHMS(0), "00:00");
     });
-    tr.addTest("should unparse 1 hour as 01:00", () => {
-        assert.equal(Time.unparse(60 * 60 * 1000), "01:00");
+    tr.addTest("should formatHMS 1 hour as 01:00", () => {
+        assert.equal(Time.formatHMS(60 * 60 * 1000), "01:00");
     });
-    tr.addTest("should unparse unparse 1 minute as 00:01", () => {
-        assert.equal(Time.unparse(60 * 1000), "00:01");
+    tr.addTest("should formatHMS formatHMS 1 minute as 00:01", () => {
+        assert.equal(Time.formatHMS(60 * 1000), "00:01");
     });
-    tr.addTest("should unparse 1 second as 00:00:01", () => {
-        assert.equal(Time.unparse(1000), "00:00:01");
+    tr.addTest("should formatHMS 1 second as 00:00:01", () => {
+        assert.equal(Time.formatHMS(1000), "00:00:01");
     });
-    tr.addTest("should unparse 23:59:59.999", () => {
-        assert.equal(Time.unparse(ONE_DAY-1), "23:59:59.999");
+    tr.addTest("should formatHMS 23:59:59.999", () => {
+        assert.equal(Time.formatHMS(ONE_DAY-1), "23:59:59.999");
     });
     tr.addTest("should check upper end of range", () => {
         try {
-            Time.unparse(ONE_DAY + 1);
+            Time.formatHMS(ONE_DAY + 1);
             assert(false);
         } catch (e) {
         }
     });
     tr.addTest("should check lower end of range", () => {
         try {
-            Time.unparse(-1);
+            Time.formatHMS(-1);
             assert(false);
         } catch (e) {
         }

@@ -207,7 +207,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
             }
             let t;
             try {
-                t = this.timeline.valueAtTime(Time.time_of_day());
+                t = this.timeline.valueAtTime(Date.now() - Time.midnight());
             } catch (e) {
                 Utils.TRACE(TAG, e, "\n",
                             typeof e.stack !== "undefined" ? e.stack : e);
@@ -284,7 +284,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 							purge = true;
 							Utils.TRACE(TAG, `Purge because boost ${this.temperature} over ${r.target}`);
 						}
-					} else if (!purge && r.until < Time.nowSeconds()) {
+					} else if (!purge && r.until < Date.now() / 1000) {
 						purge = true;
 						Utils.TRACE(TAG, "Purge because until was in the past");
 					}

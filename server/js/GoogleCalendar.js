@@ -69,7 +69,7 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
 
             .then(() => {
                 let calendarAPI = googleCalendarAPI()
-                let now = Time.now();
+                let now = Date.now();
 
                 let params = {
                     auth: this.oauth2Client,

@@ -31,7 +31,7 @@ requirejs(["test/TestRunner", "common/js/Utils"], function(TestRunner, Utils) {
     });
 
     tr.addTest("exceptions", () => {
-        let t = new Utils.exception("A", {b: 1}, " flabdab");
+        let t = Utils.exception("A", {b: 1}, " flabdab");
         assert.equal(t.name, "A");
         assert.equal(t.message, "{\n b: 1\n} flabdab");
     });

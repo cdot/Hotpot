@@ -12,7 +12,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "server/js/
     let assert = tr.assert;
 
 	tr.addTest("an event in the future", async () => {
-		let t = Time.now();
+		let t = Date.now();
 		let e = new Expectation(2);
 		let cal = {
 			trigger: (id, service, temp, until) => {
@@ -34,7 +34,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "server/js/
 	});
 
 	tr.addTest("a live event", () => {
-		let t = Time.now();
+		let t = Date.now();
 		let e = new Expectation(2);
 		let cal = {
 			trigger: (id, service, temp, until) => {
@@ -56,7 +56,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "server/js/
 	});
 
 	tr.addTest("a past event", () => {
-		let t = Time.now();
+		let t = Date.now();
 		let cal = {
 			trigger: (id, service, temp, until) => {
 				fail();

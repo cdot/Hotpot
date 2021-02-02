@@ -24,7 +24,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 
         getSerialisable() {
             return Promise.resolve({
-                times: Time.unparse(this.time),
+                times: Time.formatHMS(this.time),
                 value: this.value
             });
         };

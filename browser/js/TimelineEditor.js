@@ -493,7 +493,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                 bg = "yellow";
             }
 
-            let ts = Time.unparse(tv.time);
+            let ts = Time.formatHMS(tv.time);
             let vs = /*this.timeline.valueAtTime(tv.time)*/ tv.value.toFixed(1);
             let text = "  " + ts + " : " + vs;
 

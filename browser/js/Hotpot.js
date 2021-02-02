@@ -337,7 +337,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                 let dp = te.getSelectedPoint();
                 if (dp) {
                     $tp.val(dp.index);
-                    $tt.val(Time.unparse(dp.time));
+                    $tt.val(Time.formatHMS(dp.time));
                     $th.val(dp.value.toFixed(1));
                 }
             }).trigger("selection_changed");

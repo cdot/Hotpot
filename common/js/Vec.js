@@ -11,8 +11,8 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
      * {r:, g:, b:, a:} or can be simple 1-dimensional arrays.
      * @namespace
      */
-    let Vec = {
-        _check: function () {
+    class Vec {
+        static _check() {
             let v = arguments[0], i, j;
             if (v instanceof Array) {
                 for (i = 1; i < arguments.length; i++)
@@ -30,7 +30,7 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
                 }
                 return {};
             }
-        },
+        }
 
         /**
          * Subtract vector p2 from p1
@@ -38,13 +38,13 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
          * @param p2 vector to take away
          * @return a new vector p1-p2
          */
-        sub: function (p1, p2) {
+        static sub(p1, p2) {
             let res = Vec._check(p1, p2);
             for (let ord in p1) {
                 res[ord] = p1[ord] - p2[ord];
             }
             return res;
-        },
+        }
 
         /**
          * Add two vectors
@@ -52,12 +52,12 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
          * @param p2 second vector
          * @return a new vector
          */
-        add: function (p1, p2) {
+        static add(p1, p2) {
             let res = Vec._check(p1, p2);
             for (let ord in p1)
                 res[ord] = p1[ord] + p2[ord];
             return res;
-        },
+        }
 
         /**
          * Multiply a vector by a scalar
@@ -65,12 +65,12 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
          * @param d factor to scale by
          * @return a new vector scaled by d
          */
-        mul: function (v, d) {
+        static mul(v, d) {
             let res = Vec._check(v);
             for (let ord in v)
                 res[ord] = v[ord] * d;
             return res;
-        },
+        }
 
         /**
          * Divide a vector by a scalar
@@ -78,12 +78,12 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
          * @param d factor to scale by
          * @return a new vector scaled by d
          */
-        div: function (v, d) {
+        static div(v, d) {
             let res = Vec._check(v);
             for (let ord in v)
                 res[ord] = v[ord] / d;
             return res;
-        },
+        }
 
         /**
          * Get the dot product of two vectors a.b
@@ -91,34 +91,34 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
          * @param a second vector
          * @return scalar dot product
          */
-        dot: function (a, b) {
+        static dot(a, b) {
             Vec._check(a, b);
             let res = 0;
             for (let ord in a)
                 res += a[ord] * b[ord];
             return res;
-        },
+        }
 
         /**
          * Get the square of the magnitude of the vector
          * @param v the vector
          * @return sum of the squares of the coordinates
          */
-        mag2: function (v) {
+        static mag2(v) {
             let res = 0;
             for (let ord in v)
                 res += v[ord] * v[ord];
             return res;
-        },
+        }
 
         /**
          * Get the magnitude of the vector
          * @param v the vector
          * @return scalar magnitude of the vector
          */
-        mag: function (v) {
+        static mag(v) {
 			return Math.sqrt(Vec.mag2(v));
-		},
+		}
 
         /**
          * Normalise a vector. Optionally pass in the magnitude
@@ -127,10 +127,10 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
          * @param d (optional) pre-computed magnitude of the vector
          * @return the normalised vector
          */
-        normalise: function (v, d) {
+        static normalise(v, d) {
 			return Vec.div(v, typeof d !== "undefined" ? d : Vec.mag(v));
 		}
-    };
+    }
 
     return Vec;
 });

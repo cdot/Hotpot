@@ -120,7 +120,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                 // Clip to the current time
                 let before = -1,
                     after = -1;
-                let now = Time.now();
+                let now = Date.now();
                 for (let i = 1; i < h.length; i += 2) {
                     if (h[0] + h[i] <= now)
                         before = i;
@@ -278,7 +278,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          */
         getWeather() {
             if (typeof this.after !== "undefined" &&
-                Time.now() < this.after.$) {
+                Date.now() < this.after.$) {
                 return Promise.resolve();
             }
 
@@ -311,7 +311,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
         };
 
         bracket() {
-            let now = Time.now();
+            let now = Date.now();
             let b = {};
 
             for (let i = 0; i < this.log.length; i++) {
@@ -340,7 +340,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
             return this.getWeather()
             .then(() => {
                 let br = this.bracket();
-                this.last_update = Time.now();
+                this.last_update = Date.now();
                 let wait = br.after.$ - this.last_update;
                 Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
                 this.timeout = setTimeout(() => { this.update(); }, wait);
@@ -361,7 +361,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                 return 0;
             let est = b.before[what];
             if (b.after[what] !== est && IS_NUMBER.indexOf(what) >= 0) {
-                let frac = (Time.now() - b.before.$) /
+                let frac = (Date.now() - b.before.$) /
                     (b.after.$ - b.before.$);
                 est += (b.after[what] - est) * frac;
             }

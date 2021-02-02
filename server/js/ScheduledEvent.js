@@ -25,7 +25,7 @@ define("server/js/ScheduledEvent", ["common/js/Utils", "common/js/Time"], functi
             // End of the event, in epoch ms, or Utils.BOOST
             this.until = until;
 
-            let now = Time.now();
+            let now = Date.now();
             if (start > now) {
                 Utils.TRACE(TAG, this.id, "(", service, ",", temperature, ") will start at ", new Date(start),
                             " now is ", new Date());
