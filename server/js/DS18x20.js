@@ -51,16 +51,6 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 			})
 			.catch((e) => {
 				Utils.TRACE(TAG, `Poll failed ${e}`);
-				if (Date.now() - this.lastKnownGood > 5 * 60 * 1000) {
-					// No good signal for 5 minutes
-					Fs.writeFile(
-						Path.resolve(
-							ONE_WIRE_PATH,
-							"w1_bus_master1", "w1_master_add"), this.id)
-					.catch((e) => {
-						Utils.TRACE(TAG, `w1_master_add failed ${e}`);
-					});
-				}
 				throw e;
 			});
 		}
