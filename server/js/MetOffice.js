@@ -6,7 +6,7 @@
 /*eslint-env node */
 
 define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", "common/js/Time", "common/js/Utils", "common/js/DataModel", "server/js/Historian"], function(Follow, Url, Location, Time, Utils, DataModel, Historian) {
-    
+
     const Http = Follow.http;
 
     /** @private */
@@ -368,7 +368,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
             return est;
         };
     }
-    
+
     MetOffice.Model = {
         $class: MetOffice,
         api_key: {

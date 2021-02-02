@@ -13,6 +13,6 @@ define("common/test/Instantiable", () => {
 	Instantiable.Model = {
 		data: { $class: String }
 	};
-	
+
 	return Instantiable;
 });

@@ -39,7 +39,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
      * @class
      */
     class Thermostat {
-        
+
         /**
          * @param name {String} name by which the caller identifies the thermostat
          * @param proto configuration for the thermostat - see
@@ -64,7 +64,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 
 			// Remember the time of the last known good sample
 			this.lastKnownGood = Date.now();
-			
+
             // Temperature history, sample on a time schedule
             let hc = this.history;
             if (typeof hc !== "undefined") {
@@ -152,7 +152,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
          * Return a promise to start polling thermometers
          * Thermostats are polled every <poll interval> seconds for
 		 * new values; results are cached in the Thermostat object.
-		 * 
+		 *
          * The promise resolves to the Thermostat.
          */
         poll() {
@@ -171,7 +171,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 				console.error(`Error polling ${this.id} ${e}`);
 				return this;
 			})
-			
+
 			.finally(() => {
 				if (this.interrupted) {
 					Utils.TRACE(TAG, `'${this.name}' polling interrupted`);
@@ -190,7 +190,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 		interrupt() {
 			this.interrupted = true;
 		}
-		
+
         /**
          * Get the target temperature specified by the timeline or active boost
          * request for this thermostat at the current time.

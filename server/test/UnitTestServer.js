@@ -31,7 +31,7 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
 			}
 		};
 	}
-	
+
     function makeServer(config) {
         let server = new Server(config);
         return server.start().then(() => server);

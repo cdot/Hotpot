@@ -22,7 +22,7 @@ requirejs(["test/TestRunner", "common/js/Utils", "common/js/Time", "common/js/Da
 
     let tr = new TestRunner("MetOffice");
     let assert = tr.assert;
-    
+
     tr.addTest('Works', () => {
 		return DataModel.remodel(
 			"test",

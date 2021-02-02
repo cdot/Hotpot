@@ -87,7 +87,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
          * Update service information cache with data from server
          */
         updateService(service, obj) {
-            
+
             let $div = $("#" + service);
             let tcur = Math.round(
                 10 * obj.thermostat[service].temperature) / 10;
@@ -208,7 +208,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let ctx = te.$main_canvas[0].getContext("2d");
             let base = is_binary ? te.timeline.max / 10 : 0;
             let binary = is_binary ? te.timeline.max / 10 : 1;
-            
+
             // Draw from current time back to 0
             ctx.strokeStyle = style1;
             ctx.beginPath();
@@ -267,7 +267,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
         }
 
         initialiseTimeline(service) {
-            
+
             let DAY_IN_MS = 24 * 60 * 60 * 1000;
             let timeline = new Timeline({
                 period: DAY_IN_MS,
@@ -329,7 +329,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             .on("click", () => {
                 te.removeSelectedPoint();
             });
-			
+
             $container
             .on("selection_changed", () => {
                 // Timeline editor selected point changed, update
@@ -415,7 +415,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
          */
         begin() {
             $(".spinnable").Spinner();
-        
+
             this.configureService("HW");
             this.configureService("CH");
 

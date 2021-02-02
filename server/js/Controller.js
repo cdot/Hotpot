@@ -159,7 +159,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         resetValve() {
             let pins = this.pin;
 			let valve_back = this.valve_return;
-			
+
             Utils.TRACE(TAG, "Resetting valve");
             return pins.HW.setState(1, "Reset")
 
@@ -289,7 +289,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
             let logs = {};
             let promises = [];
-            
+
             for (let field in this) {
                 let block = this[field];
                 promises.push(
@@ -350,7 +350,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 						// HW is on, so just turn CH off
 						if (hw_state !== 0)
 							return pins.CH.setState(new_state);
-							
+
 						// HW is 0 but CH is 1, so we're in state 3 (grey
 						// live and white live).
 						// Need to switch on HW to kill the grey wire.
@@ -365,7 +365,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 						.then(() => { this.pending = false;	});
 					});
                 }
-				
+
                 // Otherwise this is a simple state transition, just
                 // promise to set the appropriate pin
                 return pins[channel].setState(new_state);
@@ -470,7 +470,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @private
          */
         pollRules() {
-            
+
             if (typeof this.poll.timer !== "undefined") {
                 clearTimeout(this.poll.timer);
                 this.poll.timer = undefined;
@@ -501,7 +501,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 			});
         }
     }
-    
+
     Controller.Model = {
         $class: Controller,
         thermostat: {

@@ -5,7 +5,7 @@
 define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Utils, Time) {
 
 	const TAG = "Timeline";
-	
+
     class Timepoint {
         constructor(proto) {
 
@@ -71,7 +71,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
                 || typeof this.period !== "number"
                 || this.period <= 0)
                 throw new Utils.exception(TAG, "Bad configuration");
-            
+
             if (typeof this.points === "undefined")
                 this.points = [];
 

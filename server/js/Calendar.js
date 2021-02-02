@@ -5,7 +5,7 @@
 define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common/js/DataModel", "server/js/ScheduledEvent", "server/js/Thermostat"], function(fs, Utils, Time, DataModel, ScheduledEvent, Thermostat) {
 
 	const Fs = fs.promises;
-	
+
     // MS in an hour
     const HOURS = 60 * 60 * 1000;
 
@@ -66,7 +66,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
         setRemove(remove) {
             this.remove = remove;
         }
-    
+
         /**
          * Return a promise that will update the list of the events
          * stored for the next 24 hours.
@@ -161,7 +161,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
          * <events> = <event> [ ";" <events> ]
 		 * <event> = <service> [=] <specs>
 		 * <specs> = <spec> [ <specs> ]
-		 * <spec> = "boost" | <temperature> 
+		 * <spec> = "boost" | <temperature>
 		 * ```
 		 * where
 		 * + <prefix> is an optional prefix (e.g. HOTPOT:)
@@ -227,35 +227,35 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 						state = 0;
 						Utils.TRACE(`${TAG}Parser`, `1 -> 0 on '${token}'`);
 					}
-					
+
 				} else if (state >= 2) {
 					if (token == this.prefix) {
 						commit();
 						Utils.TRACE(`${TAG}Parser`, `${state} -> 1 on '${token}'`);
 						state = 1;
 						token = null;
-						
+
 					} else if (token === ";" && state === 3) {
 						commit();
 						Utils.TRACE(`${TAG}Parser`, `${state} -> 1 on '${token}'`);
 						state = 1;
 						token = null;
-						
+
 					} else if (/^boost$/i.test(token)) {
 						Utils.TRACE(`${TAG}Parser`, "Boosted");
 						until = Utils.BOOST;
 						token = null;
-					
+
 					} else if ("=" == token) {
 						// Ignore it
 						token = null;
-						
+
 					} else if (/^\d/.test(token) && parseFloat(token) != NaN) {
 						temperature = parseFloat(token);
 						Utils.TRACE(`${TAG}Parser`, `${state} -> 3 on '${token}'`);
 						state = 3;
 						token = null;
-						
+
 					} else {
 						if (state === 3)
 							commit();
@@ -271,7 +271,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 				commit();
 		}
     }
-    
+
     Calendar.Model = {
         prefix: {
             $doc: "Prefix for hotpot instructions in the calendar",

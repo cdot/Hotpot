@@ -199,7 +199,7 @@ define("common/js/Utils", () => {
 
 	// Private function to write tracing info
 	Utils.writeTrace = console.log;
-	
+
     /**
      * Produce a tagged log message, if the tag is included in the string
      * passed to Utils.TRACEwhat
@@ -231,7 +231,7 @@ define("common/js/Utils", () => {
 			}
 		});
 	};
-	
+
     /**
      * eval() the code, generating meaningful syntax errors (with line numbers)
      * @param {String} code the code to eval

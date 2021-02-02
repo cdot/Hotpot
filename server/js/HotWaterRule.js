@@ -10,7 +10,7 @@ define("server/js/HotWaterRule", ["common/js/Utils", "server/js/Rule"], (Utils, 
 		constructor(proto, name) {
 			super(proto, name);
 		}
-		
+
 		test(controller) {
 			let thermostat = controller.thermostat.HW;
 			let pin = controller.pin.HW;
@@ -28,7 +28,7 @@ define("server/js/HotWaterRule", ["common/js/Utils", "server/js/Rule"], (Utils, 
 					// handles the interaction between HW and CH in Y-plan systems
 					return controller.setPromise("HW", 0);
 				}
-				
+
 				// Otherwise respect the timeline
 				let target = thermostat.getTargetTemperature();
 				if (thermostat.temperature > target) {
@@ -61,6 +61,6 @@ define("server/js/HotWaterRule", ["common/js/Utils", "server/js/Rule"], (Utils, 
 	HotWaterRule.Model = {
         $class: HotWaterRule
     };
-	
+
 	return HotWaterRule;
 });

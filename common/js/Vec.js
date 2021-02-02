@@ -31,7 +31,7 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
                 return {};
             }
         },
-    
+
         /**
          * Subtract vector p2 from p1
          * @param p1 vector to subtract from

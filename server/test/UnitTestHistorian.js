@@ -11,22 +11,12 @@ requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], f
 
     let tr = new TestRunner("Historian");
     let assert = tr.assert;
-	let logfile = "/tmp/unordered_historian.log";
-	let logfile2 = "/tmp/sampled_historian.log";
-	
-    if (Fs.existsSync(logfile))
-		Fs.unlinkSync(logfile);
-    
+
     tr.addTest('unordered', () => {
         let h = new Historian({
             unordered: true,
-            file: "/tmp/unordered_historian.log"
+            file: tr.tmpFile("unordered_historian.log")
         }, "test1");
-
-        try {
-            Fs.unlinkSync(h.path());
-        } catch (e) {
-        }
 
         let p = Promise.resolve();
 
@@ -64,18 +54,10 @@ requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], f
         let COUNT = 7;
         let nsamples = 0;
 
-		if (Fs.existsSync(logfile2))
-			Fs.unlinkSync(logfile2);
-        
         let h = new Historian({
-            file: "/tmp/sampled_historian.log",
+            file: tr.tmpFile("sampled_historian.log"),
             interval: INTERVAL
         }, "test2");
-
-        try {
-            Fs.unlinkSync(h.path());
-        } catch (e) {
-        }
 
         h.start(
             () => {
@@ -97,6 +79,6 @@ requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], f
                 return nsamples++;
             });
     });
-    
+
     tr.run();
 });

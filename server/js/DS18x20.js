@@ -28,7 +28,7 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 			return this.getTemperature()
 			.then(() => this);
 		}
-		
+
 		/**
 		 * Return a promise to get the temperature from the sensor
 		 */

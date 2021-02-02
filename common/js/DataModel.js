@@ -14,7 +14,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			Fs = fs.promises;
 		}
 	}
-	
+
     /**
      * Provides a way to deserialise a datastructure from JSON data
      * such that the resultant deserialised data obeys a specific data
@@ -178,7 +178,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
         let is_base = false;
         if (typeof model.$class === "function") {
-				
+
             if (DataModel.builtin_types.indexOf(model.$class) >= 0) {
                 // Internal fields not supported
                 is_base = true;
@@ -258,10 +258,10 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			Utils.TRACE(`${TAG}Details`, `\t$skip '${context.join('.')}'`);
             return Promise.resolve(data);
 		}
-        
+
         if (typeof model.$map_of !== "undefined") {
 			Utils.TRACE(`${TAG}Details`, `\t$map_of ${model.$map_of}`);
-			
+
             // Object with keys that don't have to match the model,
             // and values that can be undefined
 			let promises = [];
@@ -295,13 +295,13 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
         if (DataModel.builtin_types.indexOf(model.$class) >= 0)
             return Promise.resolve(data);
-        
+
         // Not a base type, so the model describes what has to be passed
         // to the constructor (if there is one)
 		let promise;
-		
+
         if (typeof data === "object") {
-			
+
 			let promises = [];
             // Keep data meta-keys, and make sure the data doesn't
 			// carry any hidden payload
@@ -330,13 +330,13 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 						}));
                 }
             }
-			
+
 			promise = Promise.all(promises)
 			.then((result) => {
 				let rebuilt = {};
 				for (let i in result) {
 					let res = result[i];
-					
+
                     if (typeof res.data !== "undefined") {
                         // undefined is skipped in objects
                         rebuilt[res.key] = res.data;
@@ -356,10 +356,10 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 				let t = rebuilt.$instance_of;
 				if (typeof t !== "string")
 					throw new Error(`Expected $instance_of at '${context.join(".")}'`);
-				
+
 				Utils.TRACE(`${TAG}Details`,
 							`Instantiate a ${rebuilt.$instance_of}`, rebuilt);
-				
+
 				// Building a type defined in the data. When we serialise,
 				// it will record the type loaded, not the type in the
 				// original data
@@ -371,7 +371,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 								index, rebuilt, module.Model, context);
 						else
 							promise = Promise.resolve(rebuilt);
-						
+
 						return promise
 						.then((rebuilt) => {
 							let sub = new module(rebuilt, index, module.Model);
@@ -382,7 +382,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					});
 				});
 			}
-			
+
 			if (typeof model.$class === "undefined")
 				return Promise.resolve(rebuilt);
 
@@ -465,7 +465,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					res[s[i].key] = s[i].serialised;
 				return res;
 			});
- 
+
 		} else if (typeof model.$class === "function" &&
                    typeof data.getSerialisable === "function") {
             // objects can override getSerialisable
@@ -596,7 +596,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         return DataModel.getSerialisable(data, model)
         .then((remod) => Fs.writeFile(
             Utils.expandEnvVars(file),
-            JSON.stringify(remod, null, 2), "utf8"));      
+            JSON.stringify(remod, null, 2), "utf8"));
     }
 
     /**
@@ -605,7 +605,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      */
     DataModel.help = (model, index) => {
         DataModel.check(model);
-		
+
         // index is used for formatting and is not visible to callers
         function indent(s) {
             return s.replace(/\n/g, "\n ");
@@ -635,7 +635,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 
 		if (model.$instantiable)
 			docstring.push('(instantiable)');
-		
+
         if (typeof model.$doc === "string")
             docstring.push(model.$doc);
 
@@ -672,7 +672,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
     /**
      * DataModel inner class for handling filenames specified in serialisable
 	 * data.
-	 * 
+	 *
      * The constructor uses the $mode (default "r") specified in the
      * model to verify the status of the target file. This supports the
      * following modes:
@@ -691,19 +691,19 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
             this.data = filename;
 
 			_loadFs();
-			
+
             if (typeof model === "undefined")
 				return;
-			
+
             // Got a model to check against. This should always be the case
             // except in tests.
             let fnm = Utils.expandEnvVars(filename);
 			this.path = fnm;
-			
+
             let $mode = model.$mode;
             if (typeof $mode === "undefined")
                 $mode = "r";
-            
+
             let mode = fs.constants.F_OK;
 
             if ($mode.indexOf("r") >= 0)
@@ -767,7 +767,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 		getPath() {
 			return this.path;
 		}
-		
+
         getSerialisable() {
             return Promise.resolve(this.data);
         }
@@ -793,7 +793,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
      * @class
      */
     class TextOrFile extends File {
-        
+
         constructor(textOrFile, index, model) {
             super(textOrFile, index, model);
             this.is_file = fs.existsSync(Utils.expandEnvVars(textOrFile));

@@ -17,7 +17,7 @@ requirejs.config({
 requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel"], function(Getopt, JSFtp, fs, Utils, DataModel) {
 
 	const Fs = fs.promises;
-	
+
 	function Url(e) {
 		for (let i in e)
 			this[i] = e[i];
@@ -51,7 +51,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 
 	if (typeof cliopt.config === "undefined")
 		cliopt.config = "./GetIP.cfg";
-	
+
 	if (cliopt.debug)
 		Utils.TRACEwhat("all");
 

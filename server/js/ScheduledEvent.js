@@ -9,7 +9,7 @@ define("server/js/ScheduledEvent", ["common/js/Utils", "common/js/Time"], functi
     /**
      * Calendar event cache entry
      */
-   
+
     class ScheduledEvent {
         constructor(cal, id, start, service, temperature, until) {
             // Reference to container {Calendar}
@@ -53,7 +53,7 @@ define("server/js/ScheduledEvent", ["common/js/Utils", "common/js/Time"], functi
         begin() {
             if (typeof this.calendar.trigger === "function")
                 this.calendar.trigger(this.id, this.service, this.temperature, this.until);
-       
+
 			Utils.runAt(() => this.end(), this.until);
         }
 

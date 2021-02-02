@@ -49,7 +49,7 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
         assert.equal(p.time, 999);
         assert.equal(p.value, 50);
     });
-    
+
     tr.addTest('handles points', () => {
         var tl = new Timeline(test_line_proto);
         assert.equal(tl.nPoints, 4);
@@ -106,7 +106,7 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
     });
 
     tr.addTest('interpolates', () => {
-        var tl = new Timeline(test_line_proto);          
+        var tl = new Timeline(test_line_proto);
         var p = tl.getPoint(2);
         assert.equal(p.time, 20);
         assert.equal(p.value, 4);

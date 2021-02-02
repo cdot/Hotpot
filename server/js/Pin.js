@@ -5,7 +5,7 @@
 define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Historian"], function(Utils, Gpio, Historian) {
 
     const TAG = "Pin";
-	
+
     /**
      * A Pin is the interface to a RPi GPIO pin.
      * @class

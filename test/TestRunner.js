@@ -5,25 +5,37 @@ if (typeof requirejs === "undefined") {
 }
 
 /**
-* Common code for running mocha tests
-*/
-define(["mocha", "chai"], (maybeMocha, chai) => {
-	
+ * Common code for running mocha tests.
+ * Look at one of the UnitTest* files to understand the pattern.
+ * Command-line parameters are interpreted as names of tests to run.
+ * '*' wildcard.
+ * --keep will prevent tmp files from being deleted
+ */
+define(["mocha", "chai", "fs"], (maybeMocha, chai, fs) => {
+
     if (typeof Mocha === "undefined")
         Mocha = maybeMocha; // node.js
 
-    class TestRunner {
+    class TestRunner extends Mocha {
         constructor(title, debug) {
+			super({ reporter: (typeof global === "undefined") ? 'html' : 'spec' });
             this.chai = chai;
             this.assert = chai.assert;
-            if (typeof global !== "undefined")
-                this.mocha = new Mocha({ reporter: 'spec' });
-            else
-                this.mocha = new Mocha({ reporter: 'html' });
             if (typeof title === "string")
-                this.mocha.suite.title = title;
+                this.suite.title = title;
             this.debug = debug;
-			this.testDataDirs = [];
+
+			this.matches = [];
+			this.keepTmpFiles = false;
+			for (let i = 2; i < process.argv.length; i++) {
+				let arg = process.argv[i];
+				if (arg === "--keep")
+					this.keepTmpFiles = true;
+				else {
+					let expr = arg.replace('*', '.*');
+					this.matches.push(new RegExp(`^${expr}$`));
+				}
+			}
         }
 
         static samePath(a, b) {
@@ -34,67 +46,70 @@ define(["mocha", "chai"], (maybeMocha, chai) => {
             return true;
         }
 
-        beforeEach(before) {
-            this.before = before;
-        }
-
-        afterEach(after) {
-            this.after = after;
-        }
-
+		/**
+		 * Defuse test. Use command-line params instead.
+		 */
         deTest(title, fn) {
         }
 
+		/**
+		 * Return the path to a temporary file for the test to use
+		 */
+		tmpFile(name) {
+			if (!this.tmpFileDir) {
+				this.tmpFileDir = fs.mkdtempSync("/tmp/TestRunner-");
+				if (!this.keepTmpFiles) {
+					this.suite.afterEach("testdirs", () => {
+						this.rm_rf(this.tmpFileDir);
+					});
+				}
+			}
+			return `${this.tmpFileDir}/${name}`;
+		}
+
         addTest(title, fn) {
-            let test = new Mocha.Test(title, () => {
-                if (typeof this.before === "function")
-                    this.before();
-                let res = fn.call(this);
-                if (res instanceof Promise) {
-                    return res.then(() => {
-                        if (typeof this.after === "function")
-                            this.after();
-                    });
-                }
-                else if (typeof this.after === "function")
-                    this.after()
-            });
-            this.mocha.suite.addTest(test);
+			if (this.matches.length > 0) {
+				let matched = false;
+				for (let i = 0; i < this.matches.length; i++) {
+					if (this.matches[i].test(title)) {
+						matched = true;
+						break;
+					}
+				}
+				if (!matched)
+					return;
+			}
+
+            let test = new Mocha.Test(title, () => fn.call(this));
+            this.suite.addTest(test);
         }
 
 		rm_rf(path) {
-			let fs = requirejs("fs");
-			let Fs = fs.promises;
-			return Fs.readdir(path)
+			return fs.promises.readdir(path)
 			.then((files) => {
 				let promises = [];
 				files.forEach((file, index) => {
 					var curPath = `${path}/${file}`;
-					promises.push(Fs.lstat(curPath)
+					promises.push(fs.promises.lstat(curPath)
 					.then((stat) => {
 						if (stat.isDirectory())
 							return this.rm_rf(curPath);
 						else
-							return Fs.unlink(curPath);
+							return fs.promises.unlink(curPath);
 					}));
 				});
 				return Promise.all(promises);
 			})
 			.then(() => {
-				return Fs.rmdir(path);
+				return fs.promises.rmdir(path);
 			});
 		}
 
         run() {
             return new Promise((resolve) => {
-                this.mocha.timeout(10000);
-                this.mocha.run(resolve);
-            })
-			.then(() => {
-				for (let i in this.testDataDirs) {
-					rmdir(this.testDataDirs[i]);
-				}
-			});
+                this.timeout(10000);
+                super.run(resolve);
+            });
         }
     }
 

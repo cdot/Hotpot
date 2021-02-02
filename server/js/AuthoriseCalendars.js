@@ -19,7 +19,7 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
           "a Google calendar that contains control events";
 
 	const Fs = fs.promises;
-	
+
     let cliopt = new Getopt([
         ["h", "help", "Show this help"],
         ["c", "config=ARG", "Configuration file (default ./hotpot.cfg)"]

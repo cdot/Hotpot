@@ -67,7 +67,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
     .then((cfg) => {
 		if (cfg.tracefile)
 			Utils.TRACEto(cfg.tracefile.getPath());
-		
+
 		Utils.TRACE(TAG, "Configuration loaded");
         config = cfg;
         controller = config.controller;

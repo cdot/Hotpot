@@ -32,7 +32,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "server/js/
 			cal, "future", t + 250, "CH", 99, t + 500);
 		return e.expect();
 	});
-			   
+
 	tr.addTest("a live event", () => {
 		let t = Time.now();
 		let e = new Expectation(2);
@@ -68,7 +68,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "server/js/
 		let pastevent = new ScheduledEvent(
 			cal, "past", t - 2000, "HW", 99, t - 1000);
 	});
-	
+
 	tr.run();
 });
 

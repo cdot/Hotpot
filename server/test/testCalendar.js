@@ -74,14 +74,14 @@ requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/C
                 break;
         }
         var cfg = config.controller.calendar[cliopt.calendar];
-		
+
         if (!cfg)
             throw new Utils.exception("Calendar", "No calendar ",
                                       clipopt.calendar, " in config");
         console.log("Using calendar '" + cliopt.calendar + "'");
-		
+
         var cal = new GoogleCalendar(cfg, cliopt.calendar);
-		
+
         if (cliopt.list)
             listCalendars(cal);
         else

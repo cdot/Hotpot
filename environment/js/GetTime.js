@@ -18,7 +18,7 @@ requirejs.config({
 requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt, Http, fs, DataModel) {
 
 	const Fs = fs.promises;
-	
+
 	let cliopt = Getopt.create([
 		["h", "help", "Show this help"],
 		["s", "set", "Set the time (must be root)"],

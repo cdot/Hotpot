@@ -11,7 +11,7 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
     const HOURS = 60 * 60 * 1000;
 
 	const Fs = fs.promises;
-	
+
     const TAG = "GoogleCalendar";
 
     function googleCalendarAPI() {
@@ -143,7 +143,7 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
             });
         }
     }
-    
+
     GoogleCalendar.Model = Utils.extend(Calendar.Model, {
         $class: GoogleCalendar,
         id: {

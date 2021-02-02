@@ -27,7 +27,7 @@ define("test/Expectation", () => {
 				}));
 			}
 		}
-		
+
 		/**
 		 * Report that one of the expected events was seen
 		 */

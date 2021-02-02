@@ -80,4 +80,3 @@ requirejs(["jquery", "jquery-ui", "../js/autoscale_graph"], function($) {
 
 		});
 });
-	

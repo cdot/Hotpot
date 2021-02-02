@@ -2,7 +2,7 @@
 
 /*eslint-env node */
 define("server/js/Rule", ["common/js/Utils", "common/js/Time", "common/js/DataModel"], function(Utils, Time, DataModel) {
-    
+
     const TAG = "Rule";
 
     /**

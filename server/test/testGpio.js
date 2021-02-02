@@ -38,13 +38,13 @@ requirejs(["node-getopt", "common/js/Utils", "server/js/Gpio"], function(Getopt,
 		console.error(`Bad active=${active}`);
 		getopt.showHelp();
 	}
-	
+
 	let value = cliopt.set;
 	if (typeof value !== "undefined" && value != 0 && value != 1) {
 		console.error(`Bad set=${value}`);
 		getopt.showHelp();
 	}
-	
+
 	Utils.TRACEwhat("Gpio");
 
 	let pin = parseInt(getopt.argv[0]);
@@ -52,7 +52,7 @@ requirejs(["node-getopt", "common/js/Utils", "server/js/Gpio"], function(Getopt,
 		console.error(`Bad pin ${pin}`);
 		getopt.showHelp();
 	}
-	
+
 	let gpio = new Gpio(pin);
 	console.log(`Pin ${pin} direction ${direction} active ${active}`);
 	if (typeof value !== "undefined")

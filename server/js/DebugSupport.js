@@ -47,13 +47,13 @@ class Service {
 	initialiseGpio(dirn, active) {
 		Utils.TRACE(TAG, "${this.name} ${dirn}pin active ${active} simulation initialised");
 	}
-	
+
 	// DS18x20 simulation
 	initialiseSensor() {
 		Utils.TRACE(TAG, "${this.name} thermostat simulation initialised");
 		return Promise.resolve(this);
 	}
-	
+
 	getTemperature() {
 		if (this.samples) {
 			this.sampleCtr = (this.sampleCtr + 1) % this.samples.length;

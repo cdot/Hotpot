@@ -10,7 +10,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
     const TAG = "Server";
 
 	const Fs = fs.promises;
-	
+
     /**
      * Super-lightweight HTTP(S) server with very few
      * dependencies. Only supports POST and GET and Basic auth
@@ -156,7 +156,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
             if (spath.length < 1 // default
 				|| spath === "browser.html") // Legacy
                 spath = 'index.html';
-			
+
             let path = spath.split(/\/+/);
 
             if (!this.ready) {

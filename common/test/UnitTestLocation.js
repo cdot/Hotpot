@@ -15,7 +15,7 @@ requirejs(["test/TestRunner", "common/js/Location"], function(TestRunner, Locati
         assert.equal(53, l1.latitude);
         assert.equal(-2, l1.longitude);
     });
-    
+
     tr.addTest('should handle another location', () => {
         let l1 = new Location(53, -2);
         let l2 = new Location(l1);
@@ -30,7 +30,7 @@ requirejs(["test/TestRunner", "common/js/Location"], function(TestRunner, Locati
         let l2 = new Location(l1);
         assert(l2.equals(l1));
     });
-    
+
     tr.addTest('should handle almost the same location', () => {
         let l1 = new Location(53, -2);
         let l2 = new Location(l1.latitude + 0.00004, l1.longitude - 0.00004);

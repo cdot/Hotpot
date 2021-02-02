@@ -5,7 +5,7 @@
 define("common/js/Location", ["common/js/Utils"], function(Utils) {
 
 	const TAG = "Location";
-	
+
     const EARTH_RADIUS = 6371000; // metres
 
     // Somewhere in the Gulf of Guinea
@@ -81,7 +81,7 @@ define("common/js/Location", ["common/js/Utils"], function(Utils) {
 
         /**
          * @return {string} containing geo coordinates
-         * @throw {Error} 
+         * @throw {Error}
          */
         toString() {
             return Utils.joinArgs(['(', this.latitude, ",", this.longitude, ')']);

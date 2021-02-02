@@ -21,7 +21,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
     const POINT_2RADIUS = POINT_RADIUS * 2;
     const POINT_2RADIUS2 = POINT_2RADIUS * POINT_2RADIUS;
-    
+
     /**
      * Timeline editor object.
      * @param timeline a Timeline object
@@ -45,7 +45,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
             .addClass('overlay')
             .css("z-index", 5);
             $container.append(this.$tip_canvas);
-            
+
             this.$selection_canvas = $("<canvas></canvas>")
             .addClass('overlay')
             .css({
@@ -63,7 +63,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
             this.$main_canvas.hover(
                 () => this.$tip_canvas.show(), () => this.$tip_canvas.hide());
-            
+
             this.$main_canvas.on("redraw", () => this.drawMainCanvas());
             this.$tip_canvas.on("redraw", () => this.drawTipCanvas());
             this.$selection_canvas.on("redraw", () => this.drawSelectionCanvas());
@@ -104,7 +104,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
             this.$tip_canvas.trigger("redraw");
             return false;
         }
-        
+
         handleMouseMove(e) {
             let xy = this.e2xy(e);
             let tv = this.xy2tv(xy);
@@ -161,7 +161,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
                     return false;
                 }
             }
-            
+
             let selpt = this.overLine(xy, POINT_RADIUS2);
             if (typeof selpt !== "undefined") {
                 // The mouse was released over a line; insert a
@@ -179,7 +179,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
         tvi2xy(i) {
             return this.tv2xy(this.timeline.getPoint(i));
         }
-        
+
         /**
          * Map a touch event to an XY point
          * @param e the event
@@ -299,7 +299,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
         get pointRadiusXY2() {
             return Vec.mag2(this.tv2xy(POINT_RADIUS_VEC));
         }
-    
+
         /**
          * Convert a canvas point to timeline space (integer ms)
          * @private
@@ -323,7 +323,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
             if (typeof this.crosshairs === "undefined" ||
                 this.crosshairs.time != time ||
                 this.crosshairs.value != value) {
-                
+
                 this.crosshairs = {
                     time: time,
                     value: value
@@ -345,7 +345,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
         getSelectedPoint() {
             if (this.sel_pt_ix < 0)
                 return null;
-            
+
             let pt = this.timeline.getPoint(this.sel_pt_ix);
             return {
                 index: this.sel_pt_ix,
@@ -504,19 +504,19 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
             // CSS just stretches the content
             tipCtx.canvas.width = tw;
             tipCtx.canvas.height = th;
-            
+
             if (bg) {
                 tipCtx.fillStyle = bg;
                 tipCtx.fillRect(0, 0, tw, th);
             }
-            
+
             tipCtx.fillStyle = fg;
             tipCtx.font = th + "px sans-serif";
-            
+
             // Move the tip to the left if too near right edge
             if (xy.x + tw > this.mcw)
                 xy.x -= tw + 2; // plus a bit to clear the cursor
-            
+
             this.$tip_canvas.css({
                 left: (xy.x + this.mcl) + "px",
                 top: (xy.y + this.mct) + "px",

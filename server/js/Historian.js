@@ -3,11 +3,11 @@
 /*eslint-env node */
 
 define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "common/js/DataModel"], function(fs, Time, Utils, DataModel) {
-    
+
     const TAG = "Historian";
 
 	const Fs = fs.promises;
-	
+
     /**
      * Logger. Can either log according to a time interval using a sampling
      * callback, or only on demand.
@@ -18,30 +18,28 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
      * @class
      */
     class Historian {
-        
+
         constructor(proto, name) {
             Utils.extend(this, proto);
-            
+
             this.name = name;
-            
+
             this.timeout = null;
             Utils.TRACE(TAG, "for ", name, " in ", this.path());
         }
-        
-        
+
         /**
          * Get the expanded file name
-         * @private
          */
         path() {
             return Utils.expandEnvVars(this.file);
-        };
-        
+        }
+
         /**
          * Return a promise to rewrite the history file with the given data
          * @private
          */
-        rewriteFile(report) {
+        _rewriteFile(report) {
             let s = "";
             for (let i = 0; i < report.length; i++)
                 s += `${report[i].time},${report[i].sample}\n`;
@@ -50,18 +48,18 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                 Utils.TRACE(TAG, "Wrote ", this.path());
             });
         };
-        
+
         /**
          * Load history from the data file
          * @private
          */
-        loadFromFile() {
+        _loadFromFile() {
             return Fs.readFile(this.path())
             .then((data) => {
                 let lines = data.toString().split("\n");
                 let report = [];
                 let i;
-                
+
                 // Load report
                 for (i in lines) {
                     let csv = lines[i].split(",", 2);
@@ -99,9 +97,9 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                             });
                     }
                     if (report.length !== doomed.length)
-                        this.rewriteFile(report);
+                        this._rewriteFile(report);
                 }
-                
+
                 return report;
             })
             .catch((e) => {
@@ -109,7 +107,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                 return [];
             });
         };
-        
+
         /**
          * Get a promise for a serialisable 1D array for the history.
          * @param since earliest datime we are interested in. Can prune log
@@ -119,7 +117,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          * in ms.
          */
         getSerialisableHistory(since) {
-            return this.loadFromFile()
+            return this._loadFromFile()
             .then((report) => {
                 let basetime = report.length > 0 ? report[0].time : Time.now();
                 let res = [basetime];
@@ -132,7 +130,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                 return res;
             });
         };
-        
+
         /**
          * Start the history polling loop.
          * Records are written according to the interval set in the config.
@@ -140,7 +138,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          * @param {function} sample sampling function - required
          */
         start(sample) {
-            
+
             if (typeof sample !== "function")
                 throw new Utils.exception(TAG, "Cannot start; sample not a function");
             this.sampler = sample;
@@ -152,7 +150,8 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
         }
 
         /**
-         * Private method woken on each poll
+         * Woken on each poll
+		 * @private
          */
         _poll() {
             let datum = this.sampler();
@@ -172,7 +171,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                 }
             });
         }
-        
+
         /**
          * Stop the polling loop
          */
@@ -183,7 +182,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                 Utils.TRACE(TAG, this.name, " stopped");
             }
         };
-        
+
         /**
          * Get a promise to record a sample in the log.
          * @param {number} sample the data to record
@@ -191,12 +190,12 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          * @public
          */
         record(sample, time) {
-            
+
             if (typeof time === "undefined")
                 time = Time.now();
-            
+
             let promise;
-            
+
             // If we've skipped recording an interval since the last
             // recorded sample, pop in a checkpoint
             if (typeof this.last_time === "undefined" ||
@@ -206,10 +205,10 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                     `${time - this.interval},${this.last_sample}\n`);
             } else
                 promise = Promise.resolve();
-            
+
             this.last_time = time;
             this.last_sample = sample;
-            
+
             return promise.then(() => {
                 return Fs.appendFile(this.path(), `${time},${sample}\n`)
                 .catch((ferr) => {
@@ -218,7 +217,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             });
         };
     }
-    
+
     Historian.Model = {
         $class: Historian,
         file: {
@@ -237,6 +236,6 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             $class: Number
         }
     };
-    
+
     return Historian;
 });

@@ -30,7 +30,7 @@ const ASYNC = true;
 
 	function poll(sensors) {
 		// This could (might but probably won't) result in asynchronous reads from the
-		// 1-wire bus. 
+		// 1-wire bus.
 		let promise;
 if (ASYNC) {
 		promise = Promise.all(sensors.map((sensor) => {

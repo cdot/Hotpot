@@ -16,7 +16,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
     const GPIO_PATH = "/sys/class/gpio";
 
     const TAG = "Gpio";
-    
+
     class Gpio {
 
         constructor(gpio) {
@@ -44,7 +44,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
 		isExported() {
 			return Fs.access(`${GPIO_PATH}/gpio${this.gpio}`);
 		}
-		
+
         // Try and export the pin
         export() {
             return Fs.writeFile(
@@ -88,6 +88,6 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
             .then((data) => parseInt(data));
         }
     }
-            
+
     return Gpio;
 });

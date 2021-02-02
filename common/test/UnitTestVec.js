@@ -22,30 +22,30 @@ requirejs(["test/TestRunner", "common/js/Vec"], function(TestRunner, Vec) {
         assert.deepEqual(Vec.add([9, 8, 7], [1, 2, 3]), [ 10, 10, 10 ]);
         assert.deepEqual(Vec.add({x:9, y:8}, {x:1, y:2}), {x:10,y:10});
     });
-    
+
     tr.addTest('scalar mul', () => {
         assert.deepEqual(Vec.mul([9, 8, 7], 2), [ 18, 16, 14 ]);
         assert.deepEqual(Vec.mul({a:9}, 2), {a:18});
     });
-    
+
     tr.addTest('scalar div', () => {
         assert.deepEqual(Vec.div([8, 6, 4], 2), [ 4, 3, 2 ]);
         assert.deepEqual(Vec.div({a:18}, 2), {a:9});
     });
-    
+
     tr.addTest('dot product', () => {
         assert.equal(Vec.dot([9, 8, 7], [1, 2, 3]), 46);
         assert.equal(Vec.dot({a:9, b:8}, {a:10, b:5}), 130);
     });
-    
+
     tr.addTest('mag2', () => {
         assert.equal(Vec.mag2([9, 8, 7]), 194);
     });
-    
+
     tr.addTest('mag', () => {
         assert.equal(Vec.mag([9, 8, 7]), Math.sqrt(194));
     });
-    
+
     tr.addTest('normalises', () => {
         assert.deepEqual(Vec.normalise([9, 8, 7]),
                          Vec.div([9,8,7],Math.sqrt(194)));

@@ -103,7 +103,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
             assert.equal(y, this.data.y);
         };
     }
-    
+
     Toad.Model = {
         $class: Toad,
         data: {
@@ -142,7 +142,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
             Utils.extend(this, data);
         }
     }
-    
+
     Amphibian.Model = {
         $class: Amphibian,
         toad: { $array_of: Toad.Model }
@@ -235,7 +235,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
             assert.equal(config.cuthbert.dibble, "grubb");
         });
     });
-	
+
     tr.addTest("saveload builtIns", () => {
         return DataModel.saveData(builtInsData, builtInsModel, mainfile)
         .then(() => DataModel.loadData(mainfile, builtInsModel))

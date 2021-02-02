@@ -29,17 +29,17 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 				assert.equal(t, 50);
 				assert.equal(now + 500, u);
 				exp.saw(1);
-			} else if (/3$/.test(id)) {				
+			} else if (/3$/.test(id)) {
 				assert.equal(s, "sc");
 				assert.equal(t, 20);
 				assert.equal(now + 500, u);
 				exp.saw(2);
-			} else if (/4$/.test(id)) {				
+			} else if (/4$/.test(id)) {
 				assert.equal(s, "SD");
 				assert.equal(t, 50);
 				assert.equal(now + 500, u);
 				exp.saw(3);
-			} else if (/5$/.test(id)) {				
+			} else if (/5$/.test(id)) {
 				assert.equal(s, "Se");
 				assert.equal(t, 20);
 				assert.equal(Utils.BOOST, u);
@@ -50,7 +50,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 		cal.parseEvents(now + 250, now + 500, "SA BOOST 18; sb 50 sc=20; SD=50 Se boost 20");
 		return exp.expect();
 	});
-	
+
 	tr.addTest("parse prefixed events", () => {
 		let now = Time.now() + 250;
 		let cal = new Calendar({ prefix: "Test:" }, "Prefixed");
@@ -70,17 +70,17 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 				assert.equal(t, 50);
 				assert.equal(now + 500, u);
 				exp.saw(1);
-			} else if (/3$/.test(id)) {				
+			} else if (/3$/.test(id)) {
 				assert.equal(s, "sc");
 				assert.equal(t, 20);
 				assert.equal(now + 500, u);
 				exp.saw(2);
-			} else if (/4$/.test(id)) {				
+			} else if (/4$/.test(id)) {
 				assert.equal(s, "SD");
 				assert.equal(t, 50);
 				assert.equal(now + 500, u);
 				exp.saw(3);
-			} else if (/5$/.test(id)) {				
+			} else if (/5$/.test(id)) {
 				assert.equal(s, "Se");
 				assert.equal(t, 20);
 				assert.equal(Utils.BOOST, u);
@@ -101,7 +101,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 		cal.parseEvents(now + 250, now + 500, " SA AS boost");
 		cal.parseEvents(now + 250, now + 500, " 99");
 	});
-			   
+
 	tr.addTest("parse bad prefixed events", () => {
 		let now = Time.now() + 250;
 		let cal = new Calendar({ prefix: "warm" }, "BAD");
@@ -110,7 +110,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 		});
 		cal.parseEvents(now + 250, now + 500, " no prefix 99 warm ignore");
 	});
-			   
+
 	tr.run();
 });
 

@@ -4,7 +4,7 @@ define("server/js/CentralHeatingRule", ["common/js/Utils", "server/js/Rule"], (U
 	// be turned on if temp drops lower than this below the target. You
 	// could set this to 0, but there is the risk of the system oscillating.
 	const PRECISION = 0.5;
-	
+
 	class CentralHeatingRule extends Rule {
 
 		constructor(proto, name) {
@@ -30,7 +30,7 @@ define("server/js/CentralHeatingRule", ["common/js/Utils", "server/js/Rule"], (U
 				// Otherwise respect the timeline
 				let target = thermostat.getTargetTemperature();
 				if (thermostat.temperature > target) {
-					// Warm enough inside, so switch off even if 
+					// Warm enough inside, so switch off even if
 					if (state === 1) {
 						Utils.TRACE("Rules", "CH is ", thermostat.temperature,
 									"°C so turning off");
@@ -38,7 +38,7 @@ define("server/js/CentralHeatingRule", ["common/js/Utils", "server/js/Rule"], (U
 					}
 					// setPromise is a NOP if already in the right state
 					return controller.setPromise("CH", 0);
-					
+
 				}
 				if (thermostat.temperature < target - PRECISION) {
 					if (state === 0) {
