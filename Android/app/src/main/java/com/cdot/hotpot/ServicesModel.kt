@@ -12,6 +12,7 @@ import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
 import java.util.*
+import kotlin.math.floor
 
 class ServicesModel : ViewModel() {
 
@@ -40,11 +41,19 @@ class ServicesModel : ViewModel() {
             val temp = job.getDouble("temperature")
             val tgt = job.getDouble("target")
             val lkg = job.getLong("lastKnownGood")
-            val deltaT = (System.currentTimeMillis() - lkg) / 1000
+            var deltaT = (System.currentTimeMillis() - lkg) / 1000
             curTemp.postValue("%.4g".format(temp))
             targetTemp.postValue("%.4g".format(tgt))
             condition.postValue(if (temp < tgt) "<" else ">")
-            lastKnownGood.postValue(if (deltaT < 60) "" else "(%ds)".format(deltaT))
+            val h = floor(deltaT / (60 * 60 * 1000.0))
+            deltaT %= 60 * 60 * 1000
+            val m = floor(deltaT / (60 * 1000.0))
+            deltaT %= 60 * 1000
+            val s = floor(deltaT / 1000.0)
+            var d = if (h > 0) "${h}h" else ""
+            if (m > 0) d + "${m}m"
+            if (s > 0) d += "${s}s"
+            lastKnownGood.postValue(d)
             val reqs = job.getJSONArray("requests")
             val rl: MutableList<Request> = mutableListOf()
             for (i in 0 until reqs.length()) {
@@ -118,7 +127,7 @@ class ServicesModel : ViewModel() {
                         Log.e(TAG, "GET /ajax/state", e)
                         activity.runOnUiThread {
                             Snackbar.make(activity.findViewById(R.id.view_pager),
-                            context.getString(R.string.no_contact), Snackbar.LENGTH_SHORT).show()
+                            activity.getString(R.string.no_contact), Snackbar.LENGTH_SHORT).show()
                         }
                     }
 
