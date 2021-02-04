@@ -29,7 +29,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 
             this.ready = false;
             if (typeof this.auth !== "undefined") {
-                this.authenticate = (request) => {
+                this.authenticate = request => {
                     let BasicAuth = require("basic-auth");
                     let credentials = BasicAuth(request);
                     if (typeof credentials === "undefined")
@@ -89,11 +89,11 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 
                 promise = promise
 
-                .then(() => {
-                    return this.ssl.key.read();
+                .then() => {
+                    returnthis.ssl.key.read();
                 })
 
-                .then((k) => {
+                .then(k => {
                     options.key = k;
                     Utils.TRACE(TAG, "SSL key loaded");
                 })
@@ -102,7 +102,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
                     return this.ssl.cert.read();
                 })
 
-                .then((c) => {
+                .then(c => {
                     options.cert = c;
                     Utils.TRACE(TAG, "SSL certificate loaded");
                     if (typeof this.auth !== "undefined")
@@ -121,12 +121,12 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
             }
 
             return promise
-            .then((httpot) => {
+            .then(httpot => {
                 this.ready = true;
                 this.http = httpot;
                 httpot.listen(this.port);
             })
-            .catch((e) => {
+            .catch(e => {
 				Utils.TRACE(TAG, `Server error ${e}`);
 			});
         };
@@ -136,7 +136,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 		 */
         stop() {
             return new Promise((resolve, reject) => {
-				this.http.close((e) => {
+				this.http.close(e => {
 					if (e instanceof Error)
 						reject(e);
 					else
@@ -151,7 +151,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
          */
         handle(spath, params, request, response) {
             if (spath.indexOf("/") !== 0 || spath.length === 0)
-                throw new Utils.exception(TAG, "Bad command ", spath);
+                throw Utils.exception(TAG, "Bad command ", spath);
             spath = spath.substring(1);
             if (spath.length < 1 // default
 				|| spath === "browser.html") // Legacy
@@ -179,7 +179,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
                 Utils.TRACE(TAG, `/ajax/${path.join("/")}`);
                 promise = this.dispatch(path, params)
 
-                .then((reply) => {
+                .then(reply => {
                     if (typeof reply === "undefined" || reply === null)
 						return "";
 					else {
@@ -202,7 +202,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
                 promise = new Promise((resolve, reject) => {
 					Fs.readFile(filepath)
 					.then(resolve)
-					.catch((error) => {
+					.catch(error => {
 						// Treat as FNF
 						Utils.TRACE(TAG, error);
 						if (error.code === 'ENOENT')
@@ -213,13 +213,13 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
             }
 
             promise
-            .then((responseBody) => {
+            .then(responseBody => {
                 response.statusCode = 200;
                 response.setHeader("Content-Type", contentType);
                 response.write(responseBody);
                 response.end();
             })
-            .catch((error) => {
+            .catch(error => {
                 // Send the error message in the payload
                 response.statusCode = error.status || 500;
                 response.setHeader("Content-Type", "text/plain");
@@ -256,7 +256,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 
             let body = [];
             request
-			.on("data", (chunk) => body.push(chunk))
+			.on("data", chunk => body.push(chunk))
 			.on("end", () => {
                 try {
                     // Parse the JSON body and pass as the data
@@ -273,9 +273,10 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
                     response.statusCode = 400;
                 }
             });
-        };
+        }
     }
-    Server.Model = {
+
+       Server.Model = {
         $class: Server,
         $doc: "HTTP(S) server",
         port: {

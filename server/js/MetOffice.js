@@ -75,9 +75,9 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          * Stop the automatic updater.
          */
         stop() {
-            if (typeof this.timeout !== undefined) {
-                clearTimeout(this.timeout);
-                delete this.timeout;
+            if (typeof this.updateTimer !== undefined) {
+                Utils.cancelTimer(this.updateTimer);
+                delete this.updateTimer;
                 Utils.TRACE(TAG, "Stopped");
             }
         };
@@ -89,7 +89,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
             return DataModel.getSerialisable(
                 this.history, Historian.Model, context.concat('history'))
 
-            .then((h) => {
+            .then(h => {
                 return {
                     api_key: this.api_key,
                     history: h
@@ -116,7 +116,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
             if (!this.history)
                 return Promise.resolve();
             return this.history.getSerialisableHistory(since)
-            .then((h) => {
+            .then(h => {
                 // Clip to the current time
                 let before = -1,
                     after = -1;
@@ -188,7 +188,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
             return new Promise((resolve, reject) => {
                 Http.get(
                     options,
-                    (res) => {
+                    res => {
                         let result = "";
                         if (res.statusCode < 200 || res.statusCode > 299) {
                             reject(new Error(
@@ -196,7 +196,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                                 res.statusCode));
                             return;
                         }
-                        res.on("data", (chunk) => {
+                        res.on("data", chunk => {
                             result += chunk;
                         });
                         res.on("end", () => {
@@ -204,7 +204,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                             resolve();
                         });
                     })
-                .on("error", (err) => {
+                .on("error", err => {
                     Utils.TRACE(TAG, "Failed to GET sitelist: ", err.toString());
                     reject(err);
                 });
@@ -293,9 +293,9 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
             return new Promise((fulfill, fail) => {
                 Http.get(
                     options,
-                    (res) => {
+                    res => {
                         let result = "";
-                        res.on("data", (chunk) => {
+                        res.on("data", chunk => {
                             result += chunk;
                         });
                         res.on("end", () => {
@@ -303,7 +303,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                             fulfill();
                         });
                     })
-                .on("error", (err) => {
+                .on("error", err => {
                     Utils.TRACE(TAG, "Failed to GET weather: ", err.toString());
                     fail(err);
                 });
@@ -333,9 +333,6 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          * @private
          */
         update() {
-            if (this.timeout)
-                clearTimeout(this.timeout);
-            delete this.timeout;
             Utils.TRACE(TAG, "Updating from MetOffice website");
             return this.getWeather()
             .then(() => {
@@ -343,7 +340,8 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                 this.last_update = Date.now();
                 let wait = br.after.$ - this.last_update;
                 Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
-                this.timeout = setTimeout(() => { this.update(); }, wait);
+                this.updateTimer = Utils.startTimer(
+					"meto", () => { this.update(); }, wait);
             });
         };
 
@@ -367,6 +365,17 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
             }
             return est;
         };
+
+		/**
+		 * Clear the update timer
+		 */
+		stop() {
+			Utils.TRACE(TAG, `'${this.name}' stopped`);
+            if (this.updateTimer) {
+                Utils.cancelTimer(this.updateTimer);
+				delete this.updateTimer;
+			}
+		}
     }
 
     MetOffice.Model = {

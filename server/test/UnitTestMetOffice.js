@@ -32,18 +32,18 @@ requirejs(["test/TestRunner", "common/js/Utils", "common/js/Time", "common/js/Da
 					file: "/tmp/metoffice.log"
 				}
 			}, MetOffice.Model, [])
-		.then((mo) => {
+		.then(mo => {
 			let u1;
 			return mo.setLocation({
 				latitude: 53.2479442,
 				longitude: -2.5043655
 			})
 			.then(() => mo.getSerialisableState())
-			.then((d) => {
+			.then(d => {
                 assert(typeof d.temperature === "number");
 			})
 			.then(() => mo.getSerialisableLog())
-            .then((result) => {
+            .then(result => {
                 let base = result[0];
                 assert(typeof base === "number");
                 let last = 0;

@@ -39,7 +39,7 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
 
     tr.addTest("404",() => {
 		let server_config = newServerConfig();
-		return makeServer(server_config).then((server) => {
+		return makeServer(server_config).then(server => {
             tr.chai
             .request('http://localhost:' + server_config.port)
             .get('/') // should try to open index.html, which doesn't exist
@@ -54,7 +54,7 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
 
     tr.addTest("simple-ajax", () => {
 		let server_config = newServerConfig();
-        return makeServer(server_config).then((server) => {
+        return makeServer(server_config).then(server => {
             server.setDispatch((path, params) => {
                 assert.equal(path.length, 2);
                 assert.equal(path[0], "blah");
@@ -79,7 +79,7 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
 
     tr.addTest("simple-file", () => {
 		let server_config = newServerConfig();
-        return makeServer(server_config).then((server) => {
+        return makeServer(server_config).then(server => {
             tr.chai
             .request('http://localhost:' + server_config.port)
             .get('/' + "test.txt")
@@ -96,7 +96,7 @@ requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils"
 
     tr.addTest("should stop the server", () => {
 		let server_config = newServerConfig();
-        return makeServer(server_config).then((server) => {
+        return makeServer(server_config).then(server => {
             return server.stop();
         });
     });

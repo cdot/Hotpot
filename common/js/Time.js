@@ -36,7 +36,7 @@ define("common/js/Time", () => {
 			let s = Number.parseFloat(hms.shift() || "0");
 			// Set according to local time
 			if (h > 23 || m > 59 || s >= 60 || h < 0 || m < 0 || s < 0)
-				throw new Utils.exception("Time", "out of range 00:00:00..23:59:59");
+				throw Utils.exception("Time", "out of range 00:00:00..23:59:59");
 			return (((h * 60) + m) * 60 + s) * 1000;
 		}
 
@@ -55,7 +55,7 @@ define("common/js/Time", () => {
 				return pad + n;
 			}
 			if (t < 0 || t > ONE_DAY)
-				throw new Utils.exception("Time", "unparse time out of range");
+				throw Utils.exception("Time", "unparse time out of range");
 			let ms = t % 1000;
 			t = Math.trunc(t / 1000); // to seconds
 			let s = t % 60; // seconds

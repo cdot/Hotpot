@@ -119,7 +119,7 @@ Trace.prototype.clipLine = function(a, b) {
 Trace.prototype.addPoint = function(t, s) {
     "use strict";
     if (typeof s === "undefined")
-        throw new Utils.exception("Trace", "Cannot add null point");
+        throw Utils.exception("Trace", "Cannot add null point");
     this.points.push({ t: t, s: s });
     this.extents = null; // clear cache
 };
@@ -388,7 +388,7 @@ function Graph(options, $canvas) {
         font_height: 10 // px
     }, options);
 
-    $canvas.on("mousemove", (e) => {
+    $canvas.on("mousemove", e => {
         let targ;
         if (!e)
             e = window.event;

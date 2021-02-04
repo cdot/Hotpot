@@ -44,7 +44,7 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
                     input: process.stdin,
                     output: process.stdout
                 });
-                rl.question("Continue [Y/n]?: ", (ans) => {
+                rl.question("Continue [Y/n]?: ", ans => {
                     rl.close();
                     if (ans === "" || /^[Yy]/.test(ans))
                         authorise(credentials);
@@ -76,7 +76,7 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
             input: process.stdin,
             output: process.stdout
         });
-        rl.question("Enter the code here: ", (code) => {
+        rl.question("Enter the code here: ", code => {
             rl.close();
             oAuth2Client.getToken(code, (err, token) => {
                 if (err) {
@@ -94,7 +94,7 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
                                 "'");
                 })
 
-                .catch((e) => {
+                .catch(e => {
                     console.error("Failed to write '" +
                                   credentials.auth_cache + "': " + e);
                 });
@@ -106,7 +106,7 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
         $skip: true
     })
 
-    .then((config) => {
+    .then(config => {
         for (let cal in config.controller.calendar) {
             console.log("Configuring calendar '" + cal + "'");
             configureCalendar(config.controller.calendar[cal]);

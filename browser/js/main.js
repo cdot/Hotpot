@@ -33,7 +33,7 @@ requirejs.config({
 
 requirejs(["jquery", "jquery-ui"], () => {
     $(() => {
-        requirejs(["browser/js/Hotpot"], (Hotpot) => {
+        requirejs(["browser/js/Hotpot"], Hotpot => {
             new Hotpot().begin();
         });
     });

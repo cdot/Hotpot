@@ -32,7 +32,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 	const DATA_META_KEYS = {
 		$instance_of: true
 	};
-	
+
 	// basic types
     const BUILTIN_TYPES = [
         Boolean,
@@ -41,7 +41,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
         String,
         RegExp
     ];
-	
+
     /**
      * Provides a way to deserialise a datastructure from JSON data
      * such that the resultant deserialised data obeys a specific data
@@ -274,7 +274,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					keys.push(key);
 				}
 				return Promise.all(promises)
-				.then((result) => {
+				.then(result => {
 					let rebuilt = {};
 					for (let i in result)
 						rebuilt[keys[i]] = result[i];
@@ -327,14 +327,14 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 						promises.push(
 							DataModel.remodel(
 								key, data[key], model[key], context.concat(key))
-							.then((rebuilt) => {
+							.then(rebuilt => {
 								return { key: key, data: rebuilt }
 							}));
 					}
 				}
 
 				promise = Promise.all(promises)
-				.then((result) => {
+				.then(result => {
 					let rebuilt = {};
 					for (let i in result) {
 						let res = result[i];
@@ -352,7 +352,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 				promise = Promise.resolve(data);
 
 			return promise
-			.then((rebuilt) => {
+			.then(rebuilt => {
 
 				if (model.$instantiable) {
 					let t = rebuilt.$instance_of;
@@ -366,7 +366,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					// it will record the type loaded, not the type in the
 					// original data
 					return new Promise((resolve, reject) => {
-						requirejs([rebuilt.$instance_of], (module) => {
+						requirejs([rebuilt.$instance_of], module => {
 							let promise;
 							if (typeof module.Model !== "undefined")
 								promise = DataModel.remodel(
@@ -375,7 +375,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 								promise = Promise.resolve(rebuilt);
 
 							return promise
-							.then((rebuilt) => {
+							.then(rebuilt => {
 								let sub = new module(rebuilt, index, module.Model);
 								// Hack in where it came from
 								sub.$instantiated_from = rebuilt.$instance_of;
@@ -459,9 +459,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 						DataModel.getSerialisable(
 							data[index], model.$map_of,
 							context.concat(index))
-						.then((ser) => { return { key: key, serialised: ser }; }));
+						.then(ser => { return { key: key, serialised: ser }; }));
 				}
-				return Promise.all(promises).then((s) => {
+				return Promise.all(promises).then(s => {
 					let res = {};
 					for (let i in s)
 						res[s[i].key] = s[i].serialised;
@@ -490,11 +490,11 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					DataModel.getSerialisable(
 						data[key], model[key],
 						context.concat(key))
-					.then((ser) => { return { key: key, serialised: ser };}));
+					.then(ser => { return { key: key, serialised: ser };}));
 			}
 
 			return Promise.all(promises)
-			.then((s) => {
+			.then(s => {
 				let res = {};
 				for (let i in s)
 					if (typeof s[i].serialised !== "undefined")
@@ -569,8 +569,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			_loadFs();
 			Utils.TRACE(TAG, `Loading ${file}`);
 			return Fs.readFile(file)
-			.then((code) => DataModel.remodel("", Utils.eval(code, file), model))
-			.then((rebuilt) => {
+			.then(code => DataModel.remodel("", Utils.eval(code, file), model))
+			.then(rebuilt => {
 				rebuilt._readFrom = file;
 				return rebuilt;
 			});
@@ -596,7 +596,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 				file = this._readFrom;
 
 			return DataModel.getSerialisable(data, model)
-			.then((remod) => Fs.writeFile(
+			.then(remod => Fs.writeFile(
 				Utils.expandEnvVars(file),
 				JSON.stringify(remod, null, 2), "utf8"));
 		}
@@ -669,7 +669,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			return docstring.join(' ').replace(/ +\n/g, "\n");
 		}
 	}
-	
+
     /* Inner classes, helpers for file operations */
 
     /**
@@ -725,7 +725,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
                 if (fs.existsSync(fnm)) {
                     fs.access(
 						fnm, mode,
-                        (err) => {
+                        err => {
                             if (err)
                                 throw new Error(
                                     `Bad ${index}: '${filename}' '$mode' mode check failed: ${err}`);

@@ -34,7 +34,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
             this.hit_pt_ix = -1;
             this.isDragging = false;
             this.sel_pt_ix = -1;
-            this.last_tip_xy = undefined;
+            delete this.last_tip_xy;
             this.$container = $container;
 
             this.$main_canvas = $("<canvas></canvas>")
@@ -57,9 +57,9 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
             $('.overlay').hide();
 
-            this.$main_canvas.on("mousedown", (e) => this.handleMouseDown(e));
-            this.$main_canvas.on("mousemove", (e) => this.handleMouseMove(e));
-            this.$main_canvas.on("mouseup", (e) => this.handleMouseUp(e));
+            this.$main_canvas.on("mousedown", e => this.handleMouseDown(e));
+            this.$main_canvas.on("mousemove", e => this.handleMouseMove(e));
+            this.$main_canvas.on("mouseup", e => this.handleMouseUp(e));
 
             this.$main_canvas.hover(
                 () => this.$tip_canvas.show(), () => this.$tip_canvas.hide());
@@ -73,7 +73,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
             // Debounce resizing
             $(window) /*this.$main_canvas*/ .on('resize', () => {
                 if (resizeTimer)
-                    clearTimeout(resizeTimer);
+                    (resizeTimer);
                 resizeTimer = setTimeout(() => { this.refresh_all(); }, 100);
             });
 
@@ -399,7 +399,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
          * @param v value to set. Will be constrained to the valid range.
          * @return this
          */
-        setSelectedValue = (v) => {
+        setSelectedValue(v) {
             let dp = this.timeline.getPoint(this.sel_pt_ix);
             dp = {
                 time: dp.time,

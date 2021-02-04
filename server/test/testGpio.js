@@ -66,10 +66,10 @@ requirejs(["node-getopt", "common/js/Utils", "server/js/Gpio"], function(Getopt,
 			return Promise.resolve();
 	})
 	.then(() => gpio.getValue())
-	.then((val) => {
+	.then(val => {
 		console.log(`Value is ${val}`);
 	})
-	.catch((e) => {
+	.catch(e => {
 		console.error(e);
 	});
 });

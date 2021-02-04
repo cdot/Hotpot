@@ -42,7 +42,7 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
 		initialise() {
 			Utils.TRACE(TAG, `Initialising pin ${this.name}`);
 			return this.Gpio.initialiseGpio("out", "low")
-			.catch((e) => {
+			.catch(e => {
 				console.error(`Pin ${this.name} initialisation failed ${e}`);
 				if (typeof HOTPOT_DEBUG === "undefined") {
 					console.error("--debug not enabled");
@@ -90,7 +90,7 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
          */
         getSerialisableState() {
             return this.getState()
-            .then((value) => {
+            .then(value => {
 				return { reason: this.reason, state: value }
 			});
         };

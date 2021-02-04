@@ -154,7 +154,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 
     tr.addTest("remodel simple", () => {
         return DataModel.remodel('', simpleData, simpleModel)
-		.then((remodeled) => {
+		.then(remodeled => {
 			assert.equal(Utils.dump(remodeled), Utils.dump(simpleData));
 		});
     });
@@ -162,7 +162,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
     tr.addTest("remodel bad simple", () => {
         return DataModel.remodel('', simpleDataBad, simpleModel)
 		.then(() => assert.fail())
-		.catch((s) => {
+		.catch(s => {
 			// Unpredictable order from maps
             assert(s.message == "'array' not optional and no default"
 				   || s.message == "'cuthbert.dibble' not optional and no default");
@@ -171,7 +171,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 
     tr.addTest("remodel builtIns", () => {
         return DataModel.remodel("", builtInsData, builtInsModel)
-		.then((remodeled) => {
+		.then(remodeled => {
 			assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
 		});
     });
@@ -179,14 +179,14 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
     tr.addTest("remodel bad builtIns", () => {
         return DataModel.remodel("", builtInsDataBad, builtInsModel)
 		.then(() => assert.fail())
-		.catch((s) => {
+		.catch(s => {
             assert.equal(s.message, "'fnaar' not optional and no default");
         });
     });
 
     tr.addTest("remodel toady", () => {
         return DataModel.remodel("", toadyData, toadyModel)
-		.then((remodeled) => {
+		.then(remodeled => {
 			assert.equal(Utils.dump(remodeled), Utils.dump(toadyDump));
 			remodeled.b.croak(1, true);
 			remodeled.c.one.croak(2, true);
@@ -196,7 +196,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 
     tr.addTest("remodel amphibian", () => {
         return DataModel.remodel("", amphibianProto, Amphibian.Model)
-		.then((remodeled) => {
+		.then(remodeled => {
 			assert.equal(remodeled.constructor.name, "Amphibian");
 			assert.equal(remodeled.toad.constructor.name, "Array");
 			assert.equal(remodeled.toad[0].constructor.name, "Toad");
@@ -212,13 +212,13 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 
     tr.addTest("serialise builtIns", () => {
         return DataModel.remodel("", builtInsData, builtInsModel)
-		.then((data) => DataModel.getSerialisable(data, builtInsModel))
-        .then((s) => assert.equal(Utils.dump(s), Utils.dump(builtInsData)));
+		.then(data => DataModel.getSerialisable(data, builtInsModel))
+        .then(s => assert.equal(Utils.dump(s), Utils.dump(builtInsData)));
 	});
 
     tr.addTest("serialise toady", () => {
         DataModel.remodel("", toadyData, toadyModel)
-        .then((data) => DataModel.getSerialisable(data, toadyModel))
+        .then(data => DataModel.getSerialisable(data, toadyModel))
 		.then(function(s) {
 			assert.equal(Utils.dump(s), Utils.dump(toadySerial));
 		});
@@ -239,7 +239,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
     tr.addTest("saveload builtIns", () => {
         return DataModel.saveData(builtInsData, builtInsModel, mainfile)
         .then(() => DataModel.loadData(mainfile, builtInsModel))
-        .then((config) => {
+        .then(config => {
             assert.equal(config._readFrom, mainfile);
             delete config._readFrom;
             assert.equal(Utils.dump(config), Utils.dump(builtInsDump));
@@ -249,34 +249,34 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 
     tr.addTest("simple proto, simple data", () => {
         return DataModel.remodel('', simpleData, simpleModel)
-		.then((remodeled) => {
+		.then(remodeled => {
 			return DataModel.at(remodeled, simpleModel, "/cuthbert/bob")
-			.then((p) => {
+			.then(p => {
 				assert.equal(p.node, remodeled.cuthbert.bob);
 				assert.equal(p.model, simpleModel.cuthbert.bob);
 				assert.equal(p.parent, remodeled.cuthbert);
 				assert.equal(p.key, "bob");
 			})
 			.then(() => {
-				return new Promise((resolve) => {
+				return new Promise(resolve => {
 					DataModel.at(remodeled, simpleModel, "cuthbert/array")
 					.then(() => {
 						assert.fail("Should never be called");
 					})
-					.catch((e) => {
+					.catch(e => {
 						resolve();
 					});
 				});
 			})
 			.then(() => DataModel.at(remodeled, simpleModel, "array/1"))
-			.then((p) => {
+			.then(p => {
 				assert(p.node === remodeled.array[1]);
 				assert(p.model === simpleModel.array.$array_of);
 				assert(p.parent === remodeled.array);
 				assert.equal(p.key, 1);
 			})
 			.then(() => DataModel.at(remodeled, simpleModel, "array"))
-			.then((p) => {
+			.then(p => {
 				assert(p.node === remodeled.array);
 				assert(p.model === simpleModel.array);
 				assert(p.parent === remodeled);
@@ -305,8 +305,8 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 		};
 
 		return DataModel.remodel("", data, model)
-		.then((d) => DataModel.getSerialisable(d, model))
-        .then((s) => {
+		.then(d => DataModel.getSerialisable(d, model))
+        .then(s => {
 			assert.equal(Utils.dump(s), Utils.dump(data));
 		});
 	});

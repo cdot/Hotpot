@@ -35,9 +35,9 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
             // Function called when an event is removed
             this.remove = null;
             // current timeout, as returned by setTimeout
-            this.timeoutId = undefined;
+            //this.updateTimer = undefined;
             // @property {string} last_update last time the calendars were updated
-            this.last_update = undefined;
+            //this.last_update = undefined;
         }
 
         /**
@@ -131,22 +131,34 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
          */
         update(after) {
             // Kill the old timer
-            if (this.timeoutId)
-                clearTimeout(this.timeoutId);
-            this.timeoutId = setTimeout(() => {
-                Utils.TRACE(TAG, "Updating '", this.name, "'");
-                this.fillCache()
-				.then(() => {
-					Utils.TRACE(TAG, "Updated '", this.name, "'");
-                    this.timeoutId = undefined;
-                    this.update(this.update_period * HOURS);
-                })
-				.catch((e) => {
-					console.error(this, e);
-					console.error(`${TAG} '${this.name}' error ${e.message}`);
-				});
-            }, after);
+            this.updateTimer = Utils.startTimer(
+				"calUp",
+				() => {
+					delete this.updateTimer;
+					Utils.TRACE(TAG, `Updating '${this.name}'`);
+					this.fillCache()
+					.then(() => {
+						Utils.TRACE(TAG, `Updated '${this.name}'`);
+						this.update(this.update_period * HOURS);
+					})
+					.catch(e => {
+						console.error(this, e);
+						console.error(`${TAG} '${this.name}' error ${e.message}`);
+					});
+				}, after);
         }
+
+		/**
+		 * Cancel the calendar update timer and all active event timers
+		 */
+		stop() {
+			Utils.TRACE(TAG, `'${this.name}' stopped`);
+			if (typeof this.updateTimer !== "undefined") {
+				Utils.cancelTimer(this.updateTimer);
+				delete this.updateTimer;
+			}
+			this.clearSchedule();
+		}
 
 		/**
 		 * Return a list of available calendars.

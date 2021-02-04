@@ -86,12 +86,12 @@ define(["mocha", "chai", "fs"], (maybeMocha, chai, fs) => {
 
 		rm_rf(path) {
 			return fs.promises.readdir(path)
-			.then((files) => {
+			.then(files => {
 				let promises = [];
 				files.forEach((file, index) => {
 					var curPath = `${path}/${file}`;
 					promises.push(fs.promises.lstat(curPath)
-					.then((stat) => {
+					.then(stat => {
 						if (stat.isDirectory())
 							return this.rm_rf(curPath);
 						else
@@ -106,7 +106,7 @@ define(["mocha", "chai", "fs"], (maybeMocha, chai, fs) => {
 		}
 
         run() {
-            return new Promise((resolve) => {
+            return new Promise(resolve => {
                 this.timeout(10000);
                 super.run(resolve);
             });

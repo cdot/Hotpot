@@ -49,7 +49,7 @@ requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/C
         .authorise()
         .then(() => cal.fillCache())
         .then(() => console.log("Schedule", cal.schedule))
-        .catch((e) => {
+        .catch(e => {
             console.error(e.stack);
         });
 	}
@@ -57,7 +57,7 @@ requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/C
 	function listCalendars(cal) {
 		cal.authorise()
         .then(() => cal.listCalendars())
-        .then((data) => {
+        .then(data => {
             for (var i in data) {
                 console.log(data[i].summary + " - '" + data[i].id + "'");
             }
@@ -76,7 +76,7 @@ requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/C
         var cfg = config.controller.calendar[cliopt.calendar];
 
         if (!cfg)
-            throw new Utils.exception("Calendar", "No calendar ",
+            throw Utils.exception("Calendar", "No calendar ",
                                       clipopt.calendar, " in config");
         console.log("Using calendar '" + cliopt.calendar + "'");
 

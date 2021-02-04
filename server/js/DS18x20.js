@@ -39,7 +39,7 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 			Utils.TRACE(TAG, `Polling ${this.id}`);
 			return await Fs.readFile(
 				Path.resolve(ONE_WIRE_PATH, this.id, 'w1_slave'), 'latin1')
-			.then((content) => {
+			.then(content => {
 				let lines = content.split("\n");
 				if (lines[0].substr(-3) != "YES")
 					throw new Error(`DS18x20 ${this.id} CRC check failed '${content}'`);
@@ -49,7 +49,7 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 				this.lastKnownGood = Date.now();
 				return parseFloat(parts[1]) / 1000;
 			})
-			.catch((e) => {
+			.catch(e => {
 				Utils.TRACE(TAG, `Poll failed ${e}`);
 				throw e;
 			});
@@ -61,7 +61,7 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 	 */
 	DS18x20.list = () => {
 		return Fs.readdir(ONE_WIRE_PATH)
-		.then((list) => {
+		.then(list => {
 			let sensors = [];
 			for (let i in list) {
 				if (/^[\da-f][\da-f]-[\da-f]{12}$/i.test(list[i]))

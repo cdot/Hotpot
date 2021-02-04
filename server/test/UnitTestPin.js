@@ -14,22 +14,22 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
 	tr.addTest("initialise/get/set", async () => {
 		HOTPOT_DEBUG = require('../js/DebugSupport.js');
 		return DataModel.remodel("test", {gpio:6}, Pin.Model, [])
-		.then((p) => {
+		.then(p => {
 			assert(p instanceof Pin);
 			return p.initialise()
-			.then((p) => { assert(p instanceof Pin); })
+			.then(p => { assert(p instanceof Pin); })
 			.then(() => p.getState())
-			.then((v) => assert.equal(v, 0))
+			.then(v => assert.equal(v, 0))
 			.then(() => p.setState(1))
 			.then(() => p.getState())
-			.then((v) => assert.equal(v, 1))
+			.then(v => assert.equal(v, 1))
 			.then(() => p.getSerialisableState())
-			.then((log) => {
+			.then(log => {
 				assert.equal(log.reason, "");
 				assert.equal(log.state, 1);
 			})
 			.then(() => p.getSerialisableLog(0))
-			.then((log) => {
+			.then(log => {
 				assert.isUndefined(log);
 			})
 		})

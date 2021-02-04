@@ -33,11 +33,11 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
 				  ]
 			  }
 			}, Thermostat.Model, [])
-		.then((th) => {
+		.then(th => {
 			assert.isUndefined(th.history);
 
 			return th.initialise()
-			.then((th) => {
+			.then(th => {
 				assert(th instanceof Thermostat);
 				assert(th.getTargetTemperature() <= 10);
 				assert(th.getTargetTemperature() >= 0);
@@ -45,11 +45,11 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
 				return th.poll();
 			})
 			.then(() => th.getSerialisableState())
-			.then((st) => {
+			.then(st => {
 				assert(st.temperature <= 12);
 				assert(Math.abs(st.target - th.getTargetTemperature()) < 0.1);
 			assert.equal(st.requests.length, 0);
-				th.interrupt();
+				th.stop();
 			})
 			.then(() => HOTPOT_DEBUG.stop());
 		});

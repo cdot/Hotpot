@@ -32,7 +32,7 @@
             try {
                 eval("data={" + data + "}");
             } catch (e) {
-                throw new Utils.exception(
+                throw Utils.exception(
                     TAG, "Unparseable data-editable: ", data, ": ", e.message);
             }
             for (let o in options)

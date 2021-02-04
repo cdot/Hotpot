@@ -31,7 +31,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
         (this.path ? this.path : "");
 	};
 
-	Url.prototype.equals = (other) => {
+	Url.prototype.equals = other => {
 		return (this.ipaddr === other.ipaddr) &&
         (this.protocol === other.protocol) &&
         (this.path === other.path) &&
@@ -60,7 +60,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 	DataModel.loadData(cliopt.config, {
         $skip: true
     })
-    .then((cfg) => {
+    .then(cfg => {
         config = cfg;
         step1();
     });
@@ -83,7 +83,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 
 		return new Promise((resolve, reject) => {
 			Ftp.put(new Buffer(data), config.ftp.path,
-					(hadErr) => {
+					hadErr => {
 						Utils.TRACE("Upload finished");
 						Ftp.raw.quit();
 						if (hadErr)
@@ -107,21 +107,21 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 		return new Promise((resolve, reject) => {
 			getter.get(
                 url,
-                (res) => {
+                res => {
                     if (res.statusCode < 200 || res.statusCode > 299) {
                         reject(new Error("Failed to load URL, status: " +
 										 res.statusCode));
                         return;
                     }
 
-                    res.on("data", (chunk) => {
+                    res.on("data", chunk => {
                         result += chunk;
                     });
                     res.on("end", () => {
                         resolve(result);
                     });
                 })
-            .on("error", (err) => {
+            .on("error", err => {
                 reject(err);
             });
 		});
@@ -151,7 +151,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 		console.log("New target ", current);
 
 		Fs.readFile(Utils.expandEnvVars(config.template))
-        .then((buf) => {
+        .then(buf => {
             let html = buf.toString();
             for (let k in current) {
                 if (typeof current[k] !== "undefined")
@@ -160,7 +160,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
             html = html.replace(new RegExp("#url", "g"), current.toString());
             return update(html);
         })
-        .catch((e) => {
+        .catch(e => {
             Utils.TRACE("Update failed", e);
         });
 	}
@@ -171,7 +171,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 	 */
 	function step1() {
 		httpGET(config.http, true) // dodge redirects
-		.then((data) => {
+		.then(data => {
             let s = data.toString();
             // The current information is encoded in a JSON block comment
             let m = /<!--GetIP((.|\n)*?)-->/g.exec(s);
@@ -187,7 +187,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
             }
             step2();
         })
-        .catch((e) => {
+        .catch(e => {
             Utils.TRACE("Old GET failed ", e);
             step2();
         });
@@ -209,7 +209,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
         .then(() => {
             return connection
             .exec('ip iplist')
-            .then((resp) => {
+            .then(resp => {
                 connection.end();
                 let m = config.gateway_router.extract.exec(resp);
                 if (m)
@@ -219,12 +219,12 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
                     step3();
                 }
             },
-                  (err) => {
+                  err => {
                       Utils.TRACE("Gateway router Telnet error", err);
                       step3();
                   });
         },
-              (err) => {
+              err => {
                   Utils.TRACE("Gateway router Telnet error:", err);
                   step3();
               });
@@ -251,7 +251,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 		}
 
 		httpGET(config.netgear_router.url)
-        .then((data) => {
+        .then(data => {
             return new Promise((resolve, reject) => {
                 data = data.replace(/\n/g, " ");
                 let scan = /<td[^>]*>\s*IP Address\s*<\/td>\s*<td[^>]*>\s*(\d+\.\d+\.\d+\.\d+)\s*</g;
@@ -270,7 +270,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
         }, didnt_work)
         .finally(() => {
             httpGET(config.netgear_router.logout_url)
-            .catch((e) => {
+            .catch(e => {
                 if (!/status: 401/.test(e))
                     Utils.TRACE("Problem logging out of netgear router ", e);
             });
@@ -283,10 +283,10 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 	 */
 	function step4() {
 		httpGET("http://icanhazip.com")
-        .then((data) => {
+        .then(data => {
             finish(data.toString().trim());
         },
-              (err) => {
+              err => {
                   Utils.TRACE("icanhazip failed: ", err);
                   step5();
               });
@@ -298,10 +298,10 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 	 */
 	function step5() {
 		httpGET("http://freegeoip.net/json")
-        .then((data) => {
+        .then(data => {
             finish(JSON.parse(data).ip);
         },
-              (err) => {
+              err => {
                   Utils.TARCE("Failed to fetch new IP address: " + err);
               });
 	}

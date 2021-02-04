@@ -13,12 +13,12 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 
             if (typeof this.time === "undefined") {
                 if (typeof this.times === "undefined")
-                    throw new Utils.exception(
+                    throw Utils.exception(
 						"Timepoint", "must have time or times");
                 this.time = Time.parse(this.times);
                 delete this.times;
             } else if (typeof this.times !== "undefined")
-                throw new Utils.exception(
+                throw Utils.exception(
 					"Timepoint", "must have time or times, not both");
         }
 
@@ -70,7 +70,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
                 || this.max < this.min
                 || typeof this.period !== "number"
                 || this.period <= 0)
-                throw new Utils.exception(TAG, "Bad configuration");
+                throw Utils.exception(TAG, "Bad configuration");
 
             if (typeof this.points === "undefined")
                 this.points = [];
@@ -117,7 +117,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
          */
         getPointAfter(t) {
             if (t < 0 || t >= this.period)
-                throw new Utils.exception(
+                throw Utils.exception(
                     TAG, `${t} is outside timeline 0..${this.period - 1}`);
             for (let i = 1; i < this.points.length - 1; i++) {
                 if (this.points[i].time > t)
@@ -161,7 +161,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
          */
         insertBefore(index, point) {
             if (index <= 0 || index >= this.points.length)
-                throw new Utils.exception(
+                throw Utils.exception(
                     TAG, `Index ${index} is outside timeline 0..${this.points.length - 1}`);
             this.points.splice(index, 0, new Timepoint(point));
             // Use setPoint to validate it
@@ -181,7 +181,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
          */
         remove(idx) {
             if (idx <= 0 || idx >= this.points.length - 1)
-                throw new Utils.exception(
+                throw Utils.exception(
                     TAG, `${idx} cannot be removed from 0..${this.points.length - 1}`);
             this.points.splice(idx, 1);
             return this;
@@ -201,7 +201,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
          */
         getPoint(i) {
             if (i < 0 || i >= this.points.length)
-                throw new Utils.exception(
+                throw Utils.exception(
 					TAG, `getPoint ${i} not in 0..${this.points.length - 1}`);
             return this.points[i];
 
@@ -216,23 +216,23 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
          */
         setPoint(i, p) {
             if (i < 0 || i >= this.points.length)
-                throw new Utils.exception(
+                throw Utils.exception(
 					TAG, `Point ${i} not in timeline`);
             if (typeof p === "undefined")
                 p = this.points[i];
             if (p.time < 0 || p.time >= this.period) {
-                throw new Utils.exception(
+                throw Utils.exception(
                     TAG,
                     `Time ${p.time} outside period 0..${this.period - 1}`);
             }
             if (i < this.points.length - 1 && p.time >= this.points[i + 1].time)
-                throw new Utils.exception(
+                throw Utils.exception(
                     TAG, `setPoint ${p.time} is later than following point @${this.points[i + 1].time}`);
             if (i > 0 && p.time <= this.points[i - 1].time)
-                throw new Utils.exception(
+                throw Utils.exception(
                     TAG, `setPoint ${p.time} is earlier than preceding point @${this.points[i - 1].time}`);
             if (p.value < this.min || p.value > this.max)
-                throw new Utils.exception(
+                throw Utils.exception(
 					TAG,
 					`setPoint value ${p.value} is out of range ${this.min}..${this.max}`);
             this.points[i].time = p.time;
@@ -249,7 +249,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
          */
         setPointConstrained(idx, tp) {
             if (idx < 0 || idx >= this.points.length)
-                throw new Utils.exception(
+                throw Utils.exception(
                     TAG, `Point ${idx} not in timeline`);
 
             // Clip

@@ -20,12 +20,12 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             Utils.extend(this, proto);
         }
 
+		/**
+		 * Start the controller.
+		 * @return this
+		 */
         initialise() {
             Utils.TRACE(TAG, "Initialising Controller");
-
-            this.poll = {
-                timer: undefined
-            };
 
             return this.initialisePins()
 
@@ -37,7 +37,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
             .then(() => this.initialiseWeatherAgents())
 
-            // Start the poll loop
+            // Start the poll loop; the promise returned resolves to this
             .then(() => this.pollRules());
         };
 
@@ -86,7 +86,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                         th.addRequest(id, target, until);
                 }
             } else if (!this.thermostat[service])
-                throw new Utils.exception(
+                throw Utils.exception(
 					TAG, `Cannot add request, ${service} is not a known thermostat`);
             else if (remove)
                 this.thermostat[service].purgeRequests({
@@ -165,8 +165,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
             .then(() => {
                 Utils.TRACE(TAG, "Reset: HW(1) done");
-                return new Promise((resolve) => {
-                    setTimeout(resolve, valve_back);
+                return new Promise(resolve => {
+                    Utils.startTimer("HWreset", resolve, valve_back);
                 });
             })
 
@@ -184,7 +184,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 Utils.TRACE(TAG, "Valve reset");
             })
 
-            .catch((e) => {
+            .catch(e => {
                 Utils.TRACE(TAG, "Failed to reset valve: ", e);
             });
         }
@@ -198,12 +198,25 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             for (let name in this.thermostat) {
                 promises.push(
 					this.thermostat[name].initialise()
-					.then((th) => th.poll()));
-            }
+					.then(th => {
+						th.setAlertHandler(
+							mess => this.sendMailToAdmin("HOTPOT ALERT", mess));
+						return th.poll();
+					}));
+			}
             return Promise.all(promises).then(() => {
                 Utils.TRACE(TAG, "Initialised thermostats");
             });
         };
+
+		/**
+		 * Set a handler to be invoked if there's a problem requiring
+		 * an admin alert
+		 */
+		setAlertHandler(func) {
+            for (let name in this.thermostat)
+				this.thermostat[name].setAlertHandler(func);
+		}
 
         /**
          * Set the location of the server
@@ -238,7 +251,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                             state[field] = {};
                         promises.push(
                             item.getSerialisableState()
-                            .then((value) => {
+                            .then(value => {
                                 state[field][key] = value;
                                 return field;
                             }));
@@ -247,7 +260,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             }
 
             return Promise.all(promises)
-            .then((p) => {
+            .then(p => {
                 return state;
             });
         };
@@ -268,7 +281,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 					&& typeof item.getSerialisableLog === "function") {
                     promises.push(
                         item.getSerialisableLog(since)
-                        .then((value) => {
+                        .then(value => {
                             if (!logset)
                                 logset = {};
                             logset[key] = value;
@@ -294,7 +307,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 let block = this[field];
                 promises.push(
                     this.getLogsFor(this[field], since)
-                    .then((logset) => {
+                    .then(logset => {
                         if (logset)
                             logs[field] = logset;
                     }));
@@ -321,15 +334,16 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 return Promise.resolve();
 
             if (this.pending) {
-                return new Promise((resolve) => {
-                    setTimeout(() => resolve(this.setPromise(channel, new_state)),
+                return new Promise(resolve => {
+                    Utils.startTimer("setPromise", () => resolve(
+						this.setPromise(channel, new_state)),
 							   this.valve_return);
                 });
             }
 
             return pins[channel].getState()
 
-            .then((cur_state) => {
+            .then(cur_state => {
                 if (cur_state === new_state)
                     return Promise.resolve(); // already in the right state
 
@@ -346,7 +360,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 if (channel === "CH" && cur_state === 1 && new_state === 0) {
                     // CH is on, and it's going off
                     return pins.HW.getState()
-					.then((hw_state) => {
+					.then(hwstate => {
 						// HW is on, so just turn CH off
 						if (hw_state !== 0)
 							return pins.CH.setState(new_state);
@@ -360,8 +374,11 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 						return pins.CH.setState(0) // switch off CH
 						.then(() => pins.HW.setState(1)) // switch on HW
 						// wait for spring return
-						.then(() => new Promise((resolve) => setTimeout(resolve, this.valve_return)))
-						.then(() => pins.HW.setState(0)) // switch off HW
+						.then(() => new Promise(
+							resolve => Utils.startTimer(
+								"springReturn",
+								resolve, this.valve_return)))
+						.then(() => pinsHW.setState(0)) // switch off HW
 						.then(() => { this.pending = false;	});
 					});
                 }
@@ -385,7 +402,6 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             switch (command) {
             case "state": // Return the current system state
                 // /state
-                this.pollRules();
                 return this.getSerialisableState();
             case "trace": // Set tracing level
                 // Set tracing
@@ -406,19 +422,19 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 // /getconfig/path/to/config/node
                 Utils.TRACE(TAG, `getconfig ${path}`);
                 return DataModel.at(this, Controller.Model, path)
-				.then((p) => DataModel.getSerialisable(p.node, p.model));
+				.then(p => DataModel.getSerialisable(p.node, p.model));
             case "setconfig":
                 // /setconfig/path/to/config/node, data.value is new setting
                 return DataModel.at(this, Controller.Model, path)
-				.then((p) => {
+				.then(p => {
                     if (typeof p.parent === "undefined" ||
                         typeof p.key === "undefined" ||
                         typeof p.node === "undefined")
-                        throw new Utils.exception(
+                        throw Utils.exception(
                             TAG,
                             `Cannot update ${path}, insufficient context`);
                     return DataModel.remodel(p.key, data, p.model, path)
-					.then((rebuilt) => {
+					.then(rebuilt => {
 						p.parent[p.key] = rebuilt;
 						Utils.TRACE(TAG, `setconfig ${path} = ${rebuilt}`);
 						this.emit("config_change");
@@ -436,7 +452,6 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 				if (data.until == "boost") data.until = Utils.BOOST;
 				else if (data.until == "clear") data.until = Utils.CLEAR;
                 this.addRequest(data.service, data.source, data.target, data.until);
-                this.pollRules();
                 break;
             case "refresh_calendars":
                 // Force the refresh of all calendars (sent manually when one changes)
@@ -446,10 +461,9 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 Utils.TRACE(TAG, "Refresh calendars");
                 for (let cal in this.calendar)
                     this.calendar[cal].update(100);
-                this.pollRules();
                 break;
             default:
-                throw new Utils.exception(TAG, `Unrecognised command ${command}`);
+                throw Utils.exception(TAG, `Unrecognised command ${command}`);
             }
             return Promise.resolve({
                 status: "OK"
@@ -461,12 +475,6 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * @private
          */
         pollRules() {
-
-            if (typeof this.poll.timer !== "undefined") {
-                clearTimeout(this.poll.timer);
-                this.poll.timer = undefined;
-            }
-
             // Purge completed requests
             for (let name in this.thermostat)
                 this.thermostat[name].purgeRequests();
@@ -482,19 +490,121 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                 promises.push(rule.test(this));
             }
 
-			Promise.all(promises)
+			return Promise.all(promises)
 			.then(() => {
 				// Queue the next poll
-				this.poll.timer = setTimeout(() => {
-					this.poll.timer = undefined;
-					this.pollRules();
-				}, this.rule_interval);
+				this.pollTimer = Utils.startTimer(
+					"pollRules", () => this.pollRules(), this.rule_interval);
+				return this;
 			});
         }
-    }
+
+		/**
+		 * Stop the controller polling loop, and the polling loops associated
+		 * with sensors
+		 */
+		stop() {
+			this.stopped = true;
+			if (typeof this.pollTimer !== "undefined") {
+				Utils.cancelTimer(this.pollTimer);
+				delete this.pollTimer;
+			}
+			for (let name in this.thermostat) {
+				this.thermostat[name].stop();
+			}
+			for (let name in this.calendar) {
+				this.calendar[name].stop();
+			}
+			for (let name in this.weather) {
+				this.weather[name].stop();
+			}
+		}
+
+		/**
+		 * Return a promise to send mail to the admin. The promise resolves
+		 * to an info block used by tests, which can safely be ignored.
+		 */
+		sendMailToAdmin(subject, text) {
+			let NodeMailer;
+			return Utils.require("nodemailer").then(NodeMailer => {
+				let promise;
+
+				if (typeof this.mail === "undefined") {
+					if (typeof HOTPOT_DEBUG === "undefined") {
+						console.error("Mail not configured and no --debug");
+						return null;
+					}
+					promise = HOTPOT_DEBUG.setupEmail(NodeMailer)
+					.then(mail => {
+						this.mail = mail;
+					});
+				} else
+					promise = Promise.resolve();
+
+				return promise
+				.then(() => NodeMailer.createTransport({
+					host: this.mail.host,
+					port: this.mail.port,
+					secure: this.mail.port == 465,
+					auth: {
+						user: this.mail.user,
+						pass: this.mail.pass
+					}
+				}))
+				.then(transporter => new Promise((resolve, reject) => {
+					transporter.sendMail({
+						from: this.mail.from,
+						to: this.mail.to,
+						subject: subject,
+						html: text,
+						text: text
+					}, (err, info) => {
+						if (err !== null) reject(err)
+						else resolve(info);
+					});
+				}))
+				.then(info => {
+					// ethereal mail host used in testing
+					if (this.mail.host === "smtp.ethereal.email")
+						console.log("Mail preview URL: ",
+									NodeMailer.getTestMessageUrl(info));
+					return info;
+				})
+				.catch(err => console.error(`Mail error ${err}`));
+			});
+		}
+	}
 
     Controller.Model = {
         $class: Controller,
+		mail: {
+			$doc: "Admin mail configuration",
+			$optional: true,
+			host: {
+				$doc: "Send mail host",
+				$class: String
+			},
+			port: {
+				$doc: "Mail host port",
+				$class: Number
+			},
+			user: {
+				$doc: "Mail host user",
+				$class: String
+			},
+			pass: {
+				$doc: "Mail host pass",
+				$class: String
+			},
+			from: {
+				$doc: "Mail sender",
+				$class: String
+			},
+			to: {
+				$doc: "Mail recipient",
+				$class: String
+			}
+		},
         thermostat: {
             $doc: "Set of Thermostats",
             $map_of: Thermostat.Model

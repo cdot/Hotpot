@@ -27,9 +27,13 @@ define("server/js/ScheduledEvent", ["common/js/Utils", "common/js/Time"], functi
 
             let now = Date.now();
             if (start > now) {
-                Utils.TRACE(TAG, this.id, "(", service, ",", temperature, ") will start at ", new Date(start),
-                            " now is ", new Date());
-                this.event = setTimeout(() => this.begin(), start - now);
+                Utils.TRACE(
+					TAG, this.id,
+					`(${service},${temperature}) will start at `,
+					new Date(start),
+                    " now is ", new Date());
+                this.eventTimer = Utils.startTimer(this.id, () => this.begin(), start - now);
+                Utils.TRACE(TAG, this.id, ` set timer ${this.eventTimer}`);
             } else if (start <= now && until > 0 && until > now) {
                 Utils.TRACE(TAG, this.id, " began in the past");
                 this.begin();
@@ -40,10 +44,9 @@ define("server/js/ScheduledEvent", ["common/js/Utils", "common/js/Time"], functi
 
         // Cancel this event. Will remove the event from the containing calendar.
         cancel() {
-            Utils.TRACE(TAG, this.id, " cancelled");
-            if (typeof this.event !== "undefined") {
-                clearTimeout(this.event);
-                this.event = undefined;
+            if (typeof this.eventTimer !== "undefined") {
+                Utils.cancelTimer(this.eventTimer);
+                delete this.eventTimer;
             }
             if (typeof this.calendar.remove === "function")
                 this.calendar.remove(this.id, this.service);

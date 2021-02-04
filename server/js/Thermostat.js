@@ -7,7 +7,11 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
     const TAG = "Thermostat";
 
     // Default interval between polls
-    const DEFAULT_POLL_INTERVAL = 5; // seconds
+    const DEFAULT_POLL_INTERVAL = 20; // seconds
+
+	// If there has been no response from the sensor in this time, email an
+	// alarm to the admin
+	const NO_RESPONSE_ALARM = 10 * 60 * 1000; // 10 mins in ms
 
     /**
      * Interface to a DS18x20 thermostat. This object takes care of polling the
@@ -70,8 +74,6 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
             if (typeof hc !== "undefined") {
                 if (typeof hc.interval === "undefined")
                     hc.interval = 300; // 5 minutes
-                // Only log temperatures to one decimal place
-                hc.sample = () => Math.round(this.temperature * 10) / 10;
             }
         }
 
@@ -80,11 +82,11 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
          * from the probe. The promise resolves to the Thermostat.
          */
         initialise() {
-            return new Promise((resolve) => {
+            return new Promise(resolve => {
 				this.sensor.initialiseSensor()
-				.then((s) => s.getTemperature())
-				.then((t) => resolve(t))
-				.catch((e) => {
+				.then(s => s.getTemperature())
+				.then(t => resolve(t))
+				.catch(e => {
 					console.error(`Thermostat ${this.id} initialisation failed ${e}`);
 					if (typeof HOTPOT_DEBUG === "undefined") {
 						console.error("--debug not enabled");
@@ -103,12 +105,14 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 					}
 				});
 			})
-			.then((temp) => {
+			.then(temp => {
                 this.temperature = temp;
                 // Start the historian
                 if (this.history) {
 					Utils.TRACE(TAG, `starting historian for '${this.name}' at ${temp}`);
-                    this.history.start(() => this.temperature);
+                    this.history.start(() => {
+						return Math.round(this.temperature * 10) / 10;
+					});
 				}
                 Utils.TRACE(TAG, `'${this.name}' initialised`);
 				return this;
@@ -143,10 +147,18 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
          * @protected
          */
         getSerialisableLog(since) {
-            if (!this.history)
-                return Promise.resolve();
-            return this.history.getSerialisableHistory(since);
-        };
+            if (this.history)
+				return this.history.getSerialisableHistory(since);
+            return Promise.resolve();
+        }
+
+		/**
+		 * Set a handler to be invoked if there's a problem requiring
+		 * an admin alert
+		 */
+		setAlertHandler(func) {
+			this.alertHandler = func;
+		}
 
         /**
          * Return a promise to start polling thermometers
@@ -156,39 +168,56 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
          * The promise resolves to the Thermostat.
          */
         poll() {
+			delete this.pollTimer;
             return this.sensor.getTemperature()
-			.then((temp) => {
+			.then(temp => {
 				Utils.TRACE(TAG, `${this.id} now ${temp}`);
                 this.temperature = temp;
 				this.lastKnownGood = Date.now();
+				this.alerted = false;
 				return this;
 			})
 
 			// If we didn't get a useable reading, use the last
 			// temperature returned. Log how long it's been since we
 			// last got a known-good reading.
-			.catch((e) => {
-				console.error(`Error polling ${this.id} ${e}`);
+			.catch(e => {
+				let waiting = Date.now() - this.lastKnownGood;
+				let mess = `${this.name} sensor ${this.id} has had no reading for ${Time.formatDelta(waiting)}`;
+				console.error(mess);
+				if (this.alerted || waiting < NO_RESPONSE_ALARM)
+					return this;
+				if (typeof this.alertHandler === "function")
+					this.alertHandler(mess);
+				this.alerted = true;
 				return this;
 			})
 
 			.finally(() => {
 				if (this.interrupted) {
-					Utils.TRACE(TAG, `'${this.name}' polling interrupted`);
+					Utils.TRACE(TAG, `'${this.name}' interrupted`);
 					this.interrupted = false;
-				} else {
-					setTimeout(
-						() => this.poll(),
-						1000 * (this.poll_every || DEFAULT_POLL_INTERVAL));
+					return;
 				}
+				this.pollTimer = Utils.startTimer(
+					`poll${this.name}`,
+					() => this.poll(),
+					1000 * (this.poll_every || DEFAULT_POLL_INTERVAL));
             });
         };
 
 		/**
 		 * Interrupt the temperature polling
 		 */
-		interrupt() {
-			this.interrupted = true;
+		stop() {
+			if (this.pollTimer) {
+				Utils.TRACE(
+					TAG, `'${this.name}' interrupted ${this.pollTimer}`);
+				Utils.cancelTimer(this.pollTimer)
+				delete this.pollTimer;
+			}
+			if (this.history)
+				this.history.stop();
 		}
 
         /**

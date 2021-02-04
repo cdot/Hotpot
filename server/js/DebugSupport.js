@@ -39,18 +39,16 @@ class Service {
         this.temperature += RATES[this.pinState][this.name];
 		if (this.temperature < 0)
 			this.temperature = 0;
-		if (!this.interrupted) {
-			this.timer = setTimeout(() => this._getNextTemperature(), 1000);
-		}
+		this.timer = setTimeout(() => this._getNextTemperature(), 1000);
 	}
 
 	initialiseGpio(dirn, active) {
-		Utils.TRACE(TAG, "${this.name} ${dirn}pin active ${active} simulation initialised");
+		console.log(`${this.name} ${dirn}pin active ${active} simulation initialised`);
 	}
 
 	// DS18x20 simulation
 	initialiseSensor() {
-		Utils.TRACE(TAG, "${this.name} thermostat simulation initialised");
+		console.log(`${this.name} thermostat simulation initialised`);
 		return Promise.resolve(this);
 	}
 
@@ -63,6 +61,10 @@ class Service {
 				this.isSimulating = true;
 				this._getNextTemperature();
 			}
+			// No response alarm test
+			//if (this.hadOne)
+			//	return Promise.reject("Wobbly");
+			//this.hadOne = true;
 			return Promise.resolve(this.temperature);
 		}
 	}
@@ -75,6 +77,13 @@ class Service {
 	setValue(state) {
 		this.pinState = state;
 		return Promise.resolve();
+	}
+
+	stop() {
+		if (typeof this.timer !== "undefined") {
+			clearTimeout(this.timer);
+			delete this.timer;
+		}
 	}
 }
 
@@ -96,10 +105,22 @@ class DebugSupport {
 	stop() {
 		for (let k in this.services) {
 			let s = this.services[k];
-			s.interrupted = true;
-			if (s.timer)
-				clearTimeout(s.timer);
+			s.stop();
 		}
+	}
+
+	setupEmail(NodeMailer) {
+		return NodeMailer.createTestAccount()
+		.then(testAccount => {
+			return {
+				host: "smtp.ethereal.email",
+				port: 587,
+				user: testAccount.user,
+				pass: testAccount.pass,
+				from: "source@hotpot.co.uk",
+				to: "dest@hotpot.co.uk"
+			}
+		});
 	}
 }
 

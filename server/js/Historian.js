@@ -55,7 +55,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          */
         _loadFromFile() {
             return Fs.readFile(this.path())
-            .then((data) => {
+            .then(data => {
                 let lines = data.toString().split("\n");
                 let report = [];
                 let i;
@@ -102,7 +102,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
 
                 return report;
             })
-            .catch((e) => {
+            .catch(e => {
                 Utils.TRACE(TAG, "Failed to open history ", e);
                 return [];
             });
@@ -118,7 +118,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          */
         getSerialisableHistory(since) {
             return this._loadFromFile()
-            .then((report) => {
+            .then(report => {
                 let basetime = report.length > 0 ? report[0].time : Date.now();
                 let res = [basetime];
                 for (let i in report) {
@@ -140,13 +140,13 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
         start(sample) {
 
             if (typeof sample !== "function")
-                throw new Utils.exception(TAG, "Cannot start; sample not a function");
+                throw Utils.exception(TAG, "Cannot start; sample not a function");
             this.sampler = sample;
 
             if (typeof this.interval === "undefined")
-                throw new Utils.exception(TAG, "Cannot start; interval not defined");
-            // Polling will continue until the timer is deleted
-            this.timeout = setTimeout(() => this._poll(), 100);
+                throw Utils.exception(TAG, "Cannot start; interval not defined");
+            this.timeout = Utils.startTimer(
+				`hist${this.name}`, () => this._poll(), 100);
         }
 
         /**
@@ -167,7 +167,8 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                 if (this.timeout) {
                     // Existance of a timer indicates we must continue
                     // to poll
-                    this.timeout = setTimeout(() => this._poll(), this.interval);
+                    this.timeout = Utils.startTimer(
+						`hist${this.name}`, () => this._poll(), this.interval);
                 }
             });
         }
@@ -177,7 +178,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          */
         stop() {
             if (this.timeout) {
-                clearTimeout(this.timeout);
+                Utils.cancelTimer(this.timeout);
                 this.timeout = null;
                 Utils.TRACE(TAG, this.name, " stopped");
             }
@@ -194,26 +195,21 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
             if (typeof time === "undefined")
                 time = Date.now();
 
-            let promise;
+			let line = "";
 
             // If we've skipped recording an interval since the last
             // recorded sample, pop in a checkpoint
-            if (typeof this.last_time === "undefined" ||
-                time > this.last_time + 5 * this.interval / 4) {
-                promise = Fs.appendFile(
-                    this.path(),
-                    `${time - this.interval},${this.last_sample}\n`);
-            } else
-                promise = Promise.resolve();
+            if (typeof this.last_time !== "undefined" &&
+                time > this.last_time + 5 * this.interval / 4)
+                line = `${time - this.interval},${this.last_sample}\n`;
 
+			line += `${time},${sample}\n`;
             this.last_time = time;
             this.last_sample = sample;
 
-            return promise.then(() => {
-                return Fs.appendFile(this.path(), `${time},${sample}\n`)
-                .catch((ferr) => {
-                    Utils.TRACE(TAG, `failed to append to '${this.path()}': `, ferr);
-                });
+            return Fs.appendFile(this.path(), line)
+            .catch(ferr => {
+                Utils.TRACE(TAG, `failed to append to '${this.path()}': `, ferr);
             });
         };
     }

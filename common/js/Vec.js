@@ -18,13 +18,13 @@ define("common/js/Vec", ["common/js/Utils"], function(Utils) {
                 for (i = 1; i < arguments.length; i++)
                     if (!(arguments[i] instanceof Array)
                         || (arguments[i].length != v.length))
-                        throw new Utils.exception("Vec", "Length mismatch");
+                        throw Utils.exception("Vec", "Length mismatch");
                 return [];
             } else {
                 for (i in v) {
                     for (j = 1; j < arguments.length; j++)
                         if (typeof arguments[j][i] !== typeof v[i])
-                            throw new Utils.exception("Vec", "Type mismatch",
+                            throw Utils.exception("Vec", "Type mismatch",
                                                       typeof arguments[j][i],
                                                       typeof v[i]);
                 }

@@ -42,7 +42,7 @@ define("common/js/Location", ["common/js/Utils"], function(Utils) {
                     lng = lat.longitude;
                     lat = lat.latitude;
                 } else {
-                    throw new Utils.exception(
+                    throw Utils.exception(
                         TAG, `Cannot initialise from ${lat}`);
                 }
             } // else Constructor (1.)

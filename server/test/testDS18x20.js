@@ -33,15 +33,15 @@ const ASYNC = true;
 		// 1-wire bus.
 		let promise;
 if (ASYNC) {
-		promise = Promise.all(sensors.map((sensor) => {
+		promise = Promise.all(sensors.map(sensor => {
 			sensor.getTemperature()
-			.then((t) => {
+			.then(t => {
 				let now = Date.now();
 				let diff = (now - lastKnownGood[sensor.id]) / 1000;
 				console.log(`${sensor.id}: ${t} ${diff}`);
 				lastKnownGood[sensor.id] = now;
 			 })
-			.catch((e) => {
+			.catch(e => {
 				let wait = (Date.now() - lastKnownGood[sensor.id]) / 1000;
 				if (wait > longestWait[sensor.id])
 					longestWait[sensor.id] = wait;
@@ -53,13 +53,13 @@ if (ASYNC) {
 		for (let i in sensors) {
 			let sensor = sensors[i];
 			promise = promise.then(() => sensor.getTemperature())
-			.then((t) => {
+			.then(t => {
 				let now = Date.now();
 				let diff = (now - lastKnownGood[sensor.id]) / 1000;
 				console.log(`${sensor.id}: ${t} ${diff}`);
 				lastKnownGood[sensor.id] = now;
 			 })
-			.catch((e) => {
+			.catch(e => {
 				let wait = (Date.now() - lastKnownGood[sensor.id]) / 1000;
 				if (wait > longestWait[sensor.id])
 					longestWait[sensor.id] = wait;
@@ -69,13 +69,13 @@ if (ASYNC) {
 }
 		promise.finally(() => {
 			if (freq > 0)
-				setTimeout(() => poll(sensors), freq * 1000);
+				Utils.startTimer("freq", () => poll(sensors), freq * 1000);
 		});
 	}
 
 	let id = getopt.argv[0];
 	((typeof id === "undefined") ? DS18x20.list() : Promise.resolve([id]))
-	.then((ids) => {
+	.then(ids => {
 		console.log("Sensors ", ids);
 		Promise.all(ids.map(id => {
 			let sensor = new DS18x20(id);
@@ -83,9 +83,9 @@ if (ASYNC) {
 			longestWait[sensor.id] = 0;
 			return sensor.initialiseSensor();
 		}))
-		.then((sensors) => {
+		.then(sensors => {
 			poll(sensors);
 		});
 	})
-	.catch((e) => {console.error(e);});
+	.catch(e => {console.error(e);});
 });

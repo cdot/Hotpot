@@ -59,8 +59,11 @@ define("common/js/Utils", () => {
         "Timeout"
     ];
 
+	var TIMERS = {};
+	var TIMER_ID = 1;
+
     class Utils {
-		
+
 		/**
 		 * Expand environment variables in the data string
 		 * @param {String} data string containing env var references
@@ -164,6 +167,22 @@ define("common/js/Utils", () => {
 		}
 
 		/**
+		 * Promisify requirejs. Require a single module.
+		 */
+		static require(mod) {
+			return new Promise((resolve, reject) => {
+				requirejs(
+					[mod],
+					function () {
+						resolve(arguments[0]);
+					},
+					function (err) {
+						reject(err);
+					});
+			});
+		}
+
+		/**
 		 * Construct a slightly customised exception object
 		 * @param name Exception type name
 		 * @param args remaining args will be
@@ -236,9 +255,33 @@ define("common/js/Utils", () => {
 			let then = typeof date === "object" ? date.getTime() : date;
 			let diff = Math.max((then - now), 0);
 			if (diff > 0x7FFFFFFF) // setTimeout limit is MAX_INT32=(2^31-1)
-				setTimeout(() => Utils.runAt(func, date), 0x7FFFFFFF);
+				Utils.startTimer("runAt", () => Utils.runAt(func, date), 0x7FFFFFFF);
 			else
-				setTimeout(func, diff);
+				Utils.startTimer("runAt", func, diff);
+		}
+
+		static startTimer(descr, fn, timeout) {
+			let id = `${descr}:${TIMER_ID++}`;
+			//Utils.TRACE(id, "started");
+			let timer = setTimeout(() => {
+				//Utils.TRACE(id, "fired");
+				delete TIMERS[id];
+				fn();
+			}, timeout);
+			TIMERS[id] = timer;
+			return id;
+		}
+
+		static cancelTimer(id) {
+			if (typeof TIMERS[id] === "undefined")
+				throw new Error(`No such timer ${id}!`);
+			//Utils.TRACE(id, "cancelled");
+			clearTimeout(TIMERS[id]);
+			delete TIMERS[id];
+		}
+
+		static getTimers() {
+			return TIMERS;
 		}
 	}
 
@@ -246,6 +289,9 @@ define("common/js/Utils", () => {
 		Utils.extend = jQuery.extend;
 	else
 		Utils.extend = require("extend");
+
+	// Mail handler
+	//Utils.sendMail = undefined;
 
 	// Private function to write tracing info
 	Utils.writeTrace = console.log;

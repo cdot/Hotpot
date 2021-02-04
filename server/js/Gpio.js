@@ -35,7 +35,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
             .catch(() => this.export(exported))
             .then(() => this.setDirection(direction))
             .then(() => this.setActive(active))
-            .catch((e) => {
+            .catch(e => {
                 console.error(`Failed to initialise ${this.gpio} ${e}`);
 				throw e;
             });
@@ -48,11 +48,11 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
         // Try and export the pin
         export() {
             return Fs.writeFile(
-                Path.resolve(GPIO_PATH, 'export'), `${this.gpio}`, "utf8")
+                Path.resolve(GPIO_PATH, 'export'), this.gpio, "utf8")
             .then(() => {
                 // Use a timeout to give it time to get set up; it takes a while
-                return new Promise((resolve) => {
-                    setTimeout(resolve, 1000);
+                return new Promise(resolve => {
+                    Utils.startTimer(`export${this.gpio}`, resolve, 1000);
                 })
             })
         }
@@ -85,7 +85,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
         getValue() {
             return Fs.readFile(
                 Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'value'), "utf8")
-            .then((data) => parseInt(data));
+            .then(data => parseInt(data));
         }
     }
 

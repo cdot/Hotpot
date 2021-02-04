@@ -91,7 +91,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let $div = $("#" + service);
             let tcur = Math.round(
                 10 * obj.thermostat[service].temperature) / 10;
-            let deltat = (Date.now() - obj.thermostat[service].lastKnownGood)
+            let deltat = (Date.now() - obj.thermostat[service].lastKnownGood);
             let ttgt = Math.round(
                 10 * obj.thermostat[service].target) / 10;
             if (tcur > ttgt)
@@ -172,7 +172,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                 this.poller = null;
             }
             $.getJSON("/ajax/state")
-            .done((data) => {
+            .done(data => {
                 $(".showif").hide(); // hide optional content
                 this.updateTraces(data);
                 this.updateState(data);
@@ -351,9 +351,9 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
 			$div.find(".tl-save").prop("disabled", true);
 			te.onChanged = () => { $div.find(".tl-save").prop("disabled", false) };
             $.getJSON("/ajax/getconfig/thermostat/" + service + "/timeline")
-            .done((tl) => {
+            .done(tl => {
 				DataModel.remodel(service, tl, Timeline.Model)
-                .then((timel) => {
+                .then(timel => {
 					te.timeline = timel;
 					te.$main_canvas.trigger("redraw");
 				});
@@ -372,7 +372,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let te = this.timelineEditors[service];
             console.log("Send timeline update to server");
             DataModel.getSerialisable(te.timeline, Timeline.Model)
-            .then((serialisable) => {
+            .then(serialisable => {
                 $.post(
                     "/ajax/setconfig/thermostat/" + service + "/timeline",
                     JSON.stringify(serialisable))
@@ -393,7 +393,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
                     service: service,
                     until: Utils.BOOST
                 },
-                (e) => {
+                e => {
                     e.data.target = $div.find(".boost-target").val();
                     this.sendRequest(e.data);
                 });
@@ -445,7 +445,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Tim
             let params = {
                 since: Date.now() - 24 * 60 * 60
             };
-            $.getJSON("/ajax/log", JSON.stringify(params), (data) => {
+            $.getJSON("/ajax/log", JSON.stringify(params), data => {
                 this.loadTraces(data);
             })
             .fail((jqXHR, textStatus, errorThrown) => {

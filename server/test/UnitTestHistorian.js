@@ -64,7 +64,7 @@ requirejs(["test/TestRunner", "server/js/Historian", "common/js/Utils", "fs"], f
                 if (nsamples >= COUNT) {
                     h.stop();
                     h.getSerialisableHistory()
-                    .then((report) => {
+                    .then(report => {
                         assert.equal(report.length, 2 * COUNT + 1);
                         let last_t = -INTERVAL;
                         for (let i = 1, j = 0; i < report.length; i += 2, j++) {

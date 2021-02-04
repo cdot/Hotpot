@@ -31,7 +31,7 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
         constructor(proto, name) {
 			super(proto, name);
             // GoogleAuthClient.OAuth2
-            this.oauth2Client = undefined;
+            delete this.oauth2Client;
         }
 
         /**
@@ -44,7 +44,7 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
 
             return Fs.readFile(Utils.expandEnvVars(this.auth_cache))
 
-            .then((token) => {
+            .then(token => {
                 let clientSecret = this.secrets.client_secret;
                 let clientId = this.secrets.client_id;
                 let redirectUrl = this.secrets.redirect_uris[0];
@@ -103,7 +103,7 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
                 });
             })
 
-            .then((response) => {
+            .then(response => {
                 this.clearSchedule();
                 let events = response.data.items;
                 Utils.TRACE(TAG, `'${this.name}' has ${events.length} events`);

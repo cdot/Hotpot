@@ -52,7 +52,7 @@ requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt,
 			console.debug("Trying " + addr);
 			Http.get(
 				addr,
-				(res) => {
+				res => {
 					console.log(res.statusCode + " received from " +
 								addr + " " + res.headers.date);
 					if (res.statusCode < 200 || res.statusCode > 299) {
@@ -70,7 +70,7 @@ requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt,
 					}
 				});
         })
-		.catch("error", (err) => {
+		.catch("error", err => {
 			console.error(addr + " failed " + err);
 			reject();
 		});

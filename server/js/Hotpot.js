@@ -64,7 +64,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
 
     DataModel.loadData(cliopt.config, HOTPOT_MODEL)
 
-    .then((cfg) => {
+    .then(cfg => {
 		if (cfg.tracefile)
 			Utils.TRACEto(cfg.tracefile.getPath());
 
@@ -72,6 +72,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
         config = cfg;
         controller = config.controller;
         server = config.server;
+		Utils.sendMail = (subj, mess) => server.sendMailToAdmin(subj, mess);
         server.setDispatch(
             (path, params) => {
                 return controller.dispatch(path, params);
@@ -100,7 +101,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
             });
     })
 
-    .catch((e) => {
+    .catch(e => {
         console.error("Controller initialisation failed: ",
                     typeof e.stack !== "undefined" ? e.stack : e);
         eval("process.exit(1)");
