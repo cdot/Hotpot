@@ -6,4 +6,8 @@
         android:id="@+id/updateCalendars"
         android:title="@string/updateCalendars"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/about"
+        android:title="@string/about"
+        app:showAsAction="never" />
 </menu>

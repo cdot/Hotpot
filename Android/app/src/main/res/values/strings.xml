@@ -9,4 +9,6 @@
     <string name="no_contact">Could not contact server</string>
     <string name="clear_request">Clear request</string>
     <string name="updateCalendars">Update Calendars</string>
+    <string name="about">About</string>
+    <string name="about_snack">This is Hotpot %1$s build %2$d.%3$f</string>
 </resources>

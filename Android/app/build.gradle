@@ -5,6 +5,8 @@ plugins {
 
 def localProperties = new Properties()
 localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+final VERSION_NAME="1.1 Basaltic"
+final VERSION_CODE=2
 
 android {
     compileSdkVersion 30
@@ -25,8 +27,8 @@ android {
         applicationId "com.cdot.hotpot"
         minSdkVersion 23
         targetSdkVersion 30
-        versionCode 1
-        versionName "1.0"
+        versionCode VERSION_CODE
+        versionName VERSION_NAME
         buildConfigField "long", "BUILD_TIME",  System.currentTimeMillis() + "L"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
