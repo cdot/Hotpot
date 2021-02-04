@@ -54,8 +54,8 @@ define("server/js/CentralHeatingRule", ["common/js/Utils", "server/js/Rule"], (U
 	}
 
 	CentralHeatingRule.Model = {
-        $class: CentralHeatingRule
-    };
+		$class: CentralHeatingRule
+	};
 
 	return CentralHeatingRule;
 });

@@ -3,15 +3,15 @@
 let suppression = "t=" + Date.now();
 
 requirejs.config({
-    baseUrl: ".",
-    urlArgs: suppression, // caches suppression
-    paths: {
-        // text! plugin, used for importing css
-        //"text" : "https://cdnjs.cloudflare.com/ajax/libs/require-text/2.0.12/text" ,
+	baseUrl: ".",
+	urlArgs: suppression, // caches suppression
+	paths: {
+		// text! plugin, used for importing css
+		//"text" : "https://cdnjs.cloudflare.com/ajax/libs/require-text/2.0.12/text" ,
 
-        "jquery" :"https://code.jquery.com/jquery-3.4.1" ,
-        "jquery-ui" : "https://code.jquery.com/ui/1.12.1/jquery-ui"
-    }
+		"jquery" :"https://code.jquery.com/jquery-3.4.1" ,
+		"jquery-ui" : "https://code.jquery.com/ui/1.12.1/jquery-ui"
+	}
 });
 
 requirejs(["jquery", "jquery-ui", "../js/autoscale_graph"], function($) {

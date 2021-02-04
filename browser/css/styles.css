@@ -1,143 +1,143 @@
 .body-bg {
-    background-color: #062F47;
+	background-color: #062F47;
 }
 
 .body-fg {
-    color: #FFFFFF
+	color: #FFFFFF
 }
 
 .banner-bg {
-    background-color: #000000;
+	background-color: #000000;
 }
 
 .banner-fg {
-    color: #B82601;
+	color: #B82601;
 }
 
 .fonts {
-    font-family: Helvetica,Arial,sans-serif;
-    font-size: 5vmin;
-    line-height: 1.5;
+	font-family: Helvetica,Arial,sans-serif;
+	font-size: 5vmin;
+	line-height: 1.5;
 }
 
 .banner {
-    padding: 1.7vmin;
-    margin: 0;
+	padding: 1.7vmin;
+	margin: 0;
 }
 
 h1 {
-    font-size: 8vmin;
-    margin: 1vmin 0vmin;
+	font-size: 8vmin;
+	margin: 1vmin 0vmin;
 }
 
 table {
-    width: 100%;
+	width: 100%;
 }
 
 button {
-    font-size: 6vmin;
-    padding: 1vmin;
-    -webkit-border-radius: 1vmin;
-    -moz-border-radius: 1vmin;
-    color: #FFFFFF;
-    background-color: #B82601
+	font-size: 6vmin;
+	padding: 1vmin;
+	-webkit-border-radius: 1vmin;
+	-moz-border-radius: 1vmin;
+	color: #FFFFFF;
+	background-color: #B82601
 }
 
 button:disabled {
-    color: #B0B0B0
-    background-color: #B82601
+	color: #B0B0B0
+			   background-color: #B82601
 }
 
 input {
-    font-family: Courier, "Courier New", Monospace;
-    font-size: 5vmin;
-    line-height: 1;
-    text-align: right;
+	font-family: Courier, "Courier New", Monospace;
+	font-size: 5vmin;
+	line-height: 1;
+	text-align: right;
 }
 
 .switcher {
-    float:right;
+	float:right;
 }
 
 #help {
-    display: none;
+	display: none;
 }
 
 .example {
-    display: inline-block;
-    background-color: lightgrey;
-    padding: 2px;
+	display: inline-block;
+	background-color: lightgrey;
+	padding: 2px;
 }
 
 button.twisty {
-    font-size: 2vmin;
-    -webkit-border-radius: 0;
-    -moz-border-radius: 0;
-    background-color: transparent;
-    color: black;
+	font-size: 2vmin;
+	-webkit-border-radius: 0;
+	-moz-border-radius: 0;
+	background-color: transparent;
+	color: black;
 }
 
 #help-twisty {
-    display: none;
+	display: none;
 }
 
 .request {
-    background-color: orange;
-    padding: 1vmin;
+	background-color: orange;
+	padding: 1vmin;
 }
 
 canvas {
-    -webkit-touch-callout:none;
-    -webkit-user-select:none;
-    -webkit-user-drag:none;
-    -khtml-user-select:none;
-    -moz-user-select:none;
-    -ms-user-select:none;
-    user-select:none;
+	-webkit-touch-callout:none;
+	-webkit-user-select:none;
+	-webkit-user-drag:none;
+	-khtml-user-select:none;
+	-moz-user-select:none;
+	-ms-user-select:none;
+	user-select:none;
 }
 
 .overlay {
-    position: absolute;
-    color: white;
-    background-color: transparent;
-    pointer-events: none;
+	position: absolute;
+	color: white;
+	background-color: transparent;
+	pointer-events: none;
 }
 
 .tl-container {
-    width: 100%;
-    display: none;
+	width: 100%;
+	display: none;
 }
 
 /* The canvases used to edit timelines */
 .tl-canvas {
-    width: 100%;
+	width: 100%;
 }
 
 .spinner { /** container for a spinnable input */
-    display: inline-flex;
-    vertical-align: middle;
+	display: inline-flex;
+	vertical-align: middle;
 }
 
 .spinnable { /* input inside a spinner */
-    text-align: right;
+	text-align: right;
 }
 
 .spinner-controls {
-    min-height: 4vmin;
+	min-height: 4vmin;
 }
 
 .spinner-controls > input {
-    min-height: 4vmin;
-    top: -0.5vmin;
-    position: relative;
+	min-height: 4vmin;
+	top: -0.5vmin;
+	position: relative;
 }
 
 .image_button {
-    height: 4vmin;
+	height: 4vmin;
 }
 
 .calendar {
-    display: none;
+	display: none;
 }
 
 .input-group-btn-vertical {

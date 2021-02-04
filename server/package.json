@@ -29,9 +29,9 @@
     ],
     "dependencies": {
         "basic-auth": "^2.0.1",
-        "follow-redirects": "^1.13.1",
+        "follow-redirects": "^1.13.2",
         "fs": "0.0.1-security",
-        "google-auth-library": "^6.1.4",
+        "google-auth-library": "^6.1.6",
         "googleapis": "^67.0.0",
         "http": "0.0.1-security",
         "https": "^1.0.0",
@@ -45,19 +45,14 @@
     "analyze": true,
     "eslintConfig": {
         "parserOptions": {
-            "ecmaVersion": 6
+            "ecmaVersion": 2017
         },
         "env": {
             "browser": true,
             "jquery": true
         },
-        "ecmaFeatures": {
-            "blockBindings": true
-        },
         "globals": {
             "module": true,
-            "Time": true,
-            "Utils": true,
             "HOTPOT_DEBUG": true
         },
         "rules": {
@@ -75,9 +70,9 @@
             "dot-notation": 1,
             "no-trailing-spaces": 0,
             "no-use-before-define": 0,
-            "no-loop-func": 1,
+            "no-loop-func": 0,
             "no-process-exit": 0,
-            "no-eval": 1,
+            "no-eval": 0,
             "quotes": 0
         }
     },

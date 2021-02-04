@@ -4,12 +4,12 @@
 
 let requirejs = require('requirejs');
 requirejs.config({
-    baseUrl: "../.."
+	baseUrl: "../.."
 });
 
 requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "server/js/ScheduledEvent", "common/js/Time"], function( TestRunner, Expectation, Utils, ScheduledEvent, Time) {
-    let tr = new TestRunner("ScheduledEvent");
-    let assert = tr.assert;
+	let tr = new TestRunner("ScheduledEvent");
+	let assert = tr.assert;
 
 	tr.addTest("an event in the future", async () => {
 		let t = Date.now();

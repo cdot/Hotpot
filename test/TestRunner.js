@@ -1,7 +1,7 @@
 /*@preserve Copyright (C) 2015-2019 Crawford Currie http://c-dot.co.uk license MIT*/
 
 if (typeof requirejs === "undefined") {
-    throw new Error(__filename + " is not runnable stand-alone");
+	throw new Error(__filename + " is not runnable stand-alone");
 }
 
 /**
@@ -13,17 +13,17 @@ if (typeof requirejs === "undefined") {
  */
 define(["mocha", "chai", "fs"], (maybeMocha, chai, fs) => {
 
-    if (typeof Mocha === "undefined")
-        Mocha = maybeMocha; // node.js
+	if (typeof Mocha === "undefined")
+		Mocha = maybeMocha; // node.js
 
-    class TestRunner extends Mocha {
-        constructor(title, debug) {
+	class TestRunner extends Mocha {
+		constructor(title, debug) {
 			super({ reporter: (typeof global === "undefined") ? 'html' : 'spec' });
-            this.chai = chai;
-            this.assert = chai.assert;
-            if (typeof title === "string")
-                this.suite.title = title;
-            this.debug = debug;
+			this.chai = chai;
+			this.assert = chai.assert;
+			if (typeof title === "string")
+				this.suite.title = title;
+			this.debug = debug;
 
 			this.matches = [];
 			this.keepTmpFiles = false;
@@ -36,21 +36,21 @@ define(["mocha", "chai", "fs"], (maybeMocha, chai, fs) => {
 					this.matches.push(new RegExp(`^${expr}$`));
 				}
 			}
-        }
+		}
 
-        static samePath(a, b) {
-            if (a.length !== b.length) return false;
-            for (let i = 0; i < a.length; i++)
-                if (a[i] !== b[i])
-                    return false;
-            return true;
-        }
+		static samePath(a, b) {
+			if (a.length !== b.length) return false;
+			for (let i = 0; i < a.length; i++)
+				if (a[i] !== b[i])
+					return false;
+			return true;
+		}
 
 		/**
 		 * Defuse test. Use command-line params instead.
 		 */
-        deTest(title, fn) {
-        }
+		deTest(title, fn) {
+		}
 
 		/**
 		 * Return the path to a temporary file for the test to use
@@ -67,7 +67,7 @@ define(["mocha", "chai", "fs"], (maybeMocha, chai, fs) => {
 			return `${this.tmpFileDir}/${name}`;
 		}
 
-        addTest(title, fn) {
+		addTest(title, fn) {
 			if (this.matches.length > 0) {
 				let matched = false;
 				for (let i = 0; i < this.matches.length; i++) {
@@ -80,9 +80,9 @@ define(["mocha", "chai", "fs"], (maybeMocha, chai, fs) => {
 					return;
 			}
 
-            let test = new Mocha.Test(title, () => fn.call(this));
-            this.suite.addTest(test);
-        }
+			let test = new Mocha.Test(title, () => fn.call(this));
+			this.suite.addTest(test);
+		}
 
 		rm_rf(path) {
 			return fs.promises.readdir(path)
@@ -105,13 +105,13 @@ define(["mocha", "chai", "fs"], (maybeMocha, chai, fs) => {
 			});
 		}
 
-        run() {
-            return new Promise(resolve => {
-                this.timeout(10000);
-                super.run(resolve);
-            });
-        }
-    }
+		run() {
+			return new Promise(resolve => {
+				this.timeout(10000);
+				super.run(resolve);
+			});
+		}
+	}
 
-    return TestRunner;
+	return TestRunner;
 });

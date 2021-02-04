@@ -3,66 +3,66 @@
 /*eslint-env browser,node */
 
 define("common/js/Utils", () => {
-    /**
-     * Useful utilities
-     */
+	/**
+	 * Useful utilities
+	 */
 
-    const TOSTRING_TYPES = [
-        "Boolean",
-        "Number",
-        "Date",
-        "String",
-        "RegExp"
-    ];
+	const TOSTRING_TYPES = [
+		"Boolean",
+		"Number",
+		"Date",
+		"String",
+		"RegExp"
+	];
 
-    const STANDARD_TYPES = [
-        "Function",
-        "Symbol",
-        "Error",
-        "EvalError",
-        "InternalError",
-        "RangeError",
-        "ReferenceError",
-        "SyntaxError",
-        "TypeError",
-        "URIError",
-        "Math",
-        "Array",
-        "Int8Array",
-        "Uint8Array",
-        "Uint8ClampedArray",
-        "Int16Array",
-        "Uint16Array",
-        "Int32Array",
-        "Uint32Array",
-        "Float32Array",
-        "Float64Array",
-        "Map",
-        "Set",
-        "WeakMap",
-        "WeakSet",
-        "ArrayBuffer",
-        "SharedArrayBuffer ",
-        "Atomics ",
-        "DataView",
-        "JSON",
-        "Promise",
-        "Generator",
-        "GeneratorFunction",
-        "AsyncFunction",
-        "Reflect",
-        "Proxy",
-        "Intl",
-        "Intl.Collator",
-        "Intl.DateTimeFormat",
-        "Intl.NumberFormat",
-        "Timeout"
-    ];
+	const STANDARD_TYPES = [
+		"Function",
+		"Symbol",
+		"Error",
+		"EvalError",
+		"InternalError",
+		"RangeError",
+		"ReferenceError",
+		"SyntaxError",
+		"TypeError",
+		"URIError",
+		"Math",
+		"Array",
+		"Int8Array",
+		"Uint8Array",
+		"Uint8ClampedArray",
+		"Int16Array",
+		"Uint16Array",
+		"Int32Array",
+		"Uint32Array",
+		"Float32Array",
+		"Float64Array",
+		"Map",
+		"Set",
+		"WeakMap",
+		"WeakSet",
+		"ArrayBuffer",
+		"SharedArrayBuffer ",
+		"Atomics ",
+		"DataView",
+		"JSON",
+		"Promise",
+		"Generator",
+		"GeneratorFunction",
+		"AsyncFunction",
+		"Reflect",
+		"Proxy",
+		"Intl",
+		"Intl.Collator",
+		"Intl.DateTimeFormat",
+		"Intl.NumberFormat",
+		"Timeout"
+	];
 
 	var TIMERS = {};
 	var TIMER_ID = 1;
 
-    class Utils {
+	class Utils {
 
 		/**
 		 * Expand environment variables in the data string
@@ -238,9 +238,8 @@ define("common/js/Utils", () => {
 		/**
 		 * eval() the code, generating meaningful syntax errors (with line numbers)
 		 * @param {String} code the code to eval
-		 * @param {String} context the context of the code e.g. a file name
 		 */
-		static eval(code, context) {
+		static eval(code) {
 			let compiled;
 			eval(`compiled=${code}`);
 			return compiled;

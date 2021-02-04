@@ -6,11 +6,11 @@ const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
 define("common/js/Time", () => {
 
-    /**
-     * Functions for handling times within the current 24 hour period.
-     * @namespace
-     */
-    class Time {
+	/**
+	 * Functions for handling times within the current 24 hour period.
+	 * @namespace
+	 */
+	class Time {
 
 		/**
 		 * Get midnight, today, as a number of ms since the epoch
@@ -88,5 +88,5 @@ define("common/js/Time", () => {
 		}
 	}
 
-    return Time;
+	return Time;
 });

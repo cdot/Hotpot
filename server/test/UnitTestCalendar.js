@@ -4,12 +4,12 @@
 
 let requirejs = require('requirejs');
 requirejs.config({
-    baseUrl: "../.."
+	baseUrl: "../.."
 });
 
 requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/Time", "server/js/Calendar"], (TestRunner, Expectation, Utils, Time, Calendar) => {
-    let tr = new TestRunner("Calendar");
-    let assert = tr.assert;
+	let tr = new TestRunner("Calendar");
+	let assert = tr.assert;
 
 	tr.addTest("parse unprefixed events", () => {
 		let now = Date.now() + 250;

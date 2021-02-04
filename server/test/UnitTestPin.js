@@ -4,12 +4,12 @@
 
 let requirejs = require('requirejs');
 requirejs.config({
-    baseUrl: "../.."
+	baseUrl: "../.."
 });
 
 requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/DataModel", "server/js/Pin"], function(fs, TestRunner, Expectation, Utils, DataModel, Pin) {
-    let tr = new TestRunner("Pin");
-    let assert = tr.assert;
+	let tr = new TestRunner("Pin");
+	let assert = tr.assert;
 
 	tr.addTest("initialise/get/set", async () => {
 		HOTPOT_DEBUG = require('../js/DebugSupport.js');

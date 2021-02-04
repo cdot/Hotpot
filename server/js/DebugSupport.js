@@ -35,8 +35,8 @@ class Service {
 	//
 	// In sampled mode, a set of samples supplied are stepped through on
 	// each call to get() on the DS18x20 simulation.
-    _getNextTemperature() {
-        this.temperature += RATES[this.pinState][this.name];
+	_getNextTemperature() {
+		this.temperature += RATES[this.pinState][this.name];
 		if (this.temperature < 0)
 			this.temperature = 0;
 		this.timer = setTimeout(() => this._getNextTemperature(), 1000);
@@ -100,7 +100,7 @@ class DebugSupport {
 			service = new Service(name);
 		this.services[name] = service;
 		return service;
-    }
+	}
 
 	stop() {
 		for (let k in this.services) {

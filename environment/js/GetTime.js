@@ -12,7 +12,7 @@ const DESCRIPTION = "DESCRIPTION\nSimple server time synchronisation";
 let requirejs = require('requirejs');
 
 requirejs.config({
-    baseUrl: __dirname + "/../.."
+	baseUrl: __dirname + "/../.."
 });
 
 requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt, Http, fs, DataModel) {
@@ -25,7 +25,7 @@ requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt,
 		["c", "config=ARG", "Configuration file (default ./GetTime.cfg)"]
 	])
 		.bindHelp()
-        .setHelp(DESCRIPTION + "[[OPTIONS]]")
+		.setHelp(DESCRIPTION + "[[OPTIONS]]")
 		.parseSystem()
 		.options;
 
@@ -69,7 +69,7 @@ requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt,
 							resolve();
 					}
 				});
-        })
+		})
 		.catch("error", err => {
 			console.error(addr + " failed " + err);
 			reject();

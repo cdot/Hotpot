@@ -15,7 +15,7 @@
 
 let requirejs = require('requirejs');
 requirejs.config({
-    baseUrl: "../.."
+	baseUrl: "../.."
 });
 
 requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/Controller", "server/js/GoogleCalendar"], function(Getopt, Utils, DataModel, Controller, GoogleCalendar) {
@@ -46,45 +46,45 @@ requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/C
 
 	function showCalendar(cal) {
 		cal
-        .authorise()
-        .then(() => cal.fillCache())
-        .then(() => console.log("Schedule", cal.schedule))
-        .catch(e => {
-            console.error(e.stack);
-        });
+		.authorise()
+		.then(() => cal.fillCache())
+		.then(() => console.log("Schedule", cal.schedule))
+		.catch(e => {
+			console.error(e.stack);
+		});
 	}
 
 	function listCalendars(cal) {
 		cal.authorise()
-        .then(() => cal.listCalendars())
-        .then(data => {
-            for (var i in data) {
-                console.log(data[i].summary + " - '" + data[i].id + "'");
-            }
-        })
-        .catch(function(e) {
-            console.error(e.stack);
-        });
+		.then(() => cal.listCalendars())
+		.then(data => {
+			for (var i in data) {
+				console.log(data[i].summary + " - '" + data[i].id + "'");
+			}
+		})
+		.catch(function(e) {
+			console.error(e.stack);
+		});
 	}
 
 	DataModel.loadData(cliopt.config, HOTPOT_MODEL)
-    .then(function(config) {
-        if (!cliopt.calendar) {
-            for (cliopt.calendar in config.controller.calendar)
-                break;
-        }
-        var cfg = config.controller.calendar[cliopt.calendar];
+	.then(function(config) {
+		if (!cliopt.calendar) {
+			for (cliopt.calendar in config.controller.calendar)
+				break;
+		}
+		var cfg = config.controller.calendar[cliopt.calendar];
 
-        if (!cfg)
-            throw Utils.exception("Calendar", "No calendar ",
-                                      clipopt.calendar, " in config");
-        console.log("Using calendar '" + cliopt.calendar + "'");
+		if (!cfg)
+			throw Utils.exception("Calendar", "No calendar ",
+								  clipopt.calendar, " in config");
+		console.log("Using calendar '" + cliopt.calendar + "'");
 
-        var cal = new GoogleCalendar(cfg, cliopt.calendar);
+		var cal = new GoogleCalendar(cfg, cliopt.calendar);
 
-        if (cliopt.list)
-            listCalendars(cal);
-        else
-            showCalendar(cal);
-    });
+		if (cliopt.list)
+			listCalendars(cal);
+		else
+			showCalendar(cal);
+	});
 });

@@ -4,7 +4,7 @@
 
 let requirejs = require('requirejs');
 requirejs.config({
-    baseUrl: "../.."
+	baseUrl: "../.."
 });
 
 requirejs(["node-getopt", "common/js/Utils", "server/js/DS18x20"], function(Getopt, Utils, DS18x20) {
@@ -18,8 +18,8 @@ const ASYNC = true;
 	.setHelp(`Usage: node ${process.argv[1]} [OPTION] <sensor>\n`
 			 + "With no options, get the value of all sensors\n\n"
 			 + "[[OPTIONS]]")
-    .bindHelp()
-    .parseSystem();
+		.bindHelp()
+		.parseSystem();
 
 	let cliopt = getopt.options;
 	let freq = cliopt.poll ? parseFloat(cliopt.poll) : 2;
@@ -41,7 +41,7 @@ if (ASYNC) {
 				console.log(`${sensor.id}: ${t} ${diff}`);
 				lastKnownGood[sensor.id] = now;
 			 })
-			.catch(e => {
+			.catch(() => {
 				let wait = (Date.now() - lastKnownGood[sensor.id]) / 1000;
 				if (wait > longestWait[sensor.id])
 					longestWait[sensor.id] = wait;
@@ -59,7 +59,7 @@ if (ASYNC) {
 				console.log(`${sensor.id}: ${t} ${diff}`);
 				lastKnownGood[sensor.id] = now;
 			 })
-			.catch(e => {
+			.catch(() => {
 				let wait = (Date.now() - lastKnownGood[sensor.id]) / 1000;
 				if (wait > longestWait[sensor.id])
 					longestWait[sensor.id] = wait;

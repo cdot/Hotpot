@@ -4,7 +4,7 @@
 
 let requirejs = require('requirejs');
 requirejs.config({
-    baseUrl: "../.."
+	baseUrl: "../.."
 });
 
 requirejs(["node-getopt", "common/js/Utils", "server/js/Gpio"], function(Getopt, Utils, Gpio) {
@@ -18,8 +18,8 @@ requirejs(["node-getopt", "common/js/Utils", "server/js/Gpio"], function(Getopt,
 	.setHelp(`Usage: node ${process.argv[1]} [OPTION] <pin>\n`
 			 + "With no options, get the value of the pin\n\n"
 			 + "[[OPTIONS]]")
-    .bindHelp()
-    .parseSystem();
+		.bindHelp()
+		.parseSystem();
 
 	var cliopt = getopt.options;
 

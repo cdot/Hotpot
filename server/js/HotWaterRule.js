@@ -59,8 +59,8 @@ define("server/js/HotWaterRule", ["common/js/Utils", "server/js/Rule"], (Utils, 
 	}
 
 	HotWaterRule.Model = {
-        $class: HotWaterRule
-    };
+		$class: HotWaterRule
+	};
 
 	return HotWaterRule;
 });

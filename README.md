@@ -417,3 +417,9 @@ Adds a request on behalf of the given `source` (an arbitrary string) for the giv
 
 ### `/ajax/refresh_calendars`
 Force a calendar refresh from the calendar server(s), useful if an event has been added/removed from the calendar (there is no support for push notifications)
+
+## Code Layout
++ The code is written for node.js 11.15.0, which is ECMA 2017
++ Use `eslint` with `server/package.json` to provide the configuration
++ 4-space tabs
++ Code layout as per Emacs `js-mode`

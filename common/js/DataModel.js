@@ -16,17 +16,17 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 	}
 
 	// meta keys valid in the model
-    const MODEL_META_KEYS = {
-        $array_of: true,
-        $checked: true,
-        $class: true,
-        $default: true,
-        $doc: true,
+	const MODEL_META_KEYS = {
+		$array_of: true,
+		$checked: true,
+		$class: true,
+		$default: true,
+		$doc: true,
 		$instantiable: true,
-        $map_of: true,
-        $optional: true,
-        $skip: true
-    };
+		$map_of: true,
+		$optional: true,
+		$skip: true
+	};
 
 	// meta keys valid in data
 	const DATA_META_KEYS = {
@@ -34,127 +34,127 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 	};
 
 	// basic types
-    const BUILTIN_TYPES = [
-        Boolean,
-        Number,
-        Date,
-        String,
-        RegExp
-    ];
+	const BUILTIN_TYPES = [
+		Boolean,
+		Number,
+		Date,
+		String,
+		RegExp
+	];
 
-    /**
-     * Provides a way to deserialise a datastructure from JSON data
-     * such that the resultant deserialised data obeys a specific data
-     * model.
-     *
-     * The data is read from JSON. On load this data is post-processed
-     * under the guidance of the spec, to validate the structure, and
-     * instantiate any required class members.
-     *
-     * The data model is a recursive description of the data. The data can
-     * contain simple Javascript types (number, string etc), objects, and
-     * arrays. Function and Symbol objects are not supported.
-     *
-     * Keywords in the model, starting with $, are used to control the
-     * checking and expansion, while other simple names are used for fields
-     * in the modelled data.
-     *
-     * For example, we might want to load a simple data structure which
-     * can have a single field, "id:", which must have a string value.
-     * ```
-     * {
-     *   id: "28-0316027f81ff",
-     * }
-     * ```
-     * this is modelled as follows:
-     * ```
-     * {
-     *   id: { $class: String, $doc: "unique id" }
-     * }
-     * ```
-     * Names that don't start with $ (such as `id` in the example) are
-     * keys that are expected to be found in the data. The model maps these
-     * to the epected type of the data.
-     *
-     * $keywords in the example define the type of the datum ($class)
-     * and a block of documentation ($doc).
-     *
-     * Keywords include:
-     *   $class - type of the datum (as returned by typeof, defaults
-     *   to "object")
-     *   $doc - a documentation string for the datum
-     *   $optional - this datum is optional
-     *   $default: default value, if not defined and not $optional
-     *   $skip - skip deeper checking of this item
-     *   $map_of - object is an associative array of elements, each of
-     *   which has this model.
-     *   $array_of - true if object is an integer-index list of elements, each
-     *   of which has this model.
-     *
-     * for example,
-     * ```
-     *   ids: {
-     *     $doc: "set of ids",
-     *     $map_of: { id: { $class: String } }
-     *   }
-     * ```
-     * specifies an array an array of simple objects, e.g.
-     * ```
-     * ids: { a: { id: "sam" }, b: { id: "joe" } }
-     * ```
-     * or using json shorthand for an integer key,
-     * ```
-     * ids: [ { id: "sam" }, { id: "joe" } ]
-     * ```
-     * you can also instantiate classes. For example,
-     * ```
-     * {
-     *    location: {
-     *       $class: Location,
-     *       $doc: "Location of the event"
-     *    }
-     * }
-     * ```
-     * specifies data that might look like this:
-     * { location: { latitude: 53.2856, longitude: -2.5678 } }
-     * when this is loaded, the Location constructor is called, thus
-     * ```
-     * Location({string} key, {object} data, {object} spec)
-     * ```
-     * and the key value in the final structure is replaced with the created
-     * object.
-     *
-     * Note that currently $class must be undefined if $array_of is defined.
-     * A future extension may be to use $class to template objects that subclass
-     * array - this is left open.
-     *
-     * Classes may want to decorate the spec with other $keys.
-     * for example, the DataModel.File class uses the $mode key to specify
-     * the modes that will be used with a file (see DataModel.File below)
-     *
-     * Models could be declared flat, but the convention is adopted
-     * to break them down so that the model associated with a given
-     * object is given alongside in class, using the key "spec". for example,
-     * ```
-     * function Thing(key, model, spec) { ... }
-     *
-     * Thing.Model = {
-     *    $class: Thing,
-     *    ...
-     * };
-     * ```
-     * this can then be referred to in another model e.g
-     * ```
-     * things: {
-     *    $array_of: Thing.Model,
-     *    $doc: "list of things"
-     * }
-     * ```
-     * Note that "undefined" is not regarded as a useful value. If the
-     * value of a field is undefined, the key for that field will be dropped.
-     * @namespace
-     */
-    class DataModel {
+	/**
+	 * Provides a way to deserialise a datastructure from JSON data
+	 * such that the resultant deserialised data obeys a specific data
+	 * model.
+	 *
+	 * The data is read from JSON. On load this data is post-processed
+	 * under the guidance of the spec, to validate the structure, and
+	 * instantiate any required class members.
+	 *
+	 * The data model is a recursive description of the data. The data can
+	 * contain simple Javascript types (number, string etc), objects, and
+	 * arrays. Function and Symbol objects are not supported.
+	 *
+	 * Keywords in the model, starting with $, are used to control the
+	 * checking and expansion, while other simple names are used for fields
+	 * in the modelled data.
+	 *
+	 * For example, we might want to load a simple data structure which
+	 * can have a single field, "id:", which must have a string value.
+	 * ```
+	 * {
+	 *   id: "28-0316027f81ff",
+	 * }
+	 * ```
+	 * this is modelled as follows:
+	 * ```
+	 * {
+	 *   id: { $class: String, $doc: "unique id" }
+	 * }
+	 * ```
+	 * Names that don't start with $ (such as `id` in the example) are
+	 * keys that are expected to be found in the data. The model maps these
+	 * to the epected type of the data.
+	 *
+	 * $keywords in the example define the type of the datum ($class)
+	 * and a block of documentation ($doc).
+	 *
+	 * Keywords include:
+	 *   $class - type of the datum (as returned by typeof, defaults
+	 *   to "object")
+	 *   $doc - a documentation string for the datum
+	 *   $optional - this datum is optional
+	 *   $default: default value, if not defined and not $optional
+	 *   $skip - skip deeper checking of this item
+	 *   $map_of - object is an associative array of elements, each of
+	 *   which has this model.
+	 *   $array_of - true if object is an integer-index list of elements, each
+	 *   of which has this model.
+	 *
+	 * for example,
+	 * ```
+	 *   ids: {
+	 *     $doc: "set of ids",
+	 *     $map_of: { id: { $class: String } }
+	 *   }
+	 * ```
+	 * specifies an array an array of simple objects, e.g.
+	 * ```
+	 * ids: { a: { id: "sam" }, b: { id: "joe" } }
+	 * ```
+	 * or using json shorthand for an integer key,
+	 * ```
+	 * ids: [ { id: "sam" }, { id: "joe" } ]
+	 * ```
+	 * you can also instantiate classes. For example,
+	 * ```
+	 * {
+	 *    location: {
+	 *       $class: Location,
+	 *       $doc: "Location of the event"
+	 *    }
+	 * }
+	 * ```
+	 * specifies data that might look like this:
+	 * { location: { latitude: 53.2856, longitude: -2.5678 } }
+	 * when this is loaded, the Location constructor is called, thus
+	 * ```
+	 * Location({string} key, {object} data, {object} spec)
+	 * ```
+	 * and the key value in the final structure is replaced with the created
+	 * object.
+	 *
+	 * Note that currently $class must be undefined if $array_of is defined.
+	 * A future extension may be to use $class to template objects that subclass
+	 * array - this is left open.
+	 *
+	 * Classes may want to decorate the spec with other $keys.
+	 * for example, the DataModel.File class uses the $mode key to specify
+	 * the modes that will be used with a file (see DataModel.File below)
+	 *
+	 * Models could be declared flat, but the convention is adopted
+	 * to break them down so that the model associated with a given
+	 * object is given alongside in class, using the key "spec". for example,
+	 * ```
+	 * function Thing(key, model, spec) { ... }
+	 *
+	 * Thing.Model = {
+	 *    $class: Thing,
+	 *    ...
+	 * };
+	 * ```
+	 * this can then be referred to in another model e.g
+	 * ```
+	 * things: {
+	 *    $array_of: Thing.Model,
+	 *    $doc: "list of things"
+	 * }
+	 * ```
+	 * Note that "undefined" is not regarded as a useful value. If the
+	 * value of a field is undefined, the key for that field will be dropped.
+	 * @namespace
+	 */
+	class DataModel {
 
 		/**
 		 * Check the model for correct construction. Not recursive.
@@ -365,7 +365,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					// Building a type defined in the data. When we serialise,
 					// it will record the type loaded, not the type in the
 					// original data
-					return new Promise((resolve, reject) => {
+					return new Promise(resolve => {
 						requirejs([rebuilt.$instance_of], module => {
 							let promise;
 							if (typeof module.Model !== "undefined")
@@ -512,14 +512,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 		 * @param {object} model the root of the model that describes the tree
 		 * @param path either a path expresses as a /-separated
 		 * string or an already-split array of path components.
-		 * @param {function} fn (node, subtreemodel, parentnode, key)
-		 * where node is the root of the subtree, nodemodel is the model for the
-		 * subtree, parentnode is the node that contains the subtree and key is
-		 * the key for the subtree in the parent. parentnode and key will be
-		 * undefined if the path is empty.
-		 * @return a promise with the result of the call to fn
+		 * @return a promise that resolves to {node, model, parent, key}
 		 */
-		static at(root, model, path, fn) {
+		static at(root, model, path) {
 			if (typeof path === "string") {
 				// Convert string path to array of path components
 				path = path.split(/\/+/);
@@ -553,7 +548,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			}
 			if (i < path.length)
 				throw new Error(`Could not find '${path.join('.')}'`);
-			return Promise.resolve({node: node, model: node_model, parent: parent, key: key});
+			return Promise.resolve({
+				node: node, model: node_model, parent: parent, key: key
+			});
 		}
 
 		/**
@@ -670,99 +667,99 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 		}
 	}
 
-    /* Inner classes, helpers for file operations */
+	/* Inner classes, helpers for file operations */
 
-    /**
-     * DataModel inner class for handling filenames specified in serialisable
+	/**
+	 * DataModel inner class for handling filenames specified in serialisable
 	 * data.
 	 *
-     * The constructor uses the $mode (default "r") specified in the
-     * model to verify the status of the target file. This supports the
-     * following modes:
-     * e: the file must exist
-     * r: the file must be readable
-     * w: the file must be writable
-     * x: the file must be executable
-     * @param filename the file name
-     * @param index the name passed to the constructor by DataModel
-     * @param {object} model the model for this file
-     * @class
-     */
-    class File {
+	 * The constructor uses the $mode (default "r") specified in the
+	 * model to verify the status of the target file. This supports the
+	 * following modes:
+	 * e: the file must exist
+	 * r: the file must be readable
+	 * w: the file must be writable
+	 * x: the file must be executable
+	 * @param filename the file name
+	 * @param index the name passed to the constructor by DataModel
+	 * @param {object} model the model for this file
+	 * @class
+	 */
+	class File {
 
-        constructor(filename, index, model) {
-            this.data = filename;
+		constructor(filename, index, model) {
+			this.data = filename;
 
 			_loadFs();
 
-            if (typeof model === "undefined")
+			if (typeof model === "undefined")
 				return;
 
-            // Got a model to check against. This should always be the case
-            // except in tests.
-            let fnm = Utils.expandEnvVars(filename);
+			// Got a model to check against. This should always be the case
+			// except in tests.
+			let fnm = Utils.expandEnvVars(filename);
 			this.path = fnm;
 
-            let $mode = model.$mode;
-            if (typeof $mode === "undefined")
-                $mode = "r";
+			let $mode = model.$mode;
+			if (typeof $mode === "undefined")
+				$mode = "r";
 
-            let mode = fs.constants.F_OK;
+			let mode = fs.constants.F_OK;
 
-            if ($mode.indexOf("r") >= 0)
-                mode = mode | fs.constants.R_OK;
+			if ($mode.indexOf("r") >= 0)
+				mode = mode | fs.constants.R_OK;
 
-            if ($mode.indexOf("x") >= 0)
-                mode = mode | fs.constants.X_OK;
+			if ($mode.indexOf("x") >= 0)
+				mode = mode | fs.constants.X_OK;
 
-            if ($mode.indexOf("e") >= 0 && !fs.existsSync(fnm)) {
-                throw new Error(`Bad ${index}: '${filename}' does not exist`);
-            }
+			if ($mode.indexOf("e") >= 0 && !fs.existsSync(fnm)) {
+				throw new Error(`Bad ${index}: '${filename}' does not exist`);
+			}
 
-            if ($mode.indexOf("w") >= 0) {
-                mode = mode | fs.constants.W_OK;
+			if ($mode.indexOf("w") >= 0) {
+				mode = mode | fs.constants.W_OK;
 
-                if (fs.existsSync(fnm)) {
-                    fs.access(
+				if (fs.existsSync(fnm)) {
+					fs.access(
 						fnm, mode,
-                        err => {
-                            if (err)
-                                throw new Error(
-                                    `Bad ${index}: '${filename}' '$mode' mode check failed: ${err}`);
-                        });
-                }
-            } else if ($mode.indexOf("w") >= 0) {
-                // Just make sure we can write, and clear down the file
-                fs.writeFileSync(fnm, "", {
-                    mode: mode
-                });
-            }
-        }
+						err => {
+							if (err)
+								throw new Error(
+									`Bad ${index}: '${filename}' '$mode' mode check failed: ${err}`);
+						});
+				}
+			} else if ($mode.indexOf("w") >= 0) {
+				// Just make sure we can write, and clear down the file
+				fs.writeFileSync(fnm, "", {
+					mode: mode
+				});
+			}
+		}
 
-        /**
-         * Generate a simple string representation of this object suitable
-         * for use in debugging and in serialisation
-         */
-        toString() {
-            return this.data;
-        }
+		/**
+		 * Generate a simple string representation of this object suitable
+		 * for use in debugging and in serialisation
+		 */
+		toString() {
+			return this.data;
+		}
 
-        /**
-         * Promise to write a new value to the file
-         * @param value new data to write to the file
-         */
-        write(value) {
+		/**
+		 * Promise to write a new value to the file
+		 * @param value new data to write to the file
+		 */
+		write(value) {
 			_loadFs();
-            return Fs.writeFile(this.path, value, "utf8");
-        }
+			return Fs.writeFile(this.path, value, "utf8");
+		}
 
-        /**
-         * Promise to read the file
-         */
-        read() {
+		/**
+		 * Promise to read the file
+		 */
+		read() {
 			_loadFs();
-            return Fs.readFile(this.path);
-        };
+			return Fs.readFile(this.path);
+		};
 
 		/**
 		 * Get the expanded pathname to the file
@@ -771,68 +768,68 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			return this.path;
 		}
 
-        getSerialisable() {
-            return Promise.resolve(this.data);
-        }
-    }
+		getSerialisable() {
+			return Promise.resolve(this.data);
+		}
+	}
 
-    File.Model = {
-        $class: File,
-        $doc: "Filename"
-    };
+	File.Model = {
+		$class: File,
+		$doc: "Filename"
+	};
 
-    DataModel.File = File;
+	DataModel.File = File;
 
-    /**
-     * Subclass of DataModel.File representing a datum that can either
-     * be a simple text string, or a file name.
-     * When the object is constructed, if the string in the data is a
-     * valid existing filename, then the object is assumed to refer to a file.
-     * Otherwise it is assumed to be raw text data.
-     * The $mode of the model is assumed to be at least "er"
-     * @param data either a file name or raw data
-     * @param index the name passed to the constructor by DataModel
-     * @param {object} model the model for the datum
-     * @class
-     */
-    class TextOrFile extends File {
+	/**
+	 * Subclass of DataModel.File representing a datum that can either
+	 * be a simple text string, or a file name.
+	 * When the object is constructed, if the string in the data is a
+	 * valid existing filename, then the object is assumed to refer to a file.
+	 * Otherwise it is assumed to be raw text data.
+	 * The $mode of the model is assumed to be at least "er"
+	 * @param data either a file name or raw data
+	 * @param index the name passed to the constructor by DataModel
+	 * @param {object} model the model for the datum
+	 * @class
+	 */
+	class TextOrFile extends File {
 
-        constructor(textOrFile, index, model) {
-            super(textOrFile, index, model);
-            this.is_file = fs.existsSync(Utils.expandEnvVars(textOrFile));
-        }
+		constructor(textOrFile, index, model) {
+			super(textOrFile, index, model);
+			this.is_file = fs.existsSync(Utils.expandEnvVars(textOrFile));
+		}
 
-        /**
-         * Promise to read the datum
-         */
-        read() {
-            if (this.is_file)
-                return super.read();
-            else {
-                return Promise.resolve(this.data);
-            }
-        }
+		/**
+		 * Promise to read the datum
+		 */
+		read() {
+			if (this.is_file)
+				return super.read();
+			else {
+				return Promise.resolve(this.data);
+			}
+		}
 
-        /**
-         * Promise to update the datum
-         * @param value new value to store in the datum
-         */
-        write(value) {
-            if (this.is_file)
-                return super.write(value);
-            else {
-                this.data = value;
-                return Promise.resolve(true);
-            }
-        }
-    }
+		/**
+		 * Promise to update the datum
+		 * @param value new value to store in the datum
+		 */
+		write(value) {
+			if (this.is_file)
+				return super.write(value);
+			else {
+				this.data = value;
+				return Promise.resolve(true);
+			}
+		}
+	}
 
-    TextOrFile.Model = {
-        $class: TextOrFile,
-        $doc: "Filename or plain text"
-    };
+	TextOrFile.Model = {
+		$class: TextOrFile,
+		$doc: "Filename or plain text"
+	};
 
-    DataModel.TextOrFile = TextOrFile;
+	DataModel.TextOrFile = TextOrFile;
 
-    return DataModel;
+	return DataModel;
 });

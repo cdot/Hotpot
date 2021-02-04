@@ -4,12 +4,12 @@
 
 let requirejs = require('requirejs');
 requirejs.config({
-    baseUrl: "../.."
+	baseUrl: "../.."
 });
 
 requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/DataModel", "server/js/Thermostat"], function(fs, TestRunner, Expectation, Utils, DataModel, Thermostat) {
-    let tr = new TestRunner("Thermostat");
-    let assert = tr.assert;
+	let tr = new TestRunner("Thermostat");
+	let assert = tr.assert;
 	const Fs = fs.promises;
 
 	tr.addTest("initialise", () => {
