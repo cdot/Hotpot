@@ -91,7 +91,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 				promise = promise
 
 				.then(() => {
-					returnthis.ssl.key.read();
+					return this.ssl.key.read();
 				})
 
 				.then(k => {
@@ -99,9 +99,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 					Utils.TRACE(TAG, "SSL key loaded");
 				})
 
-				.then(() => {
-					return this.ssl.cert.read();
-				})
+				.then(() => this.ssl.cert.read())
 
 				.then(c => {
 					options.cert = c;
