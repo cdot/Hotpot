@@ -74,13 +74,13 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 			$(window) /*this.$main_canvas*/ .on('resize', () => {
 				if (resizeTimer)
 					(resizeTimer);
-				resizeTimer = setTimeout(() => { this.refresh_all(); }, 100);
+				resizeTimer = setTimeout(() => this.refreshAll(), 100);
 			});
 
 			this.$main_canvas.trigger("redraw");
 		}
 
-		refresh_all() {
+		refreshAll() {
 			this.$main_canvas.trigger("redraw");
 			this.$selection_canvas.trigger("redraw");
 			this.$tip_canvas.trigger("redraw");
@@ -147,7 +147,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 				// Update UI fields
 				this.$container.trigger("selection_changed");
 				this.$main_canvas.css('cursor', 'default');
-				this.refresh_all();
+				this.refreshAll();
 				return false;
 			}
 

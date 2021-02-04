@@ -157,7 +157,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 		 */
 		resetValve() {
 			let pins = this.pin;
-			let valve_back = this.valve_return;
+			let valveBack = this.valve_return;
 
 			Utils.TRACE(TAG, "Resetting valve");
 			return pins.HW.setState(1, "Reset")
@@ -165,7 +165,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 			.then(() => {
 				Utils.TRACE(TAG, "Reset: HW(1) done");
 				return new Promise(resolve => {
-					Utils.startTimer("HWreset", resolve, valve_back);
+					Utils.startTimer("HWreset", resolve, valveBack);
 				});
 			})
 
@@ -322,7 +322,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 		 * @param {String} channel e.g. "HW" or "CH"
 		 * @param {number} state 1 (on) or 0 (off)
 		 */
-		setPromise(channel, new_state) {
+		setPromise(channel, newState) {
 			let pins = this.pin;
 
 			// Avoid race condition during initialisation
@@ -332,15 +332,15 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 			if (this.pending) {
 				return new Promise(resolve => {
 					Utils.startTimer("setPromise", () => resolve(
-						this.setPromise(channel, new_state)),
+						this.setPromise(channel, newState)),
 							   this.valve_return);
 				});
 			}
 
 			return pins[channel].getState()
 
-			.then(cur_state => {
-				if (cur_state === new_state)
+			.then(curState => {
+				if (curState === newState)
 					return Promise.resolve(); // already in the right state
 
 				// Y-plan systems have a state where if the heating is
@@ -353,13 +353,13 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 				// then turning it off again. That will allow the spring
 				// to return, powering down the motor.
 
-				if (channel === "CH" && cur_state === 1 && new_state === 0) {
+				if (channel === "CH" && curState === 1 && newState === 0) {
 					// CH is on, and it's going off
 					return pins.HW.getState()
-					.then((/*hwstate*/) => {
+					.then(hwState => {
 						// HW is on, so just turn CH off
-						if (hw_state !== 0)
-							return pins.CH.setState(new_state);
+						if (hwState !== 0)
+							return pins.CH.setState(newState);
 
 						// HW is 0 but CH is 1, so we're in state 3 (grey
 						// live and white live).
@@ -381,7 +381,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
 				// Otherwise this is a simple state transition, just
 				// promise to set the appropriate pin
-				return pins[channel].setState(new_state);
+				return pins[channel].setState(newState);
 			});
 		};
 
