@@ -17,7 +17,7 @@ to derive and add new rules. Experiments have included rules using data from:
 - weather information from the UK Meteorological Office data service
 
 The controller can be used stand-alone without being connected to the
-internet, though we have found the real power of Hotpot is in the ability is
+internet, though we have found the real power of Hotpot is in the ability to
 control the system remotely from a web browser. This means the system
 need never be heating the house when nobody is home, and it's easy to boost
 the heating in anticipation of a warm house and a hot shower when you
@@ -133,10 +133,14 @@ server log, in the form of messages such as this:
 ```
 Error polling 28-0115914ff5ff CRC check failed ''
 ```
+It will also send you mail (if you have an admin mail address set in the config) if
+no good reading has been received for more than 10 minutes.
+
 There are a number of things you can try to improve performance:
 - Use a 5V Vdd to supply the DS18b20s. The signal line must still be pulled up to 3.3V, however (don't pull it to 5V or you'll fry the GPIO)
 - Disable IRQs in the `wire` module (`sudo sh -c "echo options wire disable_irqs=1 >> /etc/modprobe.d/wire.conf"` and reboot)
 - Reduce the frequency with which UIs (browser or Android) poll the server.
+- Allocate a separate GPIO pin for each sensor.
 
 ### Set up a user
 
