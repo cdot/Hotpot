@@ -196,23 +196,32 @@ define("common/js/Utils", () => {
 
 		/**
 		 * Set the string that defines what tags are traced.
-		 * @param t comma-separated string with module names e.g. "all,Rules,Controller,-DataModel"
+		 * @param t comma-separated string with module names
+		 * e.g. "Rules,Controller" or "all,-DataModel"
 		 */
-		static TRACEwhat(t) {
-			Utils.traceWhat = t.split(",");
+		static TRACEfilter(t) {
+			Utils.traceFilter = t.split(",");
+			console.log(`TRACE set to ${t}`);
 		}
 
 		/**
-		 * Produce a tagged log message, if the tag is included in the string
-		 * passed to static TRACEwhat
+		 * Determine if tracing is enabled for the given module
+		 */
+		static TRACEing(module) {
+			return typeof Utils.traceFilter === "undefined"
+			|| Utils.traceFilter.indexOf(module) >= 0
+			|| (Utils.traceFilter.indexOf("all") >= 0
+				&& Utils.traceFilter.indexOf(`-${module}`) < 0);
+		}
+
+		/**
+		 * Produce a tagged log message. The first parameter is interpreted
+		 * as a tag and TRACEing is checked
 		 */
 		static TRACE() {
 			var args = [].slice.call(arguments);
 			let module = args.shift();
-			if (typeof Utils.traceWhat !== "undefined" &&
-				(Utils.traceWhat.indexOf("all") >= 0 ||
-				 Utils.traceWhat.indexOf(module) >= 0) &&
-				(Utils.traceWhat.indexOf(`-${module}`) < 0)) {
+			if (Utils.TRACEing(module)) {
 				args.unshift(new Date().toISOString(), " ", module, ": ");
 				Utils.writeTrace(Utils.joinArgs(args));
 			}
@@ -230,13 +239,15 @@ define("common/js/Utils", () => {
 			}
 			requirejs(["fs"], function (fs) {
 				Utils.writeTrace = async function (s) {
-					await fs.promises.writeFile(where, `${s}\n`, { encoding: "utf8", flag: "a+"});
+					await fs.promises.writeFile(
+						where, `${s}\n`, { encoding: "utf8", flag: "a+"});
 				}
 			});
 		}
 
 		/**
-		 * eval() the code, generating meaningful syntax errors (with line numbers)
+		 * eval() the code, generating meaningful syntax errors
+		 * (with line numbers)
 		 * @param {String} code the code to eval
 		 */
 		static eval(code) {
@@ -262,12 +273,14 @@ define("common/js/Utils", () => {
 		static startTimer(descr, fn, timeout) {
 			let id = `${descr}:${TIMER_ID++}`;
 			//Utils.TRACE(id, "started");
-			let timer = setTimeout(() => {
-				//Utils.TRACE(id, "fired");
-				delete TIMERS[id];
-				fn();
-			}, timeout);
-			TIMERS[id] = timer;
+			TIMERS[id] = {
+				timer: setTimeout(() => {
+					//Utils.TRACE(id, "fired");
+					delete TIMERS[id];
+					fn();
+				}, timeout),
+				when: Date.now() + timeout
+			};
 			return id;
 		}
 
@@ -275,7 +288,7 @@ define("common/js/Utils", () => {
 			if (typeof TIMERS[id] === "undefined")
 				throw new Error(`No such timer ${id}!`);
 			//Utils.TRACE(id, "cancelled");
-			clearTimeout(TIMERS[id]);
+			clearTimeout(TIMERS[id].timer);
 			delete TIMERS[id];
 		}
 

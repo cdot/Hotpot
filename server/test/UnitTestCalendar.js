@@ -56,7 +56,7 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 		let cal = new Calendar({ prefix: "Test:" }, "Prefixed");
 		let spec = 1;
 		let exp = new Expectation(5);
-		//Utils.TRACEwhat("all");
+		//Utils.TRACEfilter("all");
 		cal.setTrigger((id, s, t, u) => {
 			//console.log(`SAW ${id}, ${s}, ${t}, ${u}`);
 			if (/1$/.test(id)) {

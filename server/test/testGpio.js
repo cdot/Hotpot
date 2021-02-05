@@ -45,7 +45,7 @@ requirejs(["node-getopt", "common/js/Utils", "server/js/Gpio"], function(Getopt,
 		getopt.showHelp();
 	}
 
-	Utils.TRACEwhat("Gpio");
+	Utils.TRACEfilter("Gpio");
 
 	let pin = parseInt(getopt.argv[0]);
 	if (typeof pin !== "number") {

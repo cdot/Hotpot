@@ -42,7 +42,7 @@ requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/C
 		cliopt.config = "simulated_hotpot.cfg";
 	}
 
-	Utils.TRACEwhat("all");
+	Utils.TRACEfilter("all");
 
 	function showCalendar(cal) {
 		cal

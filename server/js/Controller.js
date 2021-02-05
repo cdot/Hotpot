@@ -258,6 +258,15 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 				}
 			}
 
+			if (Utils.TRACEing(TAG)) {
+				state.timers = {};
+				let timers = Utils.getTimers();
+				for (let tid in timers) {
+					console.log("\t", tid, new Date(timers[tid].when));
+					state.timers[tid] = new Date(timers[tid].when).toString();
+				}
+			}
+
 			return Promise.all(promises)
 			.then(() => state);
 		};
@@ -401,7 +410,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 				return this.getSerialisableState();
 			case "trace": // Set tracing level
 				// Set tracing
-				Utils.TRACEwhat(data.trace);
+				Utils.TRACEfilter(data.trace);
 				break;
 			case "log":
 				// /log[/{type}[/{name}]]
@@ -471,6 +480,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 		 * @private
 		 */
 		pollRules() {
+			Utils.TRACE(TAG, "Polling rules");
+
 			// Purge completed requests
 			for (let name in this.thermostat)
 				this.thermostat[name].purgeRequests();

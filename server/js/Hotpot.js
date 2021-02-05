@@ -53,7 +53,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
 	}
 
 	if (cliopt.trace && cliopt.trace !== "")
-		Utils.TRACEwhat(cliopt.trace);
+		Utils.TRACEfilter(cliopt.trace);
 
 	let config, controller, server;
 
