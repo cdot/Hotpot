@@ -208,10 +208,10 @@ define("common/js/Utils", () => {
 		 * Determine if tracing is enabled for the given module
 		 */
 		static TRACEing(module) {
-			return typeof Utils.traceFilter === "undefined"
-			|| Utils.traceFilter.indexOf(module) >= 0
-			|| (Utils.traceFilter.indexOf("all") >= 0
-				&& Utils.traceFilter.indexOf(`-${module}`) < 0);
+			return typeof Utils.traceFilter !== "undefined"
+			&& (Utils.traceFilter.indexOf(module) >= 0
+				|| (Utils.traceFilter.indexOf("all") >= 0
+					&& Utils.traceFilter.indexOf(`-${module}`) < 0));
 		}
 
 		/**
