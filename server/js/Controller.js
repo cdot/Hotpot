@@ -383,7 +383,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 							resolve => Utils.startTimer(
 								"springReturn",
 								resolve, this.valve_return)))
-						.then(() => pinsHW.setState(0)) // switch off HW
+						.then(() => pins.HW.setState(0)) // switch off HW
 						.then(() => { this.pending = false;	});
 					});
 				}
