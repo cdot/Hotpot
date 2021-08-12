@@ -15,6 +15,7 @@ Because the system is controlled by rules written in Javascript, it is easy (and
 to derive and add new rules. Experiments have included rules using data from:
 - location reports from household mobile devices
 - weather information from the UK Meteorological Office data service
+- external temperature & humidity sensors
 
 The controller can be used stand-alone without being connected to the
 internet, though we have found the real power of Hotpot is in the ability to
@@ -347,6 +348,20 @@ browser UI. It can be installed from [github](https://github.com/cdot/Hotpot/rel
 
 The Hotpot software is designed to be extended through the addition of new rules, calendars, and weather agents. You are very welcome to submit any code you develop
 as a pull request on github.
+
+## Known Issues
+
+Issues encountered during the last 6 years of continuous use include:
+
+### Problems with 1-wire
+We have had problems with the system "losing" sensors on the 1-wire bus. This problem first emerged after some 4 years of problem-free usage. It was resolved as follows:
+- Use a 5V Vdd to supply the DS18b20s. The signal line must still be pulled up to 3.3V, however (don't pull it to 5V or you'll fry the GPIO)
+- Disabling IRQs in the `wire` module (`sudo sh -c "echo options wire disable_irqs=1 >> /etc/modprobe.d/wire.conf"` and reboot)
+- Reducing the frequency with which UIs (browser or Android) poll the server.
+Alternatively, allocating a different GPIO pin for each sensor might work.
+
+### Mains voltage spikes
+On two separate occasions, a problem with the mains power supply (AFAICT as a result of lightning) has resulted in a power cut, which may have been preceded by a voltage spike? Both times the SD card has been "fried". We now have a surge protector, though it has yet to be tested. Note that this appears to be a problem with the Pi rather than a Hotpot-specific issue. You might consider using a [more robust storage solution](https://blog.mivia.dk/solved-sd-card-corrupted-raspberry-pi/), especially if your Pi provides other services besides Hotpot.
 
 ## Running a Debug Server
 ```
