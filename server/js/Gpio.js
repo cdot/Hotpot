@@ -64,7 +64,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
 		setActive(lohi) {
 			let path = Path.resolve(
 				GPIO_PATH, `gpio${this.gpio}`, 'active_low');
-			return Fs.writeFile(path, (lohi == "low") ? 1 : 0);
+			return Fs.writeFile(path, (lohi == "low") ? "1" : "0");
 		}
 
 		/**
@@ -74,7 +74,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
 		setValue(state) {
 			return Fs.writeFile(
 				Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'value'),
-				state, "utf8");
+				`${state}`, "utf8");
 		}
 
 		/**
