@@ -46,8 +46,12 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 				let parts = lines[1].split('t=');
 				if (parts.length !== 2)
 					throw new Error("DS18x20 ${this.id} format error");
+				let val = parseFloat(parts[1]);
+				if (val == 85000)
+					// Conversion error. Reset it? How?
+					throw new Error(`DS18x20 ${this.id} error 85`);
 				this.lastKnownGood = Date.now();
-				return parseFloat(parts[1]) / 1000;
+				return val  / 1000;
 			})
 			.catch(e => {
 				Utils.TRACE(TAG, `Poll failed ${e}`);

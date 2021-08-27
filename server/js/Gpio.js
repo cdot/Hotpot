@@ -46,13 +46,13 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
 		// Try and export the pin
 		export() {
 			return Fs.writeFile(
-				Path.resolve(GPIO_PATH, 'export'), this.gpio, "utf8")
+				Path.resolve(GPIO_PATH, 'export'), `${this.gpio}`, "utf8")
 			.then(() => {
 				// Use a timeout to give it time to get set up; it takes a while
 				return new Promise(resolve => {
 					Utils.startTimer(`export${this.gpio}`, resolve, 1000);
-				})
-			})
+				});
+			});
 		}
 
 		setDirection(dirn) {
@@ -64,7 +64,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
 		setActive(lohi) {
 			let path = Path.resolve(
 				GPIO_PATH, `gpio${this.gpio}`, 'active_low');
-			return Fs.writeFile(path, (lohi == "low") ? 1 : 0);
+			return Fs.writeFile(path, (lohi == "low") ? "1" : "0");
 		}
 
 		/**
@@ -74,7 +74,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
 		setValue(state) {
 			return Fs.writeFile(
 				Path.resolve(GPIO_PATH, `gpio${this.gpio}`, 'value'),
-				state, "utf8");
+				`${state}`, "utf8");
 		}
 
 		/**
