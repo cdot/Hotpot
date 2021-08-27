@@ -46,8 +46,13 @@ define("server/js/DS18x20", ["fs", "path", "common/js/Utils"], (fs, Path, Utils)
 				let parts = lines[1].split('t=');
 				if (parts.length !== 2)
 					throw new Error("DS18x20 ${this.id} format error");
+				// Temperature of 85000 is out of range, and indicates an
+				// error. https://forum.arduino.cc/t/why-does-this-fix-work-for-ds18b20-error-code-85/529580/12
+				const val = parseFloat(parts[1]);
+				if (val === 85000)
+					throw new Error("DS18x20 ${this.id} power on reset");
 				this.lastKnownGood = Date.now();
-				return parseFloat(parts[1]) / 1000;
+				return val / 1000;
 			})
 			.catch(e => {
 				Utils.TRACE(TAG, `Poll failed ${e}`);
