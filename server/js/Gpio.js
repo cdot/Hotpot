@@ -34,7 +34,7 @@ define("server/js/Gpio", ["fs", "path", "common/js/Utils"], function(fs, Path, U
 			.then(() => this.setDirection(direction))
 			.then(() => this.setActive(active))
 			.catch(e => {
-				console.error(`Failed to initialise ${this.gpio} ${e}`);
+				console.error(`Failed to initialise GPIO ${this.gpio} ${e}`);
 				throw e;
 			});
 		}
