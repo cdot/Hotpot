@@ -3,143 +3,72 @@
   <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>HotPot remote monitor</title>
-	<link rel="icon" href="browser/images/favicon.ico" type="image/x-icon" />
+	<link rel="icon" href="/browser/images/favicon.ico" type="image/x-icon" />
 	<!--script src="https://use.fontawesome.com/1f1fc84fe3.js"></script-->
-	<link rel="stylesheet" href="browser/css/styles.css">
+	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<link rel="stylesheet" href="/browser/css/styles.css">
+	<link rel="stylesheet" href="/browser/css/index.css">
 
-	<script data-main="browser/js/main" src="https://cdnjs.cloudflare.com/ajax/libs/requ
-ire.js/2.3.6/require.js"></script>
+	<script data-main="browser/js/main" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.js"></script>
 
   </head>
-  <body class="body-bg body-fg fonts">
-	<h1 class="banner banner-bg banner-fg">Hotpot
-	  <img src="browser/images/hotpot.svg" style="height: 230px; float:right"></h1>
-	<div id="log"></div>
-	<div id="systemTime"></div>
-	<div id="controls" class="display">
-	  <div id="CH">
-		<h1>Central Heating <button class="tl-open">Timeline</button></h1>
-		<div>
-		  <span class="th-temp"></span>
-		  <span class="th-diff"></span>
-		  <span class="th-target"></span>°C
-		  <span class="th-lkg"></span>
-		</div>
-		<div>
-		  <span class="pin-state"></span>
-		  <span class="pin-reason"></span>
-		</div>
-		<div class="requests"></div>
-		<button class="boost">BOOST</button> to
-  		<input class="boost-target" value="18" size="3" />°C
-		<div class="info"></div>
-		<div class="tl-container">
-		  <div class="tl-canvas" data-service="CH">
-			<div class="spinner-controls">
-			  <input type="text" size="2" class="spinnable tl-point" />
-			  Time: <input class="tl-time" size="9"/>
-			  Temperature: <input class="tl-temp" size="5"/>°C
-			  <button class="tl-removepoint">
-				<img class="image_button" src="browser/images/wastebin.svg" />
-			  </button>
-			</div>
-		  </div>
-		  <button class="tl-save">Save</button>
-		  <button class="tl-cancel">Cancel</button>
-		</div>
-		<div class="calendar">
-		  <span class="cal-name"></span>:
-		  <span class="cal-temperature"></span>°C from
-		  <span class="cal-start"></span> until
-		  <span class="cal-end"></span>
-		</div>
+  <body>
+	<h1 id="banner">Hotpot at
+	  <span id="systemTime"></span>
+	  <img src="browser/images/hotpot.svg" style="height: 230px; float:right">
+	</h1>
+	<img id="refresh_calendars" class="image_button" src="browser/images/calendar.svg" />
+	<img class="image_button" src="browser/images/help.svg" id="help" />
+	<div id="CH">
+	  <h1>Central Heating <img title="Edit the 24-hour timeline" id="CH-timeline" class="image_button" src="browser/images/clock.svg" /></h1>
+	  <div>
+		<span id="CH-th-temp"></span>
+		<span id="CH-th-diff"></span>
+		<span id="CH-th-target"></span>°C
+		<img id="CH-boost" title="Turn the central heating on until the temperature reaches a requested level; it will then revert to following the 24h timeline" class="image_button" src="browser/images/boost.svg" />
 	  </div>
-	  <p></p>
-	  <div id="HW">
-		<h1>Hot Water <button class="tl-open">Timeline</button></h1>
-		<div>
-		  <span class="th-temp"></span>
-		  <span class="th-diff"></span>
-		  <span class="th-target"></span>°C
-		  <span class="th-lkg"></span>
-		</div>
-		<div>
-		  <span class="pin-state"></span>
-		  <span class="pin-reason"></span>
-		</div>
-		<div class="requests"></div>
-		<button class="boost">BOOST</button> to
-		<input class="boost-target" value="40" size="3" />°C
-		<div class="tl-container" >
-		  <div class="tl-canvas" data-service="HW">
-			<div class="spinner-controls">
-			  <input type="text" size="2" class="spinnable tl-point" />
-			  Time: <input type="text" class="tl-time" size="9"/>
-			  Temperature: <input type="text" class="tl-temp" size="4"/>°C
-			  <button class="tl-removepoint">
-				<img class="image_button" src="browser/images/wastebin.svg" />
-			  </button>
-			</div>
-		  </div>
-		  <button class="tl-save">Save</button>
-		  <button class="tl-cancel">Cancel</button>
-		</div>
-		<div class="calendar">
-		  <span class="cal-name"></span>:
-		  <span class="cal-temperature"></span>°C from
-		  <span class="cal-start"></span> until
-		  <span class="cal-end"></span>
-		</div>
+	  <div>
+		<span id="CH-pin-state"></span>
+		<span id="CH-pin-reason"></span>
+		<span id="CH-th-lkg" class="lkg"></span>
 	  </div>
-	  <p></p>
-	  <button class="switcher" data-to="help">Help</button>
-	  <button id="refresh_calendars">Update Calendars</button>
-	  <span id="cal_update_pending">Update pending</span>
+	  <div id="CH-requests"></div>
+	  <div class="CH-info"></div>
+	  <div id="CH-calendar" class="calendar">
+		<span id="CH-cal-name"></span>:
+		<span id="CH-cal-temperature"></span>°C from
+		<span id="CH-cal-start"></span> until
+		<span id="CH-cal-end"></span>
+	  </div>
 	</div>
-	<div class="display" id="help">
-	  <p>
-		<button>BOOST</button> will turn the service on until the temperature
-		hits the requested level; it will then revert to following the
-		timeline
-	  </p>
-	  <p>
-		<button>Timeline</button> will open a graphical timeline editor
-		<button class="twisty" id="open-twisty">more...</button>
-		<div id="help-twisty">
-		  <ul>
-			<li>You can select a point to adjust using
-			  <div class="example">
-				<input type="text" size="2" class="spinnable" value="1" />
-			  </div> the selected point will be highlighted on the display
-			</li>
-			<li>Adjust the point using
-			  <div class="example">
-				Time: <input size="9" value="08:30:00"/>
-				Temperature: <input size="5" value="18" />°C
-			  </div> inputs. Use
-			  <button>
-				<img class="image_button" src="browser/images/wastebin.svg" />
-			  </button>
-			  to delete the point.
-			</li>
-			<li>The white line on the display shows the timeline</li>
-			<li>Double-tap the display to show handles on each point</li>
-			<li>Tap a handle, hold, and drag to move a point.</li>
-			<li>Touch and hold on the middle of the line between two points to add a new point</li>
-			<li>The red crosshairs show the current date and temperature</li>
-			<li>The green trace shows the temperature over the last 24h</li>
-			<li>The orange trace shows the pin activity</li>
-			<li>Tap anywhere in the display to see the time and the
-			  temperature at the point you hit</li>
-			<li>Select <button>Save</button> to update the server or <button>Cancel</button> to quit the edit and discard all changes</li>
-		  </ul>
-		  <button class="twisty" id="close-twisty">...less</button>
-		</div>
-	  </p>
-	  <p>
-		<button>Update Calendars</button> will update the cache of the
-		calendars on the server from Google
-	  </p>
-	  <button class="switcher" data-to="controls">Close</button>
+	<p></p>
+	<div id="HW">
+	  <h1>Hot Water <img id="HW-timeline" class="image_button" src="browser/images/clock.svg" /></h1>
+	  <div>
+		<span id="HW-th-temp"></span>
+		<span id="HW-th-diff"></span>
+		<span id="HW-th-target"></span>°C
+		<img id="HW-boost" title="Turn the hot water on until the temperature reaches a requested level; it will then revert to following the 24h timeline" class="image_button" src="browser/images/boost.svg" />
+	  </div>
+	  <div>
+		<span id="HW-pin-state"></span>
+		<span id="HW-pin-reason"></span>
+		<span id="HW-th-lkg" class="lkg"></span>
+	  </div>
+	  <div class="HW-requests"></div>
+	  <div class="HW-info"></div>
+	  <div id="HW-calendar" class="calendar">
+		<span id="HW-cal-name"></span>:
+		<span id="HW-cal-temperature"></span>°C from
+		<span id="HW-cal-start"></span> until
+		<span id="HW-cal-end"></span>
+	  </div>
+	</div>
+	<span id="cal_update_pending">Calendar update pending</span>
+	<div id="boost-dialog" class="dialog">
+	  Boost to
+  	  <input id="boost-target" value="18" size="3" />°C
+	</div>
+	<div id="log"></div>
   </body>
 </html>
