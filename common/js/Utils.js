@@ -62,19 +62,24 @@ define("common/js/Utils", () => {
 	var TIMERS = {};
 	var TIMER_ID = 1;
 
+	/**
+	 * Collection of functions that provide useful utilities.
+	 * @namespace
+	 */
 	class Utils {
 
 		/**
-		 * Expand environment variables in the data string
-		 * @param {String} data string containing env var references
-		 * @return {String} data string with env vars expanded
+		 * Expand environment variables in the data string. Only works
+		 * under node.js, using `process`.
+		 * @param {string} data string containing env var references
+		 * @return {string} argument string with env vars expanded
 		 */
 		static expandEnvVars(data) {
 			let rep = function(match, v) {
 				if (typeof process.env[v] !== "undefined")
 					return process.env[v];
 				return match;
-			}
+			};
 			data = ("" + data).replace(/^~/, "${HOME}");
 			return data
 			.replace(/\$([A-Z]+)/g, rep)
@@ -133,11 +138,11 @@ define("common/js/Utils", () => {
 			} else {
 				s += ob;
 				let values = [];
-				for (let i in data) {
+				for (let i of Object.keys(data).sort()) {
 					let val = Utils.dump(data[i], cache);
 					if (ob === "{")
 						val = `${i}: ${val}`;
-					values.push(indent("" + val))
+					values.push(indent("" + val));
 				}
 				s += `\n${values.join(",\n")}\n${cb}`;
 			}
@@ -195,9 +200,22 @@ define("common/js/Utils", () => {
 		}
 
 		/**
-		 * Set the string that defines what tags are traced.
-		 * @param t comma-separated string with module names
-		 * e.g. "Rules,Controller" or "all,-DataModel"
+		 * Set the filter that defines what tags are traced. TRACE
+		 * statements in the code each have a "trace group id" that is
+		 * used to determine if the message should be output or
+		 * not. The filter is a comma-separated list of ids. If an id
+		 * is present, messages with that id will be output.  For
+		 * example, setting the filter to `"Rules,Controller"` will
+		 * enable calls to `Utils.TRACE("Rules",...)` and
+		 * `Utils.TRACE("Controller",...)`.
+		 *
+		 * The special trace group 'all' enables tracing for all ids.
+		 * When the special id `all` is given, other ids after it in
+		 * the list can be prefixed with a '-' to selectively disable
+		 * tracing for those ids.  For example, the trace filter
+		 * `"all,-DataModel"` will enable tracing for all ids except
+		 * `DataModel`.
+		 * @param {string} t comma-separated list of trace group ids.
 		 */
 		static TRACEfilter(t) {
 			Utils.traceFilter = t.split(",");
@@ -205,7 +223,10 @@ define("common/js/Utils", () => {
 		}
 
 		/**
-		 * Determine if tracing is enabled for the given module
+		 * Determine if tracing is enabled for the given trace group id.
+		 * See {@link Utils.TRACEfilter} for more.
+		 * @param {string} id the trace group id
+		 * @return {boolean} true if the group is enabled
 		 */
 		static TRACEing(module) {
 			return typeof Utils.traceFilter !== "undefined"
@@ -216,7 +237,10 @@ define("common/js/Utils", () => {
 
 		/**
 		 * Produce a tagged log message. The first parameter is interpreted
-		 * as a tag and TRACEing is checked
+		 * as a tag and TRACEing is checked. Trace messages are written
+		 * using `console.log`, or to a file if {@link Utils.TRACEto} has been
+		 * called (node.js only). See {@link Utils.TRACEfilter} for more.
+		 * @param {string} traceid the id of the trace info
 		 */
 		static TRACE() {
 			var args = [].slice.call(arguments);
@@ -241,13 +265,16 @@ define("common/js/Utils", () => {
 				Utils.writeTrace = async function (s) {
 					await fs.promises.writeFile(
 						where, `${s}\n`, { encoding: "utf8", flag: "a+"});
-				}
+				};
 			});
 		}
 
 		/**
 		 * eval() the code, generating meaningful syntax errors
-		 * (with line numbers)
+		 * (with line numbers). This is primarily intended for reading
+		 * 'loose' JSON (without quotes around keys) and must be
+		 * treated with suspicion as there is no protection against
+		 * eval'ing code.
 		 * @param {String} code the code to eval
 		 */
 		static eval(code) {
@@ -258,11 +285,13 @@ define("common/js/Utils", () => {
 
 		/**
 		 * Like setTimeout, but run at a given date rather than after
-		 * a delta. date can be a Date object or a time in ms
+		 * a delta. date can be a Date object or an epoch time in ms
+		 * @param {function} func the function to run (no arguments)
+		 * @param date may be a Date object or a time as epoch ms
 		 */
 		static runAt(func, date) {
 			let now = (new Date()).getTime();
-			let then = typeof date === "object" ? date.getTime() : date;
+			let then = (date instanceof Date) ? date.getTime() : date;
 			let diff = Math.max((then - now), 0);
 			if (diff > 0x7FFFFFFF) // setTimeout limit is MAX_INT32=(2^31-1)
 				Utils.startTimer("runAt", () => Utils.runAt(func, date), 0x7FFFFFFF);
@@ -270,6 +299,22 @@ define("common/js/Utils", () => {
 				Utils.startTimer("runAt", func, diff);
 		}
 
+		/**
+		 * Start a tracked timer. Tracked timers are used to associate
+		 * `setTimeout` calls with the time they will fire. Tracked
+		 * timers recorded as a map from the timer id (returned by
+		 * this function) to a structure:
+		 * ```
+		 * {
+		 *  timer: (system id of timer),
+		 *  when: (epoch ms when the timer runs down)
+		 * }
+		 * ```
+		 * @param {String} descr description of the timer
+		 * @param {function} fn function to run (no parameters)
+		 * @param {number} timeout delta time to run the function
+		 * @return {string} a unique id that can be used to refer to the timer
+		 */
 		static startTimer(descr, fn, timeout) {
 			let id = `${descr}:${TIMER_ID++}`;
 			//Utils.TRACE(id, "started");
@@ -284,6 +329,11 @@ define("common/js/Utils", () => {
 			return id;
 		}
 
+		/**
+		 * Cancel a tracked timer.
+		 * See {@link Utils.startTimer} for more about tracked timers.
+		 * @param {string} id as returned by startTimer
+		 */
 		static cancelTimer(id) {
 			if (typeof TIMERS[id] === "undefined")
 				throw new Error(`No such timer ${id}!`);
@@ -292,11 +342,27 @@ define("common/js/Utils", () => {
 			delete TIMERS[id];
 		}
 
+		/**
+		 * Get the array of tracked timers
+		 * See {@link Utils.startTimer} for more about tracked timers.
+		 * @return {array} tracked timer objects
+		 */
 		static getTimers() {
 			return TIMERS;
 		}
 	}
 
+	/**
+	 * Neutral interface to jQuery `extend` / `node-extend`
+	 * Extend one object with one or more others, returning the modified object.
+	 * @param {boolean} deep (optional) if set, merge becomes recursive
+	 * @param {object} target the object to extend (will be modified)
+	 * @param {object} object1 ...objectN, objects to merge
+	 * @return the merged object
+	 * @function
+	 * @memberof Utils
+	 * @name extend
+	 */
 	if (typeof jQuery !== "undefined")
 		Utils.extend = jQuery.extend;
 	else

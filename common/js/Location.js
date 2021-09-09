@@ -23,6 +23,7 @@ define("common/js/Location", ["common/js/Utils"], function(Utils) {
 		   This function has three possible constructor signatures:
 		   * 1. Location(lat, lng) where both lat and lng are numbers
 		   * 2. Location(object) where object has latitude and longitude fields
+		   * (allows us to use DataModel to load this)
 		   * 3. Location() for a default Location 55N 0W
 		   * @param p1 (1.) {number} latitude number, (2.) {object} to get
 		   * lat(itude) and long(itude) fields from (3.) undefined.
@@ -46,7 +47,9 @@ define("common/js/Location", ["common/js/Utils"], function(Utils) {
 						TAG, `Cannot initialise from ${lat}`);
 				}
 			} // else Constructor (1.)
+			/** @member {number} */
 			this.latitude = lat;
+			/** @member {number} */
 			this.longitude = lng;
 		}
 
@@ -98,6 +101,11 @@ define("common/js/Location", ["common/js/Utils"], function(Utils) {
 		};
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof Location
+	 */
 	Location.Model = {
 		$class: Location,
 		latitude: {

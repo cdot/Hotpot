@@ -7,15 +7,21 @@ requirejs.config({
 	baseUrl: "../.."
 });
 
-requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], function(TestRunner, DataModel, Utils) {
+requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils", "common/test/Instantiable", "common/js/Timeline"], function(TestRunner, DataModel, Utils, Instantiable, Timeline) {
 
-	let tr = new TestRunner("DataModel");
-	let assert = tr.assert;
+	const tr = new TestRunner("DataModel");
+	const assert = tr.assert;
+	let fs, Fs;
 
-	const mainfile = "/tmp/blah";
+	function _loadFs() {
+		if (typeof fs === "undefined") {
+			fs = require("fs");
+			Fs = fs.promises;
+		}
+	}
+	////////////////////////////////////////////////////////////////
 
-	// Test with built-in types String, Number
-	let simpleModel = {
+	const simpleModel = {
 		pugh: { $class: String, $doc: "hugh" },
 		barney: { $class: Number },
 		cuthbert: {
@@ -26,7 +32,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 		array: { $array_of: { $class: String } }
 	};
 
-	let simpleData = {
+	const simpleData = {
 		pugh: "hugh",
 		barney: 99,
 		cuthbert: {
@@ -35,7 +41,7 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 		array: [ "a", "b", "c" ]
 	};
 
-	let simpleDataBad = {
+	const simpleDataBad = {
 		pugh: "hugh",
 		barney: 7,
 		cuthbert: {
@@ -43,271 +49,478 @@ requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils"], functio
 		} // array is missing
 	};
 
-	// A model containing builtIns objects
-	let builtInsModel = {
-		fnaar: { $class: DataModel.File, $doc: "fnarr" },
-		phoar: { $class: DataModel.TextOrFile, $doc: "cor", $optional: true }
-	};
-
-	let builtInsData = {
-		fnaar: "/",
-		phoar: "flab a dab\nsnooty\nwhoops a daisy\nclump\nratfink"
-	};
-
-	let builtInsDataBad = {
-		// fnaar is missing
-		phoar: builtInsData.phoar
-	};
-
-	let builtInsDump = {
-		fnaar: new DataModel.File(builtInsData.fnaar),
-		phoar: new DataModel.TextOrFile(builtInsData.phoar),
-	};
-
-	let helpModel = {
-		simple: simpleModel,
-		builtIns: builtInsModel
-	};
-
-	let helpModelString = [
-		"{",
-		" simple: {",
-		"  pugh: <String> hugh",
-		"  barney: <Number>",
-		"  cuthbert: mcgrew {",
-		"   dibble: <String> grubb",
-		"   bob: (optional) <String> builder",
-		"  }",
-		"  array: [",
-		"   <String>",
-		"  ]",
+	const simpleHelpString = [ "{",
+		" pugh: <String> hugh",
+		" barney: <Number>",
+		" cuthbert: mcgrew {",
+		"  dibble: <String> grubb",
+		"  bob: (optional) <String> builder",
 		" }",
-		" builtIns: {",
-		"  fnaar: <File> fnarr",
-		"  phoar: (optional) <TextOrFile> cor",
-		" }",
-		"}" ].join("\n");
-
-	class Toad {
-
-		constructor(data, index, model) {
-			Utils.extend(this, data);
-		}
-
-		getSerialisable(data, model) {
-			return Promise.resolve("Smeg");
-		};
-
-		croak(x, y) {
-			assert.equal(x, this.data.x);
-			assert.equal(y, this.data.y);
-		};
-	}
-
-	Toad.Model = {
-		$class: Toad,
-		data: {
-			x: { $class: Number },
-			y: { $class: Boolean }
-		}
-	};
-
-	let toadyModel = {
-		a: { $class: String },
-		b: Toad.Model,
-		c: { $map_of: Toad.Model }
-	};
-
-	let toadyData = {
-		a: "A",
-		b: { data: { x: 1, y: true } },
-		c: {one: { data: { x: 2, y: true } }, two: { data: { x: 3, y: true } }}
-	};
-
-	let toadyDump = {
-		a: "A",
-		b: new Toad({ data: { x: 1, y: true } }),
-		c: { one: new Toad({ data: { x: 2, y: true } }),
-			 two: new Toad({ data: { x: 3, y: true } }) }
-	};
-
-	let toadySerial = {
-		a: "A",
-		b: "Smeg",
-		c: { one: "Smeg", two: "Smeg" }
-	}
-
-	class Amphibian {
-		constructor(data, index, model) {
-			Utils.extend(this, data);
-		}
-	}
-
-	Amphibian.Model = {
-		$class: Amphibian,
-		toad: { $array_of: Toad.Model }
-	};
-
-	amphibianProto = {
-		toad: [{ data: { x: 4, y: false } }]
-	};
-
-	tr.addTest("remodel simple", () => {
+		" array: [",
+		"  <String>",
+		" ]",
+	"}" ].join("\n");;
+	
+	tr.addTest("good simple", () => {
 		return DataModel.remodel('', simpleData, simpleModel)
 		.then(remodeled => {
 			assert.equal(Utils.dump(remodeled), Utils.dump(simpleData));
+			assert.equal(simpleHelpString, DataModel.help(simpleModel));
 		});
 	});
 
-	tr.addTest("remodel bad simple", () => {
+	tr.addTest("bad simple", () => {
 		return DataModel.remodel('', simpleDataBad, simpleModel)
 		.then(() => assert.fail())
 		.catch(s => {
-			// Unpredictable order from maps
-			assert(s.message == "'array' not optional and no default"
-				   || s.message == "'cuthbert.dibble' not optional and no default");
+			// Unpredictable order from maps, so use regex
+			assert.match(s.message, /field not optional and no default at/);
 		});
 	});
 
-	tr.addTest("remodel builtIns", () => {
-		return DataModel.remodel("", builtInsData, builtInsModel)
-		.then(remodeled => {
-			assert.equal(Utils.dump(remodeled), Utils.dump(builtInsDump));
-		});
-	});
+	////////////////////////////////////////////////////////////////
 
-	tr.addTest("remodel bad builtIns", () => {
-		return DataModel.remodel("", builtInsDataBad, builtInsModel)
-		.then(() => assert.fail())
-		.catch(s => {
-			assert.equal(s.message, "'fnaar' not optional and no default");
-		});
-	});
+	tr.addTest("$class", () => {
+		const model = {
+			thing: {
+				$class: Instantiable
+			}
+		};
+		const data = {
+			thing: { data: "Beans" }
+		};
 
-	tr.addTest("remodel toady", () => {
-		return DataModel.remodel("", toadyData, toadyModel)
-		.then(remodeled => {
-			assert.equal(Utils.dump(remodeled), Utils.dump(toadyDump));
-			remodeled.b.croak(1, true);
-			remodeled.c.one.croak(2, true);
-			remodeled.c.two.croak(3, true);
-		});
-	});
-
-	tr.addTest("remodel amphibian", () => {
-		return DataModel.remodel("", amphibianProto, Amphibian.Model)
-		.then(remodeled => {
-			assert.equal(remodeled.constructor.name, "Amphibian");
-			assert.equal(remodeled.toad.constructor.name, "Array");
-			assert.equal(remodeled.toad[0].constructor.name, "Toad");
-		});
-	});
-
-	tr.addTest("serialise simple", () => {
-		return DataModel.getSerialisable(simpleData, simpleModel)
-		.then(function(s) {
-			assert.deepEqual(s, simpleData);
-		});
-	});
-
-	tr.addTest("serialise builtIns", () => {
-		return DataModel.remodel("", builtInsData, builtInsModel)
-		.then(data => DataModel.getSerialisable(data, builtInsModel))
-		.then(s => assert.equal(Utils.dump(s), Utils.dump(builtInsData)));
-	});
-
-	tr.addTest("serialise toady", () => {
-		DataModel.remodel("", toadyData, toadyModel)
-		.then(data => DataModel.getSerialisable(data, toadyModel))
-		.then(function(s) {
-			assert.equal(Utils.dump(s), Utils.dump(toadySerial));
-		});
-	});
-
-	tr.addTest("saveload simple", () => {
-		return DataModel.saveData(simpleData, simpleModel, mainfile)
-		.then(() => {
-			return DataModel.loadData(mainfile, simpleModel);
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert(d.thing instanceof Instantiable);
+			assert.equal("Beans", d.thing.data);
+			return DataModel.getSerialisable(d, model);
 		})
-		.then(function(config) {
-			assert.equal(config.pugh, "hugh");
-			assert.equal(config.barney, 99);
-			assert.equal(config.cuthbert.dibble, "grubb");
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(data));
 		});
 	});
 
-	tr.addTest("saveload builtIns", () => {
-		return DataModel.saveData(builtInsData, builtInsModel, mainfile)
-		.then(() => DataModel.loadData(mainfile, builtInsModel))
-		.then(config => {
-			assert.equal(config._readFrom, mainfile);
-			delete config._readFrom;
-			assert.equal(Utils.dump(config), Utils.dump(builtInsDump));
-			return Promise.resolve(config);
-		});
-	});
+	////////////////////////////////////////////////////////////////
 
-	tr.addTest("simple proto, simple data", () => {
-		return DataModel.remodel('', simpleData, simpleModel)
-		.then(remodeled => {
-			return DataModel.at(remodeled, simpleModel, "/cuthbert/bob")
-			.then(p => {
-				assert.equal(p.node, remodeled.cuthbert.bob);
-				assert.equal(p.model, simpleModel.cuthbert.bob);
-				assert.equal(p.parent, remodeled.cuthbert);
-				assert.equal(p.key, "bob");
-			})
-			.then(() => {
-				return new Promise(resolve => {
-					DataModel.at(remodeled, simpleModel, "cuthbert/array")
-					.then(() => {
-						assert.fail("Should never be called");
-					})
-					.catch(e => {
-						resolve();
-					});
-				});
-			})
-			.then(() => DataModel.at(remodeled, simpleModel, "array/1"))
-			.then(p => {
-				assert(p.node === remodeled.array[1]);
-				assert(p.model === simpleModel.array.$array_of);
-				assert(p.parent === remodeled.array);
-				assert.equal(p.key, 1);
-			})
-			.then(() => DataModel.at(remodeled, simpleModel, "array"))
-			.then(p => {
-				assert(p.node === remodeled.array);
-				assert(p.model === simpleModel.array);
-				assert(p.parent === remodeled);
-				assert.equal(p.key, "array");
-			});
-		});
-	});
-
-	tr.addTest("help", () => {
-		assert.equal(DataModel.help(helpModel), helpModelString);
-	});
-
-	tr.addTest("require", () => {
-		let model = {
-			fleem: {
+	tr.addTest("$instantiable", () => {
+		const model = {
+			thing: {
 				$instantiable: true,
 				data: { $class: String, $doc: "nerf" },
 				$doc: "meelf",
 			}
 		};
-		let data = {
-			fleem: {
+		const data = {
+			thing: {
+				// $instantiable expects data to contain $instance_of
 				$instance_of: "common/test/Instantiable",
+				data: "Sausages"
+			}
+		};
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert(d.thing instanceof Instantiable);
+			assert.equal(d.thing.data, "Sausages");
+			assert.equal(d.thing.$instance_of, data.thing.$instance_of);
+			return DataModel.getSerialisable(d, model);
+		})
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("$instantiable requires $instance_of", () => {
+		const model = {
+			thing: {
+				$instantiable: true,
+				data: { $class: String, $doc: "nerf" },
+				$doc: "meelf",
+			}
+		};
+		const data = {
+			thing: {
+				// $instance_of missing! Can't do this!
+				data: "Sausages"
+			}
+		};
+		//Utils.TRACEfilter("all");
+		return DataModel.remodel("", data, model)
+		.then(d => assert.fail())
+		.catch(e => {
+			assert.equal(e.message,
+						 "DataModel.remodel: Expected $instance_of at 'thing'");
+		});
+	});
+	
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("$array_of $instantiable", () => {
+		const model = {
+			thing: {
+				$array_of: {
+					$instantiable: true,
+					data: { $class: String, $doc: "nerf" },
+					$doc: "meelf",
+				}
+			}
+		};
+		const data = {
+			thing: [
+				{
+					$instance_of: "common/test/Instantiable",
+					data: "Sausages"
+				},
+				{
+					$instance_of: "common/test/Instantiable",
+					data: "Beans"
+				}
+			]
+		};
+
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert(d.thing instanceof Array);
+			assert.equal(d.thing[0].data, "Sausages");
+			assert.equal(d.thing[1].data, "Beans");
+			return DataModel.getSerialisable(d, model);
+		})
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("$unchecked", () => {
+		const model = {
+			thing: {
+				$unchecked: true,
+			}
+		};
+		const data = {
+			thing: {
 				data: "Sausages"
 			}
 		};
 
 		return DataModel.remodel("", data, model)
-		.then(d => DataModel.getSerialisable(d, model))
+		.then(d => {
+			assert.equal(d.thing.data, "Sausages");
+			return DataModel.getSerialisable(d, model);
+		})
 		.then(s => {
 			assert.equal(Utils.dump(s), Utils.dump(data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("$unchecked with String $default", () => {
+		const model = {
+			thing: {
+				$unchecked: true,
+				$default: "Cheese"
+			}
+		};
+		const data = {
+		};
+		const serial_data = {
+			thing: 'Cheese'
+		};
+
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert.equal("Cheese", d.thing);
+			return DataModel.getSerialisable(d, model);
+		})
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("$unchecked with Object $default", () => {
+		const model = {
+			thing: {
+				$unchecked: true,
+				$default: { sun: "shine" }
+			}
+		};
+		const data = {
+		};
+		const serial_data = {
+			thing: { sun: "shine" }
+		};
+
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert.equal("shine", d.thing.sun);
+			return DataModel.getSerialisable(d, model);
+		})
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("get $fileable String from string", () => {
+		const model = {
+			thing: {
+				$fileable: true,
+				$class: String,
+			}
+		};
+		const data = {
+			thing: "Sausages"
+		};
+
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert.equal(d.thing, "Sausages");
+			return DataModel.getSerialisable(d, model);
+		})
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("get $fileable String from file", () => {
+		const model = {
+			thing: {
+				$fileable: true,
+				$class: String,
+			}
+		};
+		const data = {
+			thing: "oneInstantiable.txt"
+		};
+		const serial_data = {
+			thing: '{ data: "Beans" }\n'
+		};
+
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert.equal('{ data: "Beans" }\n', d.thing);
+			return DataModel.getSerialisable(d, model);
+		})
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("get one $fileable Instantiable from file", () => {
+		const model = {
+			thing: {
+				$fileable: true,
+				$class: Instantiable
+			}
+		};
+		const filename = "oneInstantiable.txt";
+		const data = {
+			thing: filename
+		};
+		const serial_data = {
+			thing: {
+				data: "Beans",
+				$read_from: filename
+			}
+		};
+
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert(d.thing instanceof Instantiable);
+			assert.equal("Beans", d.thing.data);
+			assert.equal(filename, d.thing.$read_from);
+			return DataModel.getSerialisable(d, model);
+		})
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("get $fileable array of Instantiable from file", () => {
+		const model = {
+			thing: {
+				$fileable: true,
+				$array_of: { $class: Instantiable }
+			}
+		};
+		const data = {
+			thing: "arrayOfInstantiable.txt"
+		};
+		const serial_data = {
+			thing: [
+				{ data: "Beans" },
+				{ data: "Cheese" },
+				{ data: "Sausages" }
+			]
+		};
+		
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert(d.thing instanceof Array);
+			assert(d.thing[0] instanceof Instantiable);
+			assert.equal("Beans", d.thing[0].data);
+			assert(d.thing[1] instanceof Instantiable);
+			assert.equal("Cheese", d.thing[1].data);
+			assert(d.thing[2] instanceof Instantiable);
+			assert.equal("Sausages", d.thing[2].data);
+			return DataModel.getSerialisable(d, model);
+		})
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	tr.addTest("get $fileable map of Instantiable from file", () => {
+		const model = {
+			thing: {
+				$fileable: true,
+				$map_of: { $class: Instantiable }
+			}
+		};
+		const filename = "mapOfInstantiable.txt";
+		const data = {
+			thing: filename
+		};
+		const serial_data = {
+			thing: {
+				a: { data: "Beans" },
+				b: { data: "Cheese" },
+				c: { data: "Sausages" },
+				$read_from: filename
+			}
+		};
+		
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			assert(d.thing instanceof Object);
+			assert(d.thing.a instanceof Instantiable);
+			assert.equal("Beans", d.thing.a.data);
+			assert(d.thing.b instanceof Instantiable);
+			assert.equal("Cheese", d.thing.b.data);
+			assert(d.thing.c instanceof Instantiable);
+			assert.equal("Sausages", d.thing.c.data);
+			assert.equal(filename, d.thing.$read_from);
+			return DataModel.getSerialisable(d, model);
+		})
+		.then(s => {
+			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+		});
+	});
+
+	////////////////////////////////////////////////////////////////
+
+	const saveModel = {
+		$fileable: true,
+		time: { $class: Number },
+		thing: {
+			thing_string: { $class: String }
+		},
+		array: {
+			$array_of: {
+				$instantiable: true,
+				data: { $class: String }
+			}
+		},
+		map: {
+			$map_of: {
+				$class: Instantiable
+			}
+		}
+	};
+
+	const savedFile = "testsave.dat";
+	const now = Date.now();
+		
+	const saveData = {
+		$read_from: savedFile,
+		time: now,
+		thing: {
+			thing_string: "thong"
+		},
+		array: [ {data: "a"}, {data: "b"}, {data: "c"} ],
+		map:  { a: {data: "a"}, b: {data: "b"}, c: {data: "c"} }
+	};
+
+	tr.addTest("saveData on root", () => {
+		_loadFs();
+		
+		return new Promise(resolve => {
+			Fs.unlink(savedFile)
+			.catch(e => resolve())
+			.then(() => resolve());
+		})
+		.then(() => DataModel.saveData(saveData, saveModel, "/"))
+		.then(state => {
+			assert(state instanceof Array);
+			assert.equal(0, state.length);
+		})
+		.then(() => Fs.readFile(savedFile))
+		.then(rootData => {
+			let reread = Utils.eval(rootData.toString());
+			assert.equal(Utils.dump(saveData), Utils.dump(reread));
+		});
+	});
+
+	tr.addTest("saveData on leaf", () => {
+		_loadFs();
+		
+		return new Promise(resolve => {
+			Fs.unlink(savedFile)
+			.catch(e => resolve())
+			.then(() => resolve());
+		})
+		.then(() => DataModel.saveData(saveData, saveModel, "array"))
+		.then(state => {
+			assert(state instanceof Array);
+			assert.equal(0, state.length);
+		})
+		.then(() => Fs.readFile(savedFile))
+		.then(rootData => {
+			let reread = Utils.eval(rootData.toString());
+			assert.equal(Utils.dump(saveData), Utils.dump(reread));
+		});
+	});
+
+	tr.addTest("saveData on $fileable map", () => {
+		_loadFs();
+
+		const annotatedModel = Utils.extend({},	saveModel);
+		annotatedModel.map.$fileable = true;
+
+		const annotatedData = Utils.extend({}, saveData);
+		annotatedData.map.$read_from = savedFile;
+		delete annotatedData.$read_from;
+
+		return new Promise(resolve => {
+			Fs.unlink(savedFile)
+			.catch(e => resolve())
+			.then(() => resolve());
+		})
+		.then(() => DataModel.saveData(annotatedData, annotatedModel, "map"))
+		.then(state => {
+			assert(state instanceof Object);
+			assert.equal(1, state.length);
+			assert.equal("map", state[0]);
+		})
+		.then(() => Fs.readFile(savedFile))
+		.then(rootData => {
+			let reread = Utils.eval(rootData.toString());
+			assert.equal(Utils.dump(annotatedData.map), Utils.dump(reread));
 		});
 	});
 

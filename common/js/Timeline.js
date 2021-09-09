@@ -2,24 +2,39 @@
 
 /*eslint-env browser,node */
 
-define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Utils, Time) {
+define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/js/Time'], function(Utils, DataModel, Time) {
 
 	const TAG = "Timeline";
 
+	/**
+	 * A point on a Timeline
+	 */
 	class Timepoint {
+
+		/**
+		 * Construct from a configuration data block built using
+		 * {@link DataModel} and Model
+		 */
 		constructor(proto) {
+			/**
+			 * time (epoch ms relative to start of timeline)
+			 * @member
+			 */
+			this.time = undefined;
+
+			/**
+			 * value at this time
+			 * @member
+			 */
+			this.value = undefined;
 
 			Utils.extend(this, proto);
 
-			if (typeof this.time === "undefined") {
-				if (typeof this.times === "undefined")
-					throw Utils.exception(
-						"Timepoint", "must have time or times");
-				this.time = Time.parse(this.times);
-				delete this.times;
-			} else if (typeof this.times !== "undefined")
-				throw Utils.exception(
-					"Timepoint", "must have time or times, not both");
+			if (typeof this.time === "string") {
+				const s = this.time;
+				delete this.time;
+				this.time = Time.parse(s);
+			}
 		}
 
 		getSerialisable() {
@@ -27,21 +42,20 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 				times: Time.formatHMS(this.time),
 				value: this.value
 			});
-		};
+		}
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof Timepoint
+	 */
 	Timepoint.Model = {
 		$class: Timepoint,
 		$doc: "vertex on a timeline graph",
 		time: {
-			$class: Number,
-			$optional: true, // Must have time or times, constructor enforces
+			$unchecked: true,
 			$doc: "time"
-		},
-		times: {
-			$class: String,
-			$optional: true, // Must have time or times, constructor enforces
-			$doc: "time string"
 		},
 		value: {
 			$class: Number,
@@ -61,7 +75,35 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 	 * @class
 	 */
 	class Timeline {
-		constructor(proto) {
+		/**
+		 * Construct from a configuration data block built using
+		 * {@link DataModel} and Model
+		 */
+		constructor(proto, index, model) {
+
+			 /**
+			  * minimum possible value
+			  * @member
+			  */
+			this.min = undefined;
+
+			 /**
+			  * maximum possible value
+			  * @member
+			  */
+			this.max = undefined;
+
+			 /**
+			  * period of timeline in ms
+			  * @member
+			  */
+			this.period = undefined;
+
+			 /**
+			  * Array of {@link Timepoint}
+			  * @member
+			  */
+			this.points = undefined;
 
 			Utils.extend(this, proto);
 
@@ -69,8 +111,9 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 				|| typeof this.min !== "number"
 				|| this.max < this.min
 				|| typeof this.period !== "number"
-				|| this.period <= 0)
+				|| this.period <= 0) {
 				throw Utils.exception(TAG, "Bad configuration");
+			}
 
 			if (typeof this.points === "undefined")
 				this.points = [];
@@ -107,7 +150,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 					value: this.points[this.points.length - 1].value
 				}));
 			}
-		};
+		}
 
 		/**
 		 * Get the index of the point that follows the given time.
@@ -124,7 +167,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 					return i;
 			}
 			return this.points.length - 1;
-		};
+		}
 
 		/**
 		 * Get the maximum value at any time
@@ -137,7 +180,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 					max = this.points[i].value;
 			}
 			return max;
-		};
+		}
 
 		/**
 		 * Get the value at the given time
@@ -172,7 +215,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 				this.points.splice(index, 1);
 				throw e;
 			}
-		};
+		}
 
 		/**
 		 * Remove the point at the given index
@@ -185,7 +228,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 					TAG, `${idx} cannot be removed from 0..${this.points.length - 1}`);
 			this.points.splice(idx, 1);
 			return this;
-		};
+		}
 
 		/**
 		 * Get total number of points
@@ -193,7 +236,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 		 */
 		get nPoints() {
 			return this.points.length;
-		};
+		}
 
 		/**
 		 * Get the point at the given index
@@ -205,7 +248,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 					TAG, `getPoint ${i} not in 0..${this.points.length - 1}`);
 			return this.points[i];
 
-		};
+		}
 
 		/**
 		 * Set a point, validating the new settings are in range
@@ -237,7 +280,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 					`setPoint value ${p.value} is out of range ${this.min}..${this.max}`);
 			this.points[i].time = p.time;
 			this.points[i].value = p.value;
-		};
+		}
 
 		/**
 		 * Set a point, constraining the new location to be in range both in
@@ -280,10 +323,14 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 			cp.time = tp.time;
 			cp.value = tp.value;
 			return true;
-		};
-
+		}
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof Timeline
+	 */
 	Timeline.Model = {
 		$class: Timeline,
 		min: {
@@ -303,7 +350,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/Time'], function(Uti
 		},
 		points: {
 			$doc: "Array of time points",
-			$array_of: Timepoint.Model
+			$array_of: { $class: Timepoint }
 		}
 	};
 

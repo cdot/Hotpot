@@ -7,7 +7,7 @@ requirejs.config({
 	baseUrl: "../.."
 });
 
-requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeline) {
+requirejs(["test/TestRunner", "common/js/Timeline", "common/js/DataModel", "common/js/Utils"], function(TestRunner, Timeline, DataModel, Utils) {
 	const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
 	var test_line_proto = {
@@ -209,6 +209,17 @@ requirejs(["test/TestRunner", "common/js/Timeline"], function(TestRunner, Timeli
 		assert.equal(p.time, 29);
 		assert.equal(p.value, 4);
 
+	});
+
+	tr.addTest("get $fileable map of Timeline from file", () => {
+		const model = Utils.extend({}, { $fileable: true },
+								   Timeline.Model);
+		const data = "oneTimeline.txt";
+		Utils.TRACEfilter("all");
+		return DataModel.remodel("", data, model)
+		.then(d => {
+			console.log(d);
+		});
 	});
 
 	tr.run();

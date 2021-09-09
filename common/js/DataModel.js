@@ -1,9 +1,11 @@
-/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT */
 
 /*eslint-env node */
 
 define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
-
+   /** 
+    * A module representing a shirt.
+    */
 	const TAG = "DataModel";
 
 	var fs, Fs;
@@ -18,19 +20,21 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 	// meta keys valid in the model
 	const MODEL_META_KEYS = {
 		$array_of: true,
-		$checked: true,
+		$$checked: true, // internal use only
 		$class: true,
 		$default: true,
 		$doc: true,
+		$fileable: true,
 		$instantiable: true,
 		$map_of: true,
 		$optional: true,
-		$skip: true
+		$unchecked: true
 	};
 
 	// meta keys valid in data
 	const DATA_META_KEYS = {
-		$instance_of: true
+		$instance_of: true,
+		$read_from: true
 	};
 
 	// basic types
@@ -43,70 +47,54 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 	];
 
 	/**
-	 * Provides a way to deserialise a datastructure from JSON data
-	 * such that the resultant deserialised data obeys a specific data
-	 * model.
+	 * Support for complex loadable/savable data structures. The
+	 * goal is to support loading of complex JSON configuration
+	 * data with minimum coding in the configured classes.
 	 *
-	 * The data is read from JSON. On load this data is post-processed
-	 * under the guidance of the spec, to validate the structure, and
-	 * instantiate any required class members.
+	 * Supports distributing the configuration data across
+	 * several external files, for both load and save.
+
+	 * A configuration data tree is read using `loadData`. This data
+	 * is processed under the guidance of the spec, to validate the
+	 * structure, and instantiate any required class members. The data
+	 * is optionally instrumented with meta-data allowing
+	 * reconstruction of objects not defined in the spec, and ensure
+	 * the data is saved back to the file it came from.
 	 *
-	 * The data model is a recursive description of the data. The data can
-	 * contain simple Javascript types (number, string etc), objects, and
-	 * arrays. Function and Symbol objects are not supported.
+	 * The data can contain simple Javascript types (number, string
+	 * etc), Javascript objects, and arrays. Function and Symbol
+	 * objects are not supported.
 	 *
-	 * Keywords in the model, starting with $, are used to control the
-	 * checking and expansion, while other simple names are used for fields
-	 * in the modelled data.
+	 * The data model is described in an object using keys that start
+	 * with $. These are used to control checking and expansion, and
+	 * reading from/writing to files. Any field name not recognised as
+	 * metadata is treated as the description of a field in the
+	 * modelled data.
 	 *
-	 * For example, we might want to load a simple data structure which
-	 * can have a single field, "id:", which must have a string value.
+	 * ##### Built-in types and `$doc`
+	 * For example, we might want to load a simple
+	 * configuration which can have a single field, "id:", which must have
+	 * a string value:
 	 * ```
 	 * {
 	 *   id: "28-0316027f81ff",
 	 * }
 	 * ```
-	 * this is modelled as follows:
+	 * this can described in the model object as follows:
 	 * ```
 	 * {
 	 *   id: { $class: String, $doc: "unique id" }
 	 * }
 	 * ```
 	 * Names that don't start with $ (such as `id` in the example) are
-	 * keys that are expected to be found in the data. The model maps these
-	 * to the epected type of the data.
+	 * keys that must be to be found in the data.
 	 *
-	 * $keywords in the example define the type of the datum ($class)
-	 * and a block of documentation ($doc).
+	 * The $keywords in the example define the type of the datum (`$class`)
+	 * and a block of documentation (`$doc`). In this case the `$class` is
+	 * the Javascript built-in class `String`.
 	 *
-	 * Keywords include:
-	 *   $class - type of the datum (as returned by typeof, defaults
-	 *   to "object")
-	 *   $doc - a documentation string for the datum
-	 *   $optional - this datum is optional
-	 *   $default: default value, if not defined and not $optional
-	 *   $skip - skip deeper checking of this item
-	 *   $map_of - object is an associative array of elements, each of
-	 *   which has this model.
-	 *   $array_of - true if object is an integer-index list of elements, each
-	 *   of which has this model.
-	 *
-	 * for example,
-	 * ```
-	 *   ids: {
-	 *     $doc: "set of ids",
-	 *     $map_of: { id: { $class: String } }
-	 *   }
-	 * ```
-	 * specifies an array an array of simple objects, e.g.
-	 * ```
-	 * ids: { a: { id: "sam" }, b: { id: "joe" } }
-	 * ```
-	 * or using json shorthand for an integer key,
-	 * ```
-	 * ids: [ { id: "sam" }, { id: "joe" } ]
-	 * ```
-	 * you can also instantiate classes. For example,
+	 * ##### `$class`
+	 * You can also instantiate your own classes. For example, the model:
 	 * ```
 	 * {
 	 *    location: {
@@ -116,27 +104,144 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 	 * }
 	 * ```
 	 * specifies data that might look like this:
+	 * ```
 	 * { location: { latitude: 53.2856, longitude: -2.5678 } }
-	 * when this is loaded, the Location constructor is called, thus
 	 * ```
-	 * Location({string} key, {object} data, {object} spec)
+	 * when this is loaded, the `Location` constructor is called with the
+	 * signature:
 	 * ```
-	 * and the key value in the final structure is replaced with the created
-	 * object.
-	 *
-	 * Note that currently $class must be undefined if $array_of is defined.
-	 * A future extension may be to use $class to template objects that subclass
-	 * array - this is left open.
-	 *
-	 * Classes may want to decorate the spec with other $keys.
-	 * for example, the DataModel.File class uses the $mode key to specify
-	 * the modes that will be used with a file (see DataModel.File below)
-	 *
-	 * Models could be declared flat, but the convention is adopted
-	 * to break them down so that the model associated with a given
-	 * object is given alongside in class, using the key "spec". for example,
+	 * Location({string} key, {object} data, {object} model)
 	 * ```
-	 * function Thing(key, model, spec) { ... }
+	 * and the value in the processed structure is replaced with the
+	 * created object.
+	 *
+	 * ##### `$array_of` and `$map_of`
+	 * Array and Map structures are described using the keywords
+	 * `$array_of` and `$map_of` respectively. For example:
+	 * ```
+	 *   ids: {
+	 *     $doc: "set of ids",
+	 *     $array_of: { $class: String }
+	 *   }
+	 * ```
+	 * describes an array of Strings:
+	 * ```
+	 * [ "jane", "sam", "joe", "marion" ]
+	 * ```
+	 * Maps are similar. Only String keys are supported.
+	 * ```
+	 *   auth: {
+	 *     $doc: "Authentication information",
+	 *     $map_of: { $class: String }
+	 *   }
+	 * ```
+	 * describes a map of Strings:
+	 * ```
+	 * auth: { user: "cusack", pass: "joanie", "first school": "rock" }
+	 * ```
+	 * ##### `$fileable`
+	 * File saving/loading is controlled by the `$fileable` key. Where
+	 * the model has `$fileable: true` it signals that the value of the
+	 * described field can be replaced by a string with the name of
+	 * a file that the datum can be read from. For example,
+	 * ```
+	 * {
+	 *   locations: {
+	 *     $doc: "array of locations",
+	 *     $map_of: Location,
+	 *     $fileable: true 
+	 * }
+	 * ```
+	 * The configuration data can contain:
+	 * ```
+	 * {
+	 *    locations: "$HOME/my/locations.dat"
+     * }
+     * ```
+	 * * field, and a matching file exists, then the map will be read
+	 * from that file. The data read is then annotated with the source file
+	 * using the `$read_from` metadata giving the filename. Filenames
+	 * can include environment variables, such as `$PWD` and `$HOME`.
+	 *
+	 * Note that while it is possible to *load* an array this way, it is
+	 * *not* possible to *save* it again, as arrays do not carry the
+	 * `$read_from` meta-data. If you want to save an array this way, you
+	 * should wrap it with an object.
+     *
+	 * Data saving works by writing serialised data back to
+	 * files. Saving can be triggered at any point in the data
+	 * hierarchy. When `DataModel.saveData` is called on the path to a
+	 * field, it will inspect the the data for that field for a
+	 * `$read_from` metadatum. If it is not found, then the parent
+	 * node in the spec will be recursively inspected until a
+	 * `$read_from` annotation is found. If the root is reached
+	 * without a `$read_from` being found, the save will fail. Note
+	 * that while it is possible to builtin type value (String, Number
+	 * etc) and arrays, saving these types is not supported; only
+	 * Javascript objects (including user class objects) are annotated
+	 * with `$read_from`.
+	 *
+	 * ##### `$default` and `$optional`
+	 * Fields in the data can be given default values in the model
+	 * using `$default: value`, and can be specified as optional using
+	 * `$optional: true`.
+	 *
+	 * ##### `$instantiable`
+	 * In the case where the exact type of an object is not known to
+	 * the model, then `$instantiable: true` can be used. In this
+	 * case, the data must be decorated with a `$instance_of`
+	 * annotation that tells the code how to instantiate this
+	 * object. `$instance_of` should be the name of a Javascript
+	 * class, as required by `requirejs`. For example, given the model
+	 * ```
+	 * {
+	 *   thing: {
+     *     $instantiable: true,
+     *     data: { $class: String }
+	 *   }
+	 * }
+	 * ```
+	 * and the data
+	 * ```
+	 * {
+	 *   thing: {
+     *     $instance_of: "my/js/example",
+     *     data: "Some data"
+	 *   }
+	 * }
+	 * ```
+	 * when this data is read, it will use `requirejs` to load the
+	 * `my/js/example` class, and instantiate it, using the same
+	 * constructor arguments as described for `$class`, above.
+	 *
+	 * ##### `$unchecked`
+	 * Finally if you need to load an object that has no known class,
+	 * you can use `$unchecked`. For example, to load a simple
+	 * structure such as:
+	 * ```
+	 * {
+	 *   auth: {
+	 *     user: "brian", pass: "eno"
+	 *   }
+	 * }
+	 * ```
+	 * we can use the model
+	 * ```
+	 * {
+	 *   auth: {
+	 *     $unchecked: true
+     *   }
+     * }
+	 * ```
+	 *
+	 * ##### Models in code
+	 * Note that a sensible convention is to associate the model with
+	 * the class definition. For example,
+	 * ```
+	 * class Thing {
+	 *   constructor(key, model, spec) { ... }
+	 *   ...
+	 * }
 	 *
 	 * Thing.Model = {
 	 *    $class: Thing,
@@ -150,99 +255,141 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 	 *    $doc: "list of things"
 	 * }
 	 * ```
-	 * Note that "undefined" is not regarded as a useful value. If the
-	 * value of a field is undefined, the key for that field will be dropped.
+	 * Note that "undefined" is not regarded as a useful value in
+	 * data. If the value of a field is undefined, the key for that
+	 * field will be dropped.
+	 *
 	 * @namespace
 	 */
 	class DataModel {
 
 		/**
-		 * Check the model for correct construction. Not recursive.
-		 * @param model the model to check
-		 * @param context undefined or an array
+		 * Check the model for correct construction.
+		 * @param {DataModel} model the model to check
+		 * @param {Array} context path to node being checked (may be undefined)
 		 * @private
 		 */
 		static check(model, context) {
-			if (model.$checked)
+
+			if (model.$$checked)
 				return;
+
+			function fail(mess) {
+				throw new Error(`${TAG}.check: ${mess} at '${context.join('.')}'`);
+			}
 
 			if (typeof context === "undefined")
 				context = [];
 
 			if (typeof model !== "object")
-				throw new Error(
-					`typeof=="${typeof model}" at '${context.join('.')}'`);
-
-			//Utils.TRACE(TAG, "check <",context.join('.'),"> {");
+				fail(`typeof=="${typeof model}"`);
 
 			if (model.$instantiable && typeof model.$class !== "undefined")
-				throw new Error(`$instantiable and $class are mutually exclusive at '${context.join('.')}'`);
+				fail("$instantiable and $class are mutually exclusive");
 
-			let is_base = false;
+			if (typeof model.$array_of !== "undefined"
+				&& typeof model.$map_of !== "undefined")
+				fail("$array_of and $map_of are mutually exclusive");
+
+			if (typeof model.$array_of !== "undefined"
+				&& typeof $class !== "undefined")
+				fail("Cannot have both $array_of and $class");
+
+			let is_builtin = false;
 			if (typeof model.$class === "function") {
-
+				// The datum being described has a class
 				if (BUILTIN_TYPES.indexOf(model.$class) >= 0) {
-					// Internal fields not supported
-					is_base = true;
+					// It's a built-in type e.g. String, RegExp, Date etc.
+					// Internal fields are not supported
+					is_builtin = true;
 				}
-				// Currently cannot have both $array_of and $class
-				if (typeof model.$array_of !== "undefined")
-					throw new Error(
-						"Cannot have both $array_of and $class");
+			} else if (typeof model.$class !== "undefined")
+				fail(`$class is ${typeof model.$class}`);
 
-			} else if (typeof model.$class !== "undefined") {
-				throw new Error(
-					`$class is ${typeof model.$class} at '${context.join('.')}'`);
-			}
+			model.$$checked = true; // model has been checked
 
-			model.$checked = true;
+			if (model.$unchecked)
+				// model specifies that content can't be checked
+				return;
 
-			if (!model.$skip) {
-				if (typeof model.$array_of !== "undefined") {
-					if (typeof model.$map_of !== "undefined")
-						throw new Error(
-							`Cannot have $array_of and $map_of at '${context.join('.')}'`);
-					DataModel.check(model.$array_of, context.concat("[]"));
-				} else if (typeof model.$map_of !== "undefined")
-					DataModel.check(model.$map_of, context.concat("{}"));
-				else {
-					for (let i in model) {
-						if (i.charAt(0) !== '$') {
-							if (is_base)
-								throw new Error(
-									`Bad model: ${model.$class.name} has field ${i} at '${context.join('.')}'`);
-							DataModel.check(model[i], context.concat(i));
-						}
-					}
+			// Contents are required to be modeled
+			if (typeof model.$array_of !== "undefined") {
+				// Check the model for the array contents
+				DataModel.check(model.$array_of, context.concat("[]"));
+			} else if (typeof model.$map_of !== "undefined")
+				// Check the model for the map values. The keys
+				// are not modeled.
+				DataModel.check(model.$map_of, context.concat("{}"));
+			else {
+				// Examine fields in the object
+				for (let i in model) {
+					if (i.match(/^\$/))
+						continue;
+					// Not a metadata key
+					if (is_builtin)
+						// Builtin types e.g. String may not have
+						// internal fields
+						fail(`builtin type ${model.$class.name} has field ${i}`);
+					DataModel.check(model[i], context.concat(i));
 				}
 			}
-			//Utils.TRACE(TAG, "} <",context.join('.'),">");
 		}
 
 		/**
-		 * Return a promise to test the given model against the given
-		 * data structure, checking data against the model and constructing
-		 * objects as required.
+		 * Promise to process the given data structure, checking data
+		 * against the model, constructing objects, and loading
+		 * referenced files, as required.
 		 * @param {object} data The data being loaded
-		 * @param {index} The index of the structure in the parent object. This
-		 * will be a number for an array entry, or a key for a hash, and is used
-		 * to pass to constructors for named objects.
+		 * @param {index} The index of the structure in the parent
+		 * object. This will be a number for an array entry, or a key
+		 * for a hash, and is used to pass to constructors for named
+		 * objects.
 		 * @param {object} model the model
-		 * @param {string[]} context The context of the check, used in messages only
-		 * @return a promise that resolves to the data (or the default, if one
-		 * was applied)
+		 * @param {string[]} context The context of the check, used in
+		 * messages only
+		 * @return a promise that resolves to the data (or the
+		 * default, if one was applied)
 		 */
 		static remodel(index, data, model, context) {
 
 			DataModel.check(model);
 
-			if (index === "_readFrom")
+			function fail(mess) {
+				return Promise.reject(
+					new Error(
+						`${TAG}.remodel: ${mess} at '${context.join('.')}'`));
+			}
+
+			// Load from a file name if the model allows it
+			if (model.$fileable && typeof data === "string") {
+				_loadFs();
+				if (fs.existsSync(data)) {
+					Utils.TRACE(TAG, `Loading ${index} from file ${data}`);
+					return Fs.readFile(data)
+					.then(content => {
+						if (BUILTIN_TYPES.indexOf(model.$class) >= 0)
+							return Promise.resolve(content.toString());
+
+						content = Utils.eval(content, data);
+						return DataModel.remodel(index, content, model)
+						.then(rebuilt => {
+							if (rebuilt instanceof Object
+								&& !(rebuilt instanceof Array))
+								rebuilt.$read_from = data;
+							return rebuilt;
+						});
+					});
+				}
+			}
+
+			if (index === "$read_from")
 				return Promise.resolve(data);
 
 			if (typeof context === "undefined")
 				context = [];
 
-			Utils.TRACE(`${TAG}Details`, `Remodel '${context.join('.')}' `, data);
+			Utils.TRACE(
+				`${TAG}Details`, `Remodel '${context.join('.')}' `, data);
 
 			// Got a data definition
 			if (typeof data === "undefined") {
@@ -250,19 +397,20 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					return Promise.resolve(data);
 
 				if (typeof model.$default === "undefined")
-					return Promise.reject(new Error(
-						`'${context.join(".")}' not optional and no default`));
+					return fail("field not optional and no default");
 				else
 					data = model.$default;
 			}
 
-			if (model.$skip) {
-				Utils.TRACE(`${TAG}Details`, `\t$skip '${context.join('.')}'`);
+			if (model.$unchecked) {
+				// Don't remodel data under this node
+				Utils.TRACE(`${TAG}Details`, `\t$unchecked '${context.join('.')}'`);
 				return Promise.resolve(data);
 			}
 
 			if (typeof model.$map_of !== "undefined") {
-				Utils.TRACE(`${TAG}Details`, `\t$map_of ${model.$map_of}`);
+				Utils.TRACE(`${TAG}Details`,
+							`\tbuild $map_of ${model.$map_of}`);
 
 				// Object with keys that don't have to match the model,
 				// and values that can be undefined
@@ -280,7 +428,6 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 						rebuilt[keys[i]] = result[i];
 					return rebuilt;
 				});
-
 			}
 
 			if (typeof model.$array_of !== "undefined") {
@@ -305,20 +452,29 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			if (typeof data === "object") {
 
 				let promises = [];
+
 				// Keep data meta-keys, and make sure the data doesn't
 				// carry any hidden payload
 				for (let i in data) {
 					if (model[i])
 						continue;
-					// If $instance_of is set we have no way of validating the
-					// fields yet, so preserve them all. Also preserve all
-					// meta-keys. Anything else is regarded as hidden payload.
 					if (data.$instance_of || DATA_META_KEYS[i])
+						// If $instance_of is set we have no way of
+						// validating the fields yet, so preserve them
+						// all. Also preserve all meta-keys.
 						promises.push({ key: i, data: data[i]});
-					else
-						return Promise.reject(
-							new Error(
-								`Hidden payload '${i}' in ` + Utils.dump(data) + ` at ${context.join('.')}`));
+					else if (typeof model.$class !== "undefined"
+							 && typeof model.$class.Model !== "undefined"
+							 && typeof model.$class.Model[i] !== "undefined") {
+						// We could validate the fields now, but we
+						// just leave it till later
+						promises.push({ key: i, data: data[i]});
+					}
+					else {
+						// Anything else is regarded as hidden payload.
+						return fail(`Hidden payload '${i}' in `
+									+ Utils.dump(data));
+					}
 				}
 
 				// Promise to rebuild each data field
@@ -328,7 +484,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 							DataModel.remodel(
 								key, data[key], model[key], context.concat(key))
 							.then(rebuilt => {
-								return { key: key, data: rebuilt }
+								return { key: key, data: rebuilt };
 							}));
 					}
 				}
@@ -344,7 +500,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 							rebuilt[res.key] = res.data;
 							Utils.TRACE(`${TAG}Details`, `Rebuilt ${res.key}`);
 						}
-						else Utils.TRACE(`${TAG}Details`, `Filtered ${res.key}`);
+						else
+							Utils.TRACE(`${TAG}Details`, `Filtered ${res.key}`);
 					}
 					return rebuilt;
 				});
@@ -355,9 +512,9 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			.then(rebuilt => {
 
 				if (model.$instantiable) {
-					let t = rebuilt.$instance_of;
+					const t = rebuilt.$instance_of;
 					if (typeof t !== "string")
-						throw new Error(`Expected $instance_of at '${context.join(".")}'`);
+						return fail("Expected $instance_of");
 
 					Utils.TRACE(`${TAG}Details`,
 								`Instantiate a ${rebuilt.$instance_of}`, rebuilt);
@@ -377,8 +534,11 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 							return promise
 							.then(rebuilt => {
 								let sub = new module(rebuilt, index, module.Model);
-								// Hack in where it came from
-								sub.$instantiated_from = rebuilt.$instance_of;
+								// Hack in where it came from, so it can be
+								// deserialised
+								if (typeof rebuilt.$instance_of !== "undefined")
+									sub.$instance_of = rebuilt.$instance_of;
+
 								resolve(sub);
 							});
 						});
@@ -388,22 +548,25 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 				if (typeof model.$class === "undefined")
 					return Promise.resolve(rebuilt);
 
-				Utils.TRACE(`${TAG}Details`,
-							`Instantiate ${model.$class.name} ${index}`);
-
 				// Have to pass index for building native types such
 				// as String, Number, Date
 				// Could call remodel, this is fractionally quicker
-				return Promise.resolve(new model.$class(rebuilt, index, model));
+				const clss = model.$class;
+				return new Promise(resolve => {
+					Utils.TRACE(`${TAG}Details`,
+							`Instantiate ${clss.name} ${index}`);
+					resolve(new clss(rebuilt, index, model));
+				});
 			});
 		};
 
 		/**
-		 * Promise to extract a serialisable version of a data structure
-		 * under guidance of the model as text, such that the data can be
-		 * reloaded using DataModel.load
+		 * Promise to extract a serialisable version of a data
+		 * structure under the direction of the model. The
+		 * serialisable version will be a simple structure (without
+		 * class information or types that can't be serialised).
 		 * @param {object} data data to get a serialisable version of
-		 * @param {object{ model data model to follow
+		 * @param {object} model data model to follow
 		 * @return a promise that resolves to the serialisable data structure
 		 */
 		static getSerialisable(data, model, context) {
@@ -422,11 +585,11 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					`${context.join('.')} is not optional`);
 			}
 
-			if (model.$skip) {
+			if (model.$unchecked) {
+				// Model not specified, just have to do our best
 				if (typeof data === "object" &&
 					typeof data.getSerialisable === "function") {
-					// objects can override getSerialisable
-					// Could also use model.prototype.getSerialisable
+					// objects can define getSerialisable
 					return data.getSerialisable(context);
 				}
 				return Promise.resolve(data);
@@ -447,7 +610,11 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 							data[index], model.$array_of,
 							context.concat(index)));
 				}
-				return Promise.all(promises);
+				return Promise.all(promises)
+				.then(p => {
+					Utils.TRACE(`${TAG}Details`, "Array loaded");
+					return p;
+				});
 
 			} else if (typeof model.$map_of !== "undefined") {
 				if (typeof data !== "object")
@@ -457,8 +624,8 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 				for (let key in data) {
 					promises.push(
 						DataModel.getSerialisable(
-							data[index], model.$map_of,
-							context.concat(index))
+							data[key], model.$map_of,
+							context.concat(key))
 						.then(ser => { return { key: key, serialised: ser }; }));
 				}
 				return Promise.all(promises).then(s => {
@@ -468,29 +635,53 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					return res;
 				});
 
-			} else if (typeof model.$class === "function" &&
-					   typeof data.getSerialisable === "function") {
+			} else if (typeof model.$class === "function"
+					   && typeof data.getSerialisable === "function") {
 				// objects can override getSerialisable
 				// Could also use model.prototype.getSerialisable
 				return data.getSerialisable(model);
+			} else if (typeof model.$class === "function"
+					   && typeof model.$class.Model === "object") {
+				// in the case where a datum was loaded from a file, we
+				// end up with a field in the data that doesn't correspond
+				// to the model (which simply shows the File model)
+				model = model.$class.Model;
 			} else if (BUILTIN_TYPES.indexOf(model.$class) >= 0) {
 				return Promise.resolve(data);
 			}
 
 			let promises = [];
-			if (model.$instantiable)
-				promises.push(Promise.resolve({
-					key: "$instance_of", serialised: data.$instantiated_from}));
-			// Only serialise fields described in the model. All other fields
-			// in the object (except $instance_of) are ignored.
+
+			// Retain $instance_of and $read_from in serialised data
+			for (let mk in DATA_META_KEYS)
+				if (typeof data[mk] !== "undefined")
+					promises.push(Promise.resolve({
+						key: mk, serialised: data[mk]}));
+
+			// Default is to only serialise fields described in
+			// the model, and metadata injected by this module.
 			for (let key in model) {
 				if (MODEL_META_KEYS[key])
 					continue;
+				Utils.TRACE(`${TAG}Details`, `Expand ${key}`);
 				promises.push(
 					DataModel.getSerialisable(
 						data[key], model[key],
 						context.concat(key))
 					.then(ser => { return { key: key, serialised: ser };}));
+			}
+
+			if (model.$instantiable) {
+				// An $instantiable is known to be an object, but we
+				// may not know what type it is. We may be able to recover
+				// the type from the data.
+				for (let key in data) {
+					if (MODEL_META_KEYS[key] || model[key])
+						continue;
+					promises.push(
+						Promise.resolve(
+							{ key: key, serialised: data[key] }));
+				}
 			}
 
 			return Promise.all(promises)
@@ -504,15 +695,24 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 		}
 
 		/**
-		 * Follow the path from the root to the node at the end of the path,
-		 * and call a function on the the root of the subtree there, and the
-		 * model that describes it. Will throw if the path does not describe a
-		 * node with a corresponding model.
-		 * @param {object} root the root of the tree
-		 * @param {object} model the root of the model that describes the tree
-		 * @param path either a path expresses as a /-separated
-		 * string or an already-split array of path components.
-		 * @return a promise that resolves to {node, model, parent, key}
+		 * Follow the path from the root to the node at the end of the
+		 * path, kee[ping track of the position in the data and the
+		 * model. Will throw if the path does not describe a node with
+		 * a corresponding model.
+		 * @param {object} root the root of the data
+		 * @param {object} model the root of the model that describes the data
+		 * @param path a path relative to the root, either a path
+		 * expressed as a `/` -separated string or an already-split array
+		 * of path components.
+		 * @return {object} The end of the path, as:
+		 * ```
+		 * {
+		 *   node: // the data node
+		 *   model: // the correspoding position in the model
+		 *   parent: // the node that is the parent of the data node
+		 *   key: // the key indexing the data node in the parent
+		 * }
+		 * ```
 		 */
 		static at(root, model, path) {
 			if (typeof path === "string") {
@@ -522,8 +722,7 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 					path.shift();
 			}
 
-			DataModel.check(model);
-
+			// Don't bother to DataModel.check(model);
 			let node = root;
 			let node_model = model;
 			let parent;
@@ -548,18 +747,19 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			}
 			if (i < path.length)
 				throw new Error(`Could not find '${path.join('.')}'`);
-			return Promise.resolve({
+			return {
 				node: node, model: node_model, parent: parent, key: key
-			});
+			};
 		}
 
 		/**
-		 * Promise to load data that observes the given data model
-		 * from a file.
+		 * Promise to load data that is expected to observe the given
+		 * data model from a file.
 		 * @param file the file to load from
 		 * @param {object} model the data model to check against
-		 * @return {promise} promise that returns the loaded data
-		 * @public
+		 * @return {promise} promise that returns the loaded data. The
+		 * object will be annotated with `$read_from` to indicate where
+		 * it was read from (does not work for arrays or builtin types)
 		 */
 		static loadData(file, model) {
 			DataModel.check(model);
@@ -568,39 +768,64 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			return Fs.readFile(file)
 			.then(code => DataModel.remodel("", Utils.eval(code, file), model))
 			.then(rebuilt => {
-				rebuilt._readFrom = file;
+				if (typeof rebuilt === "object"
+					&& !(rebuilt instanceof Array))
+					rebuilt.$read_from = file;
 				return rebuilt;
 			});
 		}
 
 		/**
 		 * Promise to save that part of the data as is specified by the model
-		 * to a file
-		 * @param {object} data the data to save
-		 * @param {object} model the data model
-		 * @param file file to write to, or undefined to rewrite the
-		 * file the data was read from.
-		 * @return {promise} promise that returns after saving
+		 * to a file. Will recursively track back up the path until a node
+		 * with `$read_from` is found, and will save to that file.
+		 * @param {object} root the root of the data
+		 * @param {object} model the root of the model that describes the data
+		 * @param path a path relative to the root, either a path
+		 * expressed as a /-separated string or an already-split array
+		 * of path components.
+		 * @return {promise} promise that resolves to the saved path
+		 * (array of components) after saving
 		 */
-		static saveData(data, model, file) {
-			"use strict";
+		static saveData(root, model, path) {
+			if (typeof path === "string") {
+				// Convert string path to array of path components
+				path = path.split(/\/+/);
+				while (path.length > 0 && path[0].length == 0)
+					path.shift();
+			}
+
+			// Note that we don't bother to DataModel.check. The data will
+			// have been through DataModel.remodel, which does that job.
+
+			// Walk up the node and model trees until we find a node
+			// with $read_from
+			let p = DataModel.at(root, model, path);
+			while (path.length > 0
+				   && typeof p.node.$read_from === "undefined") {
+				path.pop();
+				p = DataModel.at(root, model, path);
+			}
+			if (!p.node.$read_from)
+				return Promise.reject(new Error("DataModel.saveData: Cannot determine file to save to"));
+
+			Utils.TRACE(TAG, `Saving ${path.join('.')} to ${p.node.$read_from}`);
 
 			_loadFs();
-
-			DataModel.check(model);
-
-			if (typeof file === "undefined")
-				file = this._readFrom;
-
-			return DataModel.getSerialisable(data, model)
-			.then(remod => Fs.writeFile(
-				Utils.expandEnvVars(file),
-				JSON.stringify(remod, null, 2), "utf8"));
+			return DataModel.getSerialisable(p.node, p.model)
+			.then(serial => Fs.writeFile(
+				Utils.expandEnvVars(p.node.$read_from),
+				JSON.stringify(serial, null, 2), "utf8"))
+			.then(() => {
+				return path;
+			});
 		}
 
 		/**
-		 * Generate the help string for the given model
+		 * Generate the help string for the given model, using the `$doc`
+		 * keys.
 		 * @param {object} model the data model to generate help for
+		 * @return {string} the help information 
 		 */
 		static help(model, index) {
 			DataModel.check(model);
@@ -666,170 +891,6 @@ define("common/js/DataModel", ["common/js/Utils"], function(Utils) {
 			return docstring.join(' ').replace(/ +\n/g, "\n");
 		}
 	}
-
-	/* Inner classes, helpers for file operations */
-
-	/**
-	 * DataModel inner class for handling filenames specified in serialisable
-	 * data.
-	 *
-	 * The constructor uses the $mode (default "r") specified in the
-	 * model to verify the status of the target file. This supports the
-	 * following modes:
-	 * e: the file must exist
-	 * r: the file must be readable
-	 * w: the file must be writable
-	 * x: the file must be executable
-	 * @param filename the file name
-	 * @param index the name passed to the constructor by DataModel
-	 * @param {object} model the model for this file
-	 * @class
-	 */
-	class File {
-
-		constructor(filename, index, model) {
-			this.data = filename;
-
-			_loadFs();
-
-			if (typeof model === "undefined")
-				return;
-
-			// Got a model to check against. This should always be the case
-			// except in tests.
-			let fnm = Utils.expandEnvVars(filename);
-			this.path = fnm;
-
-			let $mode = model.$mode;
-			if (typeof $mode === "undefined")
-				$mode = "r";
-
-			let mode = fs.constants.F_OK;
-
-			if ($mode.indexOf("r") >= 0)
-				mode = mode | fs.constants.R_OK;
-
-			if ($mode.indexOf("x") >= 0)
-				mode = mode | fs.constants.X_OK;
-
-			if ($mode.indexOf("e") >= 0 && !fs.existsSync(fnm)) {
-				throw new Error(`Bad ${index}: '${filename}' does not exist`);
-			}
-
-			if ($mode.indexOf("w") >= 0) {
-				mode = mode | fs.constants.W_OK;
-
-				if (fs.existsSync(fnm)) {
-					fs.access(
-						fnm, mode,
-						err => {
-							if (err)
-								throw new Error(
-									`Bad ${index}: '${filename}' '$mode' mode check failed: ${err}`);
-						});
-				}
-			} else if ($mode.indexOf("w") >= 0) {
-				// Just make sure we can write, and clear down the file
-				fs.writeFileSync(fnm, "", {
-					mode: mode
-				});
-			}
-		}
-
-		/**
-		 * Generate a simple string representation of this object suitable
-		 * for use in debugging and in serialisation
-		 */
-		toString() {
-			return this.data;
-		}
-
-		/**
-		 * Promise to write a new value to the file
-		 * @param value new data to write to the file
-		 */
-		write(value) {
-			_loadFs();
-			return Fs.writeFile(this.path, value, "utf8");
-		}
-
-		/**
-		 * Promise to read the file
-		 */
-		read() {
-			_loadFs();
-			return Fs.readFile(this.path);
-		};
-
-		/**
-		 * Get the expanded pathname to the file
-		 */
-		getPath() {
-			return this.path;
-		}
-
-		getSerialisable() {
-			return Promise.resolve(this.data);
-		}
-	}
-
-	File.Model = {
-		$class: File,
-		$doc: "Filename"
-	};
-
-	DataModel.File = File;
-
-	/**
-	 * Subclass of DataModel.File representing a datum that can either
-	 * be a simple text string, or a file name.
-	 * When the object is constructed, if the string in the data is a
-	 * valid existing filename, then the object is assumed to refer to a file.
-	 * Otherwise it is assumed to be raw text data.
-	 * The $mode of the model is assumed to be at least "er"
-	 * @param data either a file name or raw data
-	 * @param index the name passed to the constructor by DataModel
-	 * @param {object} model the model for the datum
-	 * @class
-	 */
-	class TextOrFile extends File {
-
-		constructor(textOrFile, index, model) {
-			super(textOrFile, index, model);
-			this.is_file = fs.existsSync(Utils.expandEnvVars(textOrFile));
-		}
-
-		/**
-		 * Promise to read the datum
-		 */
-		read() {
-			if (this.is_file)
-				return super.read();
-			else {
-				return Promise.resolve(this.data);
-			}
-		}
-
-		/**
-		 * Promise to update the datum
-		 * @param value new value to store in the datum
-		 */
-		write(value) {
-			if (this.is_file)
-				return super.write(value);
-			else {
-				this.data = value;
-				return Promise.resolve(true);
-			}
-		}
-	}
-
-	TextOrFile.Model = {
-		$class: TextOrFile,
-		$doc: "Filename or plain text"
-	};
-
-	DataModel.TextOrFile = TextOrFile;
 
 	return DataModel;
 });
