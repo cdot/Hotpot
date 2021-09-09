@@ -6,10 +6,7 @@
 # We don't bother compressing the node.js code, and there is no
 # great advantage to compressing the browser code.
 
-JS := $(shell find . \( -name node_modules -o -name '*.min.*' -o -name release -o -name Android \) -prune -o \( -name '*.js' \) )
-
-FIND := find . \
-	\( -name node_modules -o -name Android -prune -o -name
+JS := $(shell find . \( -name node_modules -o -name doc -o -name test -o -name '*.min.*' -o -name release -o -name Android \) -prune -false -o \( -type f -name '*.js' \) )
 
 %.esl : %.js
 	eslint --no-ignore $^
@@ -25,8 +22,10 @@ tidy: $(patsubst %.js,%.js.tidy,$(JS))
 lint: $(subst .js,.esl,$(JS))
 
 # Make HTML source-code documentation
-doc: $(ALL_JS)
-	jsdoc -c jsdoc_config.json -d doc $(JS)
+doc: doc/index.html
+
+doc/index.html: $(JS)
+	node_modules/.bin/jsdoc -c jsdoc_config.json -d doc $(JS)
 
 test:
 	$(FIND) browser -prune -o -name test -type d -exec mocha \{\}/*.js \;
