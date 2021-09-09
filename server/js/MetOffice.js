@@ -93,7 +93,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
 				return {
 					api_key: this.api_key,
 					history: h
-				}
+				};
 			});
 		};
 
@@ -378,6 +378,11 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
 		}
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof MetOffice
+	 */
 	MetOffice.Model = {
 		$class: MetOffice,
 		api_key: {

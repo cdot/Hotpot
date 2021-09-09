@@ -10,7 +10,7 @@ requirejs.config({
 
 /**
  * Stand-alone program to authorise calendars declared in hotpot.cfg
- * @module AuthoriseCalendars
+ * @module server/AuthoriseCalendars
  */
 requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "common/DataModel"], function(Getopt, fs, readLine, Utils, Time, DataModel) {
 
@@ -102,7 +102,7 @@ requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "comm
 	}
 
 	DataModel.loadData(cliopt.config, {
-		$skip: true
+		$unchecked: true
 	})
 
 	.then(config => {

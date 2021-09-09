@@ -4,7 +4,7 @@
 
 /**
  * Main program for heating control server
- * @module Hotpot
+ * @module server/Hotpot
  */
 const DESCRIPTION =
 	  "DESCRIPTION\nA Raspberry PI central heating control server.\n" +
@@ -24,8 +24,7 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
 	const HOTPOT_MODEL = {
 		tracefile: {
 			$doc: "Full path to the trace file",
-			$class: DataModel.File,
-			$mode: "w",
+			$class: String,
 			$optional: true
 		},
 		server: Server.Model,
@@ -75,7 +74,10 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
 		Utils.sendMail = (subj, mess) => server.sendMailToAdmin(subj, mess);
 		server.setDispatch(
 			(path, params) => {
-				return controller.dispatch(path, params);
+				return controller.dispatch(path, params)/*
+				.catch(e => {
+					console.log("FAILED", e);
+				})*/;
 			});
 		return controller.initialise()
 		.then(() => {
@@ -95,12 +97,11 @@ requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/Da
 			"config_change",
 			() => {
 				DataModel.saveData(config, HOTPOT_MODEL, cliopt.config)
-				.done(() => {
+				.then(() => {
 					Utils.TRACE(TAG, cliopt.config, " updated");
 				});
 			});
 	})
-
 	.catch(e => {
 		console.error("Controller initialisation failed: ",
 					  typeof e.stack !== "undefined" ? e.stack : e);

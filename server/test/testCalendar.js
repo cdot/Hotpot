@@ -20,10 +20,10 @@ requirejs.config({
 
 requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/Controller", "server/js/GoogleCalendar"], function(Getopt, Utils, DataModel, Controller, GoogleCalendar) {
 
-	Controller.Model.thermostat = { $skip: true };
-	Controller.Model.pin = { $skip: true };
+	Controller.Model.thermostat = { $unchecked: true };
+	Controller.Model.pin = { $unchecked: true };
 	const HOTPOT_MODEL = {
-		server: { $skip: true },
+		server: { $unchecked: true },
 		controller: Controller.Model
 	};
 

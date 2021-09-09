@@ -280,6 +280,11 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 		}
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof Calendar
+	 */
 	Calendar.Model = {
 		prefix: {
 			$doc: "Prefix for hotpot instructions in the calendar",

@@ -7,9 +7,9 @@
  * Not needed if NTP or other time synchronisation support is available
  * See environment/README.md for information.
  */
-const DESCRIPTION = "DESCRIPTION\nSimple server time synchronisation";
 
-let requirejs = require('requirejs');
+/** @private */
+const requirejs = require('requirejs');
 
 requirejs.config({
 	baseUrl: __dirname + "/../.."
@@ -17,6 +17,7 @@ requirejs.config({
 
 requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt, Http, fs, DataModel) {
 
+	const DESCRIPTION = "DESCRIPTION\nSimple server time synchronisation";
 	const Fs = fs.promises;
 
 	let cliopt = Getopt.create([
@@ -62,7 +63,7 @@ requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt,
 					} else {
 						console.log(addr + " says it's " + res.headers.date);
 						if (cliopt.set) {
-							return setTime(res.headers.date)
+							setTime(res.headers.date)
 							.then(resolve)
 							.catch(reject);
 						} else
@@ -77,13 +78,13 @@ requirejs(["node-getopt", "http", "fs", "common/js/DataModel"], function(Getopt,
 	}
 
 	DataModel.loadData(cliopt.config, {
-		$skip: true // don't bother checking
+		$unchecked: true // don't bother checking
 	})
 	.then(cfg => {
 		var proms = [];
 		for (var i = 0; i < cfg.length; i++) {
 			if (cfg[i][0] != "_")
-				proms.push(getTimeFrom(cfg[i]))
+				proms.push(getTimeFrom(cfg[i]));
 		}
 		Promise.any(proms).then(() => { console.log("OK"); });
 	});

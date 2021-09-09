@@ -4,9 +4,8 @@
 define("server/js/Rule", ["common/js/Utils"], function(Utils) {
 
 	/**
-	 * Abstract base class of rules governing when/if a function is to be turned on/off based on the
-	 * state of one or more thermostats.
-	 * @class
+	 * Abstract base class of rules governing when/if a function is to
+	 * be turned on/off based on the state of one or more thermostats.
 	 */
 	class Rule {
 		/**
@@ -17,8 +16,7 @@ define("server/js/Rule", ["common/js/Utils"], function(Utils) {
 
 			/**
 			 * Name of the rule
-			 * @type {string}
-			 * @public
+			 * @member {string}
 			 */
 			this.name = name;
 

@@ -1,0 +1,6 @@
+[
+	{ data: "Beans" },
+	{ data: "Cheese" },
+	{ data: "Sausages" }
+]
+

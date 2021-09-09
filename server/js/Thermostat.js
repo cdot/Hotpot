@@ -2,7 +2,7 @@
 
 /*eslint-env node */
 
-define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/Timeline", "server/js/DS18x20", "server/js/Historian"], function(Utils, Time, Timeline, DS18x20, Historian) {
+define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "common/js/Time", "common/js/Timeline", "server/js/DS18x20", "server/js/Historian"], function(Utils, DataModel, Time, Timeline, DS18x20, Historian) {
 
 	const TAG = "Thermostat";
 
@@ -45,36 +45,86 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 	class Thermostat {
 
 		/**
-		 * @param name {String} name by which the caller identifies the thermostat
-		 * @param proto configuration for the thermostat - see
-		 * Thermostat.Model
+		 * Construct from a configuration data block built using
+		 * {@link DataModel} and Model
 		 */
 		constructor(proto, name) {
 
+			/**
+			 * Unique ID used to communicate with this thermostat
+			 * @member {string}
+			 */
+			this.id = undefined;
+			
+			/**
+			 * Polling frequency, in seconds
+			 * @member {Number}
+			 */
+			this.poll_every = undefined;
+
+			/**
+			 * Timeline
+			 * @member {Timeline}
+			 */
+			this.timeline = undefined;
+
+			/**
+			 * History
+			 * @member {Historian}
+			 */
+			this.history = undefined;
+
 			Utils.extend(this, proto);
 
-			// Name of the thermostat e.g. "HW"
+			/**
+			 * @member {string}
+			 * @desc  Name of the thermostat e.g. "HW"
+			 */
 			this.name = name;
 
-			/** @property {object} requests map of lists of requests, one per service
-			 * (see #addRequest) */
+			/**
+			 * Map of lists of requests, one per service
+			 * (see {@link addRequest})
+			 * @member {object}
+			 */
 			this.requests = [];
 
-			// Load the driver asynchronously
+			/**
+			 * Loaded asynchronously
+			 * @member
+			 */
 			this.sensor = new DS18x20(this.id);
 
-			// Last recorded temperature {float}
+			/**
+			 * Last recorded temperature {float}
+			 * @member {number}
+			 */
 			this.temperature = 0;
 
-			// Remember the time of the last known good sample
+			/**
+			 * Remember the time of the last known good sample
+			 * @member {number}
+			 */
 			this.lastKnownGood = Date.now();
 
-			// Temperature history, sample on a time schedule
 			let hc = this.history;
 			if (typeof hc !== "undefined") {
 				if (typeof hc.interval === "undefined")
 					hc.interval = 300; // 5 minutes
 			}
+
+			/**
+			 * Handler to be invoked if there's a problem requiring
+			 * an admin alert
+			 * @member
+			 */
+			this.alertHandler = undefined;
+
+			/**
+			 * Timeout id for the temperature poll timer
+			 * @member
+			 */
+			this.pollTimer = undefined;
 		}
 
 		/**
@@ -82,7 +132,16 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 		 * from the probe. The promise resolves to the Thermostat.
 		 */
 		initialise() {
-			return new Promise(resolve => {
+			let promise;
+			if (typeof this.timeline === "string") {
+				promise = Promise.resolve(DataModel.loadData(
+					Utils.expandEnvVars(this.timeline), Timeline.Model))
+				.then(data => {	this.timeline = data; });
+			} else
+				promise = Promise.resolve();
+
+			return promise
+			.then(() => new Promise(resolve => {
 				this.sensor.initialiseSensor()
 				.then(s => s.getTemperature())
 				.then(t => resolve(t))
@@ -104,7 +163,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 						resolve(this.sensor.getTemperature());
 					}
 				});
-			})
+			}))
 			.then(temp => {
 				this.temperature = temp;
 				// Start the historian
@@ -116,8 +175,8 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 				}
 				Utils.TRACE(TAG, `'${this.name}' initialised`);
 				return this;
-			})
-		};
+			});
+		}
 
 		/**
 		 * Generate and return a promise for a serialisable version of the state
@@ -213,7 +272,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 			if (this.pollTimer) {
 				Utils.TRACE(
 					TAG, `'${this.name}' interrupted ${this.pollTimer}`);
-				Utils.cancelTimer(this.pollTimer)
+				Utils.cancelTimer(this.pollTimer);
 				delete this.pollTimer;
 			}
 			if (this.history)
@@ -289,8 +348,10 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 		/**
 		 * Purge requests that have timed out, or are force-purged by matching
 		 * the parameters.
-		 * @param match map of request fields to match e.g. { source: id } All fields must match
-		 * @param clear true if requests are to be deleted even if they are under targets
+		 * @param {object} match map of request fields to match
+		 * e.g. { source: id }
+		 * All fields must match
+		 * @param {boolean} clear true if requests are to be deleted even if they are under targets
 		 */
 		purgeRequests(match, clear) {
 			if (match)
@@ -326,6 +387,11 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 		};
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof Thermostat
+	 */
 	Thermostat.Model = {
 		$class: Thermostat,
 		id: {
@@ -337,7 +403,10 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/Time", "common/js/
 			$doc: "Polling frequency, in seconds",
 			$optional: true
 		},
-		timeline: Timeline.Model,
+		timeline: Utils.extend({}, {
+			$fileable: true,
+			$doc: "Timeline (object or filename)",
+		},  Timeline.Model),
 		history: Utils.extend({
 			$optional: true
 		}, Historian.Model)

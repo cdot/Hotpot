@@ -214,12 +214,16 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
 		};
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof Historian
+	 */
 	Historian.Model = {
 		$class: Historian,
 		file: {
 			$doc: "Full path to the log file",
-			$class: DataModel.File,
-			$mode: "w"
+			$class: String
 		},
 		unordered: {
 			$doc: "Set if sample events may be added out of order",

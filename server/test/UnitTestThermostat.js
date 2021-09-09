@@ -23,11 +23,11 @@ requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "comm
 				  period: 86400000,
 				  points: [
 					  {
-						  "times": "00:00",
+						  "time": "00:00",
 						  "value": 0
 					  },
 					  {
-						  "times": "23:59:59",
+						  "time": "23:59:59",
 						  "value": 10
 					  }
 				  ]

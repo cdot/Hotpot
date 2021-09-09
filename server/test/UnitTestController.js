@@ -24,11 +24,11 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 					period: 86400000,
 					points: [
 						{
-							times: "00:00",
+							time: "00:00",
 							value: 10
 						},
 						{
-							times: "18:00",
+							time: "18:00",
 							value: 40
 						}
 					]
@@ -47,11 +47,11 @@ requirejs(["test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/
 					period: 86400000,
 					points: [
 						{
-							times: "00:00",
+							time: "00:00",
 							value: 8.638465723612622
 						},
 						{
-							times: "18:00",
+							time: "18:00",
 							value: 8.829166666666667
 						}
 					]

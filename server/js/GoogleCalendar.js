@@ -23,10 +23,8 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
 	class GoogleCalendar extends Calendar{
 
 		/**
-		 * Get active events from a Google calendar.
-		 * @param {string} name name of the calendar
-		 * @param {object} proto see Calendar.Model
-		 * @class
+		 * Construct from a configuration data block built using
+		 * {@link DataModel} and Model
 		 */
 		constructor(proto, name) {
 			super(proto, name);
@@ -42,17 +40,14 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
 			if (typeof this.oauth2Client !== "undefined")
 				return Promise.resolve(); // already started
 
-			return Fs.readFile(Utils.expandEnvVars(this.auth_cache))
-
-			.then(token => {
-				let clientSecret = this.secrets.client_secret;
-				let clientId = this.secrets.client_id;
-				let redirectUrl = this.secrets.redirect_uris[0];
-				let {OAuth2Client} = require("google-auth-library");
-				this.oauth2Client = new OAuth2Client(
-					clientId, clientSecret, redirectUrl);
-				this.oauth2Client.credentials = JSON.parse(token);
-			});
+			let clientSecret = this.secrets.client_secret;
+			let clientId = this.secrets.client_id;
+			let redirectUrl = this.secrets.redirect_uris[0];
+			let {OAuth2Client} = require("google-auth-library");
+			this.oauth2Client = new OAuth2Client(
+				clientId, clientSecret, redirectUrl);
+			this.oauth2Client.credentials = this.auth_cache;
+			return Promise.resolve();
 		}
 
 		/**
@@ -144,6 +139,11 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
 		}
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof GoogleCalendar
+	 */
 	GoogleCalendar.Model = Utils.extend(Calendar.Model, {
 		$class: GoogleCalendar,
 		id: {
@@ -170,8 +170,11 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
 		},
 		auth_cache: {
 			$doc: "File containing cached oauth authentication",
-			$class: DataModel.File,
-			$mode: "r"
+			access_token: { $class: String },
+			token_type: { $class: String },
+			refresh_token: { $class: String },
+			expiry_date: { $class: Number},
+			$fileable: true
 		},
 	});
 

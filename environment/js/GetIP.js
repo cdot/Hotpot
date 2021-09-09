@@ -6,9 +6,9 @@
  * Determine "true" IP address.
  * See README.md for information.
  */
-const DESCRIPTION = "DESCRIPTION\nSimple server time synchronisation";
 
-let requirejs = require('requirejs');
+/** @private */
+const requirejs = require('requirejs');
 
 requirejs.config({
 	baseUrl: __dirname + "/../.."
@@ -16,6 +16,7 @@ requirejs.config({
 
 requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel"], function(Getopt, JSFtp, fs, Utils, DataModel) {
 
+	const DESCRIPTION = "DESCRIPTION\nSimple server time synchronisation";
 	const Fs = fs.promises;
 
 	function Url(e) {
@@ -58,7 +59,7 @@ requirejs(["node-getopt", "jsftp", "fs", "common/js/Utils", "common/js/DataModel
 	let config, current = {};
 
 	DataModel.loadData(cliopt.config, {
-		$skip: true
+		$unchecked: true
 	})
 	.then(cfg => {
 		config = cfg;

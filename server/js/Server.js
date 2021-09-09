@@ -2,9 +2,6 @@
 
 /*eslint-env node */
 
-// Yes, I could have used express, but I wrote this before I knew about
-// it, and it "just works".
-
 define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel", "common/js/Location"], function(fs, Url, Utils, DataModel, Location) {
 
 	const TAG = "Server";
@@ -18,16 +15,58 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 	 * requests. The predefined root path `/ajax` is used to decide when to
 	 * route requests to a dispatcher function. Otherwise requests are
 	 * handled as files relative to the defined `docroot`.
+	 *
+	 * Yes, I could have used express, but I wrote this before I knew about
+	 * it, and it "just works".
 	 * @param proto see Server.Model
 	 * @class
 	 */
 	class Server {
 
+		/**
+		 * Construct from a configuration data block built using
+		 * {@link DataModel} and Model
+		 */
 		constructor(proto) {
+
+			/**
+			 * Port to run the server on
+			 * @member {number}
+			 */
+			this.port = undefined;
+			
+			/**
+			 * Absolute file path to server documents
+			 * @member {string}
+			 */
+			this.docroot = undefined;
+			
+			/**
+			 * Where in the world the server is locate
+			 * @member {Location}
+			 */
+			this.location = undefined;
+
+			/**
+			 * SSL configuration
+			 * @member
+			 */
+			this.ssl = undefined;
+
+			/**
+			 * Basic auth to access the server
+			 * @member
+			 */
+			this.auth = undefined;
 
 			Utils.extend(this, proto);
 
+			/**
+			 * @member
+			 * @private
+			 */
 			this.ready = false;
+
 			if (typeof this.auth !== "undefined") {
 				this.authenticate = request => {
 					let BasicAuth = require("basic-auth");
@@ -276,6 +315,11 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 		}
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof Server
+	 */
 	Server.Model = {
 		$class: Server,
 		$doc: "HTTP(S) server",
@@ -283,24 +327,26 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 			$doc: "Port to run the server on",
 			$class: Number
 		},
-		docroot: Utils.extend({}, DataModel.File.Model, {
+		docroot: {
 			$doc: "Absolute file path to server documents",
-			$mode: "dr"
-		}),
+			$class: String
+		},
 		location: Utils.extend({}, Location.Model, {
 			$doc: "Where in the world the server is located"
 		}),
 		ssl: {
 			$doc: "SSL configuration",
 			$optional: true,
-			cert: Utils.extend({}, DataModel.TextOrFile.Model, {
-				$doc: "SSL certificate (filename or text)",
-				$mode: "r"
-			}),
-			key: Utils.extend({}, DataModel.TextOrFile.Model, {
-				$doc: "SSL key (filename or text)",
-				$mode: "r"
-			})
+			cert: {
+				$class: String,
+				$fileable: true,
+				$doc: "SSL certificate (filename or text)"
+			},
+			key: {
+				$class: String,
+				$fileable: true,
+				$doc: "SSL key (filename or text)"
+			}
 		},
 		auth: {
 			$doc: "Basic auth to access the server",

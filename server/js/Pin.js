@@ -18,24 +18,40 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
 		 */
 		constructor(proto, name) {
 
+			/**
+			 * The number of the gpio pin
+			 * @member {number}
+			 */
+			this.gpio = undefined;
+
+			/**
+			 * History of this pin
+			 * @member {Historian}
+			 */
+			this.history = undefined;
+
 			Utils.extend(this, proto);
 
 			/**
-			 * @property {string} name Name of the pin e.g. HW
-			 * @public
+			 * Name of the pin e.g. HW
+			 * @member {string}
 			 */
 			this.name = name;
 
 			/**
-			 * @property {string} reason Descriptive reason the pin is currently in
+			 * Descriptive reason the pin is currently in
 			 * the state it is.
-			 * @public
+			 * @member {string}
 			 */
 			this.reason = "";
 
 			Utils.TRACE(TAG, `'${this.name}' constructed on gpio ${this.gpio}`);
 
-			// Construct the object that interfaces to the actual GPIO pins
+			/**
+			 * The object that interfaces to the actual GPIO pins
+			 * @member
+			 * @private
+			 */
 			this.Gpio = new Gpio(this.gpio);
 		}
 
@@ -106,6 +122,11 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
 		};
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof Pin
+	 */
 	Pin.Model = {
 		$class: Pin,
 		gpio: {

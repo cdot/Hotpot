@@ -15,6 +15,10 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 	 */
 	class Controller extends Events.EventEmitter {
 
+		/**
+		 * Construct from a configuration data block built using
+		 * {@link DataModel} and Model
+		 */
 		constructor(proto) {
 			super();
 			Utils.extend(this, proto);
@@ -262,7 +266,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 				state.timers = {};
 				let timers = Utils.getTimers();
 				for (let tid in timers) {
-					console.log("\t", tid, new Date(timers[tid].when));
+					Utils.TRACE(TAG, "\t", tid, new Date(timers[tid].when));
 					state.timers[tid] = new Date(timers[tid].when).toString();
 				}
 			}
@@ -423,29 +427,52 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 					return this.getLogsFor(this[path[0]], data.since);
 				// Get the log for the given object of the given type
 				return this[path[0]][path[1]].getSerialisableLog(data.since);
+
 			case "getconfig":
 				// /getconfig/path/to/config/node
 				Utils.TRACE(TAG, `getconfig ${path}`);
-				return DataModel.at(this, Controller.Model, path)
-				.then(p => DataModel.getSerialisable(p.node, p.model));
-			case "setconfig":
-				// /setconfig/path/to/config/node, data.value is new setting
-				return DataModel.at(this, Controller.Model, path)
-				.then(p => {
-					if (typeof p.parent === "undefined" ||
-						typeof p.key === "undefined" ||
-						typeof p.node === "undefined")
-						throw Utils.exception(
-							TAG,
-							`Cannot update ${path}, insufficient context`);
-					return DataModel.remodel(p.key, data, p.model, path)
-					.then(rebuilt => {
-						p.parent[p.key] = rebuilt;
-						Utils.TRACE(TAG, `setconfig ${path} = ${rebuilt}`);
-						this.emit("config_change");
-						return { status: "OK" };
-					});
+				const p = DataModel.at(this, Controller.Model, path);
+				return DataModel.getSerialisable(p.node, p.model)
+				.catch(e => {
+					Utils.TRACE(TAG, `${e.stack}`);
+					return e.stack;
 				});
+
+			case "setconfig": {
+				// /setconfig/path/to/config/node, data.value is new setting
+
+				// Locate the data in the Controller model
+				const p = DataModel.at(this, Controller.Model, path);
+
+				if (typeof p.parent === "undefined" ||
+					typeof p.key === "undefined" ||
+					typeof p.node === "undefined")
+					throw Utils.exception(
+						TAG,
+						`Cannot update ${path}, insufficient context`);
+
+				// Now remodel the data using the sub-model
+				return DataModel.remodel(p.key, data, p.model, path)
+				// Assign the remodeled data to the right place in the
+				// controller data
+				.then(rebuilt => {
+					p.parent[p.key] = rebuilt;
+					Utils.TRACE(TAG, `setconfig ${path} = `, rebuilt);
+					return rebuilt;
+				})
+				// finally trigger a save at the right place in
+				// the controller data. This will walk up the
+				// structure until $read_from is found.
+				.then(() =>
+					  DataModel.saveData(this, Controller.Model, path))
+				.then(() => {
+					return { status: "OK" };
+				})
+				.catch(e => {
+					Utils.TRACE(TAG, `Write failed ${e.stack}`);
+					return e.stack;
+				});
+			};
 			case "request":
 				// Push a request onto a service (or all services). Requests may come
 				// from external sources such as browsers.
@@ -581,6 +608,11 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 		}
 	}
 
+	/**
+	 * Configuration model, for use with {@link DataModel}
+	 * @member
+	 * @memberof Controller
+	 */
 	Controller.Model = {
 		$class: Controller,
 		mail: {
@@ -634,11 +666,11 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 			$map_of: { $instantiable: true }
 		},
 		calendar: {
-			$doc: "Set of Calendars e.g. $instance_of:`GoogleCalendar`",
+			$doc: "Set of Calendars e.g. GoogleCalendar",
 			$map_of: { $instantiable: true }
 		},
 		weather: {
-			$doc: "Set of weather agents e.g. $instance_of:`MetOffice`",
+			$doc: "Set of weather agents e.g. MetOffice",
 			// We don't know what class the agents are yet
 			$map_of: { $instantiable: true }
 		}
