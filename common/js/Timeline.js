@@ -39,7 +39,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
 		getSerialisable() {
 			return Promise.resolve({
-				times: Time.formatHMS(this.time),
+				time: Time.formatHMS(this.time),
 				value: this.value
 			});
 		}
