@@ -1,28 +1,9 @@
-.body-bg {
+body {
 	background-color: #062F47;
-}
-
-.body-fg {
-	color: #FFFFFF
-}
-
-.banner-bg {
-	background-color: #000000;
-}
-
-.banner-fg {
-	color: #B82601;
-}
-
-.fonts {
+	color: #FFFFFF;
 	font-family: Helvetica,Arial,sans-serif;
 	font-size: 5vmin;
 	line-height: 1.5;
-}
-
-.banner {
-	padding: 1.7vmin;
-	margin: 0;
 }
 
 h1 {
@@ -34,18 +15,8 @@ table {
 	width: 100%;
 }
 
-button {
-	font-size: 6vmin;
-	padding: 1vmin;
-	-webkit-border-radius: 1vmin;
-	-moz-border-radius: 1vmin;
-	color: #FFFFFF;
-	background-color: #B82601
-}
-
-button:disabled {
-	color: #B0B0B0
-			   background-color: #B82601
+img.disabled {
+	filter: grayscale(100);
 }
 
 input {
@@ -55,117 +26,23 @@ input {
 	text-align: right;
 }
 
-.switcher {
-	float:right;
-}
-
-#help {
-	display: none;
-}
-
 .example {
 	display: inline-block;
 	background-color: lightgrey;
 	padding: 2px;
 }
 
-button.twisty {
-	font-size: 2vmin;
-	-webkit-border-radius: 0;
-	-moz-border-radius: 0;
-	background-color: transparent;
-	color: black;
-}
-
-#help-twisty {
-	display: none;
-}
-
-.request {
-	background-color: orange;
-	padding: 1vmin;
-}
-
-canvas {
-	-webkit-touch-callout:none;
-	-webkit-user-select:none;
-	-webkit-user-drag:none;
-	-khtml-user-select:none;
-	-moz-user-select:none;
-	-ms-user-select:none;
-	user-select:none;
-}
-
-.overlay {
-	position: absolute;
-	color: white;
-	background-color: transparent;
-	pointer-events: none;
-}
-
-.tl-container {
-	width: 100%;
-	display: none;
-}
-
-/* The canvases used to edit timelines */
-.tl-canvas {
-	width: 100%;
-}
-
-.spinner { /** container for a spinnable input */
-	display: inline-flex;
+.image_button {
+	height: 7vmin;
 	vertical-align: middle;
 }
-
-.spinnable { /* input inside a spinner */
-	text-align: right;
-}
-
-.spinner-controls {
-	min-height: 4vmin;
-}
-
-.spinner-controls > input {
-	min-height: 4vmin;
-	top: -0.5vmin;
-	position: relative;
-}
-
-.image_button {
-	height: 4vmin;
-}
-
-.calendar {
-	display: none;
-}
-
-.input-group-btn-vertical {
-  position: relative;
-  display: inline-block;
-  padding: 0;
-  margin: 0;
-}
-
-.input-group-btn-vertical > .btn {
-  display: block;
-  font-size: 40%;
-  padding: 0;
-  margin: 0;
-}
-
-/*
-.input-group-btn-vertical > .btn:first-child {
-  border-top-right-radius: 4px;
-}
-
-.input-group-btn-vertical > .btn:last-child {
-  margin-top: -2px;
-  border-bottom-right-radius: 4px;
-}*/
 
 input {
 	position: relative;
 	top: -0.3vmin;
 	padding-top: 3vmin;
+}
+
+.dialog {
+	display: none;
 }

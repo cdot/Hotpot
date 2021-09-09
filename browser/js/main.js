@@ -16,9 +16,6 @@ requirejs.config({
 		useXhr: (/*url, protocol, hostname, port*/) => true
 	},
 	paths: {
-		// text! plugin, used for importing css
-		//"text" : "https://cdnjs.cloudflare.com/ajax/libs/require-text/2.0.12/text" + min,
-
 		"jquery" :"https://code.jquery.com/jquery-3.4.1" + min,
 		"jquery-ui" : "https://code.jquery.com/ui/1.12.1/jquery-ui" + min,
 		"js-cookie" : "https://cdnjs.cloudflare.com/ajax/libs/js-cookie/2.2.0/js.cookie" + min,
@@ -31,10 +28,6 @@ requirejs.config({
 	}
 });
 
-requirejs(["jquery", "jquery-ui"], () => {
-	$(() => {
-		requirejs(["browser/js/Hotpot"], Hotpot => {
-			new Hotpot().begin();
-		});
-	});
+requirejs(["jquery", "jquery-ui", "browser/js/Hotpot"], (jq, jqui, Hotpot) => {
+	new Hotpot().begin();
 });

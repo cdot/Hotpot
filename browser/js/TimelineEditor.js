@@ -37,16 +37,16 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 			delete this.last_tip_xy;
 			this.$container = $container;
 
-			this.$main_canvas = $("<canvas></canvas>")
+			this.$main_canvas = $("<canvas id='main'></canvas>")
 			.css("width", "100%");
 			$container.append(this.$main_canvas);
 
-			this.$tip_canvas = $("<canvas></canvas>")
+			this.$tip_canvas = $("<canvas id='tip'></canvas>")
 			.addClass('overlay')
 			.css("z-index", 5);
 			$container.append(this.$tip_canvas);
 
-			this.$selection_canvas = $("<canvas></canvas>")
+			this.$selection_canvas = $("<canvas id='sel'></canvas>")
 			.addClass('overlay')
 			.css({
 				width: 2 * POINT_RADIUS,
@@ -54,6 +54,15 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 				"z-index": 10
 			});
 			$container.append(this.$selection_canvas);
+
+			this.$drag_canvas = $("<canvas id='drag'></canvas>")
+			.addClass('overlay')
+			.css({
+				width: 2 * POINT_RADIUS,
+				height: 2 * POINT_RADIUS,
+				"z-index": 20
+			});
+			$container.append(this.$drag_canvas);
 
 			$('.overlay').hide();
 
@@ -113,14 +122,17 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 				// by at least the point radius since the mouse was pressed
 				if (!this.isDragging) {
 					let delta = Vec.sub(xy, this.tvi2xy(this.hit_pt_ix));
-					if (Vec.mag2(delta) > POINT_RADIUS2)
+					if (Vec.mag2(delta) > POINT_RADIUS2) {
 						this.isDragging = true;
+						this.$drag_canvas.show();
+					}
 				}
 				if (this.isDragging
 					&& this.timeline.setPointConstrained(this.hit_pt_ix, tv)) {
 					if (typeof this.onChanged == "function") this.onChanged();
 					// Update UI fields
 					this.$container.trigger("selection_changed");
+					this.drawDragCanvas();
 				}
 			} else {
 				let selpt = this.overPoint(xy, POINT_RADIUS2);
@@ -140,10 +152,11 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 			//console.log("E: mouseup ", xy);
 			this.last_tip_xy = xy;
 			if (this.isDragging) {
+				this.$drag_canvas.hide();
+				this.isDragging = false;
 				// We have dragged a point at least POINT_RADIUS away from
 				// where it started. Simply finish the drag.
-				this.hit_pt_ix = -1
-				this.isDragging = false;
+				this.hit_pt_ix = -1;
 				// Update UI fields
 				this.$container.trigger("selection_changed");
 				this.$main_canvas.css('cursor', 'default');
@@ -174,6 +187,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 				}
 				this.last_tip_xy = xy;
 			}
+			return true;
 		}
 
 		tvi2xy(i) {
@@ -338,8 +352,8 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 		}
 
 		/**
-		 * get the index of the currently selected point.
-		 * @return {index:, time:, value:} for selected point or null if
+		 * Get the index of the currently selected point.
+		 * @return {object} {index, time, value} for selected point or null if
 		 * no point selected
 		 */
 		getSelectedPoint() {
@@ -439,37 +453,63 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 		 */
 		drawSelectionCanvas() {
 
-			if (this.hit_pt_ix < 0 && this.sel_pt_ix < 0) {
+			if (this.sel_pt_ix < 0) {
 				this.$selection_canvas.hide();
 				return;
 			}
 
 			this.$selection_canvas.show();
+			let xy = this.tvi2xy(this.sel_pt_ix);
+			this.$selection_canvas.css({
+				left: `${xy.x - POINT_RADIUS + this.mcl}px`,
+				top: `${xy.y - POINT_RADIUS + this.mct}px`
+			});
 			let pCtx = this.$selection_canvas[0].getContext("2d");
 			pCtx.canvas.width = 2 * POINT_RADIUS;
-			pCtx.canvas.height = 2 * POINT_RADIUS;
-			if (this.sel_pt_ix >= 0) {
-				let xy = this.tvi2xy(this.sel_pt_ix);
-				this.$selection_canvas.css({
-					left: (xy.x - POINT_RADIUS + this.mcl) + "px",
-					top: (xy.y - POINT_RADIUS + this.mct) + "px"
-				});
-				pCtx.fillStyle = 'rgba(255,255,0,0.5)';
-				pCtx.beginPath();
-				pCtx.arc(POINT_RADIUS, POINT_RADIUS, POINT_RADIUS, 0, 2 * Math.PI, false);
-				pCtx.fill();
-			}
-			if (this.hit_pt_ix >= 0) {
-				let xy = this.tvi2xy(this.hit_pt_ix);
-				this.$selection_canvas.css({
-					left: (xy.x - POINT_RADIUS + this.mcl) + "px",
-					top: (xy.y - POINT_RADIUS + this.mct) + "px"
-				});
-				pCtx.fillStyle = 'rgba(255,0,0,0.5)';
-				pCtx.beginPath();
-				pCtx.arc(POINT_RADIUS, POINT_RADIUS, POINT_RADIUS, 0, 2 * Math.PI, false);
-				pCtx.fill();
-			}
+            pCtx.canvas.height = 2 * POINT_RADIUS;
+			pCtx.fillStyle = 'rgba(255,255,0,0.75)';
+			pCtx.beginPath();
+			pCtx.arc(POINT_RADIUS, POINT_RADIUS, POINT_RADIUS, 0, 2 * Math.PI);
+			pCtx.fill();
+		}
+
+		/**
+		 * @private
+		 */
+		drawDragCanvas() {
+			let xy = this.tvi2xy(this.hit_pt_ix);
+			let prev = (this.hit_pt_ix > 0) ? this.tvi2xy(this.hit_pt_ix - 1) : xy;
+			let next = (this.hit_pt_ix < this.timeline.nPoints - 1) ? this.tvi2xy(this.hit_pt_ix + 1) : xy;
+			let bb = {
+				min: {
+					x: Math.min(xy.x - POINT_RADIUS, prev.x, next.x),
+					y: Math.min(xy.y - POINT_RADIUS, prev.y, next.y)
+				},
+				max: {
+					x: Math.max(xy.x + POINT_RADIUS, prev.x, next.x),
+					y: Math.max(xy.y + POINT_RADIUS, prev.y, next.y)
+				}
+			};
+			this.$drag_canvas.css({
+				left: `${bb.min.x + this.mcl}px`,
+				top: `${bb.min.y + this.mct}px`,
+				width: `${bb.max.x - bb.min.x}px`,
+				height: `${bb.max.y - bb.min.y}px`
+			});
+			let pCtx = this.$drag_canvas[0].getContext("2d");
+			pCtx.canvas.width = bb.max.x - bb.min.x;
+			pCtx.canvas.height = bb.max.y - bb.min.y;
+			pCtx.beginPath();
+			pCtx.strokeStyle = "red";
+			pCtx.moveTo(prev.x - bb.min.x, prev.y - bb.min.y);
+			pCtx.lineTo(xy.x - bb.min.x, xy.y - bb.min.y);
+			pCtx.lineTo(next.x - bb.min.x, next.y - bb.min.y);
+			pCtx.stroke();
+
+			pCtx.fillStyle = 'rgba(255,0,0,0.5)';
+			pCtx.beginPath();
+			pCtx.arc(xy.x - bb.min.x, xy.y - bb.min.y, POINT_RADIUS, 0, 2 * Math.PI);
+			pCtx.fill();
 		}
 
 		/**
