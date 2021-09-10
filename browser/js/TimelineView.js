@@ -7,25 +7,44 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
 	// Frequency of going back to the server for state
 	const UPDATE_BACKOFF = 10000; // milliseconds
 
+	// A day in ms
+	const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+	/**
+	 * Management of a timeline view page. This is a standalone brower
+	 * app that communicates via AJAX with a Hotpot server.
+	 */
 	class TimelineView {
-		
+
 		constructor(params) {
+			/**
+			 * Name of the service
+			 * @member {string}
+			 */
 			this.service = params.service;
+
 			$("#title").text(`${params.name} timeline`);
 			$(".spinnable").Spinner();
 
+			/**
+			 * Traces on this view.
+			 * @member
+			 */
 			this.traces = {
 				thermostat: [],
 				pin: []
 			};
 
-			const DAY_IN_MS = 24 * 60 * 60 * 1000;
 			const timeline = new Timeline({
 				period: DAY_IN_MS,
 				min: 0,
 				max: 25
 			});
 			const $container = $("#canvas");
+
+			/**
+			 * @member
+			 */
 			const editor = new TimelineEditor(timeline, $container);
 			this.editor = editor;
 			
@@ -269,9 +288,11 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
 			});
 		}
 
+		/**
+		 * Send timeline to the server. On a successful save, mark the editor
+		 * as unchanged and disable the save button.
+		 */
 		saveTimeline(service) {
-			if ($("#save").hasClass("disabled"))
-				return;
 			console.log("Send timeline update to server");
 			DataModel.getSerialisable(this.editor.timeline, Timeline.Model)
 			.then(serialisable => {
@@ -279,7 +300,13 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
 					"/ajax/setconfig/thermostat/" + service + "/timeline",
 					JSON.stringify(serialisable))
 				.done(() => {
+					alert("Timeline saved");
 					this.editor.changed = false;
+					// Save done, not required.
+					$("#save").addClass("disabled");
+				})
+				.fail(function(xhr, status, error) {
+					alert(`Save failed ${xhr.status}: ${xhr.statusText}`);
 				})
 				.always(() => {
 					$(document).trigger("poll");
