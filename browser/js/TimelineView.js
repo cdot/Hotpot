@@ -42,10 +42,10 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
 			});
 			const $container = $("#canvas");
 
+			const editor = new TimelineEditor(timeline, $container);
 			/**
 			 * @member
 			 */
-			const editor = new TimelineEditor(timeline, $container);
 			this.editor = editor;
 			
 			$container.on("redraw", () => this.renderTraces());
@@ -113,8 +113,57 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
 
 			$("#save")
 			.on("click", () => this.saveTimeline(this.service));
+
+			console.log(`Starting timeline for ${this.service}`);
+			const te = this.editor;
+
+			te.onChanged = () => {
+				$("#save").removeClass("disabled");
+			};
+
+			$(document).on("poll", () => this.poll());
+
+			// Get the last 24 hours of logs
+			const ajaxParams = {
+				since: Date.now() - 24 * 60 * 60
+			};
+			const promises = [
+				$.getJSON(`/ajax/log/thermostat/${this.service}`,
+						  JSON.stringify(ajaxParams), data => {
+							  this.traces.thermostat = this.loadTrace(data);
+						  })
+				.fail((jqXHR, textStatus, errorThrown) => {
+					console.log("Could not contact server: " + errorThrown);
+				}),
+				$.getJSON(`/ajax/log/pin/${this.service}`,
+						  JSON.stringify(ajaxParams), data => {
+							  this.traces.pin = this.loadTrace(data);
+						  })
+				.fail((jqXHR, textStatus, errorThrown) => {
+					console.log("Could not contact server: " + errorThrown);
+				}),
+				$.getJSON(`/ajax/getconfig/thermostat/${this.service}/timeline`)
+				.fail((jqXHR, textStatus, errorThrown) => {
+					console.log("Could not contact server: " + errorThrown);
+				})
+				.done(tl => {
+					DataModel.remodel(this.service, tl, Timeline.Model)
+					.then(timel => {
+						te.timeline = timel;
+						te.$main_canvas.trigger("redraw");
+					});
+				})
+			];
+
+			Promise.all(promises)
+			.then(() => {
+				$(document).trigger("poll");
+			});
 		}
 
+		/**
+		 * @private
+		 */
 		renderTrace(trace, style1, style2, is_binary) {
 			if (typeof trace === "undefined" || trace.length < 1)
 				return;
@@ -169,6 +218,9 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
 			ctx.stroke();
 		}
 
+		/**
+		 * @private
+		 */
 		renderTraces() {
 			this.renderTrace(this.traces.thermostat,
 				"#00AA00", "#005500", false);
@@ -176,6 +228,9 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
 				"#eea500", "#665200", true);
 		}
 
+		/**
+		 * @private
+		 */
 		loadTrace(data) {
 			const trace = [];
 			const offset = data.shift();
@@ -218,6 +273,7 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
 		
 		/**
 		 * Wake up on schedule and refresh the state
+		 * @private
 		 */
 		poll() {
 			if (this.poller) {
@@ -240,57 +296,10 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
 			});
 		}
 
-		begin() {
-			console.log(`Starting timeline for ${this.service}`);
-			const te = this.editor;
-
-			te.onChanged = () => {
-				$("#save").removeClass("disabled");
-			};
-
-			$(document).on("poll", () => this.poll());
-
-			// Get the last 24 hours of logs
-			const params = {
-				since: Date.now() - 24 * 60 * 60
-			};
-			const promises = [
-				$.getJSON(`/ajax/log/thermostat/${this.service}`,
-						  JSON.stringify(params), data => {
-							  this.traces.thermostat = this.loadTrace(data);
-						  })
-				.fail((jqXHR, textStatus, errorThrown) => {
-					console.log("Could not contact server: " + errorThrown);
-				}),
-				$.getJSON(`/ajax/log/pin/${this.service}`,
-						  JSON.stringify(params), data => {
-							  this.traces.pin = this.loadTrace(data);
-						  })
-				.fail((jqXHR, textStatus, errorThrown) => {
-					console.log("Could not contact server: " + errorThrown);
-				}),
-				$.getJSON(`/ajax/getconfig/thermostat/${this.service}/timeline`)
-				.fail((jqXHR, textStatus, errorThrown) => {
-					console.log("Could not contact server: " + errorThrown);
-				})
-				.done(tl => {
-					DataModel.remodel(this.service, tl, Timeline.Model)
-					.then(timel => {
-						te.timeline = timel;
-						te.$main_canvas.trigger("redraw");
-					});
-				})
-			];
-
-			Promise.all(promises)
-			.then(() => {
-				$(document).trigger("poll");
-			});
-		}
-
 		/**
 		 * Send timeline to the server. On a successful save, mark the editor
 		 * as unchanged and disable the save button.
+		 * @private
 		 */
 		saveTimeline(service) {
 			console.log("Send timeline update to server");

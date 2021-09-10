@@ -3,6 +3,13 @@
 /*eslint-env browser */
 
 define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common/js/Time", "jquery", "touch-punch"], function(Utils, Vec, Time) {
+
+	const POINT_RADIUS = 10; // px
+	const POINT_RADIUS2 = POINT_RADIUS * POINT_RADIUS;
+
+	const POINT_2RADIUS = POINT_RADIUS * 2;
+	const POINT_2RADIUS2 = POINT_2RADIUS * POINT_2RADIUS;
+
 	/**
 	 * Interactive canvas that supports the editing of a timeline. The
 	 * idea is that the timeline provides a value at any point along it's
@@ -16,36 +23,40 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 	 * See https://github.com/benmajor/jQuery-Touch-Events for touch event
 	 * support.
 	 */
-	const POINT_RADIUS = 10; // px
-	const POINT_RADIUS2 = POINT_RADIUS * POINT_RADIUS;
 
-	const POINT_2RADIUS = POINT_RADIUS * 2;
-	const POINT_2RADIUS2 = POINT_2RADIUS * POINT_2RADIUS;
-
-	/**
-	 * Timeline editor object.
-	 * @param timeline a Timeline object
-	 */
 	class TimelineEditor {
 
+		/**
+		 * @param timeline a Timeline object
+		 * @param $container container object (a canvas)
+		 */
 		constructor(timeline, $container) {
+			/** @member {Timeline} */
 			this.timeline = timeline;
 
+			/** @member */
 			this.hit_pt_ix = -1;
+			/** @member */
 			this.isDragging = false;
+			/** @member */
 			this.sel_pt_ix = -1;
-			delete this.last_tip_xy;
+			/** @member */
+			this.last_tip_xy = undefined;
+			/** @member */
 			this.$container = $container;
 
+			/** @member */
 			this.$main_canvas = $("<canvas id='main'></canvas>")
 			.css("width", "100%");
 			$container.append(this.$main_canvas);
 
+			/** @member */
 			this.$tip_canvas = $("<canvas id='tip'></canvas>")
 			.addClass('overlay')
 			.css("z-index", 5);
 			$container.append(this.$tip_canvas);
 
+			/** @member */
 			this.$selection_canvas = $("<canvas id='sel'></canvas>")
 			.addClass('overlay')
 			.css({
@@ -55,6 +66,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 			});
 			$container.append(this.$selection_canvas);
 
+			/** @member */
 			this.$drag_canvas = $("<canvas id='drag'></canvas>")
 			.addClass('overlay')
 			.css({
@@ -89,12 +101,14 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 			this.$main_canvas.trigger("redraw");
 		}
 
+		/** @private */
 		refreshAll() {
 			this.$main_canvas.trigger("redraw");
 			this.$selection_canvas.trigger("redraw");
 			this.$tip_canvas.trigger("redraw");
 		}
 
+		/** @private */
 		handleMouseDown(e) {
 			//console.log("E: mousedown ", this.hit_pt_ix);
 			e.preventDefault();
@@ -114,6 +128,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 			return false;
 		}
 
+		/** @private */
 		handleMouseMove(e) {
 			let xy = this.e2xy(e);
 			let tv = this.xy2tv(xy);
@@ -147,6 +162,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 			this.$tip_canvas.trigger("redraw");
 		}
 
+		/** @private */
 		handleMouseUp(e) {
 			let xy = this.e2xy(e);
 			//console.log("E: mouseup ", xy);
@@ -190,6 +206,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 			return true;
 		}
 
+		/** @private */
 		tvi2xy(i) {
 			return this.tv2xy(this.timeline.getPoint(i));
 		}
@@ -310,6 +327,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 			};
 		}
 
+		/** @private */
 		get pointRadiusXY2() {
 			return Vec.mag2(this.tv2xy(POINT_RADIUS_VEC));
 		}
@@ -428,9 +446,9 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 		}
 
 		/**
-		 * Remove the currently selected point. The selected point will be moved
-		 * to the next point after the removed point, or the last point if that's
-		 * not legal.
+		 * Remove the currently selected point. The selected point
+		 * will be moved to the next point after the removed point, or
+		 * the last point if that's not legal.
 		 * @return this
 		 */
 		removeSelectedPoint() {

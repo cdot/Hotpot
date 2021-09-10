@@ -7,7 +7,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 	const TAG = "Timeline";
 
 	/**
-	 * A point on a Timeline
+	 * A point on a {@link Timeline}
 	 */
 	class Timepoint {
 

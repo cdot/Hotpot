@@ -28,7 +28,7 @@ requirejs(["jquery", "jquery-ui"], () => {
 				let param = params[i].split('=');
 				params[param[0]] = decodeURIComponent(param[1]);
 			}
-			new TimelineView(params).begin();
+			new TimelineView(params);
 		});
 	});
 });
