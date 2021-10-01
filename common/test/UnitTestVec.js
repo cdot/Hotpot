@@ -7,7 +7,7 @@ requirejs.config({
 	baseUrl: "../.."
 });
 
-requirejs(["test/TestRunner", "common/js/Vec"], function(TestRunner, Vec) {
+requirejs(["common/test/TestRunner", "common/js/Vec"], function(TestRunner, Vec) {
 
 	let tr = new TestRunner("Vec");
 	let assert = tr.assert;

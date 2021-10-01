@@ -5,7 +5,7 @@ requirejs.config({
 	baseUrl: "../.."
 });
 
-requirejs(["test/TestRunner", "common/js/Location"], function(TestRunner, Location) {
+requirejs(["common/test/TestRunner", "common/js/Location"], function(TestRunner, Location) {
 
 	let tr = new TestRunner("Location");
 	let assert = tr.assert;

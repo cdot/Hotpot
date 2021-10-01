@@ -2,368 +2,369 @@
 
 /*eslint-env node */
 
-define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel", "common/js/Location"], function(fs, Url, Utils, DataModel, Location) {
+define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel", "common/js/Location"], function (fs, Url, Utils, DataModel, Location) {
 
-	const TAG = "Server";
+    const TAG = "Server";
 
-	const Fs = fs.promises;
+    const Fs = fs.promises;
 
-	/**
-	 * Super-lightweight HTTP(S) server with very few
-	 * dependencies. Only supports POST and GET and Basic auth
-	 * The server sits on the selected port and processes GET and POST
-	 * requests. The predefined root path `/ajax` is used to decide when to
-	 * route requests to a dispatcher function. Otherwise requests are
-	 * handled as files relative to the defined `docroot`.
-	 *
-	 * Yes, I could have used express, but I wrote this before I knew about
-	 * it, and it "just works".
-	 * @param proto see Server.Model
-	 * @class
-	 */
-	class Server {
+    /**
+     * Super-lightweight HTTP(S) server with very few
+     * dependencies. Only supports POST and GET and Basic auth
+     * The server sits on the selected port and processes GET and POST
+     * requests. The predefined root path `/ajax` is used to decide when to
+     * route requests to a dispatcher function. Otherwise requests are
+     * handled as files relative to the defined `docroot`.
+     *
+     * Yes, I could have used express, but I wrote this before I knew about
+     * it, and it "just works".
+     * @param proto see Server.Model
+     * @class
+     */
+    class Server {
 
-		/**
-		 * Construct from a configuration data block built using
-		 * {@link DataModel} and Model
-		 */
-		constructor(proto) {
+        /**
+         * Construct from a configuration data block built using
+         * {@link DataModel} and Model
+         */
+        constructor(proto) {
 
-			/**
-			 * Port to run the server on
-			 * @member {number}
-			 */
-			this.port = undefined;
-			
-			/**
-			 * Absolute file path to server documents
-			 * @member {string}
-			 */
-			this.docroot = undefined;
-			
-			/**
-			 * Where in the world the server is locate
-			 * @member {Location}
-			 */
-			this.location = undefined;
+            /**
+             * Port to run the server on
+             * @member {number}
+             */
+            this.port = undefined;
 
-			/**
-			 * SSL configuration
-			 * @member
-			 */
-			this.ssl = undefined;
+            /**
+             * Absolute file path to server documents
+             * @member {string}
+             */
+            this.docroot = undefined;
 
-			/**
-			 * Basic auth to access the server
-			 * @member
-			 */
-			this.auth = undefined;
+            /**
+             * Where in the world the server is locate
+             * @member {Location}
+             */
+            this.location = undefined;
 
-			Utils.extend(this, proto);
+            /**
+             * SSL configuration
+             * @member
+             */
+            this.ssl = undefined;
 
-			/**
-			 * @member
-			 * @private
-			 */
-			this.ready = false;
+            /**
+             * Basic auth to access the server
+             * @member
+             */
+            this.auth = undefined;
 
-			if (typeof this.auth !== "undefined") {
-				this.authenticate = request => {
-					let BasicAuth = require("basic-auth");
-					let credentials = BasicAuth(request);
-					if (typeof credentials === "undefined")
-						return false;
-					return (credentials.name === this.auth.user &&
-							credentials.pass === this.auth.pass);
-				};
-			}
-		}
+            Utils.extend(this, proto);
 
-		/**
-		 * @param {function} (optional) dispatch function for handling
-		 * ajax requests
-		 * ```
-		 * dispatch(Array path, Object params) => Promise
-		 * ```
-		 * where `path` is an array of path elements parsed from the
-		 * URL and `params` is an object mapping parameter names to
-		 * values. The return value is a promise that resolves to an
-		 * object (or undefined, or null) that will be serialised to
-		 * form the body of the response.  The object must be
-		 * JSON-ifiable. Without a dispatch function, the server will
-		 * be a simple file server.
-		 */
-		setDispatch(dispatch) {
-			this.dispatch = dispatch;
-		};
+            /**
+             * @member
+             * @private
+             */
+            this.ready = false;
 
-		/**
-		 * Get a promise to start the server.
-		 * @return {Promise} a promise to start the server
-		 */
-		start() {
-			let handler = (request, response) => {
-				if (typeof this.authenticate !== "undefined") {
-					if (!this.authenticate(request)) {
-						Utils.TRACE(TAG, "Authentication failed ", request.url);
-						response.statusCode = 401;
-						response.setHeader('WWW-Authenticate',
-										   `Basic realm="${this.auth.realm}"`);
-						response.end('Access denied');
-						return;
-					}
-				}
-				if (this[request.method]) {
-					this[request.method].call(this, request, response);
-				} else {
-					response.statusCode = 405;
-					response.write(`No support for ${request.method}`);
-					response.end();
-				}
-			};
+            if (typeof this.auth !== "undefined") {
+                this.authenticate = request => {
+                    let BasicAuth = require("basic-auth");
+                    let credentials = BasicAuth(request);
+                    if (typeof credentials === "undefined")
+                        return false;
+                    return (credentials.name === this.auth.user &&
+                        credentials.pass === this.auth.pass);
+                };
+            }
+        }
 
-			let promise = Promise.resolve();
+        /**
+         * @param {function} (optional) dispatch function for handling
+         * ajax requests
+         * ```
+         * dispatch(Array path, Object params) => Promise
+         * ```
+         * where `path` is an array of path elements parsed from the
+         * URL and `params` is an object mapping parameter names to
+         * values. The return value is a promise that resolves to an
+         * object (or undefined, or null) that will be serialised to
+         * form the body of the response.  The object must be
+         * JSON-ifiable. Without a dispatch function, the server will
+         * be a simple file server.
+         */
+        setDispatch(dispatch) {
+            this.dispatch = dispatch;
+        };
 
-			if (typeof this.ssl !== "undefined") {
-				let options = {};
+        /**
+         * Get a promise to start the server.
+         * @return {Promise} a promise to start the server
+         */
+        start() {
+            let handler = (request, response) => {
+                if (typeof this.authenticate !== "undefined") {
+                    if (!this.authenticate(request)) {
+                        Utils.TRACE(TAG, "Authentication failed ", request.url);
+                        response.statusCode = 401;
+                        response.setHeader('WWW-Authenticate',
+                            `Basic realm="${this.auth.realm}"`);
+                        response.end('Access denied');
+                        return;
+                    }
+                }
+                if (this[request.method]) {
+                    this[request.method].call(this, request, response);
+                } else {
+                    response.statusCode = 405;
+                    response.write(`No support for ${request.method}`);
+                    response.end();
+                }
+            };
 
-				promise = promise
+            let promise = Promise.resolve();
 
-				.then(() => {
-					return this.ssl.key.read();
-				})
+            if (typeof this.ssl !== "undefined") {
+                let options = {};
 
-				.then(k => {
-					options.key = k;
-					Utils.TRACE(TAG, "SSL key loaded");
-				})
+                promise = promise
 
-				.then(() => this.ssl.cert.read())
+                    .then(() => {
+                        return this.ssl.key.read();
+                    })
 
-				.then(c => {
-					options.cert = c;
-					Utils.TRACE(TAG, "SSL certificate loaded");
-					if (typeof this.auth !== "undefined")
-						Utils.TRACE(TAG, "Requires authentication");
-					Utils.TRACE(TAG, "HTTPS starting on port ", this.port);
-				})
+                    .then(k => {
+                        options.key = k;
+                        Utils.TRACE(TAG, "SSL key loaded");
+                    })
 
-				.then(() => require("https").createServer(options, handler));
+                    .then(() => this.ssl.cert.read())
 
-			} else {
-				if (typeof this.auth !== "undefined")
-					Utils.TRACE(TAG, "Requires authentication");
-				Utils.TRACE(TAG, "HTTP starting on port ", this.port);
-				promise = promise
-				.then(() => require("http").createServer(handler));
-			}
+                    .then(c => {
+                        options.cert = c;
+                        Utils.TRACE(TAG, "SSL certificate loaded");
+                        if (typeof this.auth !== "undefined")
+                            Utils.TRACE(TAG, "Requires authentication");
+                        Utils.TRACE(TAG, "HTTPS starting on port ", this.port);
+                    })
 
-			return promise
-			.then(httpot => {
-				this.ready = true;
-				this.http = httpot;
-				httpot.listen(this.port);
-			})
-			.catch(e => {
-				Utils.TRACE(TAG, `Server error ${e}`);
-			});
-		}
+                    .then(() => require("https").createServer(options, handler));
 
-		/**
-		 * return a promise to stop the server
-		 */
-		stop() {
-			return new Promise((resolve, reject) => {
-				this.http.close(e => {
-					if (e instanceof Error)
-						reject(e);
-					else
-						resolve();
-				});
-			});
-		}
+            } else {
+                if (typeof this.auth !== "undefined")
+                    Utils.TRACE(TAG, "Requires authentication");
+                Utils.TRACE(TAG, "HTTP starting on port ", this.port);
+                promise = promise
+                    .then(() => require("http").createServer(handler));
+            }
 
-		/**
-		 * Common handling for POST or GET
-		 * @private
-		 */
-		handle(spath, params, request, response) {
-			if (spath.indexOf("/") !== 0 || spath.length === 0)
-				throw Utils.exception(TAG, "Bad command ", spath);
-			spath = spath.substring(1);
-			if (spath.length < 1 // default
-				|| spath === "browser.html") // Legacy
-				spath = 'index.html';
+            return promise
+                .then(httpot => {
+                    this.ready = true;
+                    this.http = httpot;
+                    httpot.listen(this.port);
+                })
+                .catch(e => {
+                    Utils.TRACE(TAG, `Server error ${e}`);
+                });
+        }
 
-			let path = spath.split(/\/+/);
+        /**
+         * return a promise to stop the server
+         */
+        stop() {
+            return new Promise((resolve, reject) => {
+                this.http.close(e => {
+                    if (e instanceof Error)
+                        reject(e);
+                    else
+                        resolve();
+                });
+            });
+        }
 
-			if (!this.ready) {
-				// Not ready
-				response.statusCode = 503;
-				response.write("Not ready");
-				response.end();
-				return;
-			}
-			let contentType = "text/plain";
-			let promise;
+        /**
+         * Common handling for POST or GET
+         * @private
+         */
+        handle(spath, params, request, response) {
+            if (spath.indexOf("/") !== 0 || spath.length === 0)
+                throw Utils.exception(TAG, "Bad command ", spath);
+            spath = spath.substring(1);
+            if (spath.length < 1 // default
+                ||
+                spath === "browser.html") // Legacy
+                spath = 'index.html';
 
-			// Allow cross-domain posting
-			response.setHeader("Access-Control-Allow-Origin", "*");
-			response.setHeader("Access-Control-Allow-Methods", "POST,GET");
+            let path = spath.split(/\/+/);
 
-			if (path[0] === "ajax") {
-				// AJAX command, destined for the dispatcher
-				path.shift();
-				Utils.TRACE(TAG, `/ajax/${path.join("/")}`);
-				promise = this.dispatch(path, params)
+            if (!this.ready) {
+                // Not ready
+                response.statusCode = 503;
+                response.write("Not ready");
+                response.end();
+                return;
+            }
+            let contentType = "text/plain";
+            let promise;
 
-				.then(reply => {
-					if (typeof reply === "undefined" || reply === null)
-						return "";
-					else {
-						contentType = "application/json";
-						return JSON.stringify(reply);
-					}
-				});
-			} else if (path.join("") === "") {
-				promise = Promise.resolve("");
-			} else {
-				// Handle file lookup
-				Utils.TRACE(TAG, "GET ", path.join("/"));
-				let filepath = Utils.expandEnvVars(
-					`${this.docroot}/${path.join("/")}`);
+            // Allow cross-domain posting
+            response.setHeader("Access-Control-Allow-Origin", "*");
+            response.setHeader("Access-Control-Allow-Methods", "POST,GET");
 
-				let m = /\.([A-Z0-9]+)$/i.exec(filepath);
-				if (m) {
-					let Mime = require("mime-types");
-					contentType = Mime.lookup(m[1]);
-				}
-				promise = new Promise((resolve, reject) => {
-					Fs.readFile(filepath)
-					.then(resolve)
-					.catch(error => {
-						// Treat as FNF
-						Utils.TRACE(TAG, error);
-						if (error.code === 'ENOENT')
-							error.status = 404;
-						reject(error);
-					});
-				});
-			}
+            if (path[0] === "ajax") {
+                // AJAX command, destined for the dispatcher
+                path.shift();
+                Utils.TRACE(TAG, `/ajax/${path.join("/")}`);
+                promise = this.dispatch(path, params)
 
-			promise
-			.then(responseBody => {
-				response.statusCode = 200;
-				response.setHeader("Content-Type", contentType);
-				response.write(responseBody);
-				response.end();
-			})
-			.catch(error => {
-				// Send the error message in the payload
-				response.statusCode = error.status || 500;
-				response.setHeader("Content-Type", "text/plain");
-				response.write(error.toString());
-				response.end();
-			});
-		}
+                    .then(reply => {
+                        if (typeof reply === "undefined" || reply === null)
+                            return "";
+                        else {
+                            contentType = "application/json";
+                            return JSON.stringify(reply);
+                        }
+                    });
+            } else if (path.join("") === "") {
+                promise = Promise.resolve("");
+            } else {
+                // Handle file lookup
+                Utils.TRACE(TAG, "GET ", path.join("/"));
+                let filepath = Utils.expandEnvVars(
+                    `${this.docroot}/${path.join("/")}`);
 
-		/**
-		 * handler for incoming GET request
-		 * @private
-		 */
-		GET(request, response) {
-			"use strict";
-			try {
-				// Parse URL parameters and pass them as the data
-				let req = Url.parse("" + request.url, true);
-				this.handle(req.pathname, req.query, request, response);
-			} catch (e) {
-				Utils.TRACE(TAG, `${e} in ${request.url}\n`,
-							typeof e.stack !== "undefined" ? e.stack : e);
-				response.write(`${e} in ${request.url}\n`);
-				response.statusCode = 400;
-				response.end();
-			}
-		}
+                let m = /\.([A-Z0-9]+)$/i.exec(filepath);
+                if (m) {
+                    let Mime = require("mime-types");
+                    contentType = Mime.lookup(m[1]);
+                }
+                promise = new Promise((resolve, reject) => {
+                    Fs.readFile(filepath)
+                        .then(resolve)
+                        .catch(error => {
+                            // Treat as FNF
+                            Utils.TRACE(TAG, error);
+                            if (error.code === 'ENOENT')
+                                error.status = 404;
+                            reject(error);
+                        });
+                });
+            }
 
-		/**
-		 * Handler for incoming POST request
-		 * @private
-		 */
-		POST(request, response) {
-			"use strict";
+            promise
+                .then(responseBody => {
+                    response.statusCode = 200;
+                    response.setHeader("Content-Type", contentType);
+                    response.write(responseBody);
+                    response.end();
+                })
+                .catch(error => {
+                    // Send the error message in the payload
+                    response.statusCode = error.status || 500;
+                    response.setHeader("Content-Type", "text/plain");
+                    response.write(error.toString());
+                    response.end();
+                });
+        }
 
-			let body = [];
-			request
-			.on("data", chunk => body.push(chunk))
-			.on("end", () => {
-				try {
-					// Parse the JSON body and pass as the data
-					let object;
-					if (body.length > 0) {
-						let sbody = Buffer.concat(body).toString();
-						//Utils.TRACE(TAG, "Parsing message ", sbody);
-						object = JSON.parse(sbody);
-					}
-					this.handle(request.url, object, request, response);
-				} catch (e) {
-					Utils.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
-					response.write(`${e} in ${request.url}\n`);
-					response.statusCode = 400;
-				}
-			});
-		}
-	}
+        /**
+         * handler for incoming GET request
+         * @private
+         */
+        GET(request, response) {
+            "use strict";
+            try {
+                // Parse URL parameters and pass them as the data
+                let req = Url.parse("" + request.url, true);
+                this.handle(req.pathname, req.query, request, response);
+            } catch (e) {
+                Utils.TRACE(TAG, `${e} in ${request.url}\n`,
+                    typeof e.stack !== "undefined" ? e.stack : e);
+                response.write(`${e} in ${request.url}\n`);
+                response.statusCode = 400;
+                response.end();
+            }
+        }
 
-	/**
-	 * Configuration model, for use with {@link DataModel}
-	 * @member
-	 * @memberof Server
-	 */
-	Server.Model = {
-		$class: Server,
-		$doc: "HTTP(S) server",
-		port: {
-			$doc: "Port to run the server on",
-			$class: Number
-		},
-		docroot: {
-			$doc: "Absolute file path to server documents",
-			$class: String
-		},
-		location: Utils.extend({}, Location.Model, {
-			$doc: "Where in the world the server is located"
-		}),
-		ssl: {
-			$doc: "SSL configuration",
-			$optional: true,
-			cert: {
-				$class: String,
-				$fileable: true,
-				$doc: "SSL certificate (filename or text)"
-			},
-			key: {
-				$class: String,
-				$fileable: true,
-				$doc: "SSL key (filename or text)"
-			}
-		},
-		auth: {
-			$doc: "Basic auth to access the server",
-			$optional: true,
-			user: {
-				$doc: "Username",
-				$class: String
-			},
-			pass: {
-				$doc: "Password",
-				$class: String
-			},
-			realm: {
-				$doc: "Authentication realm",
-				$class: String
-			}
-		}
-	};
-	return Server;
+        /**
+         * Handler for incoming POST request
+         * @private
+         */
+        POST(request, response) {
+            "use strict";
+
+            let body = [];
+            request
+                .on("data", chunk => body.push(chunk))
+                .on("end", () => {
+                    try {
+                        // Parse the JSON body and pass as the data
+                        let object;
+                        if (body.length > 0) {
+                            let sbody = Buffer.concat(body).toString();
+                            //Utils.TRACE(TAG, "Parsing message ", sbody);
+                            object = JSON.parse(sbody);
+                        }
+                        this.handle(request.url, object, request, response);
+                    } catch (e) {
+                        Utils.TRACE(TAG, e, " in ", request.url, "\n", e.stack);
+                        response.write(`${e} in ${request.url}\n`);
+                        response.statusCode = 400;
+                    }
+                });
+        }
+    }
+
+    /**
+     * Configuration model, for use with {@link DataModel}
+     * @member
+     * @memberof Server
+     */
+    Server.Model = {
+        $class: Server,
+        $doc: "HTTP(S) server",
+        port: {
+            $doc: "Port to run the server on",
+            $class: Number
+        },
+        docroot: {
+            $doc: "Absolute file path to server documents",
+            $class: String
+        },
+        location: Utils.extend({}, Location.Model, {
+            $doc: "Where in the world the server is located"
+        }),
+        ssl: {
+            $doc: "SSL configuration",
+            $optional: true,
+            cert: {
+                $class: String,
+                $fileable: true,
+                $doc: "SSL certificate (filename or text)"
+            },
+            key: {
+                $class: String,
+                $fileable: true,
+                $doc: "SSL key (filename or text)"
+            }
+        },
+        auth: {
+            $doc: "Basic auth to access the server",
+            $optional: true,
+            user: {
+                $doc: "Username",
+                $class: String
+            },
+            pass: {
+                $doc: "Password",
+                $class: String
+            },
+            realm: {
+                $doc: "Authentication realm",
+                $class: String
+            }
+        }
+    };
+    return Server;
 });

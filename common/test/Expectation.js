@@ -9,7 +9,7 @@ if (typeof requirejs === "undefined") {
  * asynchronous events will be seen, and promise to wait for them all.
  * All events must still complete within the mocha test timeout.
  */
-define("test/Expectation", () => {
+define("common/test/Expectation", () => {
 	class Expectation {
 		/**
 		 * Construct an expectation that nEvents will be seen

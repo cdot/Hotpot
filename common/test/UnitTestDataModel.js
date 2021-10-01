@@ -7,7 +7,7 @@ requirejs.config({
 	baseUrl: "../.."
 });
 
-requirejs(["test/TestRunner", "common/js/DataModel", "common/js/Utils", "common/test/Instantiable", "common/js/Timeline"], function(TestRunner, DataModel, Utils, Instantiable, Timeline) {
+requirejs(["common/test/TestRunner", "common/js/DataModel", "common/js/Utils", "common/test/Instantiable", "common/js/Timeline"], function(TestRunner, DataModel, Utils, Instantiable, Timeline) {
 
 	const tr = new TestRunner("DataModel");
 	const assert = tr.assert;

@@ -7,7 +7,7 @@ requirejs.config({
 	baseUrl: "../.."
 });
 
-requirejs(["fs", "test/TestRunner", "test/Expectation", "common/js/Utils", "common/js/DataModel", "server/js/Pin"], function(fs, TestRunner, Expectation, Utils, DataModel, Pin) {
+requirejs(["fs", "common/test/TestRunner", "common/test/Expectation", "common/js/Utils", "common/js/DataModel", "server/js/Pin"], function(fs, TestRunner, Expectation, Utils, DataModel, Pin) {
 	let tr = new TestRunner("Pin");
 	let assert = tr.assert;
 

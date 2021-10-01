@@ -7,7 +7,7 @@ requirejs.config({
 	baseUrl: "../.."
 });
 
-requirejs(["test/TestRunner", "common/js/Utils", "common/js/Time", "common/js/DataModel", "server/js/MetOffice"], function(TestRunner, Utils, Time, DataModel, MetOffice) {
+requirejs(["common/test/TestRunner", "common/js/Utils", "common/js/Time", "common/js/DataModel", "server/js/MetOffice"], function(TestRunner, Utils, Time, DataModel, MetOffice) {
 
 	var config = {
 		api_key: "f6268ca5-e67f-4666-8fd2-59f219c5f66d",

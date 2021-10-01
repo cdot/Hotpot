@@ -9,7 +9,7 @@ requirejs.config({
 
 let nextPort = 13198;
 
-requirejs(["chai-http", "test/TestRunner", "test/Expectation", "common/js/Utils", "server/js/Server"], function(chaiHttp, TestRunner, Expectation, Utils, Server) {
+requirejs(["chai-http", "common/test/TestRunner", "common/test/Expectation", "common/js/Utils", "server/js/Server"], function(chaiHttp, TestRunner, Expectation, Utils, Server) {
 
 	/**
 	 * Simple test program to create an HTTP server

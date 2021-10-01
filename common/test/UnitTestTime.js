@@ -7,7 +7,7 @@ requirejs.config({
 	baseUrl: "../.."
 });
 
-requirejs(["test/TestRunner", "common/js/Time"], function(TestRunner, Time) {
+requirejs(["common/test/TestRunner", "common/js/Time"], function(TestRunner, Time) {
 	const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
 	let tr = new TestRunner("Time");
