@@ -1,29 +1,33 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
 define("common/js/Vec", ["common/js/Utils"], function (Utils) {
 
     /**
-     * Simple vector package
+     * Simple vector package.
      * Objects passed are maps of coordinate names to numbers. Coordinates
      * can be named whatever you like e,g. {x:, y:, z:} or
-     * {r:, g:, b:, a:} or can be simple 1-dimensional arrays.
-     * @namespace
+     * {r:, g:, b:, a:} or objects can be simple 1-dimensional arrays.
+     * Whatever vector representation is employed must be used
+     * consistently; you can't mix [] arrays with {X:, Y:} objects,
+     * for example.
      */
     class Vec {
+        /**
+         * @private
+         */
         static _check() {
-            let v = arguments[0],
-                i, j;
+            const v = arguments[0];
             if (v instanceof Array) {
-                for (i = 1; i < arguments.length; i++)
+                for (let i = 1; i < arguments.length; i++)
                     if (!(arguments[i] instanceof Array) ||
                         (arguments[i].length != v.length))
                         throw Utils.exception("Vec", "Length mismatch");
                 return [];
             } else {
-                for (i in v) {
-                    for (j = 1; j < arguments.length; j++)
+                for (let i in v) {
+                    for (let j = 1; j < arguments.length; j++)
                         if (typeof arguments[j][i] !== typeof v[i])
                             throw Utils.exception("Vec", "Type mismatch",
                                 typeof arguments[j][i],
@@ -34,13 +38,13 @@ define("common/js/Vec", ["common/js/Utils"], function (Utils) {
         }
 
         /**
-         * Subtract vector p2 from p1
-         * @param p1 vector to subtract from
-         * @param p2 vector to take away
-         * @return a new vector p1-p2
+         * Subtract p2 from p1
+         * @param p1 {object} vector to subtract from
+         * @param p2 {object} vector to take away
+         * @return {object} a new vector p1-p2
          */
         static sub(p1, p2) {
-            let res = Vec._check(p1, p2);
+            const res = Vec._check(p1, p2);
             for (let ord in p1) {
                 res[ord] = p1[ord] - p2[ord];
             }
@@ -49,12 +53,12 @@ define("common/js/Vec", ["common/js/Utils"], function (Utils) {
 
         /**
          * Add two vectors
-         * @param p1 first vector
-         * @param p2 second vector
-         * @return a new vector
+         * @param {object} p1 first vector
+         * @param {object} p2 second vector
+         * @return {object} a new vector
          */
         static add(p1, p2) {
-            let res = Vec._check(p1, p2);
+            const res = Vec._check(p1, p2);
             for (let ord in p1)
                 res[ord] = p1[ord] + p2[ord];
             return res;
@@ -62,12 +66,12 @@ define("common/js/Vec", ["common/js/Utils"], function (Utils) {
 
         /**
          * Multiply a vector by a scalar
-         * @param v vector to scale
-         * @param d factor to scale by
-         * @return a new vector scaled by d
+         * @param {object} v vector to scale
+         * @param {object} d factor to scale by
+         * @return {object} a new vector scaled by d
          */
         static mul(v, d) {
-            let res = Vec._check(v);
+            const res = Vec._check(v);
             for (let ord in v)
                 res[ord] = v[ord] * d;
             return res;
@@ -75,12 +79,12 @@ define("common/js/Vec", ["common/js/Utils"], function (Utils) {
 
         /**
          * Divide a vector by a scalar
-         * @param v vector to scale
-         * @param d factor to scale by
-         * @return a new vector scaled by d
+         * @param {object} v vector to scale
+         * @param {number} d factor to scale by
+         * @return {object} a new vector scaled by d
          */
         static div(v, d) {
-            let res = Vec._check(v);
+            const res = Vec._check(v);
             for (let ord in v)
                 res[ord] = v[ord] / d;
             return res;
@@ -88,9 +92,9 @@ define("common/js/Vec", ["common/js/Utils"], function (Utils) {
 
         /**
          * Get the dot product of two vectors a.b
-         * @param a first vector
-         * @param a second vector
-         * @return scalar dot product
+         * @param {object} a first vector
+         * @param {object} a second vector
+         * @return {number} scalar dot product
          */
         static dot(a, b) {
             Vec._check(a, b);
@@ -102,8 +106,8 @@ define("common/js/Vec", ["common/js/Utils"], function (Utils) {
 
         /**
          * Get the square of the magnitude of the vector
-         * @param v the vector
-         * @return sum of the squares of the coordinates
+         * @param {object} v the vector
+         * @return {number} sum of the squares of the coordinates
          */
         static mag2(v) {
             let res = 0;
@@ -114,8 +118,8 @@ define("common/js/Vec", ["common/js/Utils"], function (Utils) {
 
         /**
          * Get the magnitude of the vector
-         * @param v the vector
-         * @return scalar magnitude of the vector
+         * @param {object} v the vector
+         * @return {number} scalar magnitude of the vector
          */
         static mag(v) {
             return Math.sqrt(Vec.mag2(v));
@@ -124,9 +128,9 @@ define("common/js/Vec", ["common/js/Utils"], function (Utils) {
         /**
          * Normalise a vector. Optionally pass in the magnitude
          * of the vector, if pre-computed
-         * @param v the vector to normalise
-         * @param d (optional) pre-computed magnitude of the vector
-         * @return the normalised vector
+         * @param {object} v the vector to normalise
+         * @param {number} d (optional) pre-computed magnitude of the vector
+         * @return {object} the normalised vector
          */
         static normalise(v, d) {
             return Vec.div(v, typeof d !== "undefined" ? d : Vec.mag(v));

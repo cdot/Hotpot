@@ -15,7 +15,7 @@
 
 let requirejs = require('requirejs');
 requirejs.config({
-	baseUrl: "../.."
+	baseUrl: __dirname + "/../.."
 });
 
 requirejs(["node-getopt", "common/js/Utils", "common/js/DataModel", "server/js/Controller", "server/js/GoogleCalendar"], function(Getopt, Utils, DataModel, Controller, GoogleCalendar) {

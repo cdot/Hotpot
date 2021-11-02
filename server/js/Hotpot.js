@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -16,7 +16,7 @@ requirejs.config({
     baseUrl: __dirname + "/../.."
 });
 
-requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/DataModel", "server/js/Server", "server/js/Controller"], function (Getopt, Location, Utils, DataModel, Server, Controller) {
+requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "server/js/Server", "server/js/Controller"], function (Getopt, Location, Utils, Server, Controller) {
     const TAG = "Hotpot";
 
     HOTPOT_DEBUG = undefined;

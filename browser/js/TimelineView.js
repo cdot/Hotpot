@@ -105,7 +105,7 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
                     // other data fields
                     const dp = editor.getSelectedPoint();
                     if (dp) {
-                        $point.val(dp.index);
+                        $point.val(editor.getSelectedPointIndex());
                         $time.val(Time.formatHMS(60000 * Math.round(dp.time / 60000)));
                         $temperature.val(dp.value.toFixed(1));
                     }
@@ -306,20 +306,20 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
             DataModel.getSerialisable(this.editor.timeline, Timeline.Model)
                 .then(serialisable => {
                     $.post(
-                            "/ajax/setconfig/thermostat/" + service + "/timeline",
-                            JSON.stringify(serialisable))
-                        .done(() => {
-                            alert("Timeline saved");
-                            this.editor.changed = false;
-                            // Save done, not required.
-                            $("#save").addClass("disabled");
-                        })
-                        .fail(function (xhr, status, error) {
-                            alert(`Save failed ${xhr.status}: ${xhr.statusText}`);
-                        })
-                        .always(() => {
-                            $(document).trigger("poll");
-                        });
+                        "/ajax/setconfig/thermostat/" + service + "/timeline",
+                        JSON.stringify(serialisable))
+                    .done(() => {
+                        alert("Timeline saved");
+                        this.editor.changed = false;
+                        // Save done, not required.
+                        $("#save").addClass("disabled");
+                    })
+                    .fail(function (xhr) {
+                        alert(`Save failed ${xhr.status}: ${xhr.statusText}`);
+                    })
+                    .always(() => {
+                        $(document).trigger("poll");
+                    });
                 });
         }
     }

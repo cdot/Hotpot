@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env browser,node */
 
@@ -62,6 +62,8 @@ define("common/js/Utils", () => {
     var TIMERS = {};
     var TIMER_ID = 1;
 
+	const TAG = "Utils";
+
     /**
      * Collection of functions that provide useful utilities.
      * @namespace
@@ -75,7 +77,7 @@ define("common/js/Utils", () => {
          * @return {string} argument string with env vars expanded
          */
         static expandEnvVars(data) {
-            let rep = function (match, v) {
+            const rep = function (match, v) {
                 if (typeof process.env[v] !== "undefined")
                     return process.env[v];
                 return match;
@@ -137,7 +139,7 @@ define("common/js/Utils", () => {
                 s += data.toString();
             } else {
                 s += ob;
-                let values = [];
+                const values = [];
                 for (let i of Object.keys(data).sort()) {
                     let val = Utils.dump(data[i], cache);
                     if (ob === "{")
@@ -152,10 +154,10 @@ define("common/js/Utils", () => {
         /**
          * Join arguments with no spaces to create a message, expanding objects
          * using Utils.dump()
-         * @param args arguments vector
-         * @param start optional point in args to start constructing the message.
+         * @param {string[]} args arguments vector
+         * @param {number} start optional point in args to start constructing the message.
          * Without this the whole args vector will be used.
-         * @return string dump of the arguments from args[start]
+         * @return {string} dump of the arguments from args[start]
          */
         static joinArgs(args, start) {
             let mess = "";
@@ -189,12 +191,12 @@ define("common/js/Utils", () => {
 
         /**
          * Construct a slightly customised exception object
-         * @param name Exception type name
-         * @param args remaining args will be
-         * @return an Error object
+         * @param {string} name Exception type name
+         * @param {string[]} args remaining args will be
+         * @return {Error} an Error object
          */
         static exception() {
-            let e = new Error(Utils.joinArgs(arguments, 1));
+            const e = new Error(Utils.joinArgs(arguments, 1));
             e.name = arguments[0];
             return e;
         }
@@ -244,7 +246,7 @@ define("common/js/Utils", () => {
          */
         static TRACE() {
             var args = [].slice.call(arguments);
-            let module = args.shift();
+            const module = args.shift();
             if (Utils.TRACEing(module)) {
                 args.unshift(new Date().toISOString(), " ", module, ": ");
                 Utils.writeTrace(Utils.joinArgs(args));
@@ -290,12 +292,12 @@ define("common/js/Utils", () => {
          * Like setTimeout, but run at a given date rather than after
          * a delta. date can be a Date object or an epoch time in ms
          * @param {function} func the function to run (no arguments)
-         * @param date may be a Date object or a time as epoch ms
+         * @param {Date|number} date may be a Date object or a time as epoch ms
          */
         static runAt(func, date) {
-            let now = (new Date()).getTime();
-            let then = (date instanceof Date) ? date.getTime() : date;
-            let diff = Math.max((then - now), 0);
+            const now = (new Date()).getTime();
+            const then = (date instanceof Date) ? date.getTime() : date;
+            const diff = Math.max((then - now), 0);
             if (diff > 0x7FFFFFFF) // setTimeout limit is MAX_INT32=(2^31-1)
                 Utils.startTimer("runAt", () => Utils.runAt(func, date), 0x7FFFFFFF);
             else
@@ -319,11 +321,11 @@ define("common/js/Utils", () => {
          * @return {string} a unique id that can be used to refer to the timer
          */
         static startTimer(descr, fn, timeout) {
-            let id = `${descr}:${TIMER_ID++}`;
-            //Utils.TRACE(id, "started");
+            const id = `${descr}:${TIMER_ID++}`;
+            Utils.TRACE(TAG, `Timer ${id} started`);
             TIMERS[id] = {
                 timer: setTimeout(() => {
-                    //Utils.TRACE(id, "fired");
+                    Utils.TRACE(TAG, `Timer ${id} fired`);
                     delete TIMERS[id];
                     fn();
                 }, timeout),
@@ -338,11 +340,12 @@ define("common/js/Utils", () => {
          * @param {string} id as returned by startTimer
          */
         static cancelTimer(id) {
-            if (typeof TIMERS[id] === "undefined")
-                throw new Error(`No such timer ${id}!`);
-            //Utils.TRACE(id, "cancelled");
-            clearTimeout(TIMERS[id].timer);
-            delete TIMERS[id];
+            if (TIMERS[id]) {
+				Utils.TRACE(TAG, `Timer ${id} cancelled`);
+				clearTimeout(TIMERS[id].timer);
+				delete TIMERS[id];
+			} else
+				Utils.TRACE(TAG, `Timer ${id} ALREADY CANCELLED`);
         }
 
         /**
@@ -361,7 +364,7 @@ define("common/js/Utils", () => {
      * @param {boolean} deep (optional) if set, merge becomes recursive
      * @param {object} target the object to extend (will be modified)
      * @param {object} object1 ...objectN, objects to merge
-     * @return the merged object
+     * @return {object} the merged object
      * @function
      * @memberof Utils
      * @name extend

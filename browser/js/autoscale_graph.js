@@ -232,8 +232,8 @@ Trace.prototype.xy2st = function (p) {
 
 /**
  * Render the trace in the given graph
- * @param ctx the drawing context we are rendering within
- * @param lock_t the right end of the trace traces are to be extended, undef otherwise
+ * @param {CanvasRenderingContext2D} ctx the drawing context we are rendering within
+ * @param {number} lock_t the right end of the trace traces are to be extended, undef otherwise
  */
 Trace.prototype.render = function (ctx, lock_t) {
     "use strict";

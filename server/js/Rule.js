@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 define("server/js/Rule", ["common/js/Utils"], function (Utils) {
@@ -24,7 +24,8 @@ define("server/js/Rule", ["common/js/Utils"], function (Utils) {
         }
 
         /**
-         * Promise to initialise a new rule.
+         * Test the rule.
+         * @return {boolean} rule test result
          */
         test() {
             throw new Error("Subclasses must implement");

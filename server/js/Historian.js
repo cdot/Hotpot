@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -19,6 +19,10 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
      */
     class Historian {
 
+        /**
+         * @param {object} proto data blck with initial fields
+         * @param {string} name name of the historian
+         */
         constructor(proto, name) {
             Utils.extend(this, proto);
 
@@ -29,7 +33,8 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
         }
 
         /**
-         * Get the expanded file name
+         * Get the file name with environment variables expanded
+         * @return {string} file name
          */
         path() {
             return Utils.expandEnvVars(this.file);
@@ -110,17 +115,17 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
 
         /**
          * Get a promise for a serialisable 1D array for the history.
-         * @param since earliest datime we are interested in. Can prune log
-         * data before this.
-         * @return {array} First element is the base time in epoch ms,
-         * subsequent elements are alternating times and samples. Times are
-         * in ms.
+         * @param {number} since earliest datime we are interested
+         * in. Can prune log data before this.
+         * @return {Promise} resolves to an array. First element is
+         * the base time in epoch ms, subsequent elements are
+         * alternating times and samples. Times are in ms.
          */
         getSerialisableHistory(since) {
             return this._loadFromFile()
                 .then(report => {
-                    let basetime = report.length > 0 ? report[0].time : Date.now();
-                    let res = [basetime];
+                    const basetime = report.length > 0 ? report[0].time : Date.now();
+                    const res = [basetime];
                     for (let i in report) {
                         if (typeof since === "undefined" || report[i].time >= since) {
                             res.push(report[i].time - basetime);
@@ -188,6 +193,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
          * Get a promise to record a sample in the log.
          * @param {number} sample the data to record
          * @param {int} time (optional) time in ms to force into the record
+         * @return {Promise} resolves when the sample has been appended
          * @public
          */
         record(sample, time) {
@@ -216,8 +222,10 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof Historian
+     * @typedef Historian.Model
+     * @property {Strin} file Full path to the log file
+     * @property {Boolean} unordered Set if sample events may be added out of order"
+     * @property {Number} interval Sample frequency in ms, required if `start()` is called
      */
     Historian.Model = {
         $class: Historian,

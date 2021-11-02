@@ -1,21 +1,21 @@
-/*@preserve Copyright (C) 2015-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2015-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 if (typeof requirejs === "undefined") {
 	throw new Error(__filename + " is not runnable stand-alone");
 }
 
-/**
- * Common code for running mocha tests.
- * Look at one of the UnitTest* files to understand the pattern.
- * node.js: Command-line parameters are interpreted as names of tests to run.
- * '*' wildcard.
- * --keep will prevent tmp files from being deleted
- */
-define(["mocha", "chai"], (maybeMocha, chai) => {
+define("common/test/TestRunner", ["mocha", "chai"], (maybeMocha, chai) => {
 
 	if (typeof Mocha === "undefined")
 		Mocha = maybeMocha; // node.js
 
+	/**
+	 * Common code for running mocha tests.
+	 * Look at one of the UnitTest* files to understand the pattern.
+	 * node.js: Command-line parameters are interpreted as names of tests to run.
+	 * '*' wildcard.
+	 * --keep will prevent tmp files from being deleted
+	 */
 	class TestRunner extends Mocha {
 
 		constructor(title, debug) {

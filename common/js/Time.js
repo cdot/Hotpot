@@ -1,10 +1,10 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env browser,node */
 
-const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
-
 define("common/js/Time", () => {
+
+    const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
     /**
      * Functions for handling times within the current 24 hour period.
@@ -17,7 +17,7 @@ define("common/js/Time", () => {
          * @return {number} midnight as number of ms since epoch
          */
         static midnight() {
-            let d = new Date();
+            const d = new Date();
             d.setHours(0, 0, 0, 0);
             return d.getTime();
         }
@@ -30,10 +30,10 @@ define("common/js/Time", () => {
          * @return {number} number of ms since midnight
          */
         static parse(str) {
-            let hms = str.split(":");
-            let h = Number.parseInt(hms.shift());
-            let m = Number.parseInt(hms.shift() || "0");
-            let s = Number.parseFloat(hms.shift() || "0");
+            const hms = str.split(":");
+            const h = Number.parseInt(hms.shift());
+            const m = Number.parseInt(hms.shift() || "0");
+            const s = Number.parseFloat(hms.shift() || "0");
             // Set according to local time
             if (h > 23 || m > 59 || s >= 60 || h < 0 || m < 0 || s < 0)
                 throw Utils.exception("Time", "out of range 00:00:00..23:59:59");
@@ -48,7 +48,7 @@ define("common/js/Time", () => {
          */
         static formatHMS(t) {
             function pad(n, w) {
-                let k = Math.trunc(n);
+                const k = Math.trunc(n);
                 let pad = "";
                 for (let pl = w - ("" + k).length; pl > 0; pl--)
                     pad += "0";
@@ -56,12 +56,12 @@ define("common/js/Time", () => {
             }
             if (t < 0 || t > ONE_DAY)
                 throw Utils.exception("Time", "unparse time out of range");
-            let ms = t % 1000;
+            const ms = t % 1000;
             t = Math.trunc(t / 1000); // to seconds
-            let s = t % 60; // seconds
+            const s = t % 60; // seconds
             t = Math.trunc(t / 60); // to minutes
-            let m = Math.trunc(t % 60); // minutes
-            let h = Math.trunc(t / 60); // hours
+            const m = Math.trunc(t % 60); // minutes
+            const h = Math.trunc(t / 60); // hours
             let ts = pad(h, 2) + ":" + pad(m, 2);
             if (s + ms > 0) {
                 ts += ":" + pad(s, 2);
@@ -73,15 +73,15 @@ define("common/js/Time", () => {
 
         /**
          * Generate a time difference as an HMS string
-         * @param ms delta time in ms
+         * @param {number} ms delta time in ms
          */
         static formatDelta(ms) {
-            let h = Math.floor(ms / (60 * 60 * 1000))
+            const h = Math.floor(ms / (60 * 60 * 1000))
             ms %= 60 * 60 * 1000;
-            let m = Math.floor(ms / (60 * 1000));
+            const m = Math.floor(ms / (60 * 1000));
             ms %= 60 * 1000;
-            let s = Math.floor(ms / 1000);
-            let d = ((h > 0) ? `${h}h` : "") +
+            const s = Math.floor(ms / 1000);
+            const d = ((h > 0) ? `${h}h` : "") +
                 ((m > 0) ? `${m}m` : "") +
                 ((s > 0) ? `${s}s` : "");
             return (d === "") ? "0s" : d;

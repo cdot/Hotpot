@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -91,7 +91,7 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
 
         /**
          * Get a promise to get the pin state
-         * @return a promise, passed the pin state
+         * @return {Promise} a promise, passed the pin state
          * @public
          */
         getState() {
@@ -110,13 +110,15 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
                     return {
                         reason: this.reason,
                         state: value
-                    }
+                    };
                 });
         };
 
         /**
-         * Get a promise for the current log of the pin state.
-         * @param since optional param giving start of logs as a ms datime
+         * Get a promise for a log of the pin state.
+         * @param {number} since optional param giving start of
+         * required logs as a ms datime
+         * @return {Promise} resolves to the serialisable log
          */
         getSerialisableLog(since) {
             if (!this.history)
@@ -127,8 +129,9 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof Pin
+     * @typedef Pin.Model
+     * @property {Number} gpio the number of the gpio pin
+     * @property{Historian} history Logger
      */
     Pin.Model = {
         $class: Pin,

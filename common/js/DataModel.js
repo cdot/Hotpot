@@ -3,9 +3,7 @@
 /*eslint-env node */
 
 define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
-    /** 
-     * A module representing a shirt.
-     */
+
     const TAG = "DataModel";
 
     var fs, Fs;
@@ -347,7 +345,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
          * @param {object} model the model
          * @param {string[]} context The context of the check, used in
          * messages only
-         * @return a promise that resolves to the data (or the
+         * @return {Promise} a promise that resolves to the data (or the
          * default, if one was applied)
          */
         static remodel(index, data, model, context) {
@@ -414,8 +412,8 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
 
                 // Object with keys that don't have to match the model,
                 // and values that can be undefined
-                let promises = [];
-                let keys = [];
+                const promises = [];
+                const keys = [];
                 for (let key in data) {
                     promises.push(DataModel.remodel(
                         key, data[key], model.$map_of, context.concat(key)));
@@ -423,7 +421,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
                 }
                 return Promise.all(promises)
                     .then(result => {
-                        let rebuilt = {};
+                        const rebuilt = {};
                         for (let i in result)
                             rebuilt[keys[i]] = result[i];
                         return rebuilt;
@@ -432,7 +430,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
 
             if (typeof model.$array_of !== "undefined") {
                 Utils.TRACE(`${TAG}Details`, `\t$array_of ${model.$array_of}`);
-                let promises = [];
+                const promises = [];
                 for (let i in data) {
                     // undefined is allowed in array data
                     promises.push(DataModel.remodel(
@@ -451,7 +449,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
 
             if (typeof data === "object") {
 
-                let promises = [];
+                const promises = [];
 
                 // Keep data meta-keys, and make sure the data doesn't
                 // carry any hidden payload
@@ -499,9 +497,9 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
 
                 promise = Promise.all(promises)
                     .then(result => {
-                        let rebuilt = {};
+                        const rebuilt = {};
                         for (let i in result) {
-                            let res = result[i];
+                            const res = result[i];
 
                             if (typeof res.data !== "undefined") {
                                 // undefined is skipped in objects
@@ -540,7 +538,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
 
                                 return promise
                                     .then(rebuilt => {
-                                        let sub = new module(rebuilt, index, module.Model);
+                                        const sub = new module(rebuilt, index, module.Model);
                                         // Hack in where it came from, so it can be
                                         // deserialised
                                         if (typeof rebuilt.$instance_of !== "undefined")
@@ -574,7 +572,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
          * class information or types that can't be serialised).
          * @param {object} data data to get a serialisable version of
          * @param {object} model data model to follow
-         * @return a promise that resolves to the serialisable data structure
+         * @return {Promise} a promise that resolves to the serialisable data structure
          */
         static getSerialisable(data, model, context) {
             DataModel.check(model);
@@ -610,7 +608,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
                 if (typeof data[Symbol.iterator] !== 'function')
                     throw new Error(
                         `Iterable expected at ${context.join('.')}=${data}`);
-                let promises = [];
+                const promises = [];
                 for (let index in data) {
                     promises.push(
                         DataModel.getSerialisable(
@@ -627,7 +625,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
                 if (typeof data !== "object")
                     throw new Error(
                         `Map expected at ${context.join('.')}=${data}`);
-                let promises = [];
+                const promises = [];
                 for (let key in data) {
                     promises.push(
                         DataModel.getSerialisable(
@@ -641,7 +639,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
                         }));
                 }
                 return Promise.all(promises).then(s => {
-                    let res = {};
+                    const res = {};
                     for (let i in s)
                         res[s[i].key] = s[i].serialised;
                     return res;
@@ -662,7 +660,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
                 return Promise.resolve(data);
             }
 
-            let promises = [];
+            const promises = [];
 
             // Retain $instance_of and $read_from in serialised data
             for (let mk in DATA_META_KEYS)
@@ -707,7 +705,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
 
             return Promise.all(promises)
                 .then(s => {
-                    let res = {};
+                    const res = {};
                     for (let i in s)
                         if (typeof s[i].serialised !== "undefined")
                             res[s[i].key] = s[i].serialised;
@@ -722,7 +720,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
          * a corresponding model.
          * @param {object} root the root of the data
          * @param {object} model the root of the model that describes the data
-         * @param path a path relative to the root, either a path
+         * @param {string|string[]} path a path relative to the root, either a path
          * expressed as a `/` -separated string or an already-split array
          * of path components.
          * @return {object} The end of the path, as:
@@ -779,7 +777,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
         /**
          * Promise to load data that is expected to observe the given
          * data model from a file.
-         * @param file the file to load from
+         * @param {string} file the file to load from
          * @param {object} model the data model to check against
          * @return {promise} promise that returns the loaded data. The
          * object will be annotated with `$read_from` to indicate where
@@ -805,7 +803,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
          * with `$read_from` is found, and will save to that file.
          * @param {object} root the root of the data
          * @param {object} model the root of the model that describes the data
-         * @param path a path relative to the root, either a path
+         * @param {string|string[]} path a path relative to the root, either a path
          * expressed as a /-separated string or an already-split array
          * of path components.
          * @return {promise} promise that resolves to the saved path
@@ -859,7 +857,7 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
                 return s.replace(/\n/g, "\n ");
             }
 
-            let docstring = [];
+            const docstring = [];
 
             if (index)
                 docstring.push(index + ":");
@@ -893,14 +891,14 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
                     docstring.push(indent(DataModel.help(model.$array_of)));
                     docstring.push("\n]");
                 } else if (typeof model.$map_of !== "undefined") {
-                    let sub = DataModel.help(model.$map_of);
+                    const sub = DataModel.help(model.$map_of);
                     if (sub.length > 0) {
                         docstring.push('{\n');
                         docstring.push(indent(sub));
                         docstring.push("}\n");
                     }
                 } else {
-                    let sub = [];
+                    const sub = [];
                     for (let i in model) {
                         if (i.charAt(0) !== '$')
                             sub.push(DataModel.help(model[i], i));

@@ -4,15 +4,17 @@ if (typeof requirejs === "undefined") {
 	throw new Error(__filename + " is not runnable stand-alone");
 }
 
-/**
- * Common code for running tests. In a test, set an expectation that N
- * asynchronous events will be seen, and promise to wait for them all.
- * All events must still complete within the mocha test timeout.
- */
 define("common/test/Expectation", () => {
+
+	/**
+	 * Common code for running tests. In a test, set an expectation that N
+	 * asynchronous events will be seen, and promise to wait for them all.
+	 * All events must still complete within the mocha test timeout.
+	 */
 	class Expectation {
 		/**
 		 * Construct an expectation that nEvents will be seen
+		 * @param {number} nEvents number of events to watch for
 		 */
 		constructor(nEvents) {
 			this.state = [];
@@ -30,6 +32,7 @@ define("common/test/Expectation", () => {
 
 		/**
 		 * Report that one of the expected events was seen
+		 * @param {number} event the event that was seen
 		 */
 		saw(event) {
 			if (event < 0 || event >= this.state.length)
@@ -39,6 +42,7 @@ define("common/test/Expectation", () => {
 
 		/**
 		 * Wait for all expected events to be seen
+		 * @return {Promise} a promise to wait
 		 */
 		expect() {
 			return Promise.all(this.promises);

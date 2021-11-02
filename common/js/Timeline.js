@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2017 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2017-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env browser,node */
 
@@ -37,6 +37,10 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
             }
         }
 
+        /**
+         * Promise to get a serialisable version of the point
+         * @return {Promise} Promise resolving to a Timepoint
+         */
         getSerialisable() {
             return Promise.resolve({
                 time: Time.formatHMS(this.time),
@@ -47,8 +51,9 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof Timepoint
+     * @typedef Timepoint.Model
+     * @property {number} time time of the point
+     * @property {number} value value at the point
      */
     Timepoint.Model = {
         $class: Timepoint,
@@ -71,7 +76,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
      * {min}..{max} (out of range values are validated).
      * New Timelines are initialised with a straight line at value
      * (min + max) / 2
-     * @param proto see Timeline.Model
+     * @param {object} proto see Timeline.Model
      * @class
      */
     class Timeline {
@@ -154,9 +159,8 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
         /**
          * Get the index of the point that follows the given time.
-         * @param t the time to test
-         * @return the index of the point
-         * @throws {Hotpot
+         * @param {number} t the time to test
+         * @return {number} the index of the point
          */
         getPointAfter(t) {
             if (t < 0 || t >= this.period)
@@ -184,13 +188,13 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
         /**
          * Get the value at the given time
-         * @param t the time, must be in range of the timeline
+         * @param {number} t the time, must be in range of the timeline
          * @return{float}the value at time t
          */
         valueAtTime(t) {
-            let i = this.getPointAfter(t);
-            let lp = this.points[i - 1];
-            let p = this.points[i];
+            const i = this.getPointAfter(t);
+            const lp = this.points[i - 1];
+            const p = this.points[i];
             // Interpolate between last point and this point
             return lp.value + (t - lp.time) *
                 (p.value - lp.value) / (p.time - lp.time);
@@ -198,9 +202,9 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
         /**
          * Insert a point before the point at the given index
-         * @param index index of the point to add before (must be > 0)
-         * @param point the (time: value:) point to add
-         * @return index of the point added
+         * @param {number} index index of the point to add before (must be > 0)
+         * @param {Timepoint} point the (time: value:) point to add
+         * @return {number} index of the point added
          */
         insertBefore(index, point) {
             if (index <= 0 || index >= this.points.length)
@@ -219,8 +223,8 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
         /**
          * Remove the point at the given index
-         * @param idx index of point to remove
-         * @return this
+         * @param {number} idx index of point to remove
+         * @return {Timeline} this
          */
         remove(idx) {
             if (idx <= 0 || idx >= this.points.length - 1)
@@ -232,7 +236,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
         /**
          * Get total number of points
-         * @return number of points
+         * @return {number} number of points
          */
         get nPoints() {
             return this.points.length;
@@ -240,7 +244,8 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
         /**
          * Get the point at the given index
-         * @return the point object
+         * @param {number} i index
+         * @return {Timepoint} the point object
          */
         getPoint(i) {
             if (i < 0 || i >= this.points.length)
@@ -253,8 +258,8 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
         /**
          * Set a point, validating the new settings are in range
          * relative to the points neighbouring it.
-         * @param i the index of the point to set
-         * @param p a point object giving the (time,value) to set. If this is
+         * @param {number} i the index of the point to set
+         * @param {Timepoint} p a point object giving the (time,value) to set. If this is
          * undefined, it will validate the point already at i
          */
         setPoint(i, p) {
@@ -285,10 +290,10 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
         /**
          * Set a point, constraining the new location to be in range both in
          * value and between the points either side of it.
-         * @param idx the index of the point to set
-         * @param tp a point object giving the (time,value) to set. Will be
+         * @param {number} idx the index of the point to set
+         * @param {Timepoint} tp a point object giving the (time,value) to set. Will be
          * rewritten to the constrained point.
-         * @return true if the point was changed
+         * @return {boolean} if the point was changed
          */
         setPointConstrained(idx, tp) {
             if (idx < 0 || idx >= this.points.length)
@@ -305,18 +310,18 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
             if (idx === 0)
                 tp.time = 0;
             else {
-                let prevtime = this.points[idx - 1].time;
+                const prevtime = this.points[idx - 1].time;
                 if (tp.time <= prevtime) tp.time = prevtime + 1;
             }
 
             if (idx === this.points.length - 1)
                 tp.time = this.period - 1;
             else {
-                let nexttime = this.points[idx + 1].time;
+                const nexttime = this.points[idx + 1].time;
                 if (tp.time >= nexttime) tp.time = nexttime - 1;
             }
 
-            let cp = this.points[idx];
+            const cp = this.points[idx];
             if (tp.time == cp.time && tp.value == cp.value)
                 return false;
 
@@ -328,8 +333,11 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof Timeline
+     * @typedef Timeline.Model
+     * @property {number} min minimum possible value
+     * @property {number} max maximum possible value
+     * @property {number} period period of timeline in ms
+     * @property {Timepoint[]} points Array of time points
      */
     Timeline.Model = {
         $class: Timeline,

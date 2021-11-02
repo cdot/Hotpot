@@ -11,6 +11,12 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
     const POINT_2RADIUS2 = POINT_2RADIUS * POINT_2RADIUS;
 
     /**
+     * @typedef {object} TimelineEditor.Point
+     * @property {number} x x coordinate
+     * @property {number} y y coordinate
+     */
+
+    /**
      * Interactive canvas that supports the editing of a timeline. The
      * idea is that the timeline provides a value at any point along it's
      * length. The application is a temperature controller, where the
@@ -20,15 +26,14 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
      * A "selection_changed" event is sent to the container when the
      * selected point has change in some way, either a new point is
      * selected or the position of the point has changed.
-     * See https://github.com/benmajor/jQuery-Touch-Events for touch event
-     * support.
+     * See {@link https://github.com/benmajor/jQuery-Touch-Events}
+     * for touch event support.
      */
-
     class TimelineEditor {
 
         /**
-         * @param timeline a Timeline object
-         * @param $container container object (a canvas)
+         * @param {Timeline} timeline a Timeline object
+         * @param {jQuery} $container container object (a canvas)
          */
         constructor(timeline, $container) {
             /** @member {Timeline} */
@@ -213,8 +218,8 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
         /**
          * Map a touch event to an XY point
-         * @param e the event
-         * @return the XY point
+         * @param {Event} e the event
+         * @return {{x: number, y: number}} the XY point
          * @private
          */
         e2xy(e) {
@@ -226,8 +231,8 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
         /**
          * Map a mouse event to an XY point
-         * @param e the event
-         * @return the XY point
+         * @param {Event} e the event
+         * @return {{x: number, y: number}} the XY point
          * @private
          */
         mouse2xy(e) {
@@ -240,9 +245,9 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
         /**
          * Determine if point p is within a minimum range of an existing
          * timeline point.
-         * @param xy a point in canvas space
-         * @param r2 range*range
-         * @return the index of the point it's over, or null
+         * @param {TimelineEditor.Point} xy a point in canvas space
+         * @param {number} r2 range*range
+         * @return {number} the index of the point it's over, or null
          * @private
          */
         overPoint(xy, r2) {
@@ -272,9 +277,9 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
          * Determine if point p is within a minimum range of a line between two
          * neighbouring points.
          * Done in canvas space.
-         * @param xy a point on the canvas
-         * @param r2 range*range
-         * @return the index of the point at the end of the line it's over,
+         * @param {TimelineEditor.Point} xy a point on the canvas
+         * @param {number} r2 range*range
+         * @return {number} the index of the point at the end of the line it's over,
          * or undefined
          * @private
          */
@@ -347,9 +352,9 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
         /**
          * Set the crosshairs on the timeline
-         * @param time time for the crosshairs
-         * @param value value for the crosshairs
-         * @return this
+         * @param {number} time time for the crosshairs
+         * @param {number} value value for the crosshairs
+         * @return {TimelineEditor} this
          */
         setCrosshairs(time, value) {
             if (typeof this.crosshairs === "undefined" ||
@@ -370,27 +375,29 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
         }
 
         /**
-         * Get the index of the currently selected point.
-         * @return {object} {index, time, value} for selected point or null if
-         * no point selected
+         * Get the currently selected point.
+         * @return {TimelineEditor.Point} selected point or null if no point selected
          */
         getSelectedPoint() {
             if (this.sel_pt_ix < 0)
                 return null;
 
-            let pt = this.timeline.getPoint(this.sel_pt_ix);
-            return {
-                index: this.sel_pt_ix,
-                time: pt.time,
-                value: pt.value
-            };
+            return this.timeline.getPoint(this.sel_pt_ix);
+        }
+
+        /**
+         * Get the index of the currently selected point.
+         * @return {number} selected index or -1 if no point selected
+         */
+        getSelectedPointIndex() {
+            return this.sel_pt_ix;
         }
 
         /**
          * Set the selected point. The selected point must be a point on the
          * timeline.
-         * @param pno point to select
-         * @return this
+         * @param {number} pno point to select
+         * @return {TimelineEditor} this
          */
         setSelectedPoint(pno) {
             this.is_editing = true;
@@ -409,8 +416,8 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
         /**
          * Set the time for the currently selected point.
-         * @param t time to set. Will be constrained to the valid range.
-         * @return this
+         * @param {number} t time to set. Will be constrained to the valid range.
+         * @return {TimelineEditor} this
          */
         setSelectedTime(t) {
             let dp = this.timeline.getPoint(this.sel_pt_ix);
@@ -428,8 +435,8 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
 
         /**
          * Set the value for the currently selected point.
-         * @param v value to set. Will be constrained to the valid range.
-         * @return this
+         * @param {number} v value to set. Will be constrained to the valid range.
+         * @return {TimelineEditor} this
          */
         setSelectedValue(v) {
             let dp = this.timeline.getPoint(this.sel_pt_ix);
@@ -449,7 +456,7 @@ define("browser/js/TimelineEditor", ["common/js/Utils", "common/js/Vec", "common
          * Remove the currently selected point. The selected point
          * will be moved to the next point after the removed point, or
          * the last point if that's not legal.
-         * @return this
+         * @return {TimelineEditor} this
          */
         removeSelectedPoint() {
             try {

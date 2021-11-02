@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -18,7 +18,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
      *
      * Yes, I could have used express, but I wrote this before I knew about
      * it, and it "just works".
-     * @param proto see Server.Model
+     * @param {object} proto see Server.Model
      * @class
      */
     class Server {
@@ -318,8 +318,17 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof Server
+     * @typedef Server.Model
+	 * @property {number} port Port to run the server on
+	 * @property {string} docroot Absolute file path to server documents
+	 * @property {Location} location Where in the world the server is located
+	 * @property {object} ssl SSL configuration
+	 * @property {string} ssl.cert SSL certificate
+	 * @property {string} sslkey SSL key
+	 * @property {object} auth Basic auth to access the server
+	 * @property {string} auth.user Username
+	 * @property {string} auth.pass Password
+	 * @property {string} auth.realm Authentication realm
      */
     Server.Model = {
         $class: Server,

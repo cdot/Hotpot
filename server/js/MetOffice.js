@@ -1,11 +1,11 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 /*
  * @module MetOffice
  */
 
 /*eslint-env node */
 
-define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", "common/js/Time", "common/js/Utils", "common/js/DataModel", "server/js/Historian"], function (Follow, Url, Location, Time, Utils, DataModel, Historian) {
+define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", "common/js/Time", "common/js/Utils", "common/js/DataModel", "server/js/Weather", "server/js/Historian"], function (Follow, Url, Location, Time, Utils, DataModel, Weather, Historian) {
 
     const Http = Follow.http;
 
@@ -31,70 +31,42 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
      * own implementation simply by calling e.g.
      * this.weather.get("Feels Like Temperature")
      *
-     * Note that nothing will happen until you call setLocation to set the
-     * location for which the weather is being received (which must not be
-     * done before you have called initialise())
-     *
      * This reference implementation gets current and predicted
      * weather information from the UK Met Office 3 hourly forecast updates.
      * It then performs a simple interpolation to guess the current weather at
      * the server location.
      * @param {object} proto prototype
-     * @class
+     * @extends Weather
      */
-    class MetOffice {
+    class MetOffice extends Weather {
 
         constructor(proto) {
-            Utils.extend(this, proto);
+			super(proto, "MetOffice");
+			/**
+			 * MetOffice URL
+			 * @member {string}
+			 */
             this.url = Url.parse("http://datapoint.metoffice.gov.uk");
-            this.name = "MetOffice";
+			/**
+			 * Log of updates. Each update contains the fields provided
+			 * by the MetOffice service. The `$` field is converted from
+			 * minutes to epoch ms.
+			 * @member {object[]}
+			 */
             this.log = [];
         }
 
         /**
-         * Return a promise to initialise the agent
-         */
-        initialise() {
-            return Promise.resolve();
-        };
-
-        /**
-         * Return a promise to set the lat/long of the place we are getting
-         * weather data for. This will start the automatic updater that will
-         * refresh the weather cache with new data as and when it comes available.
+         * Return a promise to set the lat/long of the place we are
+         * getting weather data for. This will start the automatic
+         * updater that will refresh the weather cache with new data
+         * as and when it comes available.
          * @param {Location} loc where
          */
         setLocation(loc) {
-            loc = new Location(loc);
             Utils.TRACE(TAG, "Set location ", loc);
-            return this.findNearestLocation(loc)
-                .then(() => this.update(true));
-        };
-
-        /**
-         * Stop the automatic updater.
-         */
-        stop() {
-            if (typeof this.updateTimer !== undefined) {
-                Utils.cancelTimer(this.updateTimer);
-                delete this.updateTimer;
-                Utils.TRACE(TAG, "Stopped");
-            }
-        };
-
-        /**
-         * Promise to get serialisable configuration. See common/DataModel
-         */
-        getSerialisable(context) {
-            return DataModel.getSerialisable(
-                    this.history, Historian.Model, context.concat('history'))
-
-                .then(h => {
-                    return {
-                        api_key: this.api_key,
-                        history: h
-                    };
-                });
+            return this._findNearestLocation(loc)
+            .then(() => super.setLocation(loc));
         };
 
         /**
@@ -110,53 +82,13 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
         };
 
         /**
-         * Get a promise for the current log of the weather forecast. This
-         * simply records the estimated outside temperature.
-         * @param since optional param giving start of logs as a ms datime
-         */
-        getSerialisableLog(since) {
-            if (!this.history)
-                return Promise.resolve();
-            return this.history.getSerialisableHistory(since)
-                .then(h => {
-                    // Clip to the current time
-                    let before = -1,
-                        after = -1;
-                    let now = Date.now();
-                    for (let i = 1; i < h.length; i += 2) {
-                        if (h[0] + h[i] <= now)
-                            before = i;
-                        else {
-                            after = i;
-                            break;
-                        }
-                    }
-                    let est;
-                    if (before >= 0 && after > before) {
-                        est = h[before + 1];
-                        if (h[after + 1] !== est) {
-                            let frac = ((now - h[0]) - h[before]) / (h[after] - h[before]);
-                            est += (h[after + 1] - est) * frac;
-                        }
-                    }
-                    h.splice(after);
-                    if (typeof est !== "undefined") {
-                        h.push(now - h[0]);
-                        h.push(est);
-                    }
-                    return h;
-                });
-        };
-
-        /**
          * Process a list of locations returned by the weather service
          * to find the ID of the closest.
          * @param {Location} loc where is "here"
-         * @param data data returned from the metoffice server
+         * @param {object} data data returned from the metoffice server
          * @private
          */
-        findClosest(data, loc) {
-
+        _findClosest(data, loc) {
             let list = data.Locations.Location;
             let best, mindist = Number.MAX_VALUE;
             for (let i in list) {
@@ -178,7 +110,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          * @param {Location} loc where is "here"
          * @private
          */
-        findNearestLocation(loc) {
+        _findNearestLocation(loc) {
             let path = `${USUAL_PATH}sitelist?key=${this.api_key}`;
             let options = {
                 protocol: this.url.protocol,
@@ -186,7 +118,6 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                 port: this.url.port,
                 path: path
             };
-
             return new Promise((resolve, reject) => {
                 Http.get(
                         options,
@@ -202,7 +133,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                                 result += chunk;
                             });
                             res.on("end", () => {
-                                this.findClosest(JSON.parse(result), loc);
+                                this._findClosest(JSON.parse(result), loc);
                                 resolve();
                             });
                         })
@@ -218,7 +149,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
          * and storing the temperature history in the historian.
          * @private
          */
-        buildLog(data) {
+        _buildLog(data) {
             if (!data.SiteRep) return;
             if (!data.SiteRep.Wx) return;
             if (!data.SiteRep.Wx.Param) return;
@@ -276,13 +207,15 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
 
         /**
          * Return a promise to get the forecast for the current time
-         * @private
+		 * @override
          */
         getWeather() {
             if (typeof this.after !== "undefined" &&
                 Date.now() < this.after.$) {
                 return Promise.resolve();
             }
+
+            Utils.TRACE(TAG, "Updating from MetOffice website");
 
             let options = {
                 protocol: this.url.protocol,
@@ -301,7 +234,7 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                                 result += chunk;
                             });
                             res.on("end", () => {
-                                this.buildLog(JSON.parse(result));
+                                this._buildLog(JSON.parse(result));
                                 fulfill();
                             });
                         })
@@ -309,10 +242,14 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
                         Utils.TRACE(TAG, "Failed to GET weather: ", err.toString());
                         fail(err);
                     });
-            });
+            })
+            .then(() => {
+                let br = this._bracket();
+                return br.after.$ - Date.now();
+			});
         };
 
-        bracket() {
+        _bracket() {
             let now = Date.now();
             let b = {};
 
@@ -330,35 +267,15 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
         };
 
         /**
-         * Update the current forecast from the metoffice, and schedule the
-         * next update.
-         * @private
-         */
-        update() {
-            Utils.TRACE(TAG, "Updating from MetOffice website");
-            return this.getWeather()
-                .then(() => {
-                    let br = this.bracket();
-                    this.last_update = Date.now();
-                    let wait = br.after.$ - this.last_update;
-                    Utils.TRACE(TAG, "Next update in ", wait / 60000, " minutes");
-                    this.updateTimer = Utils.startTimer(
-                        "meto", () => {
-                            this.update();
-                        }, wait);
-                });
-        };
-
-        /**
          * Get the current weather estimate for the given field. If the field
          * is a number, interpolate linearly to get a midpoint.
          * @param {string} what the field name to interpolate
          * e.g. "Feels Like Temperature"
-         * @return the weather item
+         * @return {object} the weather item
          * @public
          */
         get(what) {
-            let b = this.bracket();
+            let b = this._bracket();
             if (!b.before || !b.after)
                 return 0;
             let est = b.before[what];
@@ -369,34 +286,20 @@ define("server/js/MetOffice", ["follow-redirects", "url", "common/js/Location", 
             }
             return est;
         };
-
-        /**
-         * Clear the update timer
-         */
-        stop() {
-            Utils.TRACE(TAG, `'${this.name}' stopped`);
-            if (this.updateTimer) {
-                Utils.cancelTimer(this.updateTimer);
-                delete this.updateTimer;
-            }
-        }
     }
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof MetOffice
+	 * @typedef MetOffice.Model
+     * @property {string} api_key API key for requests to the Met Office website
      */
-    MetOffice.Model = {
+    MetOffice.Model = Utils.extend(Weather.Model, {
         $class: MetOffice,
         api_key: {
             $class: String,
             $doc: "API key for requests to the Met Office website"
-        },
-        history: Utils.extend({
-            $optional: true
-        }, Historian.Model)
-    };
+        }
+    });
 
     return MetOffice;
 });

@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataModel", "common/js/Time", "server/js/Thermostat", "server/js/Pin"], function (Events, Utils, DataModel, Time, Thermostat, Pin) {
@@ -18,6 +18,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Construct from a configuration data block built using
          * {@link DataModel} and Model
+         * @param {object} proto data block
          */
         constructor(proto) {
             super();
@@ -26,7 +27,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
         /**
          * Start the controller.
-         * @return this
+         * @return {Promise} Promise resolving to `this`
          */
         initialise() {
             Utils.TRACE(TAG, "Initialising Controller");
@@ -48,7 +49,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Create weather agents
          * @param {Array} configs array of weather agent configurations
-         * @return {Promise} a promise. Agent creation doesn't depend on this
+         * @return {Promise} Agent creation doesn't depend on this
          * promise, it will resolve immediately.
          * @private
          */
@@ -64,15 +65,15 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
         /**
          * Add a request to a thermostat.
-         * @param service themostat to add the request to, or "ALL" to add the request
+         * @param {string} service themostat to add the request to, or "ALL" to add the request
          * to all thermostats.
-         * @param id source of the request e.g. "ajax"
-         * @param target number giving the target temperature.
-         * @param until time at which the request expires (epoch ms) or
+         * @param {string} id source of the request e.g. "ajax"
+         * @param {number} target number giving the target temperature.
+         * @param {number} until time at which the request expires (epoch ms) or
          * Utils.BOOST, in which case a boost request will be created.
          */
         addRequest(service, id, target, until) {
-            let remove = (until == Utils.CLEAR);
+            const remove = (until == Utils.CLEAR);
 
             Utils.TRACE(TAG, `request ${service} from ${id} ${target}C until `,
                 (until == Utils.BOOST) ? "boosted" :
@@ -80,7 +81,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
             if (/^ALL$/i.test(service)) {
                 for (let name in this.thermostat) {
-                    let th = this.thermostat[name];
+                    const th = this.thermostat[name];
                     if (remove)
                         th.purgeRequests({
                             source: id
@@ -102,7 +103,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Attach handlers to calendars calendars
          * @param {Array} configs array of calendar configurations
-         * @return {Promise} a promise. Calendar creation doesn't depend on this
+         * @return {Promise} Calendar creation doesn't depend on this
          * promise, it will resolve immediately.
          * @private
          */
@@ -110,7 +111,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             Utils.TRACE(TAG, "Initialising Calendars");
 
             for (let name in this.calendar) {
-                let cal = this.calendar[name];
+                const cal = this.calendar[name];
                 cal.setTrigger(
                     (id, service, target, until) => {
                         this.addRequest(service, id, target, until);
@@ -142,12 +143,12 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Create pins as specified by configs
          * @param {Map} configs map of pin configurations
-         * @return {Promise} a promise. Pins are ready for use when this promise
+         * @return {Promise} Pins are ready for use when this promise
          * is resolved.
          * @private
          */
         initialisePins() {
-            let promises = [];
+            const promises = [];
             for (let name in this.pin)
                 promises.push(this.pin[name].initialise());
             return Promise.all(promises).then(() => {
@@ -157,11 +158,12 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
         /**
          * Promise to reset pins to a known state on startup.
+         * @return {Promise} resolves to `undefined`
          * @private
          */
         resetValve() {
-            let pins = this.pin;
-            let valveBack = this.valve_return;
+            const pins = this.pin;
+            const valveBack = this.valve_return;
 
             Utils.TRACE(TAG, "Resetting valve");
             return pins.HW.setState(1, "Reset")
@@ -194,6 +196,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
         /**
          * Create thermostats as specified by config
+         * @return {Promise} resolves when thermostats are initialised
          * @private
          */
         initialiseThermostats() {
@@ -215,6 +218,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Set a handler to be invoked if there's a problem requiring
          * an admin alert
+         * @param {function} func handler function
          */
         setAlertHandler(func) {
             for (let name in this.thermostat)
@@ -223,6 +227,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
         /**
          * Set the location of the server
+         * @param {Location} location where the server is
          */
         setLocation(location) {
             for (let name in this.weather) {
@@ -233,7 +238,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Generate and return a promise for a serialisable version of
          * the structure, suitable for use in an AJAX response.
-         * @return {Promise} a promise
+         * @return {Promise} resolves to the serialisable state object
          */
         getSerialisableState() {
 
@@ -277,8 +282,10 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
         /**
          * Get the logs for a set
-         * @param set  e.g. pin, thermostat, weather
-         * @param since optional param giving start of logs as a ms datime
+         * @param {string} set  e.g. pin, thermostat, weather
+         * @param {number} since optional param giving start of logs
+         * as a ms datime
+         * @return {Promise} resolves to the logs
          * @private
          */
         getLogsFor(set, since) {
@@ -305,8 +312,9 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Generate and promise to return a serialisable version of the
          * logs, suitable for use in an AJAX response.
-         * @param since optional param giving start of logs as a ms datime
-         * @return {object} a promise to create serialisable structure
+         * @param {number} since optional param giving start of logs
+         *  as a ms datime
+         * @return {Promise} a promise that resolves to a serialisable structure
          */
         getSerialisableLog(since) {
 
@@ -334,6 +342,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * that must be respected.
          * @param {String} channel e.g. "HW" or "CH"
          * @param {number} state 1 (on) or 0 (off)
+         * @return {Promise} resolves when state has been set
          */
         setPromise(channel, newState) {
             let pins = this.pin;
@@ -403,9 +412,11 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Command handler for ajax commands, suitable for calling by a Server.
          * @params {array} path the url path components
-         * @param {object} data structure containing parameters. These vary according
-         * to the command (commands are documented in README.md)
-         * @return a promise that resolves to an object for serialisation in the response
+         * @param {object} data structure containing parameters. These
+         * vary according to the command (commands are documented in
+         * README.md)
+         * @return {Promise} resolves to an object for serialisation
+         * in the response
          */
         dispatch(path, data) {
             let command = path.shift();
@@ -562,6 +573,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
         /**
          * Return a promise to send mail to the admin. The promise resolves
          * to an info block used by tests, which can safely be ignored.
+         * @param {string} subject subject of the mail
+         * @param {string} text body of the mail
          */
         sendMailToAdmin(subject, text) {
             return Utils.require("nodemailer").then(NodeMailer => {
@@ -615,8 +628,22 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof Controller
+     * @typedef Controller.Model
+	 * @property {object} mail Admin mail configuration
+	 * @property {string} mail.host Send mail host
+	 * @property {number} mail.port Mail host port
+	 * @property {string} mail.user Mail host user
+	 * @property {string} mail.pass Mail host pass
+	 * @property {string} mail.from Mail sender
+	 * @property {string} mail.to Mail recipient
+	 * @property {object.<string,Thermostat>} thermostat Set of Thermostats
+	 * @property {object.<string,Pin>} pin Set of Pins
+	 * @property {object.<string,Rule>} rule Set of Rules
+	 * @property {object.<string,Calendar>} calendar Set of Calendars e.g. GoogleCalendar
+	 * @property {object.<string,Weather>} weather Set of weather agents e.g. MetOffice
+	 * @property {number} valve_return Time to wait for the multiposition valve to return to the discharged state, in ms
+	 * @property {number} rule_interval Frequency at which rules are re-evaluated, in ms
+
      */
     Controller.Model = {
         $class: Controller,

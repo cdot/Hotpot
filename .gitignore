@@ -3,3 +3,8 @@
 node_modules
 *.log
 #*
+doc/*.html
+doc/*.html#*
+doc/fonts
+doc/scripts
+doc/styles

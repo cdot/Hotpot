@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -17,10 +17,9 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
     class Calendar {
 
         /**
-         * Get active events from a Google calendar.
-         * @param {string} name name of the calendar
+         * Get active events from a calendar.
          * @param {object} proto see Calendar.Model
-         * @class
+         * @param {string} name name of the calendar
          */
         constructor(proto, name) {
             Utils.extend(this, proto);
@@ -89,7 +88,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
          *     service
          *   }
          * }
-         * @return Promise to get the state
+         * @return {Promise} Promise to get the state
          */
         getSerialisableState() {
             let state = {
@@ -127,11 +126,16 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
          * @private
          */
         update(after) {
+			if (!this.updateTimer)
+				return; // already cancelled
+			
             // Kill the old timer
+			Utils.cancelTimer(this.updateTimer);
+			delete this.updateTimer;
+
             this.updateTimer = Utils.startTimer(
                 "calUp",
                 () => {
-                    delete this.updateTimer;
                     Utils.TRACE(TAG, `Updating '${this.name}'`);
                     this.fillCache()
                         .then(() => {
@@ -150,7 +154,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
          */
         stop() {
             Utils.TRACE(TAG, `'${this.name}' stopped`);
-            if (typeof this.updateTimer !== "undefined") {
+            if (this.updateTimer) {
                 Utils.cancelTimer(this.updateTimer);
                 delete this.updateTimer;
             }
@@ -286,8 +290,10 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof Calendar
+     * @typedef Calendar.Model
+     * @property {String} prefix Prefix for hotpot instructions in the calendar
+     * @property {Number} update_period Delay between calendar reads, in hours
+     * @property {Number} cache_length Period of calendar entries to cache, in hours
      */
     Calendar.Model = {
         prefix: {

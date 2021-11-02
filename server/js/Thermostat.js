@@ -39,14 +39,14 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
      * Where two sources both request different targets, then the request that
      * expires first applies. If they both expire at the same time, then the
      * most recent request received applies.
-     *
-     * @class
      */
     class Thermostat {
 
         /**
          * Construct from a configuration data block built using
          * {@link DataModel} and Model
+         * @param {object} proto data block object containing fields
+         * @param {string} name name of thermostat
          */
         constructor(proto, name) {
 
@@ -129,7 +129,8 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
 
         /**
          * Return a promise to intiialise the thermostat with a valid value read
-         * from the probe. The promise resolves to the Thermostat.
+         * from the probe.
+         * @return {Promise} The promise resolves to the Thermostat
          */
         initialise() {
             let promise;
@@ -204,7 +205,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
          * @return {Promise} promise to get an array of alternating times and
          * temps. Times are all relative to a base time, which is in the first
          * array element.
-         * @param since optional param giving start of logs as a ms datime
+         * @param {number} since optional param giving start of logs as a ms datime
          * @protected
          */
         getSerialisableLog(since) {
@@ -216,6 +217,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
         /**
          * Set a handler to be invoked if there's a problem requiring
          * an admin alert
+         * @param {function} func alert handler function
          */
         setAlertHandler(func) {
             this.alertHandler = func;
@@ -225,8 +227,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
          * Return a promise to start polling thermometers
          * Thermostats are polled every <poll interval> seconds for
          * new values; results are cached in the Thermostat object.
-         *
-         * The promise resolves to the Thermostat.
+         * @return {Promise} The promise resolves to the Thermostat.
          */
         poll() {
             delete this.pollTimer;
@@ -284,6 +285,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
         /**
          * Get the target temperature specified by the timeline or active boost
          * request for this thermostat at the current time.
+         * @return {number} the target temperature
          */
         getTargetTemperature() {
             this.purgeRequests();
@@ -309,6 +311,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
         /**
          * Get the maximum temperature allowed by the timeline or active boost
          * requests for this thermostat at any time.
+         * @return {number} the maximum temperature
          */
         getMaximumTemperature() {
             let max = this.timeline.getMaxValue();
@@ -322,14 +325,18 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
         };
 
         /**
-         * Add a request. A request is an override for rules that suspends the
-         * normal rules either for a period of time ('until' is a number), or until
-         * the rules purge the request. A controller may have multiple requests, but
-         * only one request from each source is kept.
-         * When it adds a request it purges all existing requests from the same source
-         * before adding the new request.
-         * Where multiple sources have active request on the same service, then the
+         * Add a request. A request is an override for rules that
+         * suspends the normal rules either for a period of time
+         * ('until' is a number), or until the rules purge the
+         * request. A controller may have multiple requests, but only
+         * one request from each source is kept.  When it adds a
+         * request it purges all existing requests from the same
+         * source before adding the new request.  Where multiple
+         * sources have active request on the same service, then the
          * service resolves which requests win.
+         * @param {string} source source of the request
+         * @param {string} target target temperature
+         * @param {number} until request applies unti time in ms
          */
         addRequest(source, target, until) {
             if (source)
@@ -391,8 +398,11 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof Thermostat
+     * @typedef Thermostat.Model
+     * @property {String} id unique ID used to communicate with this thermostat
+     * @property {Number} poll Polling frequency, in seconds
+     * @property {Timeline} timeline Timeline
+     * @property {Historian} history Logger
      */
     Thermostat.Model = {
         $class: Thermostat,

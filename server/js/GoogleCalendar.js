@@ -2,9 +2,6 @@
 
 /*eslint-env node */
 
-/**
- * Implementation of Calendar using Google calendar
- */
 define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "common/js/DataModel", "server/js/Calendar"], function (fs, Utils, Time, DataModel, Calendar) {
 
     // MS in an hour
@@ -20,6 +17,10 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
         return apis.calendar("v3");
     }
 
+	/**
+	 * Implementation of Calendar using Google calendar
+	 * @extends Calendar
+	 */
     class GoogleCalendar extends Calendar {
 
         /**
@@ -142,8 +143,17 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof GoogleCalendar
+	 * @typedef GoogleCalendar.Model
+     * @property {String} id calendar id
+     * @property {object} secrets secrets used by google OAuth
+     * @property {String} secrets.client_id see README.md
+     * @property {String} secrets.client_secret see README.md
+     * @property {String} secrets.redirect_uris see README.md
+     * @property {object} auth_cache File containing cached oauth authentication
+     * @property {String} auth_cache.access_token see README.md
+     * @property {String} auth_cache.token_type see README.md
+     * @property {String} auth_cache.refresh_token see README.md
+     * @property {number} auth_cache.expiry_date see README.md
      */
     GoogleCalendar.Model = Utils.extend(Calendar.Model, {
         $class: GoogleCalendar,

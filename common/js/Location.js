@@ -1,4 +1,4 @@
-/*@preserve Copyright (C) 2016-2019 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
@@ -15,7 +15,8 @@ define("common/js/Location", ["common/js/Utils"], function (Utils) {
     const MIN_DEG = 0.00005; // 5 metres in degrees at 55N
 
     /**
-     * Location object
+     * Location object representing a physical location somewhere
+     * on earth.
      */
     class Location {
 
@@ -25,9 +26,10 @@ define("common/js/Location", ["common/js/Utils"], function (Utils) {
            * 2. Location(object) where object has latitude and longitude fields
            * (allows us to use DataModel to load this)
            * 3. Location() for a default Location 55N 0W
-           * @param p1 (1.) {number} latitude number, (2.) {object} to get
-           * lat(itude) and long(itude) fields from (3.) undefined.
-           * @param p2 (1.) {number} longitude, (2.) undefined, (3.) undefined
+           * @param {number|object} p1 (1.) {number} latitude number,
+		   * (2.) {object} to get lat(itude) and long(itude) fields
+		   * from (3.) undefined.
+           * @param {number} p2 longitude, if p1 is a number
            */
         constructor(lat, lng) {
             if (typeof lat === "undefined") {
@@ -68,19 +70,19 @@ define("common/js/Location", ["common/js/Utils"], function (Utils) {
             function toRadians(x) {
                 return x * Math.PI / 180;
             }
-            let lat1 = toRadians(this.latitude);
-            let lat2 = toRadians(p2.latitude);
-            let dLat = toRadians(p2.latitude - this.latitude);
-            let dLong = toRadians(p2.longitude - this.longitude);
+            const lat1 = toRadians(this.latitude);
+            const lat2 = toRadians(p2.latitude);
+            const dLat = toRadians(p2.latitude - this.latitude);
+            const dLong = toRadians(p2.longitude - this.longitude);
 
-            let a =
+            const a =
                 Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                 Math.cos(lat1) * Math.cos(lat2) *
                 Math.sin(dLong / 2) * Math.sin(dLong / 2);
-            let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
             return EARTH_RADIUS * c;
-        };
+        }
 
         /**
          * @return {string} containing geo coordinates
@@ -88,7 +90,7 @@ define("common/js/Location", ["common/js/Utils"], function (Utils) {
          */
         toString() {
             return Utils.joinArgs(['(', this.latitude, ",", this.longitude, ')']);
-        };
+        }
 
         /**
          * Is this other point the same point to within 5m accuracy?
@@ -98,13 +100,14 @@ define("common/js/Location", ["common/js/Utils"], function (Utils) {
         equals(p2) {
             return Math.abs((this.latitude - p2.latitude)) < MIN_DEG &&
                 Math.abs((this.longitude - p2.longitude)) < MIN_DEG;
-        };
+        }
     }
 
     /**
      * Configuration model, for use with {@link DataModel}
-     * @member
-     * @memberof Location
+     * @typedef Location.Model
+     * @property {number} latitude decimal latitude degrees
+     * @property {number} longitude decimal longitude degrees
      */
     Location.Model = {
         $class: Location,

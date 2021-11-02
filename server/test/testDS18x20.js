@@ -4,7 +4,7 @@
 
 let requirejs = require('requirejs');
 requirejs.config({
-	baseUrl: "../.."
+	baseUrl: __dirname + "/../.."
 });
 
 requirejs(["node-getopt", "common/js/Utils", "server/js/DS18x20"], function(Getopt, Utils, DS18x20) {

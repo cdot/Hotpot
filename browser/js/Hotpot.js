@@ -6,7 +6,7 @@
  * Main module for managing the browser interface to a Hotpot server.
  * @module browser/Hotpot
  */
-define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/DataModel"], function (Utils, Time, DataModel, TimelineView) {
+define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time"], function (Utils, Time) {
 
     const UPDATE_BACKOFF = 20; // seconds
 
@@ -61,7 +61,6 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Dat
             const tcur = Math.round(
                 10 * obj.thermostat[service].temperature) / 10;
             const lkg = obj.thermostat[service].lastKnownGood;
-            const deltat = (Date.now() - lkg);
             const ttgt = Math.round(
                 10 * obj.thermostat[service].target) / 10;
             if (tcur > ttgt)
@@ -175,7 +174,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "common/js/Dat
             const self = this;
 
             $(`#${service}-boost`)
-                .on("click", e => $(`#boost-dialog`).dialog({
+            .on("click", () => $(`#boost-dialog`).dialog({
                     title: `Boost ${name}`,
                     buttons: [
                         {
