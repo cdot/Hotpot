@@ -16,7 +16,7 @@ requirejs.config({
     baseUrl: __dirname + "/../.."
 });
 
-requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "server/js/Server", "server/js/Controller"], function (Getopt, Location, Utils, Server, Controller) {
+requirejs(["node-getopt", "common/js/Location", "common/js/Utils", "common/js/DataModel", "server/js/Server", "server/js/Controller"], function (Getopt, Location, Utils, DataModel, Server, Controller) {
     const TAG = "Hotpot";
 
     HOTPOT_DEBUG = undefined;

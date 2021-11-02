@@ -129,26 +129,24 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
 
                 promise = promise
 
-                    .then(() => {
-                        return this.ssl.key.read();
-                    })
+                .then(() => Fs.readFile(Utils.expandEnvVars(this.ssl.key)))
 
-                    .then(k => {
-                        options.key = k;
-                        Utils.TRACE(TAG, "SSL key loaded");
-                    })
+                .then(k => {
+                    options.key = k;
+                    Utils.TRACE(TAG, "SSL key loaded");
+                })
 
-                    .then(() => this.ssl.cert.read())
+                .then(() => Fs.readFile(Utils.expandEnvVars(this.ssl.cert)))
 
-                    .then(c => {
-                        options.cert = c;
-                        Utils.TRACE(TAG, "SSL certificate loaded");
-                        if (typeof this.auth !== "undefined")
-                            Utils.TRACE(TAG, "Requires authentication");
-                        Utils.TRACE(TAG, "HTTPS starting on port ", this.port);
-                    })
+                .then(c => {
+                    options.cert = c;
+                    Utils.TRACE(TAG, "SSL certificate loaded");
+                    if (typeof this.auth !== "undefined")
+                        Utils.TRACE(TAG, "Requires authentication");
+                    Utils.TRACE(TAG, "HTTPS starting on port ", this.port);
+                })
 
-                    .then(() => require("https").createServer(options, handler));
+                .then(() => require("https").createServer(options, handler));
 
             } else {
                 if (typeof this.auth !== "undefined")
