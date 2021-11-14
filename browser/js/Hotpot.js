@@ -184,7 +184,7 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time"], function (Uti
                                 self.sendRequest({
                                     service: service,
                                     until: Utils.BOOST,
-                                    target: $(`#${service}-boost-target`).val()
+                                    target: $(`#boost-target`).val()
                                 });
                             }
 					}
