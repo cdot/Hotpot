@@ -219,7 +219,7 @@ define("server/js/Calendar", ["fs", "common/js/Utils", "common/js/Time", "common
          * + `boost` tells the service to revert to rules once the
          *    target temperature has been met.
 		 * + `off` switches the service off for the duration of the event.
-         * `prefix`, `boost` and `off` are case-insensitive.
+         * `boost` and `off` are case-insensitive.
 		 * The following should all work:
 		 * ```
          * CH BOOST 18
