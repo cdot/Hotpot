@@ -12,8 +12,8 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
     const TAG = "GoogleCalendar";
 
     function googleCalendarAPI() {
-        let googleApis = require("googleapis");
-        let apis = new googleApis.GoogleApis();
+        const googleApis = require("googleapis");
+        const apis = new googleApis.GoogleApis();
         return apis.calendar("v3");
     }
 
@@ -41,9 +41,9 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
             if (typeof this.oauth2Client !== "undefined")
                 return Promise.resolve(); // already started
 
-            let clientSecret = this.secrets.client_secret;
-            let clientId = this.secrets.client_id;
-            let redirectUrl = this.secrets.redirect_uris[0];
+            const clientSecret = this.secrets.client_secret;
+            const clientId = this.secrets.client_id;
+            const redirectUrl = this.secrets.redirect_uris[0];
             let {
                 OAuth2Client
             } = require("google-auth-library");
@@ -66,10 +66,10 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
             return this.authorise()
 
                 .then(() => {
-                    let calendarAPI = googleCalendarAPI()
-                    let now = Date.now();
+                    const calendarAPI = googleCalendarAPI();
+                    const now = Date.now();
 
-                    let params = {
+                    const params = {
                         auth: this.oauth2Client,
                         calendarId: this.id,
                         // For reasons undocumented by google, if timeMin and
@@ -103,15 +103,15 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
 
                 .then(response => {
                     this.clearSchedule();
-                    let events = response.data.items;
+                    const events = response.data.items;
                     Utils.TRACE(TAG, `'${this.name}' has ${events.length} events`);
                     this.last_update = new Date();
                     for (let i = 0; i < events.length; i++) {
-                        let event = events[i];
-                        let start = Date.parse(event.start.dateTime || event.start.date);
-                        let end = Date.parse(event.end.dateTime || event.end.date);
+                        const event = events[i];
+                        const start = Date.parse(event.start.dateTime || event.start.date);
+                        const end = Date.parse(event.end.dateTime || event.end.date);
                         // Can have orders in the event summary or the description
-                        let fullText = `${event.summary};${event.description}`;
+                        const fullText = `${event.summary};${event.description}`;
                         this.parseEvents(start, end, fullText);
                     }
                     Utils.TRACE(TAG, `'${this.name}' ready`);
@@ -119,11 +119,10 @@ define("server/js/GoogleCalendar", ["fs", "common/js/Utils", "common/js/Time", "
         }
 
         listCalendars() {
-
             return this.authorise()
                 .then(() => {
                     Utils.TRACE(TAG, "Listing calendars");
-                    let calendar = googleCalendarAPI();
+                    const calendar = googleCalendarAPI();
 
                     return new Promise((resolve, reject) => {
                         calendar.calendarList.list({
