@@ -33,8 +33,11 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
      * If 'until' is Utils.BOOST, then that is used to bring a thermostat up
      * to a target temperature and then revert to the rules.
      *
-     * target gives the target temperature for the thermostat, overriding the
+     * 'target' gives the target temperature for the thermostat, overriding the
      * temperature from the timeline.
+	 *
+	 * If 'target' is Utils.OFF, then the thermostat will be set to maximum
+	 * temperature until the time is over.
      *
      * Where two sources both request different targets, then the request that
      * expires first applies. If they both expire at the same time, then the
@@ -284,16 +287,20 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
 
         /**
          * Get the target temperature specified by the timeline or active boost
-         * request for this thermostat at the current time.
+         * or off request for this thermostat at the current time.
          * @return {number} the target temperature
          */
         getTargetTemperature() {
             this.purgeRequests();
             if (this.requests.length > 0) {
-                for (let i = this.requests.length - 1; i >= 0; i--)
-                    if (this.requests[i].until == Utils.BOOST)
+                for (let i = this.requests.length - 1; i >= 0; i--) {
+                    if (this.requests[i].until === Utils.BOOST)
                         // The current boost request
                         return this.requests[i].target;
+                    if (this.requests[i].target === Utils.OFF)
+                        // The current off request, BOOST overrides OFF
+                        return 0;
+				}
                 // Otherwise the most recently-added request
                 return this.requests[this.requests.length - 1].target;
             }
@@ -314,7 +321,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
          * @return {number} the maximum temperature
          */
         getMaximumTemperature() {
-            let max = this.timeline.getMaxValue();
+            let max = this.timeline.highestValue;
             // If there's a promise to a higher temperature, honour it.
             if (this.requests.length > 0) {
                 for (let i = this.requests.length - 1; i >= 0; i--)
@@ -350,7 +357,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
                 until: until
             };
 
-            Utils.TRACE(TAG, "Add request ", this.name, " ", req);
+            Utils.TRACE(TAG, `Add request ${this.name} `, req);
             this.requests.push(req);
         };
 
@@ -360,11 +367,12 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
          * @param {object} match map of request fields to match
          * e.g. { source: id }
          * All fields must match
-         * @param {boolean} clear true if requests are to be deleted even if they are under targets
+         * @param {boolean} clear true if requests are to be deleted
+         * even if they are under targets
          */
         purgeRequests(match, clear) {
             if (match)
-                Utils.TRACE(TAG, "Purge ", this.name, match, clear);
+                Utils.TRACE(TAG, `Purge ${this.name} `, match, clear ? "clear" : "");
             match = match || {};
             let reqs = this.requests;
             for (let i = 0; i < reqs.length; i++) {
@@ -378,7 +386,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
                 }
                 if (matched) {
                     let purge = clear;
-                    if (!purge && r.until == Utils.BOOST) {
+                    if (!purge && r.until === Utils.BOOST) {
                         if (this.temperature >= r.target) {
                             purge = true;
                             Utils.TRACE(TAG, `Purge because boost ${this.temperature} over ${r.target}`);

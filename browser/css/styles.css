@@ -46,3 +46,39 @@ input {
 .dialog {
 	display: none;
 }
+
+table.timeline {
+    table-layout: auto;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table.timeline td[name] {
+	border: 1px solid #ccc;
+}
+
+table .wide-column {
+	width: 100%;
+}
+
+canvas {
+	-webkit-touch-callout:none;
+	-webkit-user-select:none;
+	-webkit-user-drag:none;
+	-khtml-user-select:none;
+	-moz-user-select:none;
+	-ms-user-select:none;
+	user-select:none;
+}
+
+.timeline_canvas {
+	height: 100px;
+	width: 500px;
+}
+
+.overlay {
+	position: absolute;
+	color: white;
+	background-color: transparent;
+	pointer-events: none;
+}

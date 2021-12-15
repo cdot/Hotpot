@@ -557,11 +557,9 @@ define("common/js/DataModel", ["common/js/Utils"], function (Utils) {
                     // as String, Number, Date
                     // Could call remodel, this is fractionally quicker
                     const clss = model.$class;
-                    return new Promise(resolve => {
-                        Utils.TRACE(`${TAG}Details`,
-                            `Instantiate ${clss.name} ${index}`);
-                        resolve(new clss(rebuilt, index, model));
-                    });
+                    Utils.TRACE(`${TAG}Details`,
+								`Instantiate ${clss.name} ${index}`);
+                    return Promise.resolve(new clss(rebuilt, index, model));
                 });
         };
 

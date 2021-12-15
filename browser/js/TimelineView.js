@@ -2,7 +2,14 @@
 
 /*eslint-env browser */
 
-define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "common/js/Timeline", "browser/js/TimelineEditor", "browser/js/Spinner"], function (Time, DataModel, Timeline, TimelineEditor) {
+define("browser/js/TimelineView", [
+	"common/js/Time",
+	"common/js/DataModel",
+	"common/js/Timeline",
+	"browser/js/TimelineCanvas",
+	"browser/js/edit_in_place",
+	"jquery-touch-events"
+], (Time, DataModel, Timeline, TimelineCanvas) => {
 
     // Frequency of going back to the server for state
     const UPDATE_BACKOFF = 10000; // milliseconds
@@ -11,317 +18,176 @@ define("browser/js/TimelineView", ["common/js/Time", "common/js/DataModel", "com
     const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
     /**
-     * Management of a timeline view page. This is a standalone brower
-     * app that communicates via AJAX with a Hotpot server.
+     * Management of a timeline edit.
      */
     class TimelineView {
 
-        constructor(params) {
+		/**
+		 * @param {jQuery} $container Container div
+		 * @param {string} service service being edited
+		 */
+        constructor($container, service) {
+			$("#save-timeline")
+			.hide();
+
+			this.$container = $container;
+
             /**
              * Name of the service
              * @member {string}
              */
-            this.service = params.service;
+            this.service = service;
 
-            $("#title").text(`${params.name} timeline`);
-            $(".spinnable").Spinner();
+            this.$container.find("[name=title]")
+			.text(`${this.service}`);
 
-            /**
-             * Traces on this view.
-             * @member
-             */
-            this.traces = {
-                thermostat: [],
-                pin: []
-            };
+			this.$canvas = new TimelineCanvas(
+				this.$container.find("[name=graph]"));
 
-            const timeline = new Timeline({
+			this.changed = false;
+
+			$.getJSON(`/ajax/getconfig/thermostat/${this.service}/timeline`)
+			.fail((jqXHR, textStatus, errorThrown) => {
+                console.log("Could not contact server: " + errorThrown);
+            })
+			.done(tl => DataModel.remodel(
+				this.service, tl, Timeline.Model)
+                  .then(timel => this.setTimeline(timel)));
+
+            this.setTimeline(new Timeline({
                 period: DAY_IN_MS,
                 min: 0,
                 max: 25
-            });
-            const $container = $("#canvas");
-
-            const editor = new TimelineEditor(timeline, $container);
-            /**
-             * @member
-             */
-            this.editor = editor;
-
-            $container.on("redraw", () => this.renderTraces());
-
-            const $point = $("#point");
-            const $time = $("#time");
-            const $temperature = $("#temp");
-
-            $point
-                .on("spin_up", function () {
-                    if (editor.timeline.nPoints === 0)
-                        return;
-                    let now = Number.parseInt($(this).val());
-                    if (isNaN(now) || now === editor.timeline.nPoints - 1)
-                        now = -1;
-                    $(this).val(++now);
-                    editor.setSelectedPoint(now);
-                })
-                .on("spin_down", function () {
-                    if (editor.timeline.nPoints === 0)
-                        return;
-                    let now = Number.parseInt($(this).val());
-                    if (isNaN(now) || now === 0)
-                        now = editor.timeline.nPoints;
-                    $(this).val(--now);
-                    editor.setSelectedPoint(now);
-                })
-                .on("change", function () {
-                    let now = Number.parseInt($(this).val());
-                    if (now >= 0 && now < editor.timeline.nPoints) {
-                        editor.setSelectedPoint(now);
-                    }
-                });
-
-            $time.on("change", () => {
-                try {
-                    const now = Time.parse($(this).val());
-                    editor.setSelectedTime(now);
-                } catch (e) {}
-            });
-
-            $temperature.on("change", () => {
-                const now = Number.parseFloat($(this).val());
-                if (isNaN(now))
-                    return;
-                editor.setSelectedValue(now);
-            });
-
-            $("#removepoint")
-                .on("click", () => {
-                    editor.removeSelectedPoint();
-                });
-
-            $container
-                .on("selection_changed", () => {
-                    // Timeline editor selected point changed, update
-                    // other data fields
-                    const dp = editor.getSelectedPoint();
-                    if (dp) {
-                        $point.val(editor.getSelectedPointIndex());
-                        $time.val(Time.formatHMS(60000 * Math.round(dp.time / 60000)));
-                        $temperature.val(dp.value.toFixed(1));
-                    }
-                }).trigger("selection_changed");
-
-            $("#save")
-                .on("click", () => this.saveTimeline(this.service));
-
-            console.log(`Starting timeline for ${this.service}`);
-            const te = this.editor;
-
-            te.onChanged = () => {
-                $("#save").removeClass("disabled");
-            };
-
-            $(document).on("poll", () => this.poll());
-
-            // Get the last 24 hours of logs
-            const ajaxParams = {
-                since: Date.now() - 24 * 60 * 60
-            };
-            const promises = [
-				$.getJSON(`/ajax/log/thermostat/${this.service}`,
-                    JSON.stringify(ajaxParams), data => {
-                        this.traces.thermostat = this.loadTrace(data);
-                    })
-				.fail((jqXHR, textStatus, errorThrown) => {
-                    console.log("Could not contact server: " + errorThrown);
-                }),
-				$.getJSON(`/ajax/log/pin/${this.service}`,
-                    JSON.stringify(ajaxParams), data => {
-                        this.traces.pin = this.loadTrace(data);
-                    })
-				.fail((jqXHR, textStatus, errorThrown) => {
-                    console.log("Could not contact server: " + errorThrown);
-                }),
-				$.getJSON(`/ajax/getconfig/thermostat/${this.service}/timeline`)
-				.fail((jqXHR, textStatus, errorThrown) => {
-                    console.log("Could not contact server: " + errorThrown);
-                })
-				.done(tl => {
-                    DataModel.remodel(this.service, tl, Timeline.Model)
-                        .then(timel => {
-                            te.timeline = timel;
-                            te.$main_canvas.trigger("redraw");
-                        });
-                })
-			];
-
-            Promise.all(promises)
-                .then(() => {
-                    $(document).trigger("poll");
-                });
+            }));
         }
 
-        /**
-         * @private
-         */
-        renderTrace(trace, style1, style2, is_binary) {
-            if (typeof trace === "undefined" || trace.length < 1)
-                return;
-            const ctx = this.editor.$main_canvas[0].getContext("2d");
-            const base = is_binary ? this.editor.timeline.max / 10 : 0;
-            const binary = is_binary ? this.editor.timeline.max / 10 : 1;
+		setChanged() {
+			this.changed = true;
+			$("#save-timeline").show();
+		}
 
-            // Draw from current time back to 0
-            ctx.strokeStyle = style1;
-            ctx.beginPath();
-            let midnight = Time.midnight();
-            let i = trace.length - 1;
-            const now = trace[i].time;
-            const te = this.editor;
-            let lp;
+		setTimeline(tl) {
+            this.$container.find("[name=table] tbody").empty();
+			this.timeline = tl;
+			for (let i = 0; i < tl.nPoints; i++) {
+				const tp = tl.getPoint(i);
+				this._decoratePoint(tp);
+			}
+			this.$canvas.setTimeline(tl);
+		}
 
-            function nextPoint(tv, last_tv) {
-                const tp = {
-                    time: tv.time - midnight,
-                    value: base + tv.value * binary
-                };
-                const xy = te.tv2xy(tp);
-                if (!last_tv) {
-                    ctx.moveTo(xy.x, xy.y);
-                } else {
-                    if (is_binary && tp.value != last_tv.value) {
-                        const lxy = te.tv2xy({
-                            time: last_tv.time,
-                            value: tp.value
-                        });
-                        ctx.lineTo(lxy.x, lxy.y);
-                    }
-                    ctx.lineTo(xy.x, xy.y);
-                }
-                return tp;
-            }
+		addPoint(tp) {
+			this.timeline.insert(tp);
+			this.setChanged();
+			this.setTimeline(this.timeline);
+		}
 
-            while (i >= 0 && trace[i].time > midnight) {
-                lp = nextPoint(trace[i--], lp);
-            }
-            ctx.stroke();
+		removePoint(tp) {
+			this.timeline.remove(tp);
+			this.setChanged();
+			this.setTimeline(this.timeline);
+		}
 
-            // Draw from midnight back to same time yesterday
-            ctx.strokeStyle = style2;
-            ctx.beginPath();
-            const stop = now - 24 * 60 * 60 * 1000;
-            midnight -= 24 * 60 * 60 * 1000;
-            lp = undefined;
-            while (i >= 0 && trace[i].time > stop) {
-                lp = nextPoint(trace[i--], lp);
-            }
-            ctx.stroke();
-        }
+		editTime($row) {
+			const tp = $row.data("point");
+			const $time = $row.find(`[name="time"]`);
+			$time.edit_in_place({
+				text: $time.text(),
+				onClose: s => {
+					try {
+						this.timeline.setTime(tp, Time.parse(s));
+						this.setChanged();
+						this.setTimeline(this.timeline);
+					} catch (e) {
+						alert(e);
+					}
+				}
+			});
+		}
 
-        /**
-         * @private
-         */
-        renderTraces() {
-            this.renderTrace(this.traces.thermostat,
-                "#00AA00", "#005500", false);
-            this.renderTrace(this.traces.pin,
-                "#eea500", "#665200", true);
-        }
+		editTemperature($row) {
+			const tp = $row.data("point");
+			const $temp = $row.find(`[name="temp"]`);
+			$temp.edit_in_place({
+				text: tp.temp,
+				onClose: s => {
+					this.timeline.setValue(tp, Number.parseFloat(s));
+					this.setChanged();
+					$temp.text(tp.value);
+					this.$canvas.refreshAll();
+				}
+			});
+		}
 
-        /**
-         * @private
-         */
-        loadTrace(data) {
-            const trace = [];
-            const offset = data.shift();
-            for (let i = 0; i < data.length; i += 2) {
-                trace.push({
-                    time: offset + data[i],
-                    value: data[i + 1]
-                });
-            }
-            return trace;
-        }
-
-        /**
-         * Update traces cache with data from server
-         */
-        updateTraces(data) {
-            const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-            for (let type in this.traces) { // thermostat/pin
-                const trace = this.traces[type];
-                if (typeof trace === "undefined")
-                    continue;
-                // Discard samples > 24h old
-                while (trace.length > 0 && trace[0].time < cutoff)
-                    trace.shift();
-                const o = data[type][this.service];
-                if (typeof o === "undefined")
-                    continue;
-                const d = (typeof o.temperature !== "undefined") ?
-                    o.temperature : o.state;
-                if (typeof d === "undefined")
-                    continue;
-                trace.push({
-                    time: data.time,
-                    value: d
-                });
-                if (typeof o.temperature !== "undefined")
-                    this.editor.setCrosshairs(data.time - Time.midnight(), d);
-            }
-        }
-
-        /**
-         * Wake up on schedule and refresh the state
-         * @private
-         */
-        poll() {
-            if (this.poller) {
-                clearTimeout(this.poller);
-                this.poller = null;
-            }
-            $.getJSON("/ajax/state")
-                .done(data => {
-                    $(".showif").hide(); // hide optional content
-                    this.updateTraces(data);
-                })
-                .fail((jqXHR, status, err) => {
-                    console.log(`Could not contact server for update: ${status} ${err}`);
-                })
-                .always(() => {
-                    this.poller = setTimeout(
-                        () => {
-                            $(document).trigger("poll");
-                        }, UPDATE_BACKOFF);
-                });
-        }
+		_decoratePoint(tp) {
+            const ev = $.isTouchCapable && $.isTouchCapable() ?
+				  "doubletap" : "dblclick";
+			const $row = $(`<tr></tr>`);
+			$row.data("point", tp);
+			const $time = $(`<td name="time">${Time.formatHMS(tp.time)}</td>`);
+			const i = this.timeline.getIndexOf(tp);
+			if (tp.time > 0 && i < this.timeline.nPoints - 1) {
+				$time.attr("title", "Double-click to edit");
+				$time.on(ev, () => this.editTime($row));
+			}
+			$row.append($time);
+			const $temp = $(`<td name="temp">${tp.value}</td>`);
+			$temp.attr("title", "Double-click to edit");
+			$temp.on(ev, () => this.editTemperature($row));
+			$row.append($temp);
+			const $controls = $("<td></td>");
+			if (tp.time > 0) {
+				const $delete = $('<img class="image_button" src="/browser/images/wastebin.svg" />');
+				$delete.on('click', () => this.removePoint(tp));
+				$controls.append($delete);
+			}
+			$row.append($controls);
+			this.$container.find("[name=table] tbody").append($row);
+		}
 
         /**
          * Send timeline to the server. On a successful save, mark the editor
          * as unchanged and disable the save button.
          * @private
          */
-        saveTimeline(service) {
+        saveTimeline() {
             console.log("Send timeline update to server");
-            DataModel.getSerialisable(this.editor.timeline, Timeline.Model)
+            DataModel.getSerialisable(this.timeline, Timeline.Model)
                 .then(serialisable => {
                     $.post(
-                        "/ajax/setconfig/thermostat/" + service + "/timeline",
+                        `/ajax/setconfig/thermostat/${this.service}/timeline`,
                         JSON.stringify(serialisable))
                     .done(() => {
                         alert("Timeline saved");
-                        this.editor.changed = false;
                         // Save done, not required.
-                        $("#save").addClass("disabled");
+                        $("#save-timeline").hide();
+						this.changed = false;
                     })
                     .fail(function (xhr) {
                         alert(`Save failed ${xhr.status}: ${xhr.statusText}`);
-                    })
-                    .always(() => {
-                        $(document).trigger("poll");
                     });
                 });
         }
+
+		cancelTimeline() {
+			if (this.changed) {
+				$("#close-timeline").dialog({
+					buttons: [
+						{
+							text: "OK",
+							click: function() {
+								$(this).dialog( "close" );
+								$("#timeline-editor").hide();
+								$("#main").show();
+							}
+						}
+					]
+				});
+			} else {
+				$("#timeline-editor").hide();
+				$("#main").show();
+			}
+		}
     }
     return TimelineView;
 });

@@ -73,7 +73,8 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
          * Utils.BOOST, in which case a boost request will be created.
          */
         addRequest(service, id, target, until) {
-            const remove = (until == Utils.CLEAR);
+            const remove_boost = (until === Utils.CLEAR);
+            const remove_off = (target === Utils.CLEAR);
 
             Utils.TRACE(TAG, `request ${service} from ${id} ${target}C until `,
                 (until == Utils.BOOST) ? "boosted" :
@@ -82,9 +83,15 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             if (/^ALL$/i.test(service)) {
                 for (let name in this.thermostat) {
                     const th = this.thermostat[name];
-                    if (remove)
+                    if (remove_boost)
                         th.purgeRequests({
-                            source: id
+                            source: id,
+							until: Utils.BOOST
+                        }, true);
+					else if (remove_off)
+                        th.purgeRequests({
+                            source: id,
+							target: Utils.OFF
                         }, true);
                     else
                         th.addRequest(id, target, until);
@@ -92,12 +99,18 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
             } else if (!this.thermostat[service])
                 throw Utils.exception(
                     TAG, `Cannot add request, ${service} is not a known thermostat`);
-            else if (remove)
-                this.thermostat[service].purgeRequests({
-                    source: id
-                }, true);
-            else
-                this.thermostat[service].addRequest(id, target, until);
+            else if (remove_boost)
+				this.thermostat[service].purgeRequests({
+					source: id,
+					until: Utils.BOOST
+				}, true);
+			else if (remove_off)
+				this.thermostat[service].purgeRequests({
+					source: id,
+					target: Utils.OFF
+				}, true);
+			else
+				this.thermostat[service].addRequest(id, target, until);
         };
 
         /**
@@ -112,6 +125,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
 
             for (let name in this.calendar) {
                 const cal = this.calendar[name];
+				cal.setServices(Object.keys(this.thermostat));
                 cal.setTrigger(
                     (id, service, target, until) => {
                         this.addRequest(service, id, target, until);
@@ -132,6 +146,7 @@ define("server/js/Controller", ["events", "common/js/Utils", "common/js/DataMode
                         }
 
                     });
+
                 // Queue an asynchronous calendar update
                 cal.update(1000);
             }

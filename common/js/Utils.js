@@ -384,7 +384,9 @@ define("common/js/Utils", () => {
 
     // 'until' values that indicate commands
     Utils.BOOST = -274;
-    Utils.CLEAR = -275;
+    Utils.CLEAR = -275; // clear all requests from source
+    // 'target' values that indicate commands
+    Utils.OFF   = -276;
 
     return Utils;
 });

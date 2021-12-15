@@ -6,7 +6,7 @@
  * Main module for managing the browser interface to a Hotpot server.
  * @module browser/Hotpot
  */
-define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time"], function (Utils, Time) {
+define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "browser/js/TimelineView"], function (Utils, Time, TimelineView) {
 
     const UPDATE_BACKOFF = 20; // seconds
 
@@ -76,41 +76,52 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time"], function (Uti
             $(`#${service}-pin-state`).text(ptext);
             $(`#${service}-pin-reason`).text(obj.pin[service].reason);
 
-            let $requests = $(`#${service}-requests`);
+            const $requests = $(`#${service}-requests`);
             $requests.empty();
             for (let req of obj.thermostat[service].requests) {
-                let $div = $("<div></div>").addClass("request");
-                let u = (!req.until || req.until === Utils.BOOST) ?
+                const $div = $("<div></div>").addClass("request");
+                const u = (!req.until || req.until === Utils.BOOST) ?
                     "boosted" : new Date(req.until);
-                $div.append("<span>" + req.source + " is requesting " +
-                    req.target + " </span>°C until " + u + " ");
-                let $butt = $('<img class="image_button" src="/browser/images/unboost.svg" />');
+				const tgt = req.target === Utils.OFF
+					  ? "OFF" : `${req.target}°C`;
+                $div.append(
+					`${req.source} is requesting ` +
+					`${tgt} until ` + u.toLocaleString() + " ");
+                const $butt = $('<img class="image_button" src="/browser/images/request-cancel.svg" title="Cancel this request" />');
                 $div.append($butt);
                 $butt
                     .on("click", () => {
                         this.sendRequest({
                             service: service,
                             source: req.source,
-                            target: req.target,
-                            until: Utils.CLEAR
+							target: req.target === Utils.OFF
+							? Utils.CLEAR : req.target,
+                            until: req.until === Utils.BOOST
+							? Utils.CLEAR : req.until
                         });
                         $div.remove();
                     });
                 $requests.append($div);
             }
 
-            let $caldiv = $(`#${service}-calendar`);
+            const $caldiv = $(`#${service}-calendar`);
             $caldiv.hide();
             for (let name in obj.calendar) {
-                let cal = obj.calendar[name];
+                const cal = obj.calendar[name];
                 if (cal.pending_update)
                     $("#cal_update_pending").show();
-                let ce = cal.events[service];
+                const ce = cal.events[service];
                 if (ce) {
-                    $(`#${service}-cal-name`).text(cal);
-                    $(`#${service}-cal-temperature`).text(ce.temperature);
-                    $(`#${service}-cal-start`).text(new Date(ce.start));
-                    $(`#${service}-cal-end`).text(ce.end === "boost" ? "boosted" : new Date(ce.end));
+                    $(`#${service}-cal-name`).text(service);
+                    $(`#${service}-cal-temperature`).text(
+						ce.temperature === Utils.OFF ? "OFF"
+						: `${ce.temperature}°C`);
+                    $(`#${service}-cal-start`).text(
+						new Date(ce.start).toLocaleString());
+                    $(`#${service}-cal-end`).text(
+						ce.end === "boost"
+						? "boosted"
+						: new Date(ce.end).toLocaleString());
                     $caldiv.show();
                 }
             }
@@ -191,12 +202,37 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time"], function (Uti
 				]
                 }));
 
+            $(`#${service}-off`)
+            .on("click", () => $(`#off-dialog`).dialog({
+                    title: `${name} off`,
+                    buttons: [
+                        {
+                            text: "Off",
+                            click: function () {
+                                $(this).dialog("close");
+                                self.sendRequest({
+                                    service: service,
+                                    until: Date.now() + Time.parse(
+										$(`#off-for`).val()),
+                                    target: Utils.OFF
+                                });
+                            }
+					}
+				]
+                }));
+
             $(`#${service}-timeline`)
-                .on("click", () => window.open(
-                    `browser/html/timeline.html?service=${service};name=${name}`,
-                    "_blank" /*`${service} timeline`*/ ,
-                    "toolbar=1,menubar=1,status=1,resizable=1"));
+            .on("click", () => this.editTimeline(service));
+
         }
+
+		editTimeline(service) {
+			$("#main").hide();
+			$("#timeline-editor").show();
+			this.timelineView = new TimelineView(
+				$("#timeline-editor"),
+				service);
+		}
 
         /**
          * Add handlers and fire initial events to configure the graphs
@@ -211,6 +247,48 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time"], function (Uti
 
             $("#help")
                 .on("click", () => window.open(`browser/html/index-help.html`, "_blank", "toolbar=1,menubar=1,status=1,resizable=1"));
+
+			$("#add-timepoint")
+			.on("click", () => {
+				const tlv = this.timelineView;
+				if (!tlv)
+					return;
+				const $dlg = $(`#add-timepoint-dialog`);
+				$dlg.dialog({
+					title: `Add timepoint`,
+					buttons: [
+						{
+							text: "Add",
+							click: function () {
+								$(this).dialog("close");
+								const tim = $dlg.find("[name=time]").val();
+								const val = $dlg.find("[name=temp]").val();
+								tlv.addPoint(
+									{
+										time: Time.parse(tim),
+										value: Number.parseFloat(val)
+									});
+							}
+						}
+					]
+				});
+			});
+
+			$("#save-timeline")
+			.on("click", () => {
+				const tlv = this.timelineView;
+				if (!tlv)
+					return;
+				tlv.saveTimeline();
+			});
+
+			$("#cancel-timeline")
+			.on("click", () => {
+				const tlv = this.timelineView;
+				if (!tlv)
+					return;
+				tlv.cancelTimeline();
+			});
 
             $(document).on("poll", () => this.poll());
 

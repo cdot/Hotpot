@@ -12,44 +12,47 @@ define("server/js/CentralHeatingRule", ["common/js/Utils", "server/js/Rule"], (U
         }
 
         test(controller) {
-            let thermostat = controller.thermostat.CH;
-            let pin = controller.pin.CH;
+            const thermostat = controller.thermostat.CH;
+            const pin = controller.pin.CH;
 
             return pin.getState()
-                .then(function (state) {
-                    if (thermostat.temperature > thermostat.getMaximumTemperature()) {
-                        if (state === 1) {
-                            Utils.TRACE("Rules", "CH is overheating ", thermostat.temperature,
-                                "°C so turning off");
-                            pin.reason = "Overheat";
-                        }
-                        // setPromise is a NOP if already in the right state
-                        return controller.setPromise("CH", 0);
-                    }
+            .then(state => {
+				const max = thermostat.getMaximumTemperature();
+                if (thermostat.temperature > max) {
+                    const mess = (state === 1) ? "turning" : "keeping";
+                    Utils.TRACE("Rules", "CH is overheating ",
+								thermostat.temperature,
+								`°C > ${max} so ${mess} off`);
+                    pin.reason = "Overheat";
+                    // setPromise is a NOP if already in the right state
+                    return controller.setPromise("CH", 0);
+                }
 
-                    // Otherwise respect the timeline
-                    let target = thermostat.getTargetTemperature();
-                    if (thermostat.temperature > target) {
-                        // Warm enough inside, so switch off even if
-                        if (state === 1) {
-                            Utils.TRACE("Rules", "CH is ", thermostat.temperature,
-                                "°C so turning off");
-                            pin.reason = "Warm enough";
-                        }
-                        // setPromise is a NOP if already in the right state
-                        return controller.setPromise("CH", 0);
+                // Otherwise respect the timeline
+                const target = thermostat.getTargetTemperature();
+                if (thermostat.temperature > target) {
+                    // Warm enough inside, so switch off even if
+                    const mess = (state === 1) ? "turning" : "keeping";
+                    Utils.TRACE("Rules", "CH is ", thermostat.temperature,
+								`°C > ${target} so ${mess} off`);
+                    pin.reason = "Warm enough";
+                    // setPromise is a NOP if already in the right state
+                    return controller.setPromise("CH", 0);
+                }
 
-                    }
-                    if (thermostat.temperature < target - PRECISION) {
-                        if (state === 0) {
-                            Utils.TRACE("Rules", "CH only ",
-                                thermostat.temperature,
-                                "°C, so on");
-                            pin.reason = "Too cold";
-                        }
-                        return controller.setPromise("CH", 1);
-                    }
-                });
+                else if (thermostat.temperature < target - PRECISION) {
+                    const mess = (state === 0) ? "turning" : "keeping";
+                    Utils.TRACE("Rules",
+								`CH only ${thermostat.temperature}°C `,
+								`< ${target}`,
+								`so ${mess} on`);
+                    pin.reason = "Too cold";
+                    return controller.setPromise("CH", 1);
+                }
+
+                Utils.TRACE("Rules", "CH no change");
+				return Promise.resolve();
+            });
         }
     }
 

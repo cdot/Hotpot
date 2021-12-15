@@ -76,13 +76,12 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
      * {min}..{max} (out of range values are validated).
      * New Timelines are initialised with a straight line at value
      * (min + max) / 2
-     * @param {object} proto see Timeline.Model
-     * @class
      */
     class Timeline {
         /**
          * Construct from a configuration data block built using
          * {@link DataModel} and Model
+		 * @param {object} proto see Timeline.Model
          */
         constructor(proto, index, model) {
 
@@ -123,67 +122,103 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
             if (typeof this.points === "undefined")
                 this.points = [];
 
-            // Use setPoint to validate points passed
-            for (let i = 1; i < this.points.length; i++)
-                this.setPoint(i);
-
-            this._fixExtremes();
-        }
-
-        // Private function to add extreme points if needed
-        _fixExtremes() {
-            // Add missing points to extremes
-            if (this.points.length == 0) {
-                this.points.push(new Timepoint({
-                    time: 0,
-                    value: (this.min + this.max) / 2
-                }));
-                this.points.push(new Timepoint({
-                    time: this.period - 1,
-                    value: (this.min + this.max) / 2
-                }));
-            }
-            if (this.points[0].time != 0)
+            // Check 0 point
+            if (this.points.length === 0
+				|| this.points[0].time != 0) {
+				// There is always a point at 00:00
                 this.points.unshift(new Timepoint({
                     time: 0,
-                    value: this.points[0].value
-                }));
-
-            if (this.points[this.points.length - 1].time < this.period - 1) {
-                this.points.push(new Timepoint({
-                    time: this.period - 1,
-                    value: this.points[this.points.length - 1].value
+                    value: this.min
                 }));
             }
         }
 
-        /**
-         * Get the index of the point that follows the given time.
-         * @param {number} t the time to test
-         * @return {number} the index of the point
-         */
-        getPointAfter(t) {
-            if (t < 0 || t >= this.period)
-                throw Utils.exception(
-                    TAG, `${t} is outside timeline 0..${this.period - 1}`);
-            for (let i = 1; i < this.points.length - 1; i++) {
-                if (this.points[i].time > t)
-                    return i;
-            }
-            return this.points.length - 1;
-        }
+		get maxValue() {
+			return this.max;
+		}
+
+		set maxValue(val) {
+			this.max = val;
+		}
+
+		get minValue() {
+			return this.min;
+		}
+
+		set minValue(val) {
+			this.min = val;
+		}
+
+		/**
+		 * Get the index of a timepoint in the timeline
+		 * @param {Timepoint} tp timepoint to find
+		 * @return {number} index of point, or -1 if not found
+		 */
+		getIndexOf(tp) {
+			return this.points.indexOf(tp);
+		}
 
         /**
          * Get the maximum value at any time
          * @return {float} the maximum value
          */
-        getMaxValue() {
-            let max = this.points[0].value;
-            for (let i = 1; i < this.points.length; i++) {
-                if (this.points[i].value > max)
-                    max = this.points[i].value;
+        get highestValue() {
+            let max = Number.MIN_VALUE;
+            for (let pt of this.points) {
+                if (pt.value > max)
+                    max = pt.value;
             }
             return max;
+        }
+
+        /**
+         * Get the minimum value at any time
+         * @return {float} the maximum value
+         */
+        get lowestValue() {
+            let min = Number.MAX_VALUE;
+            for (let pt of this.points) {
+                if (pt.value < min)
+                    min = pt.value;
+            }
+            return min;
+        }
+
+       /**
+         * Get the point that precedes the given time.
+         * @param {number} t the time to test
+         * @return {Timepoint} the point
+         */
+        getPointBefore(t) {
+            if (t < 0 || t >= this.period)
+                throw Utils.exception(
+                    TAG, `${Time.formatHMS(t)} is outside timeline ${Time.formatHMS(0)}..${Time.formatHMS(this.period - 1)}`);
+			let prev;
+            for (let pt of this.points) {
+                if (pt.time > t)
+                    return prev;
+				prev = pt;
+            }
+            return prev;
+        }
+
+       /**
+         * Get the point that follows the given time. If the time is exactly
+		 * the time of an existing timepoint, return that timepoint.
+         * @param {number} t the time to test
+         * @return {Timepoint} the point, or null if the time is between
+		 * the last point and the end of the timeline
+		 * @throws {Error} if t is outside the timeline
+         */
+        getPointAfter(t) {
+            if (t < 0 || t >= this.period)
+                throw Utils.exception(
+                    TAG, `${Time.formatHMS(t)} is outside timeline ${Time.formatHMS(0)}..${Time.formatHMS(this.period - 1)}`);
+            for (let pt of this.points) {
+                if (pt.time >= t)
+                    return pt;
+            }
+            return null;
         }
 
         /**
@@ -192,44 +227,37 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
          * @return{float}the value at time t
          */
         valueAtTime(t) {
-            const i = this.getPointAfter(t);
-            const lp = this.points[i - 1];
-            const p = this.points[i];
-            // Interpolate between last point and this point
-            return lp.value + (t - lp.time) *
-                (p.value - lp.value) / (p.time - lp.time);
+			const p0 = this.getPointBefore(t);
+			let p1 = this.getPointAfter(t);
+			if (p1 === null)
+				p1 = { time: this.period, value: this.points[0].value };
+			if (p1 === p0)
+				return p0.value;
+			// Interpolate between prev point and next point
+			return p0.value + (t - p0.time) *
+			(p1.value - p0.value) / (p1.time - p0.time);
         }
 
-        /**
-         * Insert a point before the point at the given index
-         * @param {number} index index of the point to add before (must be > 0)
-         * @param {Timepoint} point the (time: value:) point to add
-         * @return {number} index of the point added
-         */
-        insertBefore(index, point) {
-            if (index <= 0 || index >= this.points.length)
-                throw Utils.exception(
-                    TAG, `Index ${index} is outside timeline 0..${this.points.length - 1}`);
-            this.points.splice(index, 0, new Timepoint(point));
-            // Use setPoint to validate it
-            try {
-                this.setPoint(index);
-                return index;
-            } catch (e) {
-                this.points.splice(index, 1);
-                throw e;
-            }
-        }
+		setTime(tp, t) {
+			this.remove(tp);
+			tp.time = Math.min(Math.max(0, t), this.period);
+			this.insert(tp);
+		}
+
+		setValue(tp, v) {
+			tp.value = Math.min(Math.max(this.min, v), this.max);
+		}
 
         /**
-         * Remove the point at the given index
-         * @param {number} idx index of point to remove
+         * Remove the point from the timeline
+         * @param {Timepoint} pt point to remove
          * @return {Timeline} this
          */
-        remove(idx) {
-            if (idx <= 0 || idx >= this.points.length - 1)
+        remove(tp) {
+			const idx = this.points.indexOf(tp);
+            if (idx <= 0)
                 throw Utils.exception(
-                    TAG, `${idx} cannot be removed from 0..${this.points.length - 1}`);
+                    TAG, `Point at ${Time.formatHMS(tp.time)} cannot be removed`);
             this.points.splice(idx, 1);
             return this;
         }
@@ -250,85 +278,29 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
         getPoint(i) {
             if (i < 0 || i >= this.points.length)
                 throw Utils.exception(
-                    TAG, `getPoint ${i} not in 0..${this.points.length - 1}`);
+                    TAG, `Point ${i} not in 0..${this.points.length - 1}`);
             return this.points[i];
 
         }
 
-        /**
-         * Set a point, validating the new settings are in range
-         * relative to the points neighbouring it.
-         * @param {number} i the index of the point to set
-         * @param {Timepoint} p a point object giving the (time,value) to set. If this is
-         * undefined, it will validate the point already at i
-         */
-        setPoint(i, p) {
-            if (i < 0 || i >= this.points.length)
-                throw Utils.exception(
-                    TAG, `Point ${i} not in timeline`);
-            if (typeof p === "undefined")
-                p = this.points[i];
-            if (p.time < 0 || p.time >= this.period) {
-                throw Utils.exception(
-                    TAG,
-                    `Time ${p.time} outside period 0..${this.period - 1}`);
-            }
-            if (i < this.points.length - 1 && p.time >= this.points[i + 1].time)
-                throw Utils.exception(
-                    TAG, `setPoint ${p.time} is later than following point @${this.points[i + 1].time}`);
-            if (i > 0 && p.time <= this.points[i - 1].time)
-                throw Utils.exception(
-                    TAG, `setPoint ${p.time} is earlier than preceding point @${this.points[i - 1].time}`);
-            if (p.value < this.min || p.value > this.max)
-                throw Utils.exception(
-                    TAG,
-                    `setPoint value ${p.value} is out of range ${this.min}..${this.max}`);
-            this.points[i].time = p.time;
-            this.points[i].value = p.value;
-        }
-
-        /**
-         * Set a point, constraining the new location to be in range both in
-         * value and between the points either side of it.
-         * @param {number} idx the index of the point to set
-         * @param {Timepoint} tp a point object giving the (time,value) to set. Will be
-         * rewritten to the constrained point.
-         * @return {boolean} if the point was changed
-         */
-        setPointConstrained(idx, tp) {
-            if (idx < 0 || idx >= this.points.length)
-                throw Utils.exception(
-                    TAG, `Point ${idx} not in timeline`);
-
-            // Clip
-            if (tp.value < this.min) tp.value = this.min;
-            if (tp.value > this.max) tp.value = this.max;
-            if (tp.time < 0) tp.time = 0;
-            if (tp.time >= this.period) tp.time = this.period - 1;
-
-            // Constrain first and last points
-            if (idx === 0)
-                tp.time = 0;
-            else {
-                const prevtime = this.points[idx - 1].time;
-                if (tp.time <= prevtime) tp.time = prevtime + 1;
-            }
-
-            if (idx === this.points.length - 1)
-                tp.time = this.period - 1;
-            else {
-                const nexttime = this.points[idx + 1].time;
-                if (tp.time >= nexttime) tp.time = nexttime - 1;
-            }
-
-            const cp = this.points[idx];
-            if (tp.time == cp.time && tp.value == cp.value)
-                return false;
-
-            cp.time = tp.time;
-            cp.value = tp.value;
-            return true;
-        }
+		/**
+		 * Insert a new point
+		 * @param {Timepoint} tp the point to add
+		 * @return {boolean} true if the point was inserted
+		 */
+		insert(tp) {
+			for (let i = 0; i < this.points.length; i++) {
+				if (this.points[i].time === tp.time) {
+					this.points[i] = tp;
+					return;
+				}
+				if (this.points[i].time > tp.time) {
+					this.points.splice(i, 0, tp);
+					return;
+				}
+			}
+			throw Utils.exception(TAG, "Nowhere to insert point");
+		}
     }
 
     /**
