@@ -2,7 +2,9 @@
 
 /*eslint-env browser,node */
 
-define("common/js/Time", () => {
+define("common/js/Time", [
+	"common/js/Utils"
+], Utils => {
 
     const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 

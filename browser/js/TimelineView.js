@@ -41,8 +41,8 @@ define("browser/js/TimelineView", [
             this.$container.find("[name=title]")
 			.text(`${this.service}`);
 
-			this.$canvas = new TimelineCanvas(
-				this.$container.find("[name=graph]"));
+			const $graph = this.$container.find("[name=graph]");
+			this.$canvas = new TimelineCanvas($graph);
 
 			this.changed = false;
 

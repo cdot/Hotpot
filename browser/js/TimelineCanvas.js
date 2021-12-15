@@ -2,7 +2,10 @@
 
 /*eslint-env browser */
 
-define("browser/js/TimelineCanvas", ["common/js/Utils", "common/js/Vec", "common/js/Time", "jquery"], function (Utils, Vec, Time) {
+define("browser/js/TimelineCanvas", [
+	"common/js/Time",
+	"jquery"
+], Time => {
 
     const POINT_RADIUS = 10; // px
 
@@ -37,6 +40,7 @@ define("browser/js/TimelineCanvas", ["common/js/Utils", "common/js/Vec", "common
 
             /** @member {jQuery} */
             this.$container = $container;
+			this.$container.empty();
 
             /**
 			 * The Canvas object used for drawing the timeline
