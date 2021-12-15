@@ -339,11 +339,6 @@ interface that can be used fom desktops, laptops, tablets and smartphones.
 
 The interface includes full help information.
 
-# Android App
-
-There is also an Android app that offers a subset of the functionality of the
-browser UI. It can be installed from [github](https://github.com/cdot/Hotpot/releases).
-
 # Development
 
 See doc/README.md
