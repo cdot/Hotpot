@@ -181,26 +181,36 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "browser/js/Ti
                 });
         }
 
-        configureService(service, name) {
+		/**
+		 * @param {string} service service shortcode e.g. HW
+		 * @param {string} name service name e.g. "Hot Water"
+		 * @param {number} boostTo temperature to boost to
+		 */
+        configureService(service, name, boostTo) {
             const self = this;
 
             $(`#${service}-boost`)
-            .on("click", () => $(`#boost-dialog`).dialog({
+            .on("click", () => {
+				const $dlg = $(`#boost-dialog`);
+				const $target = $dlg.find("[name=target]");
+				$target.val(boostTo);
+				$dlg.dialog({
                     title: `Boost ${name}`,
                     buttons: [
                         {
                             text: "Boost",
-                            click: function () {
-                                $(this).dialog("close");
+                            click: () => {
+                                $dlg.dialog("close");
                                 self.sendRequest({
                                     service: service,
                                     until: Utils.BOOST,
-                                    target: $(`#boost-target`).val()
+                                    target: $target.val()
                                 });
                             }
 					}
 				]
-                }));
+                });
+			});
 
             $(`#${service}-off`)
             .on("click", () => $(`#off-dialog`).dialog({
@@ -239,8 +249,8 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "browser/js/Ti
          * and start the polling loop.
          */
         begin() {
-            this.configureService("HW", "Hot Water");
-            this.configureService("CH", "Central Heating");
+            this.configureService("HW", "Hot Water", 50);
+            this.configureService("CH", "Central Heating", 18);
 
             $("#refresh_calendars")
                 .on("click", () => this.refreshCalendars());
