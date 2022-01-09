@@ -6,19 +6,12 @@
  * Support for running a hotpot server without connected hardware.
  */
 
-// Heating and cooling rates, in degrees per second
-const RATES = [
-    {
-        HW: -0.01,
-        CH: -0.03,
-        test: -0.1
-    }, // OFF = COOL
-    {
-        HW: 0.333,
-        CH: 0.1,
-        test: 0.1
-    } // ON = WARM
-];
+// Cooling and heating rates, in degrees per second for pin state = 0|1
+const RATES = {
+    HW: [ -0.001, 0.015 ],
+    CH: [ -0.003, 0.01 ],
+    test: [ -0.1, 0.1 ]
+};
 
 // Service object simulates a sensor and a pin
 class Service {
@@ -44,7 +37,7 @@ class Service {
     // In sampled mode, a set of samples supplied are stepped through on
     // each call to get() on the DS18x20 simulation.
     _getNextTemperature() {
-        this.temperature += RATES[this.pinState][this.name];
+        this.temperature += RATES[this.name][this.pinState];
         if (this.temperature < 0)
             this.temperature = 0;
         this.timer = setTimeout(() => this._getNextTemperature(), 1000);
@@ -127,7 +120,7 @@ class DebugSupport {
                     pass: testAccount.pass,
                     from: "source@hotpot.co.uk",
                     to: "dest@hotpot.co.uk"
-                }
+                };
             });
     }
 }

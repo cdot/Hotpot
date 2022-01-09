@@ -7,7 +7,15 @@ define("browser/js/TimelineCanvas", [
 	"jquery"
 ], Time => {
 
-    const POINT_RADIUS = 10; // px
+	'use strict';
+
+    const TIP_HEIGHT = 10; // px
+	const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
+
+	const COLOURS = {
+		pin: "red",
+		thermostat: "#00AA00"
+	};
 
     /**
      * @typedef {object} TimelineCanvas.Point
@@ -31,6 +39,11 @@ define("browser/js/TimelineCanvas", [
 			 */
             this.timeline = undefined;
 
+			/**
+			 * Traces to be displayed
+			 */
+			this.traces = [];
+
             /**
 			 * Current cursor location, in canvas space.
 			 * undefined if the cursor is no over the canvas.
@@ -40,18 +53,20 @@ define("browser/js/TimelineCanvas", [
 
             /** @member {jQuery} */
             this.$container = $container;
-			this.$container.empty();
+			$container
+			.empty()
+            .hover(
+                () => $(".hover").show(),
+				() => $(".hover").hide())
+            .on("mousemove", e => this.handleMouseMove(e));
 
             /**
 			 * The Canvas object used for drawing the timeline
 			 * @member {jQuery}
 			 */
             this.$main_canvas = $("<canvas></canvas>")
-			.addClass("timeline_canvas")
-            .hover(
-                () => $(".overlay").show(),
-				() => $(".overlay").hide())
-            .on("mousemove", e => this.handleMouseMove(e))
+			.addClass("main_canvas overlay")
+			.css("z-index", 2)
             .on("redraw", () => this.drawTimeline());
             $container.append(this.$main_canvas);
 
@@ -60,51 +75,50 @@ define("browser/js/TimelineCanvas", [
 			 * @member {jQuery}
 			 */
             this.$crosshair_canvas = $("<canvas></canvas>")
-            .addClass('overlay')
-            .css("z-index", 5)
+            .addClass('crosshair_canvas overlay hover')
+            .css("z-index", 4)
             .on("redraw", () => this.drawCrosshairs());
             $container.append(this.$crosshair_canvas);
 
             /**
-			 * The small floating overlay canvas used for draing tips
+			 * The small floating overlay canvas used for drawing tips
 			 * @member {jQuery}
 			 */
             this.$tip_canvas = $("<canvas></canvas>")
-            .addClass('overlay')
-            .css("z-index", 10)
+            .addClass('tip_canvas overlay hover')
+            .css("z-index", 5)
             .on("redraw", () => this.drawTooltip());
             $container.append(this.$tip_canvas);
 
-			// Tooltip overlay will be shown as required
-            $('.overlay').hide();
+			// hover overlays will be shown as required
+            $('.hover').hide();
 
             let resizeTimer;
-            // Debounce resizing
-            $(window) /*this.$main_canvas*/ .on('resize', () => {
+            // Debounce window resizing
+            $(window).on('resize', () => {
                 if (resizeTimer)
                     clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(() => {
 					resizeTimer = undefined;
 					this.cacheSize();
-					this.refreshAll();
+					this.redrawAll();
 				}, 100);
             });
 
 			this.cacheSize();
-            this.refreshAll();
         }
 
+		/**
+		 * Resize all contained canvases to the parent size
+		 */
 		cacheSize() {
-            this.mch = this.$main_canvas.height();
-            this.mcw = this.$main_canvas.width();
-            this.mcl = this.$main_canvas.offset().left;
-            this.mct = this.$main_canvas.offset().top;
-
-            // Rendering doesn't work unless you force the attrs
-            this.$main_canvas.attr("width", this.mcw);
-            this.$main_canvas.attr("height", this.mch);
-            this.$crosshair_canvas.attr("width", this.mcw);
-            this.$crosshair_canvas.attr("height", this.mch);
+            this.mch = this.$container.height();
+            this.mcw = this.$container.width();
+            this.$container.find("canvas").each((i, el) => {
+				$(el)
+				.prop("width", this.mcw)
+				.prop("height", this.mch);
+			});
 		}
 
 		/**
@@ -113,14 +127,14 @@ define("browser/js/TimelineCanvas", [
 		 */
 		setTimeline(tl) {
 			this.timeline = tl;
-			this.refreshAll();
+			this.redrawAll();
 		}
 
         /** @private */
-        refreshAll() {
-            this.$main_canvas.trigger("redraw");
-            this.$tip_canvas.trigger("redraw");
-            this.$crosshair_canvas.trigger("redraw");
+        redrawAll() {
+            this.$container
+			.find("canvas")
+			.trigger("redraw");
         }
 
         /** @private */
@@ -158,8 +172,8 @@ define("browser/js/TimelineCanvas", [
          */
         mouse2xy(e) {
             return {
-                x: e.pageX - this.mcl,
-                y: e.pageY - this.mct
+                x: e.pageX - this.$container.offset().left,
+                y: e.pageY - this.$container.offset().top
             };
         }
 
@@ -194,39 +208,44 @@ define("browser/js/TimelineCanvas", [
          * @private
          */
         drawTooltip() {
-			const xy = this.cursor_pos;
-            if (!xy)
+            if (!this.cursor_pos)
                 return;
+			const xy = {
+				x: this.cursor_pos.x,
+				y: this.cursor_pos.y
+			};
             const tv = this.xy2tv(xy);
 
 			if (!this.timeline)
 				return;
 
-            const fg = "white";
             const ts = Time.formatHMS(tv.time);
             const vs = tv.value.toFixed(1);
-            const text = `  ${ts} : ${vs}`;
+            const text = `${ts} : ${vs}`;
 
             const tipCtx = this.$tip_canvas[0].getContext("2d");
+            tipCtx.font = `${TIP_HEIGHT}px sans-serif`;
             const tw = tipCtx.measureText(text).width;
-            const th = 10;
-
             // CSS just stretches the content
             tipCtx.canvas.width = tw;
-            tipCtx.canvas.height = th;
-
-            tipCtx.fillStyle = fg;
-            tipCtx.font = `${th}px sans-serif`;
+            tipCtx.canvas.height = TIP_HEIGHT;
+            tipCtx.fillStyle = 'white';
 
             // Move the tip to the left if too near right edge
+			xy.x += 1;
             if (xy.x + tw > this.mcw)
-                xy.x -= tw + 2; // plus a bit to clear the cursor
+                xy.x -= tw + 3;
+
+			// Or too near the bottom
+			xy.y += 3;
+			if (xy.y + TIP_HEIGHT > this.mch)
+				xy.y -= TIP_HEIGHT + 3;
 
             this.$tip_canvas.css({
-                left: `${(xy.x + this.mcl)}px`,
-                top: `${(xy.y + this.mct)}px`,
+                left: `${xy.x}px`,
+                top: `${xy.y}px`,
                 width: tw,
-                height: th
+                height: TIP_HEIGHT
             });
             tipCtx.textBaseline = "top";
             if (text.indexOf("NaN") >= 0)
@@ -238,12 +257,6 @@ define("browser/js/TimelineCanvas", [
 			const xy = this.cursor_pos;
             if (!xy || !this.timeline)
                 return;
-            this.$crosshair_canvas.css({
-                left: this.mcl,
-                top: this.mct,
-                width: this.mcw,
-                height: this.mch
-            });
             const tv = this.xy2tv(xy);
 
 			const ctx = this.$crosshair_canvas[0].getContext("2d");
@@ -325,17 +338,122 @@ define("browser/js/TimelineCanvas", [
             ctx.lineTo(this.mcw, iv);
 
             ctx.stroke();
-
-            if (this.is_editing) {
-                ctx.fillStyle = 'rgba(0,255,0,0.5)';
-                for (let i = 0; i < this.timeline.nPoints; i++) {
-                    const p = this.tvi2xy(i);
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, POINT_RADIUS, 0, 2 * Math.PI, false);
-                    ctx.fill();
-                }
-            }
         }
+
+		/**
+		 * Add a trace
+		 * @param {string} name either "pin" or "thermostat"
+		 * @param {boolean} is_binary if this is a simple on/off trace
+		 * @param {integer[]} data trace. The first entry is an absolute time.
+		 * Subsequent values are alternate time/value.
+		 */
+		addTrace(name, is_binary, data) {
+			const trace = {
+				name: name,
+				is_binary: is_binary,
+				points: [],
+				$canvas: $("<canvas></canvas>")
+			};
+			const offset = data[0] || 0; // might be null
+			for (let i = 1; i < data.length; i += 2) {
+				trace.points.push({
+                    time: offset + (data[i] || 0),
+                    value: data[i + 1] || 0
+                });
+			}
+			this.traces[name] = trace;
+			trace.$canvas
+			.addClass(`${name}_canvas overlay`)
+            .css("z-index", 3)
+            .on("redraw", () => this.drawTrace(name));
+            this.$container.append(trace.$canvas);
+
+			this.cacheSize();
+			trace.$canvas.trigger("redraw");
+		}
+
+		/**
+         * @private
+         */
+        drawTrace(name) {
+			const trace = this.traces[name];
+            if (!trace || trace.points.length < 1)
+                return;
+			const points = trace.points;
+            const ctx = trace.$canvas[0].getContext("2d");
+            ctx.clearRect(0, 0, this.mcw, this.mch);
+
+            const base = trace.is_binary ? this.timeline.max / 10 : 0;
+            const binary = trace.is_binary ? this.timeline.max / 10 : 1;
+
+            // Draw from current time back to 0
+            ctx.strokeStyle = COLOURS[name];
+            ctx.beginPath();
+            let midnight = Time.midnight();
+            let i = points.length - 1;
+            const now = points[i].time;
+            let lp;
+
+            const nextPoint = (tv, last_tv) => {
+                const tp = {
+                    time: tv.time - midnight,
+                    value: base + tv.value * binary
+                };
+                const xy = this.tv2xy(tp);
+                if (!last_tv) {
+                    ctx.moveTo(xy.x, xy.y);
+                } else {
+                    if (trace.is_binary && tp.value != last_tv.value) {
+                        const lxy = this.tv2xy({
+                            time: last_tv.time,
+                            value: tp.value
+                        });
+                        ctx.lineTo(lxy.x, lxy.y);
+                    }
+                    ctx.lineTo(xy.x, xy.y);
+                }
+                return tp;
+            };
+
+            while (i >= 0 && points[i].time > midnight) {
+                lp = nextPoint(points[i--], lp);
+            }
+            ctx.stroke();
+
+            // Draw from midnight back to same time yesterday
+            ctx.strokeStyle = "#009900";
+            ctx.beginPath();
+            const stop = now - ONE_DAY;
+            midnight -= ONE_DAY;
+            lp = undefined;
+            while (i >= 0 && points[i].time > stop) {
+                lp = nextPoint(points[i--], lp);
+            }
+            ctx.stroke();
+        }
+
+		/**
+		 * Update a trace with a new sample
+		 * @param {string} name either pin or thermostat
+		 * @param {number} time sample time in epoch ms
+		 * @param {number} value sample value
+		 */
+		updateTrace(name, time, value) {
+			// Cut off trace 24h before current time
+            const cutoff = Date.now() - ONE_DAY;
+            // Discard samples > 24h old
+			const points = this.traces[name].points;
+            points.push({
+                time: time,
+                value: value
+            });
+			// Trim out of range points
+            while (points.length > 0 && points[0].time < cutoff)
+                points.shift();
+			//this.drawTrace(name);
+			// debug some day why the timeline is lost if we redraw too early
+			this.redrawAll();
+		}
     }
     return TimelineCanvas;
 });

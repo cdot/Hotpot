@@ -2,7 +2,9 @@
 
 /*eslint-env node */
 
-define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel", "common/js/Location"], function (fs, Url, Utils, DataModel, Location) {
+define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel", "common/js/Location"], (fs, Url, Utils, DataModel, Location) => {
+
+	'use strict';
 
     const TAG = "Server";
 
@@ -125,7 +127,7 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
             let promise = Promise.resolve();
 
             if (typeof this.ssl !== "undefined") {
-                let options = {};
+                const options = {};
 
                 promise = promise
 
@@ -271,7 +273,6 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
          * @private
          */
         GET(request, response) {
-            "use strict";
             try {
                 // Parse URL parameters and pass them as the data
                 let req = Url.parse("" + request.url, true);
@@ -290,8 +291,6 @@ define("server/js/Server", ["fs", "url", "common/js/Utils", "common/js/DataModel
          * @private
          */
         POST(request, response) {
-            "use strict";
-
             let body = [];
             request
                 .on("data", chunk => body.push(chunk))

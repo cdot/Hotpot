@@ -11,6 +11,8 @@ define("browser/js/TimelineView", [
 	"jquery-touch-events"
 ], (Time, DataModel, Timeline, TimelineCanvas) => {
 
+	'use strict';
+
     // Frequency of going back to the server for state
     const UPDATE_BACKOFF = 10000; // milliseconds
 
@@ -41,8 +43,17 @@ define("browser/js/TimelineView", [
             this.$container.find("[name=title]")
 			.text(`${this.service}`);
 
-			const $graph = this.$container.find("[name=graph]");
-			this.$canvas = new TimelineCanvas($graph);
+			const $graph = this.$container.find(".graph");
+			this.timelineCanvas = new TimelineCanvas($graph);
+
+			this.otherHeight = 500;
+			$graph.on("click", () => {
+				const h = this.otherHeight;
+				this.otherHeight = $graph.height();
+				$graph.css("height", h);
+				this.timelineCanvas.cacheSize();
+				this.timelineCanvas.redrawAll();
+			});
 
 			this.changed = false;
 
@@ -59,6 +70,43 @@ define("browser/js/TimelineView", [
                 min: 0,
                 max: 25
             }));
+
+			$(document).on("poll", () => this.poll());
+
+			// Get the last 24 hours of logs
+            const ajaxParams = {
+                since: Date.now() - 24 * 60 * 60
+            };
+            const promises = [
+				$.getJSON(`/ajax/log/thermostat/${this.service}`,
+						  JSON.stringify(ajaxParams), trace => {
+							  this.timelineCanvas.addTrace(
+								  "thermostat", false, trace);
+						  })
+				.fail((jqXHR, textStatus, errorThrown) => {
+                    console.log("Could not contact server: " + errorThrown);
+                }),
+				$.getJSON(`/ajax/log/pin/${this.service}`,
+						  JSON.stringify(ajaxParams), trace => {
+							  this.timelineCanvas.addTrace("pin", true, trace);
+						  })
+				.fail((jqXHR, textStatus, errorThrown) => {
+                    console.log("Could not contact server: " + errorThrown);
+                }),
+				$.getJSON(`/ajax/getconfig/thermostat/${this.service}/timeline`)
+				.fail((jqXHR, textStatus, errorThrown) => {
+                    console.log("Could not contact server: " + errorThrown);
+                })
+				.done(tl => {
+                    DataModel.remodel(this.service, tl, Timeline.Model)
+                        .then(timel => {
+                            this.setTimeline(timel);
+                        });
+                })
+			];
+
+           Promise.all(promises)
+            .then(() => $(document).trigger("poll"));
         }
 
 		setChanged() {
@@ -73,7 +121,7 @@ define("browser/js/TimelineView", [
 				const tp = tl.getPoint(i);
 				this._decoratePoint(tp);
 			}
-			this.$canvas.setTimeline(tl);
+			this.timelineCanvas.setTimeline(tl);
 		}
 
 		addPoint(tp) {
@@ -114,7 +162,7 @@ define("browser/js/TimelineView", [
 					this.timeline.setValue(tp, Number.parseFloat(s));
 					this.setChanged();
 					$temp.text(tp.value);
-					this.$canvas.refreshAll();
+					this.timelineCanvas.refreshAll();
 				}
 			});
 		}
@@ -151,7 +199,6 @@ define("browser/js/TimelineView", [
          * @private
          */
         saveTimeline() {
-            console.log("Send timeline update to server");
             DataModel.getSerialisable(this.timeline, Timeline.Model)
                 .then(serialisable => {
                     $.post(
@@ -188,6 +235,35 @@ define("browser/js/TimelineView", [
 				$("#main").show();
 			}
 		}
+
+		/**
+         * Wake up on schedule and refresh the graph
+         * @private
+         */
+        poll() {
+            if (this.poller) {
+                clearTimeout(this.poller);
+                this.poller = null;
+            }
+            $.getJSON("/ajax/state")
+            .done(data => {
+                $(".showif").hide(); // hide optional content
+                this.timelineCanvas.updateTrace(
+					'thermostat',
+					data.time, data.thermostat[this.service].temperature);
+                this.timelineCanvas.updateTrace(
+					'pin', data.time, data.pin[this.service].state);
+            })
+            .fail((jqXHR, status, err) => {
+                console.log(`Could not contact server for update: ${status} ${err}`);
+            })
+            .always(() => {
+                this.poller = setTimeout(
+                    () => {
+                        $(document).trigger("poll");
+                    }, UPDATE_BACKOFF);
+            });
+        }
     }
     return TimelineView;
 });

@@ -1,6 +1,7 @@
 /*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
+/* global HOTPOT_DEBUG */
 
 define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "common/js/Time", "common/js/Timeline", "server/js/DS18x20", "server/js/Historian"], function (Utils, DataModel, Time, Timeline, DS18x20, Historian) {
 
@@ -165,7 +166,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
                             } else {
                                 // Fall back to debug
                                 this.sensor = HOTPOT_DEBUG.getService(this.name);
-                                console.error(`Falling back to debug service for thermostat '${this.name}'`);
+                                console.error(`Falling back to simulator for thermostat '${this.name}'`);
                                 resolve(this.sensor.getTemperature());
                             }
                         });

@@ -124,7 +124,9 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
         getSerialisableHistory(since) {
             return this._loadFromFile()
                 .then(report => {
-                    const basetime = report.length > 0 ? report[0].time : Date.now();
+                    const basetime = report.length > 0
+						  ? (report[0].time || 0)
+						  : Date.now();
                     const res = [basetime];
                     for (let i in report) {
                         if (typeof since === "undefined" || report[i].time >= since) {

@@ -1,6 +1,7 @@
 /*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
+/*global HOTPOT_DEBUG*/
 
 define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Historian"], function (Utils, Gpio, Historian) {
 
@@ -58,19 +59,19 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
         initialise() {
             Utils.TRACE(TAG, `Initialising pin ${this.name}`);
             return this.Gpio.initialiseGpio("out", "low")
-                .catch(e => {
-                    console.error(`Pin ${this.name} initialisation failed ${e}`);
-                    if (typeof HOTPOT_DEBUG === "undefined") {
-                        console.error("--debug not enabled");
-                        // if we can't talk to GPIO and we can't start debug,
-                        // then this is something the sysadmin has to resolve.
-                        throw e;
-                    }
-                    // Fall back to debug
-                    this.Gpio = HOTPOT_DEBUG.getService(this.name);
-                    console.error(`Falling back to debug service for pin '${this.name}'`);
-                    return this;
-                });
+            .catch(e => {
+                console.error(`Pin ${this.name} initialisation failed ${e}`);
+                if (typeof HOTPOT_DEBUG === "undefined") {
+                    console.error("--debug not enabled");
+                    // if we can't talk to GPIO and we can't start debug,
+                    // then this is something the sysadmin has to resolve.
+                    throw e;
+                }
+                // Fall back to debug
+                this.Gpio = HOTPOT_DEBUG.getService(this.name);
+                console.error(`Falling back to simulator for pin '${this.name}'`);
+                return this;
+            });
         }
 
         /**

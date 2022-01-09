@@ -6,7 +6,9 @@
  * Main module for managing the browser interface to a Hotpot server.
  * @module browser/Hotpot
  */
-define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "browser/js/TimelineView"], function (Utils, Time, TimelineView) {
+define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "browser/js/TimelineView"], (Utils, Time, TimelineView) => {
+
+	'use strict';
 
     const UPDATE_BACKOFF = 20; // seconds
 
