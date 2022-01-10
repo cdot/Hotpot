@@ -214,7 +214,7 @@ define("server/js/Thermostat", ["common/js/Utils", "common/js/DataModel", "commo
          */
         getSerialisableLog(since) {
             if (this.history)
-                return this.history.getSerialisableHistory(since);
+                return this.history.encodeTrace(since);
             return Promise.resolve();
         }
 

@@ -6,7 +6,12 @@
  * Main module for managing the browser interface to a Hotpot server.
  * @module browser/Hotpot
  */
-define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "browser/js/TimelineView"], (Utils, Time, TimelineView) => {
+define("browser/js/Hotpot", [
+	"common/js/Utils",
+	"common/js/Time",
+	"common/js/TimeValue",
+	"browser/js/TimelineView"
+], (Utils, Time, TimeValue, TimelineView) => {
 
 	'use strict';
 
@@ -275,11 +280,8 @@ define("browser/js/Hotpot", ["common/js/Utils", "common/js/Time", "browser/js/Ti
 								$(this).dialog("close");
 								const tim = $dlg.find("[name=time]").val();
 								const val = $dlg.find("[name=temp]").val();
-								tlv.addPoint(
-									{
-										time: Time.parse(tim),
-										value: Number.parseFloat(val)
-									});
+								tlv.addTimelinePoint(
+									new TimeValue(tim, Number.parseFloat(val)));
 							}
 						}
 					]

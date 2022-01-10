@@ -33,7 +33,7 @@ requirejs(["common/test/TestRunner", "server/js/Historian", "common/js/Utils", "
 		.then(() => h.record(-1, 1))
 		.then(() => h.record(-2, 2))
 
-		.then(() => h.getSerialisableHistory())
+		.then(() => h.encodeTrace())
 
 		.then(report => {
 			assert.equal(report.length, 7);
@@ -63,7 +63,7 @@ requirejs(["common/test/TestRunner", "server/js/Historian", "common/js/Utils", "
 				() => {
 					if (nsamples >= COUNT) {
 						h.stop();
-						h.getSerialisableHistory()
+						h.encodeTrace()
 						.then(report => {
 							assert.equal(report.length, 2 * COUNT + 1);
 							let last_t = -INTERVAL;

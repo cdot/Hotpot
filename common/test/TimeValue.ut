@@ -1,0 +1,64 @@
+/*@preserve Copyright (C) 2022 Crawford Currie http://c-dot.co.uk license MIT*/
+
+/*eslint-env node, mocha */
+
+let requirejs = require('requirejs');
+requirejs.config({
+	baseUrl: __dirname + "/../.."
+});
+
+requirejs([
+	"common/test/TestRunner",
+	"common/js/Time",
+	"common/js/TimeValue",
+	"common/js/DataModel",
+	"common/js/Utils"
+], (TestRunner, Time, TimeValue, Timeline, DataModel, Utils) => {
+
+	const tr = new TestRunner("TimeValue");
+	const assert = tr.assert;
+
+	tr.addTest('construct', () => {
+		let a = new TimeValue(10, 999);
+		assert.equal(a.time, 10);
+		assert.equal(a.value, 999);
+		a = new TimeValue("00:10", 999);
+		assert.equal(a.time, 600000);
+		assert.equal(a.value, 999);
+		a = new TimeValue("00:10", "999");
+		assert.equal(a.time, 600000);
+		assert.equal(a.value, 999);
+		a = new TimeValue({
+			time: "00:10", value: "99.9"
+		});
+		assert.equal(a.time, 600000);
+		assert.equal(a.value, 99.9);
+	});
+
+	tr.addTest('getSerialisable', () => {
+		const a = new TimeValue({
+			time: "00:10", value: "99.9"
+		});
+		a.getSerialisable()
+		.then(a => {
+			assert.equal(a.time, "00:10");
+			assert.equal(a.value, 99.9);
+		});
+	});
+
+	tr.addTest('encode/decode trace', () => {
+		const trace = [
+			new TimeValue(1, 1000),
+			new TimeValue(11, 100),
+			new TimeValue(29, 1)
+		];
+
+		const data = TimeValue.encodeTrace(trace, 0);
+		assert.deepEqual(data, [1, 0, 1000, 10, 100, 28, 1]);
+
+		const retrace = TimeValue.decodeTrace(data);
+		assert.deepEqual(retrace, trace);
+	});
+
+	tr.run();
+});

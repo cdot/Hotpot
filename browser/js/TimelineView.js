@@ -5,11 +5,12 @@
 define("browser/js/TimelineView", [
 	"common/js/Time",
 	"common/js/DataModel",
+	"common/js/TimeValue",
 	"common/js/Timeline",
 	"browser/js/TimelineCanvas",
 	"browser/js/edit_in_place",
 	"jquery-touch-events"
-], (Time, DataModel, Timeline, TimelineCanvas) => {
+], (Time, DataModel, TimeValue, Timeline, TimelineCanvas) => {
 
 	'use strict';
 
@@ -81,14 +82,17 @@ define("browser/js/TimelineView", [
 				$.getJSON(`/ajax/log/thermostat/${this.service}`,
 						  JSON.stringify(ajaxParams), trace => {
 							  this.timelineCanvas.addTrace(
-								  "thermostat", false, trace);
+								  "thermostat", false,
+								  TimeValue.decodeTrace(trace));
 						  })
 				.fail((jqXHR, textStatus, errorThrown) => {
                     console.log("Could not contact server: " + errorThrown);
                 }),
 				$.getJSON(`/ajax/log/pin/${this.service}`,
 						  JSON.stringify(ajaxParams), trace => {
-							  this.timelineCanvas.addTrace("pin", true, trace);
+							  this.timelineCanvas.addTrace(
+								  "pin", true,
+								  TimeValue.decodeTrace(trace));
 						  })
 				.fail((jqXHR, textStatus, errorThrown) => {
                     console.log("Could not contact server: " + errorThrown);
@@ -124,13 +128,13 @@ define("browser/js/TimelineView", [
 			this.timelineCanvas.setTimeline(tl);
 		}
 
-		addPoint(tp) {
+		addTimelinePoint(tp) {
 			this.timeline.insert(tp);
 			this.setChanged();
 			this.setTimeline(this.timeline);
 		}
 
-		removePoint(tp) {
+		removeTimelinePoint(tp) {
 			this.timeline.remove(tp);
 			this.setChanged();
 			this.setTimeline(this.timeline);
@@ -186,7 +190,7 @@ define("browser/js/TimelineView", [
 			const $controls = $("<td></td>");
 			if (tp.time > 0) {
 				const $delete = $('<img class="image_button" src="/browser/images/wastebin.svg" />');
-				$delete.on('click', () => this.removePoint(tp));
+				$delete.on('click', () => this.removeTimelinePoint(tp));
 				$controls.append($delete);
 			}
 			$row.append($controls);
@@ -248,11 +252,13 @@ define("browser/js/TimelineView", [
             $.getJSON("/ajax/state")
             .done(data => {
                 $(".showif").hide(); // hide optional content
-                this.timelineCanvas.updateTrace(
+                this.timelineCanvas.addSample(
 					'thermostat',
-					data.time, data.thermostat[this.service].temperature);
-                this.timelineCanvas.updateTrace(
-					'pin', data.time, data.pin[this.service].state);
+					new TimeValue(
+						data.time, data.thermostat[this.service].temperature));
+                this.timelineCanvas.addSample(
+					'pin',
+					new TimeValue(data.time, data.pin[this.service].state));
             })
             .fail((jqXHR, status, err) => {
                 console.log(`Could not contact server for update: ${status} ${err}`);

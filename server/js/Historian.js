@@ -1,11 +1,15 @@
-/*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
+/*@preserve Copyright (C) 2016-2022 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
 
-define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "common/js/DataModel"], function (fs, Time, Utils, DataModel) {
+define("server/js/Historian", [
+	"fs",
+	"common/js/Time",
+	"common/js/TimeValue",
+	"common/js/Utils"
+], (fs, Time, TimeValue, Utils) => {
 
     const TAG = "Historian";
-
     const Fs = fs.promises;
 
     /**
@@ -13,14 +17,12 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
      * callback, or only on demand.
      * @param {string} name identifier
      * @param {object} proto see Historian.Model
-     * If `sample` is not given, or `start()` is not called, sampling is only by
-     * calling `record()`
      * @class
      */
     class Historian {
 
         /**
-         * @param {object} proto data blck with initial fields
+         * @param {object} proto data block with initial fields
          * @param {string} name name of the historian
          */
         constructor(proto, name) {
@@ -47,7 +49,7 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
         _rewriteFile(report) {
             let s = "";
             for (let i = 0; i < report.length; i++)
-                s += `${report[i].time},${report[i].sample}\n`;
+                s += `${report[i].time},${report[i].value}\n`;
             return Fs.writeFile(this.path(), s)
                 .then(() => {
                     Utils.TRACE(TAG, "Wrote ", this.path());
@@ -69,11 +71,10 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                     for (i in lines) {
                         let csv = lines[i].split(",", 2);
                         if (csv.length === 2) {
-                            let point = {
-                                time: parseFloat(csv[0]),
-                                sample: parseFloat(csv[1])
-                            };
-                            report.push(point);
+                            report.push(new TimeValue(
+                                parseFloat(csv[0]),
+                                parseFloat(csv[1])
+                            ));
                         }
                     }
                     if (this.unordered && report.length > 1) {
@@ -96,10 +97,8 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
                         });
                         for (i = 0; i < doomed.length; i++) {
                             if (!doomed[i].dead)
-                                report.push({
-                                    time: doomed[i].time,
-                                    sample: doomed[i].sample
-                                });
+                                report.push(new TimeValue(
+                                    doomed[i].time, doomed[i].value));
                         }
                         if (report.length !== doomed.length)
                             this._rewriteFile(report);
@@ -116,26 +115,15 @@ define("server/js/Historian", ["fs", "common/js/Time", "common/js/Utils", "commo
         /**
          * Get a promise for a serialisable 1D array for the history.
          * @param {number} since earliest datime we are interested
-         * in. Can prune log data before this.
+         * in, ignore samples before this.
          * @return {Promise} resolves to an array. First element is
          * the base time in epoch ms, subsequent elements are
-         * alternating times and samples. Times are in ms.
+         * alternating delta times (relative to basetime, in ms) and
+		 * sample values.
          */
-        getSerialisableHistory(since) {
+        encodeTrace(since) {
             return this._loadFromFile()
-                .then(report => {
-                    const basetime = report.length > 0
-						  ? (report[0].time || 0)
-						  : Date.now();
-                    const res = [basetime];
-                    for (let i in report) {
-                        if (typeof since === "undefined" || report[i].time >= since) {
-                            res.push(report[i].time - basetime);
-                            res.push(report[i].sample);
-                        }
-                    }
-                    return res;
-                });
+            .then(trace => TimeValue.encodeTrace(trace, since));
         };
 
         /**

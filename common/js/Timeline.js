@@ -2,71 +2,14 @@
 
 /*eslint-env browser,node */
 
-define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/js/Time'], function (Utils, DataModel, Time) {
+define("common/js/Timeline", [
+	'common/js/Utils',
+	'common/js/DataModel',
+	'common/js/Time',
+	'common/js/TimeValue'
+], (Utils, DataModel, Time, TimeValue) => {
 
     const TAG = "Timeline";
-
-    /**
-     * A point on a {@link Timeline}
-     */
-    class Timepoint {
-
-        /**
-         * Construct from a configuration data block built using
-         * {@link DataModel} and Model
-         */
-        constructor(proto) {
-            /**
-             * time (epoch ms relative to start of timeline)
-             * @member
-             */
-            this.time = undefined;
-
-            /**
-             * value at this time
-             * @member
-             */
-            this.value = undefined;
-
-            Utils.extend(this, proto);
-
-            if (typeof this.time === "string") {
-                const s = this.time;
-                delete this.time;
-                this.time = Time.parse(s);
-            }
-        }
-
-        /**
-         * Promise to get a serialisable version of the point
-         * @return {Promise} Promise resolving to a Timepoint
-         */
-        getSerialisable() {
-            return Promise.resolve({
-                time: Time.formatHMS(this.time),
-                value: this.value
-            });
-        }
-    }
-
-    /**
-     * Configuration model, for use with {@link DataModel}
-     * @typedef Timepoint.Model
-     * @property {number} time time of the point
-     * @property {number} value value at the point
-     */
-    Timepoint.Model = {
-        $class: Timepoint,
-        $doc: "vertex on a timeline graph",
-        time: {
-            $unchecked: true,
-            $doc: "time"
-        },
-        value: {
-            $class: Number,
-            $doc: "value at this time"
-        }
-    };
 
     /**
      * A timeline is an object that represents a continuous graph
@@ -83,29 +26,29 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
          * {@link DataModel} and Model
 		 * @param {object} proto see Timeline.Model
          */
-        constructor(proto, index, model) {
+        constructor(proto) {
 
             /**
              * minimum possible value
-             * @member
+             * @member {number}
              */
             this.min = undefined;
 
             /**
              * maximum possible value
-             * @member
+             * @member {number}
              */
             this.max = undefined;
 
             /**
              * period of timeline in ms
-             * @member
+             * @member {number}
              */
             this.period = undefined;
 
             /**
-             * Array of {@link Timepoint}
-             * @member
+             * Array of {@link TimeValue}
+             * @member {TimeValue[]}
              */
             this.points = undefined;
 
@@ -126,10 +69,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
             if (this.points.length === 0
 				|| this.points[0].time != 0) {
 				// There is always a point at 00:00
-                this.points.unshift(new Timepoint({
-                    time: 0,
-                    value: this.min
-                }));
+                this.points.unshift(new TimeValue(0, this.min));
             }
         }
 
@@ -151,7 +91,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
 		/**
 		 * Get the index of a timepoint in the timeline
-		 * @param {Timepoint} tp timepoint to find
+		 * @param {TimeValue} tp timepoint to find
 		 * @return {number} index of point, or -1 if not found
 		 */
 		getIndexOf(tp) {
@@ -187,7 +127,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
        /**
          * Get the point that precedes the given time.
          * @param {number} t the time to test
-         * @return {Timepoint} the point
+         * @return {TimeValue} the point
          */
         getPointBefore(t) {
             if (t < 0 || t >= this.period)
@@ -206,7 +146,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
          * Get the point that follows the given time. If the time is exactly
 		 * the time of an existing timepoint, return that timepoint.
          * @param {number} t the time to test
-         * @return {Timepoint} the point, or null if the time is between
+         * @return {TimeValue} the point, or null if the time is between
 		 * the last point and the end of the timeline
 		 * @throws {Error} if t is outside the timeline
          */
@@ -224,13 +164,13 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
         /**
          * Get the value at the given time
          * @param {number} t the time, must be in range of the timeline
-         * @return{float}the value at time t
+         * @return{float} the value at time t
          */
         valueAtTime(t) {
 			const p0 = this.getPointBefore(t);
 			let p1 = this.getPointAfter(t);
 			if (p1 === null)
-				p1 = { time: this.period, value: this.points[0].value };
+				p1 = new TimeValue(this.period, this.points[0].value);
 			if (p1 === p0)
 				return p0.value;
 			// Interpolate between prev point and next point
@@ -250,7 +190,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
         /**
          * Remove the point from the timeline
-         * @param {Timepoint} pt point to remove
+         * @param {TimeValue} pt point to remove
          * @return {Timeline} this
          */
         remove(tp) {
@@ -273,7 +213,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
         /**
          * Get the point at the given index
          * @param {number} i index
-         * @return {Timepoint} the point object
+         * @return {TimeValue} the point object
          */
         getPoint(i) {
             if (i < 0 || i >= this.points.length)
@@ -285,7 +225,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
 
 		/**
 		 * Insert a new point
-		 * @param {Timepoint} tp the point to add
+		 * @param {TimeValue} tp the point to add
 		 * @return {boolean} true if the point was inserted
 		 */
 		insert(tp) {
@@ -309,7 +249,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
      * @property {number} min minimum possible value
      * @property {number} max maximum possible value
      * @property {number} period period of timeline in ms
-     * @property {Timepoint[]} points Array of time points
+     * @property {TimeValue[]} points Array of time points
      */
     Timeline.Model = {
         $class: Timeline,
@@ -331,7 +271,7 @@ define("common/js/Timeline", ['common/js/Utils', 'common/js/DataModel', 'common/
         points: {
             $doc: "Array of time points",
             $array_of: {
-                $class: Timepoint
+                $class: TimeValue
             }
         }
     };

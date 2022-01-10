@@ -10,10 +10,11 @@ requirejs.config({
 requirejs([
 	"common/test/TestRunner",
 	"common/js/Time",
+	"common/js/TimeValue",
 	"common/js/Timeline",
 	"common/js/DataModel",
 	"common/js/Utils"
-], (TestRunner, Time, Timeline, DataModel, Utils) => {
+], (TestRunner, Time, TimeValue, Timeline, DataModel, Utils) => {
 	const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
 	var test_line_proto = {
@@ -21,9 +22,9 @@ requirejs([
 		max: 100,
 		period: 31,
 		points: [
-			{ time: 1, value: 1000 },
-			{ time: 11, value: 100 },
-			{ time: 29, value: 10 }
+			new TimeValue(1, 1000),
+			new TimeValue(11, 100),
+			new TimeValue(29, 1)
 		]
 	};
 
@@ -71,7 +72,7 @@ requirejs([
 
 	tr.addTest('manipulate points', () => {
 		var tl = new Timeline(test_line_proto);
-		tl.insert({ time: 2, value: 200 });
+		tl.insert(new TimeValue(2, 200));
 		assert.equal(tl.nPoints, 5);
 
 		let tp = tl.getPoint(2);
@@ -94,9 +95,9 @@ requirejs([
 			max: 1000,
 			period: 30,
 			points: [
-				{ time: 0, value: 0 },
-				{ time: 10, value: 100 },
-				{ time: 20, value: 1000 }
+				new TimeValue(0, 0),
+				new TimeValue(10, 100),
+				new TimeValue(20, 1000)
 			]
 		});
 		var p = tl.getPoint(2);

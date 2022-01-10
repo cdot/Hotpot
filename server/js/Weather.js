@@ -94,7 +94,7 @@ define("server/js/Weather", [
         getSerialisableLog(since) {
             if (!this.history)
                 return Promise.resolve();
-            return this.history.getSerialisableHistory(since)
+            return this.history.encodeTrace(since)
                 .then(h => {
                     // Clip to the current time
                     let before = -1,

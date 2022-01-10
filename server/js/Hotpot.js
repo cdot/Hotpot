@@ -1,6 +1,7 @@
 /*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
+/* global HOTPOT_DEBUG*/
 
 /**
  * Main program for heating control server

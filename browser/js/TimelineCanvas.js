@@ -13,8 +13,8 @@ define("browser/js/TimelineCanvas", [
 	const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
 	const COLOURS = {
-		pin: "red",
-		thermostat: "#00AA00"
+		pin: { past: "red", future: "#990000" },
+		thermostat: { past: "#00AA00", future: "#009900" }
 	};
 
     /**
@@ -23,8 +23,18 @@ define("browser/js/TimelineCanvas", [
      * @property {number} y y coordinate
      */
 
+	/**
+	 * @typedef {object} TimelineCanvas.Trace
+	 * @property {string} name "pin" or "thermostat"
+	 * @property {boolean} is_binary true if the trace only have 0|1 values
+	 * @property {Timeline.TimeValue[]} points points on the timeline
+	 * @property {jQuery} $canvas canvas specific to this trace
+	 */
+
     /**
-     * Canvas that supports the display of a {@link Timeline}.
+     * Canvas that supports the display of a {@link Timeline} and one or
+	 * more log traces. A crosshair cursor displays time and temperature
+	 * of the timeline.
      * Construct over a div, which will be the container for the canvas.
      */
     class TimelineCanvas {
@@ -41,6 +51,7 @@ define("browser/js/TimelineCanvas", [
 
 			/**
 			 * Traces to be displayed
+			 * @member
 			 */
 			this.traces = [];
 
@@ -139,22 +150,15 @@ define("browser/js/TimelineCanvas", [
 
         /** @private */
         handleMouseMove(e) {
-            let xy = this.e2xy(e);
-            let tv = this.xy2tv(xy);
-            this.cursor_pos = xy;
+            this.cursor_pos = this.e2xy(e);
             this.$tip_canvas.trigger("redraw");
             this.$crosshair_canvas.trigger("redraw");
-        }
-
-        /** @private */
-        tvi2xy(i) {
-            return this.tv2xy(this.timeline.getPoint(i));
         }
 
         /**
          * Map a touch event to an XY point
          * @param {Event} e the event
-         * @return {{x: number, y: number}} the XY point
+         * @return {TimelineCanvas.Point} the XY point
          * @private
          */
         e2xy(e) {
@@ -167,7 +171,7 @@ define("browser/js/TimelineCanvas", [
         /**
          * Map a mouse event to an XY point
          * @param {Event} e the event
-         * @return {{x: number, y: number}} the XY point
+         * @return {TimelineCanvas.Point} the XY point
          * @private
          */
         mouse2xy(e) {
@@ -178,9 +182,11 @@ define("browser/js/TimelineCanvas", [
         }
 
         /**
-         * Convert a timeline point to canvas space
-         * @private
-         */
+		 * Map a time-value to an x-y in canvas coords
+		 * @param {Timeline.TimeValue} p time-value point
+		 * @return {TimelineCanvas.Point} point in canvas coords
+		 * @private
+		 */
         tv2xy(p) {
             return {
                 x: (p.time * this.mcw) / this.timeline.period,
@@ -191,7 +197,9 @@ define("browser/js/TimelineCanvas", [
         }
 
         /**
-         * Convert a canvas point to timeline space (integer ms)
+         * Convert a canvas point to timeline space
+		 * @param {TimelineCanvas.Point} p canvas point
+		 * @return {Timeline.TimeValue} time-value point
          * @private
          */
         xy2tv(p) {
@@ -253,6 +261,10 @@ define("browser/js/TimelineCanvas", [
             tipCtx.fillText(text, 0, 0);
         };
 
+		/**
+		 * Draw the crosshair canvas
+         * @private
+		 */
 		drawCrosshairs() {
 			const xy = this.cursor_pos;
             if (!xy || !this.timeline)
@@ -328,7 +340,7 @@ define("browser/js/TimelineCanvas", [
             ctx.strokeStyle = "white";
 			let iv;
             for (let i = 0; i < this.timeline.nPoints; i++) {
-                const p = this.tvi2xy(i);
+                const p = this.tv2xy(this.timeline.getPoint(i));
                 if (i === 0) {
 					iv = p.y;
 					ctx.moveTo(p.x, p.y);
@@ -344,35 +356,27 @@ define("browser/js/TimelineCanvas", [
 		 * Add a trace
 		 * @param {string} name either "pin" or "thermostat"
 		 * @param {boolean} is_binary if this is a simple on/off trace
-		 * @param {integer[]} data trace. The first entry is an absolute time.
-		 * Subsequent values are alternate time/value.
+		 * @param {Timeline.TimeValue[]} data sample trace
 		 */
 		addTrace(name, is_binary, data) {
 			const trace = {
 				name: name,
 				is_binary: is_binary,
-				points: [],
+				points: data,
 				$canvas: $("<canvas></canvas>")
+				.addClass(`${name}_canvas overlay`)
+				.css("z-index", 3)
+				.on("redraw", () => this.drawTrace(name))
 			};
-			const offset = data[0] || 0; // might be null
-			for (let i = 1; i < data.length; i += 2) {
-				trace.points.push({
-                    time: offset + (data[i] || 0),
-                    value: data[i + 1] || 0
-                });
-			}
-			this.traces[name] = trace;
-			trace.$canvas
-			.addClass(`${name}_canvas overlay`)
-            .css("z-index", 3)
-            .on("redraw", () => this.drawTrace(name));
             this.$container.append(trace.$canvas);
-
+			this.traces[name] = trace;
 			this.cacheSize();
 			trace.$canvas.trigger("redraw");
 		}
 
 		/**
+		 * Draw the named trace
+		 * @param {string} trane name, "thermostat" or "pin"
          * @private
          */
         drawTrace(name) {
@@ -387,7 +391,7 @@ define("browser/js/TimelineCanvas", [
             const binary = trace.is_binary ? this.timeline.max / 10 : 1;
 
             // Draw from current time back to 0
-            ctx.strokeStyle = COLOURS[name];
+            ctx.strokeStyle = COLOURS[name].future;
             ctx.beginPath();
             let midnight = Time.midnight();
             let i = points.length - 1;
@@ -421,7 +425,7 @@ define("browser/js/TimelineCanvas", [
             ctx.stroke();
 
             // Draw from midnight back to same time yesterday
-            ctx.strokeStyle = "#009900";
+            ctx.strokeStyle = COLOURS[name].past;
             ctx.beginPath();
             const stop = now - ONE_DAY;
             midnight -= ONE_DAY;
@@ -434,19 +438,15 @@ define("browser/js/TimelineCanvas", [
 
 		/**
 		 * Update a trace with a new sample
-		 * @param {string} name either pin or thermostat
-		 * @param {number} time sample time in epoch ms
-		 * @param {number} value sample value
+		 * @param {string} name trace name, either "pin" or "thermostat"
+		 * @param {Timeline.TimeValue} tv sample to add
 		 */
-		updateTrace(name, time, value) {
+		addSample(name, tv) {
 			// Cut off trace 24h before current time
             const cutoff = Date.now() - ONE_DAY;
             // Discard samples > 24h old
 			const points = this.traces[name].points;
-            points.push({
-                time: time,
-                value: value
-            });
+            points.push(tv);
 			// Trim out of range points
             while (points.length > 0 && points[0].time < cutoff)
                 points.shift();

@@ -116,15 +116,15 @@ define("server/js/Pin", ["common/js/Utils", "server/js/Gpio", "server/js/Histori
         };
 
         /**
-         * Get a promise for a log of the pin state.
+         * Get a promise for a trace of the pin state.
          * @param {number} since optional param giving start of
          * required logs as a ms datime
-         * @return {Promise} resolves to the serialisable log
+         * @return {Promise} resolves to the trace {@link Historian#encodeTrace}
          */
         getSerialisableLog(since) {
             if (!this.history)
                 return Promise.resolve();
-            return this.history.getSerialisableHistory(since);
+            return this.history.encodeTrace(since);
         };
     }
 
