@@ -3,13 +3,12 @@
   <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>HotPot remote monitor</title>
-	<link rel="icon" href="/browser/images/favicon.ico" type="image/x-icon" />
-	<!--script src="https://use.fontawesome.com/1f1fc84fe3.js"></script-->
-	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<link rel="icon" href="browser/images/favicon.ico" type="image/x-icon" />
+	<link rel="stylesheet" href="node_modules/jquery-ui-dist/jquery-ui.min.css">
+	<link rel="stylesheet" href="node_modules/jquery-ui-dist/jquery-ui.theme.min.css">
 	<link rel="stylesheet" href="browser/css/styles.css">
 	<link rel="stylesheet" href="browser/css/index.css">
-	<script data-main="browser/js/main" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.js"></script>
-
+	<script data-main="browser/js/main" src="node_modules/requirejs/require.js"></script>
   </head>
   <body>
 	<div id="main">
@@ -80,9 +79,9 @@
 	</div>
 	<div id="timeline-editor" style="display:none">
 	  <h1><span name="title"></span> timeline
-		<img id="add-timepoint" class="image_button" src="/browser/images/add-timepoint.svg" title="Add time point">
-		<img id="save-timeline" class="image_button" src="/browser/images/save.svg" title="Save timeline">
-		<img id="cancel-timeline" class="image_button" src="/browser/images/back.svg" title="Cancel edit">
+		<img id="add-timepoint" class="image_button" src="browser/images/add-timepoint.svg" title="Add time point">
+		<img id="save-timeline" class="image_button" src="browser/images/save.svg" title="Save timeline">
+		<img id="cancel-timeline" class="image_button" src="browser/images/back.svg" title="Cancel edit">
 	  </h1>
 	  <table name="table" class="timeline">
 		<thead>

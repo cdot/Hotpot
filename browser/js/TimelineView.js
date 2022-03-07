@@ -7,9 +7,7 @@ define("browser/js/TimelineView", [
 	"common/js/DataModel",
 	"common/js/TimeValue",
 	"common/js/Timeline",
-	"browser/js/TimelineCanvas",
-	"browser/js/edit_in_place",
-	"jquery-touch-events"
+	"browser/js/TimelineCanvas"
 ], (Time, DataModel, TimeValue, Timeline, TimelineCanvas) => {
 
 	'use strict';
