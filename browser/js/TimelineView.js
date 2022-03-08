@@ -165,7 +165,7 @@ define("browser/js/TimelineView", [
 					this.timeline.setValue(tp, Number.parseFloat(s));
 					this.setChanged();
 					$temp.text(tp.value);
-					this.timelineCanvas.refreshAll();
+					this.timelineCanvas.redrawAll();
 				}
 			});
 		}
