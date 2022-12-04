@@ -17,10 +17,11 @@ requirejs.config({
 	},
 	paths: {
 		"jquery": `node_modules/jquery/dist/jquery${min}`,
-		"jquery-ui": `node_modules/jquery-ui-dist/jquery-ui${min}`
+		"jquery-ui": `node_modules/jquery-ui-dist/jquery-ui${min}`,
+    "touch": "node_modules/jquery-touch-events/index"
 	}
 });
 
 requirejs(["jquery", "jquery-ui"], () => {
-	requirejs(["browser/js/Hotpot"], Hotpot => new Hotpot().begin());
+	requirejs(["browser/js/Hotpot", "touch"], Hotpot => new Hotpot().begin());
 });

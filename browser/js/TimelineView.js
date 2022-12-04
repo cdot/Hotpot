@@ -13,104 +13,107 @@ define("browser/js/TimelineView", [
 
 	'use strict';
 
-    // Frequency of going back to the server for state
-    const UPDATE_BACKOFF = 10000; // milliseconds
+  // Frequency of going back to the server for state
+  const UPDATE_BACKOFF = 10000; // milliseconds
 
-    // A day in ms
-    const DAY_IN_MS = 24 * 60 * 60 * 1000;
+  // A day in ms
+  const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
-    /**
-     * Management of a timeline edit.
-     */
-    class TimelineView {
+  /**
+   * Management of a timeline edit.
+   */
+  class TimelineView {
 
 		/**
 		 * @param {jQuery} $container Container div
 		 * @param {string} service service being edited
 		 */
-        constructor($container, service) {
+    constructor($container, service) {
 			$("#save-timeline")
 			.hide();
 
 			this.$container = $container;
 
-            /**
-             * Name of the service
-             * @member {string}
-             */
-            this.service = service;
+      /**
+       * Name of the service
+       * @member {string}
+       */
+      this.service = service;
 
-            this.$container.find("[name=title]")
+      this.$container.find("[name=title]")
 			.text(`${this.service}`);
 
 			const $graph = this.$container.find(".graph");
 			this.timelineCanvas = new TimelineCanvas($graph);
 
 			this.otherHeight = 500;
-			$graph.on("click", () => {
+      const handle_graph = () => {
 				const h = this.otherHeight;
 				this.otherHeight = $graph.height();
 				$graph.css("height", h);
 				this.timelineCanvas.cacheSize();
 				this.timelineCanvas.redrawAll();
-			});
+			};
+			$graph
+      .on("click", handle_graph)
+      .on("tap", handle_graph);
 
 			this.changed = false;
 
 			$.getJSON(`/ajax/getconfig/thermostat/${this.service}/timeline`)
 			.fail((jqXHR, textStatus, errorThrown) => {
-                console.log("Could not contact server: " + errorThrown);
-            })
+        console.log("Could not contact server: " + errorThrown);
+      })
 			.done(tl => DataModel.remodel(
 				this.service, tl, Timeline.Model)
-                  .then(timel => this.setTimeline(timel)));
+            .then(timel => this.setTimeline(timel)));
 
-            this.setTimeline(new Timeline({
-                period: DAY_IN_MS,
-                min: 0,
-                max: 25
-            }));
+      this.setTimeline(new Timeline({
+        period: DAY_IN_MS,
+        min: 0,
+        max: 25
+      }));
 
 			$(document).on("poll", () => this.poll());
 
 			// Get the last 24 hours of logs
-            const ajaxParams = {
-                since: Date.now() - 24 * 60 * 60
-            };
-            const promises = [
+      const ajaxParams = {
+        since: Date.now() - 24 * 60 * 60
+      };
+      const promises = [
 				$.getJSON(`/ajax/log/thermostat/${this.service}`,
-						  JSON.stringify(ajaxParams), trace => {
-							  this.timelineCanvas.addTrace(
-								  "thermostat", false,
-								  TimeValue.decodeTrace(trace));
-						  })
+						      JSON.stringify(ajaxParams), trace => {
+							      this.timelineCanvas.addTrace(
+								      "thermostat", false,
+								      TimeValue.decodeTrace(trace));
+						      })
 				.fail((jqXHR, textStatus, errorThrown) => {
-                    console.log("Could not contact server: " + errorThrown);
-                }),
+          console.log("Could not contact server: " + errorThrown);
+        }),
 				$.getJSON(`/ajax/log/pin/${this.service}`,
-						  JSON.stringify(ajaxParams), trace => {
-							  this.timelineCanvas.addTrace(
-								  "pin", true,
-								  TimeValue.decodeTrace(trace));
-						  })
+						      JSON.stringify(ajaxParams), trace => {
+							      this.timelineCanvas.addTrace(
+								      "pin", true,
+								      TimeValue.decodeTrace(trace));
+						      })
 				.fail((jqXHR, textStatus, errorThrown) => {
-                    console.log("Could not contact server: " + errorThrown);
-                }),
+          console.log("Could not contact server: " + errorThrown);
+        }),
 				$.getJSON(`/ajax/getconfig/thermostat/${this.service}/timeline`)
 				.fail((jqXHR, textStatus, errorThrown) => {
-                    console.log("Could not contact server: " + errorThrown);
-                })
+          console.log("Could not contact server: " + errorThrown);
+        })
 				.done(tl => {
-                    DataModel.remodel(this.service, tl, Timeline.Model)
-                        .then(timel => {
-                            this.setTimeline(timel);
-                        });
-                })
+          DataModel.remodel(this.service, tl, Timeline.Model)
+          .then(timel => {
+            this.setTimeline(timel);
+          });
+        })
 			];
 
-           Promise.all(promises)
-            .then(() => $(document).trigger("poll"));
-        }
+      Promise.all(promises)
+      .then(() => $(document).trigger("poll"));
+    }
 
 		setChanged() {
 			this.changed = true;
@@ -118,7 +121,7 @@ define("browser/js/TimelineView", [
 		}
 
 		setTimeline(tl) {
-            this.$container.find("[name=table] tbody").empty();
+      this.$container.find("[name=table] tbody").empty();
 			this.timeline = tl;
 			for (let i = 0; i < tl.nPoints; i++) {
 				const tp = tl.getPoint(i);
@@ -171,53 +174,57 @@ define("browser/js/TimelineView", [
 		}
 
 		_decoratePoint(tp) {
-            const ev = $.isTouchCapable && $.isTouchCapable() ?
-				  "doubletap" : "dblclick";
 			const $row = $(`<tr></tr>`);
 			$row.data("point", tp);
 			const $time = $(`<td name="time">${Time.formatHMS(tp.time)}</td>`);
 			const i = this.timeline.getIndexOf(tp);
 			if (tp.time > 0 && i < this.timeline.nPoints - 1) {
-				$time.attr("title", "Double-click to edit");
-				$time.on(ev, () => this.editTime($row));
+				$time.attr("title", "Click to edit");
+				$time
+        .on("click", () => this.editTime($row))
+				.on("tap", () => this.editTime($row));
 			}
 			$row.append($time);
 			const $temp = $(`<td name="temp">${tp.value}</td>`);
-			$temp.attr("title", "Double-click to edit");
-			$temp.on(ev, () => this.editTemperature($row));
+			$temp.attr("title", "Click to edit");
+			$temp
+      .on("click", () => this.editTemperature($row))
+			.on("tap", () => this.editTemperature($row));
 			$row.append($temp);
 			const $controls = $("<td></td>");
 			if (tp.time > 0) {
 				const $delete = $('<img class="image_button" src="/browser/images/wastebin.svg" />');
-				$delete.on('click', () => this.removeTimelinePoint(tp));
+				$delete
+        .on('click', () => this.removeTimelinePoint(tp))
+        .on('tap', () => this.removeTimelinePoint(tp));
 				$controls.append($delete);
 			}
 			$row.append($controls);
 			this.$container.find("[name=table] tbody").append($row);
 		}
 
-        /**
-         * Send timeline to the server. On a successful save, mark the editor
-         * as unchanged and disable the save button.
-         * @private
-         */
-        saveTimeline() {
-            DataModel.getSerialisable(this.timeline, Timeline.Model)
-                .then(serialisable => {
-                    $.post(
-                        `/ajax/setconfig/thermostat/${this.service}/timeline`,
-                        JSON.stringify(serialisable))
-                    .done(() => {
-                        alert("Timeline saved");
-                        // Save done, not required.
-                        $("#save-timeline").hide();
-						this.changed = false;
-                    })
-                    .fail(function (xhr) {
-                        alert(`Save failed ${xhr.status}: ${xhr.statusText}`);
-                    });
-                });
-        }
+    /**
+     * Send timeline to the server. On a successful save, mark the editor
+     * as unchanged and disable the save button.
+     * @private
+     */
+    saveTimeline() {
+      DataModel.getSerialisable(this.timeline, Timeline.Model)
+      .then(serialisable => {
+        $.post(
+          `/ajax/setconfig/thermostat/${this.service}/timeline`,
+          JSON.stringify(serialisable))
+        .done(() => {
+          alert("Timeline saved");
+          // Save done, not required.
+          $("#save-timeline").hide();
+					this.changed = false;
+        })
+        .fail(function (xhr) {
+          alert(`Save failed ${xhr.status}: ${xhr.statusText}`);
+        });
+      });
+    }
 
 		cancelTimeline() {
 			if (this.changed) {
@@ -240,35 +247,35 @@ define("browser/js/TimelineView", [
 		}
 
 		/**
-         * Wake up on schedule and refresh the graph
-         * @private
-         */
-        poll() {
-            if (this.poller) {
-                clearTimeout(this.poller);
-                this.poller = null;
-            }
-            $.getJSON("/ajax/state")
-            .done(data => {
-                $(".showif").hide(); // hide optional content
-                this.timelineCanvas.addSample(
+     * Wake up on schedule and refresh the graph
+     * @private
+     */
+    poll() {
+      if (this.poller) {
+        clearTimeout(this.poller);
+        this.poller = null;
+      }
+      $.getJSON("/ajax/state")
+      .done(data => {
+        $(".showif").hide(); // hide optional content
+        this.timelineCanvas.addSample(
 					'thermostat',
 					new TimeValue(
 						data.time, data.thermostat[this.service].temperature));
-                this.timelineCanvas.addSample(
+        this.timelineCanvas.addSample(
 					'pin',
 					new TimeValue(data.time, data.pin[this.service].state));
-            })
-            .fail((jqXHR, status, err) => {
-                console.log(`Could not contact server for update: ${status} ${err}`);
-            })
-            .always(() => {
-                this.poller = setTimeout(
-                    () => {
-                        $(document).trigger("poll");
-                    }, UPDATE_BACKOFF);
-            });
-        }
+      })
+      .fail((jqXHR, status, err) => {
+        console.log(`Could not contact server for update: ${status} ${err}`);
+      })
+      .always(() => {
+        this.poller = setTimeout(
+          () => {
+            $(document).trigger("poll");
+          }, UPDATE_BACKOFF);
+      });
     }
-    return TimelineView;
+  }
+  return TimelineView;
 });
