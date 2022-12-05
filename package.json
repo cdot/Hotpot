@@ -17,9 +17,13 @@
     },
     "license": "MIT",
     "dependencies": {
+        "follow-redirects": "^1.15.2",
+        "google-auth-library": "^8.7.0",
+        "googleapis": "^109.0.1",
         "jquery": "^3.6.1",
         "jquery-touch-events": "^1.0.7",
         "jquery-ui-dist": "^1.13.2",
+        "node-getopt": "^0.3.2",
         "requirejs": "^2.3.6"
     },
     "analyze": true,
