@@ -184,7 +184,6 @@ define([
             this.update(this.update_period * HOURS);
           })
           .catch(e => {
-            //console.error(this, e);
             console.error(`${TAG} '${this.name}' error ${e.message}`);
           });
         }, after);

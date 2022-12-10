@@ -371,10 +371,13 @@ define([ "js/common/Utils" ], Utils => {
 
       // Load from a file name if the model allows it
       if (model.$fileable && typeof data === "string") {
-        
+
         Utils.TRACE(TAG, `Loading ${index} from file ${data}`);
         return loadFileable(data)
-        .catch(e => data)
+        .catch(e => {
+          Utils.TRACE(TAG, `${data} load failed`);          
+          return data;
+        })
         .then(content => {
           if (BUILTIN_TYPES.indexOf(model.$class) >= 0)
             return Promise.resolve(content);
@@ -826,6 +829,7 @@ define([ "js/common/Utils" ], Utils => {
         loadFileable: f => {
           if (!Path.isAbsolute(f))
             f = Path.join(Path.dirname(file), f);
+          Utils.TRACE(TAG, `Abs path ${f}`);
           return Fs.readFile(f);
         }
       }))

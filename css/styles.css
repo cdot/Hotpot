@@ -125,7 +125,7 @@ canvas {
 /*------------ PORTRAIT SCREEN ------------*/
 
 @media screen and (max-aspect-ratio: 1/1) {
-  .ui-dialog: {
+  .ui-dialog {
     top: 0;
     bottom: 0;
     min-width: 100vw;

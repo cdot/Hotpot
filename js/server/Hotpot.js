@@ -61,7 +61,7 @@ requirejs([
     switch (option.option) {
     default: console.log(DESCRIPTION); process.exit(0);
     case 'c': cliopt.config = option.optarg; break;
-    case 't': cliopt.config = option.optarg; break;
+    case 't': cliopt.trace = option.optarg; break;
     case 'C': cliopt.confhelp = true; break;
     case 'd': cliopt.debug = true; break;
     }

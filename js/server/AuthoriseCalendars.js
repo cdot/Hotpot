@@ -2,115 +2,124 @@
 
 /*eslint-env node */
 
-requirejs = require("requirejs");
+const requirejs = require("requirejs");
+const Getopt = require("posix-getopt");
+const Fs = require("fs").promises;
+const readline = require("readline");
 
 requirejs.config({
-    baseUrl: ".."
+  baseUrl: `${__dirname}/../..`
 });
 
 /**
  * Stand-alone program to authorise calendars declared in hotpot.cfg
  * @module server/AuthoriseCalendars
  */
-requirejs(["node-getopt", "fs", "readline", "common/Utils", "common/Time", "common/DataModel"], function (Getopt, fs, readLine, Utils, Time, DataModel) {
+requirejs([
+  "js/common/Utils", "js/common/Time", "js/common/DataModel"
+], (
+  Utils, Time, DataModel
+) => {
 
-    const HELP = "Hotpot Google Calendar Authorisation\n" +
-        "This program will cache the access token required to access " +
-        "a Google calendar that contains control events";
+  const HELP = [
+    "Hotpot Google Calendar Authorisation",
+    "This program will cache the access token required to access",
+    "a Google calendar that contains control events",
+    "OPTIONS",
+		"\tc, config=ARG - Configuration file (default ./hotpot.cfg)",
+		"\th, help - Show this help"
+	].join("\n");
+  
+  const go_parser = new Getopt.BasicParser(
+    "h(help)c:(config)d(debug)",
+    process.argv);
 
-    const Fs = fs.promises;
-
-    let cliopt = new Getopt([
-		["h", "help", "Show this help"],
-		["c", "config=ARG", "Configuration file (default ./hotpot.cfg)"]
-	])
-        .bindHelp()
-        .setHelp(HELP + "[[OPTIONS]]")
-        .parseSystem()
-        .options;
-
-    if (typeof cliopt.config === "undefined")
-        cliopt.config = "./hotpot.cfg";
-
-    function configureCalendar(credentials) {
-        let cfn = Utils.expandEnvVars(credentials.auth_cache);
-        Fs.stat(cfn, (e, stats) => {
-            if (e) {
-                authorise(credentials);
-            } else if (stats.isFile()) {
-                console.log("\t" + credentials.auth_cache + " already exists");
-                console.log("\tContinuing will overwrite it.");
-                let rl = readline.createInterface({
-                    input: process.stdin,
-                    output: process.stdout
-                });
-                rl.question("Continue [Y/n]?: ", ans => {
-                    rl.close();
-                    if (ans === "" || /^[Yy]/.test(ans))
-                        authorise(credentials);
-                    else
-                        console.log("\nSkipping this calendar");
-                });
-            } else {
-                console.error("Skipping because " + credentials.auth_cache +
-                    " is not a file" + "\n" +
-                    "Please check the auth_cache of this calendar");
-            }
-        });
+  const cliopt = {
+    config: "./hotpot.cfg"
+  };
+  let option;
+  while ((option = go_parser.getopt())) {
+    switch (option.option) {
+    default: console.log(HELP); process.exit(0);
+    case 'c': cliopt.config = option.optarg; break;
+    case 'd': cliopt.debug = true; break;
     }
+  }
 
-    function authorise(credentials) {
-        let clientSecret = credentials.secrets.client_secret;
-        let clientId = credentials.secrets.client_id;
-        let redirectUrl = credentials.secrets.redirect_uris[0];
-        let {
-            OAuth2Client
-        } = require("google-auth-library");
-        let oAuth2Client = new OAuth2Client(clientId, clientSecret, redirectUrl);
-        let authUrl = oAuth2Client.generateAuthUrl({
-            access_type: "offline",
-            scope: ["https://www.googleapis.com/auth/calendar.readonly"]
-        });
+  function configureCalendar(credentials) {
+    let cfn = Utils.expandEnvVars(credentials.auth_cache);
+    console.debug(`Auth cache ${cfn}`);
+    return Fs.stat(cfn)
+    .catch(e => {
+      console.debug("Authorising...");
+      authorise(credentials);
+    })
+    .then(stats => {
+      console.debug("\t" + credentials.auth_cache + " already exists");
+      console.debug("\tContinuing will overwrite it.");
+      let rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+      rl.question("Continue [Y/n]?: ", ans => {
+        rl.close();
+        if (ans === "" || /^[Yy]/.test(ans))
+          authorise(credentials);
+        else
+          console.log("\nSkipping this calendar");
+      });
+    });
+  }
 
-        console.log("Please visit this URL in a browser: ", authUrl);
-        let rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout
-        });
-        rl.question("Enter the code here: ", code => {
-            rl.close();
-            oAuth2Client.getToken(code, (err, token) => {
-                if (err) {
-                    console.log("Error while trying to retrieve access token",
-                        err);
-                    return;
-                }
-                oAuth2Client.credentials = token;
+  function authorise(credentials) {
+    let clientSecret = credentials.secrets.client_secret;
+    let clientId = credentials.secrets.client_id;
+    let redirectUrl = credentials.secrets.redirect_uris[0];
+    let {
+      OAuth2Client
+    } = require("google-auth-library");
+    let oAuth2Client = new OAuth2Client(clientId, clientSecret, redirectUrl);
+    let authUrl = oAuth2Client.generateAuthUrl({
+      access_type: "offline",
+      scope: ["https://www.googleapis.com/auth/calendar.readonly"]
+    });
 
-                writeFile(Utils.expandEnvVars(credentials.auth_cache),
-                        JSON.stringify(token))
+    console.log("Please visit this URL in a browser: ", authUrl);
+    let rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    rl.question("Enter the code here: ", code => {
+      rl.close();
+      oAuth2Client.getToken(code, (err, token) => {
+        if (err) {
+          console.log("Error while trying to retrieve access token",
+                      err);
+          return;
+        }
+        oAuth2Client.credentials = token;
 
-                    .then(() => {
-                        console.log("Token cached in '" + credentials.auth_cache +
-                            "'");
-                    })
+        Fs.writeFile(Utils.expandEnvVars(credentials.auth_cache),
+                     JSON.stringify(token))
 
-                    .catch(e => {
-                        console.error("Failed to write '" +
-                            credentials.auth_cache + "': " + e);
-                    });
-            });
-        });
-    }
-
-    DataModel.loadData(cliopt.config, {
-            $unchecked: true
+        .then(() => {
+          console.log("Token cached in '" + credentials.auth_cache +
+                      "'");
         })
 
-        .then(config => {
-            for (let cal in config.controller.calendar) {
-                console.log("Configuring calendar '" + cal + "'");
-                configureCalendar(config.controller.calendar[cal]);
-            }
+        .catch(e => {
+          console.error("Failed to write '" +
+                        credentials.auth_cache + "': " + e);
         });
+      });
+    });
+  }
+
+  DataModel.loadData(cliopt.config, {
+    $unchecked: true
+  })
+
+  .then(config => Promise.all(
+    Object.values(config.controller.calendar)
+    .map(cal => configureCalendar(cal))));
 });

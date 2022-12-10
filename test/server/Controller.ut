@@ -164,7 +164,6 @@ describe("Controller", function() {
 
 	it("log", () => {
 		let controller;
-    Utils.TRACE("all");
 
 	  HOTPOT_DEBUG = new Service();
 		return DataModel.remodel({

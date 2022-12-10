@@ -91,16 +91,16 @@ define([
           params.q = this.prefix;
 
         this.pending_update = true;
-        return new Promise((ok, fail) => {
+        return new Promise((resolve, reject) => {
           calendarAPI.events.list(
             params,
             (err, response) => {
               delete this.pending_update;
               if (err) {
-                fail(`'${this.name}' events list failed: ${err}`);
-              } else {
-                ok(response);
-              }
+                console.error(err);
+                reject(`'${this.name}' events list failed: ${err}`);
+              } else
+                resolve(response);
             });
         });
       })

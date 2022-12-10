@@ -3,6 +3,8 @@
 /*eslint-env node */
 
 const Events = require("events");
+const Path = require("path");
+const Fs = require("fs").promises;
 
 define([
   "js/common/Utils", "js/common/DataModel",  "js/common/Time",
@@ -491,8 +493,18 @@ define([
 
           // Now remodel the data using the sub-model
           return DataModel.remodel({
-            index: p.key, data: data, model: p.model, context: path
+            index: p.key,
+            data: data,
+            model: p.model,
+            context: path,
+            loadFileable: f => Fs.readFile(f)
+            .catch(e => {
+              const failover = Path.join(this.basePath, f);
+              console.log("Failover", failover);
+              return Fs.readFile(failover);
+            })
           })
+
           // Assign the remodeled data to the right place in the
           // controller data
           .then(rebuilt => {
