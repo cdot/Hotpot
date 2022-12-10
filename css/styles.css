@@ -1,0 +1,134 @@
+body {
+  background-color: #062F47;
+  color: #FFFFFF;
+  font-family: Helvetica,Arial,sans-serif;
+  font-size: 5vmin;
+  line-height: 1.5;
+}
+
+h1 {
+  font-size: 8vmin;
+  margin: 1vmin 0vmin;
+}
+
+table {
+  width: 100%;
+}
+
+img.disabled {
+  filter: grayscale(100);
+}
+
+input {
+  font-family: Courier, "Courier New", Monospace;
+  font-size: 5vmin;
+  line-height: 1;
+  text-align: right;
+}
+
+.example {
+  display: inline-block;
+  background-color: lightgrey;
+  padding: 2px;
+}
+
+.image_button {
+  height: 7vmin;
+  vertical-align: middle;
+}
+
+.help_button {
+	height: 2.5em;
+}
+
+input {
+  position: relative;
+  top: -0.3vmin;
+  padding-top: 3vmin;
+}
+
+.dialog {
+  display: none;
+}
+
+table.timeline {
+  table-layout: auto;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+table.timeline td[name] {
+  border: 1px solid #ccc;
+}
+
+table .wide-column {
+  width: 100%;
+}
+
+canvas {
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  -webkit-user-drag:none;
+  -khtml-user-select:none;
+  -moz-user-select:none;
+  -ms-user-select:none;
+  user-select:none;
+}
+
+.timeline_canvas {
+  height: 100px;
+  width: 500px;
+}
+
+.graph {
+  position: relative;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100px;
+  cursor: none;
+  z-index: 1;
+}
+
+.overlay {
+  position: absolute;
+  color: white;
+  background-color: transparent;
+  pointer-events: none;
+}
+
+/* Main index page */
+#banner {
+	background-color: #000000;
+	color: #B82601;
+	padding: 1.7vmin;
+	margin: 0;
+}
+
+.calendar {
+	display: none;
+}
+
+.request {
+	background-color: orange;
+	padding: 1vmin;
+}
+
+#help {
+  display: none;
+}
+
+/*------------ LANDSCAPE SCREEN ------------*/
+@media screen and (min-aspect-ratio: 1/1) {
+}
+
+/*------------ PORTRAIT SCREEN ------------*/
+
+@media screen and (max-aspect-ratio: 1/1) {
+  .ui-dialog: {
+    top: 0;
+    bottom: 0;
+    min-width: 100vw;
+    min-height: 100vh;
+  }
+}

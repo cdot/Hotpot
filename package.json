@@ -15,13 +15,22 @@
         "type": "git",
         "url": "https://github.com/cdot/Hotpot.git"
     },
+  "scripts": {
+    "simulator": "node js/server/Hotpot.js --config test/server/simulated_hotpot.cfg --debug",
+        "doc": "jsdoc --verbose -c doc/config.json -r -d doc browser server",
+        "lint": "eslint browser server -f unix",
+        "test": "mocha --recursive --extension ut --timeout=5000",
+        "coverage": "nyc --hook-run-in-context --hook-run-in-this-context --reporter=html --reporter text npm run test",
+        "update": "ncu -u "
+    },
     "license": "MIT",
     "dependencies": {
+        "@rwap/jquery-ui-touch-punch": "github:RWAP/jquery-ui-touch-punch",
         "follow-redirects": "^1.15.2",
         "jquery": "^3.6.1",
-        "jquery-touch-events": "^1.0.7",
         "jquery-ui-dist": "^1.13.2",
-        "node-getopt": "^0.3.2",
+        "nodemailer": "^6.8.0",
+        "posix-getopt": "^1.2.1",
         "requirejs": "^2.3.6"
     },
     "peerDependencies": {
@@ -69,6 +78,7 @@
         "eslint": ">=8.29.0",
         "jsdoc": "^4.0.0",
         "mocha": "^10.1.0",
+		"nyc": "^15.1.0",
         "request": "^2.88.2"
     }
 }

@@ -1,0 +1,68 @@
+/*@preserve Copyright (C) 2021 Crawford Currie http://c-dot.co.uk license MIT*/
+
+/*eslint-env node */
+
+describe("Calendar", () => {
+
+  const TS = require("../TestSupport.js");
+  after(() => TS.after());
+  before(required => TS.before({
+    Expectation: "test/Expectation" /* global Expectation */,
+    Utils: "js/common/Utils" /* global Utils */,
+    Time: "js/common/Time" /* global Time */,
+    Calendar: "js/server/Calendar" /* global Calendar */
+  }, required));
+
+	it("parse events", () => {
+		let now = Date.now() + 250;
+		let cal = new Calendar({}, "test");
+		let exp = new Expectation(5);
+		cal.setTrigger((id, s, t, u) => {
+			//console.log(`SAW ${id}, ${s}, ${t}, ${u}`);
+			if (/1$/.test(id)) {
+				assert.equal(id, "Calendar 'test' 1");
+				assert.equal(s, "SA");
+				assert.equal(t, 18);
+				assert.equal(u, Utils.BOOST);
+				exp.saw(0);
+			} else if (/2$/.test(id)) {
+				assert.equal(s, "SB");
+				assert.equal(t, Utils.OFF);
+				assert.equal(now + 500, u);
+				exp.saw(1);
+			} else if (/3$/.test(id)) {
+				assert.equal(s, "SC");
+				assert.equal(t, 20);
+				assert.equal(now + 500, u);
+				exp.saw(2);
+			} else if (/4$/.test(id)) {
+				assert.equal(s, "SD");
+				assert.equal(t, 50);
+				assert.equal(now + 500, u);
+				exp.saw(3);
+			} else if (/5$/.test(id)) {
+				assert.equal(s, "SE");
+				assert.equal(t, 20);
+				assert.equal(Utils.BOOST, u);
+				exp.saw(4);
+			}
+		});
+		cal.setServices(["SA", "SB", "SC", "SD", "SE"]);
+		cal.parseEvents(
+			now + 250, now + 500,
+			"SMEG SA BOOST 18; sb off sc=20; SD=50 Se boost 20 NUTS");
+		return exp.expect();
+	});
+
+	it("parse bad unprefixed events", () => {
+		let now = Date.now() + 250;
+		let cal = new Calendar({ }, "BAD");
+		cal.setServices(["SA", "SB", "SC", "SD", "SE"]);
+		cal.setTrigger((id, s, t, u) => {
+			assert.fail();
+		});
+		cal.parseEvents(now + 250, now + 500, " SA AS boost");
+		cal.parseEvents(now + 250, now + 500, " 99");
+	});
+});
+

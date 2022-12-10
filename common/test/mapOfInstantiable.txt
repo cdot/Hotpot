@@ -1,6 +1,0 @@
-{
-	a: { data: "Beans" },
-	b: { data: "Cheese" },
-	c: { data: "Sausages" }
-}
-

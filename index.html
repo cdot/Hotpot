@@ -3,30 +3,29 @@
   <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>HotPot remote monitor</title>
-	<link rel="icon" href="browser/images/favicon.ico" type="image/x-icon" />
+	<link rel="icon" href="images/favicon.ico" type="image/x-icon" />
 	<link rel="stylesheet" href="node_modules/jquery-ui-dist/jquery-ui.min.css">
 	<link rel="stylesheet" href="node_modules/jquery-ui-dist/jquery-ui.theme.min.css">
-	<link rel="stylesheet" href="browser/css/styles.css">
-	<link rel="stylesheet" href="browser/css/index.css">
+	<link rel="stylesheet" href="css/styles.css">
 
-	<script data-main="browser/js/main" src="node_modules/requirejs/require.js"></script>
+	<script data-main="js/browser/main" src="node_modules/requirejs/require.js"></script>
   </head>
   <body>
 	<div id="main">
 	  <h1 id="banner">Hotpot at
 		<span id="systemTime"></span>
-		<img src="browser/images/hotpot.svg" style="height: 230px; float:right">
+		<img src="images/hotpot.svg" style="height: 230px; float:right">
 	  </h1>
-	  <img id="refresh_calendars" class="image_button" src="browser/images/calendar.svg" />
-	  <img class="image_button" src="browser/images/help.svg" id="help" />
+	  <img id="refresh_calendars" class="image_button" src="images/calendar.svg" />
+	  <img class="image_button" src="images/help.svg" id="help" />
 	  <div id="CH">
-		<h1>Central Heating <img title="Edit the 24-hour timeline" id="CH-timeline" class="image_button" src="browser/images/clock.svg" /></h1>
+		<h1>Central Heating <img title="Edit the 24-hour timeline" id="CH-timeline" class="image_button" src="images/clock.svg" /></h1>
 		<div>
 		  <span id="CH-th-temp"></span>
 		  <span id="CH-th-diff"></span>
 		  <span id="CH-th-target"></span>°C
-		  <img id="CH-boost" title="Turn the central heating on until the temperature reaches a requested level; it will then revert to following the 24h timeline" class="image_button" src="browser/images/service-boost.svg" />
-		  <img id="CH-off" title="Turn the central heating off for a time" class="image_button" src="browser/images/service-off.svg" />
+		  <img id="CH-boost" title="Turn the central heating on until the temperature reaches a requested level; it will then revert to following the 24h timeline" class="image_button" src="images/service-boost.svg" />
+		  <img id="CH-off" title="Turn the central heating off for a time" class="image_button" src="images/service-off.svg" />
 		</div>
 		<div>
 		  <span id="CH-pin-state"></span>
@@ -38,13 +37,13 @@
 	  </div>
 	  <p></p>
 	  <div id="HW">
-		<h1>Hot Water <img title="Edit the 24-hour timeline" id="HW-timeline" class="image_button" src="browser/images/clock.svg" /></h1>
+		<h1>Hot Water <img title="Edit the 24-hour timeline" id="HW-timeline" class="image_button" src="images/clock.svg" /></h1>
 		<div>
 		  <span id="HW-th-temp"></span>
 		  <span id="HW-th-diff"></span>
 		  <span id="HW-th-target"></span>°C
-		  <img id="HW-boost" title="Turn the hot water on until the temperature reaches a requested level; it will then revert to following the 24h timeline" class="image_button" src="browser/images/service-boost.svg" />
-		  <img id="HW-off" title="Turn the hot water off for a time" class="image_button" src="browser/images/service-off.svg" />
+		  <img id="HW-boost" title="Turn the hot water on until the temperature reaches a requested level; it will then revert to following the 24h timeline" class="image_button" src="images/service-boost.svg" />
+		  <img id="HW-off" title="Turn the hot water off for a time" class="image_button" src="images/service-off.svg" />
 		</div>
 		<div>
 		  <span id="HW-pin-state"></span>
@@ -75,14 +74,15 @@
 	  <div id="off-dialog" class="dialog">
 		Switch off for
   		<input id="off-for" value="6:00" size="6" title="Enter H:M:S time to turn off for"/>
+        <div id="off-for-feedback"></div>
 	  </div>
 	  <div id="log"></div>
 	</div>
 	<div id="timeline-editor" style="display:none">
 	  <h1><span name="title"></span> timeline
-		<img id="add-timepoint" class="image_button" src="browser/images/add-timepoint.svg" title="Add time point">
-		<img id="save-timeline" class="image_button" src="browser/images/save.svg" title="Save timeline">
-		<img id="cancel-timeline" class="image_button" src="browser/images/back.svg" title="Cancel edit">
+		<img id="add-timepoint" class="image_button" src="images/add-timepoint.svg" title="Add time point">
+		<img id="save-timeline" class="image_button" src="images/save.svg" title="Save timeline">
+		<img id="cancel-timeline" class="image_button" src="images/back.svg" title="Cancel edit">
 	  </h1>
 	  <table name="table" class="timeline">
 		<thead>
@@ -103,5 +103,24 @@
 		Timeline has been modified. Changes will not be saved to the server.
 	  </div>
 	</div>
+    <div id="help" class="dialog">
+	  <h1 id="banner">Hotpot</h1>
+	  <p>
+	    <img class="help_button image_button" src="images/service-boost.svg"/> will
+	    turn the service on until the temperature reaches a requested level;
+	    it will then revert to following the timeline
+	  </p>
+	  <p>
+	    <img class="help_button image_button" src="images/service-off.svg" /> will
+	    turn the service off for a period of time in hours:minutes
+	  </p>
+	  <p>
+	    <img class="help_button image_button" src="images/clock.svg" /> will open a timeline editor
+	  </p>
+	  <p>
+	    <img class="help_button image_button" src="images/calendar.svg" style="height: 2.5em" />
+	    will update the requests list from Google Calendar
+	  </p>
+    </div>
   </body>
 </html>
