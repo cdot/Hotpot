@@ -27,9 +27,9 @@
     "dependencies": {
         "@rwap/jquery-ui-touch-punch": "github:RWAP/jquery-ui-touch-punch",
         "follow-redirects": "^1.15.2",
-        "jquery": "^3.6.1",
+        "jquery": "^3.6.3",
         "jquery-ui-dist": "^1.13.2",
-        "nodemailer": "^6.8.0",
+        "nodemailer": "^6.9.0",
         "posix-getopt": "^1.2.1",
         "requirejs": "^2.3.6"
     },
@@ -75,9 +75,9 @@
     "devDependencies": {
         "chai": "^4.3.7",
         "chai-http": "^4.3.0",
-        "eslint": ">=8.29.0",
+        "eslint": ">=8.31.0",
         "jsdoc": "^4.0.0",
-        "mocha": "^10.1.0",
+        "mocha": "^10.2.0",
 		"nyc": "^15.1.0",
         "request": "^2.88.2"
     }
