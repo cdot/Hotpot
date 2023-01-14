@@ -141,18 +141,10 @@ define([
 
         promise = promise
 
-        .then(() => Fs.readFile(Utils.expandEnvVars(this.ssl.key)))
-
-        .then(k => {
-          options.key = k;
-          Utils.TRACE(TAG, "SSL key loaded");
-        })
-
-        .then(() => Fs.readFile(Utils.expandEnvVars(this.ssl.cert)))
-
         .then(c => {
-          options.cert = c;
-          Utils.TRACE(TAG, "SSL certificate loaded");
+          options.key = this.ssl.key;
+          options.cert = this.ssl.cert;
+          Utils.TRACE(TAG, "SSL certificates loaded");
           if (typeof this.auth !== "undefined")
             Utils.TRACE(TAG, "Requires authentication");
           Utils.TRACE(TAG, "HTTPS starting on port ", this.port);
