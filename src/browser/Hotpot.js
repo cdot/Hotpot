@@ -7,7 +7,6 @@
  * @module browser/Hotpot
  */
 import { Request } from "../common/Request.js";
-import { ScheduledEvent } from "../common/ScheduledEvent.js";
 import { Time } from "../common/Time.js";
 import { TimeValue } from "../common/TimeValue.js";
 import { TimelineView } from "../browser/TimelineView.js";

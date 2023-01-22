@@ -2,7 +2,7 @@
 
 /*eslint-env node */
 
-/* global HOTPOT_DEBUG */
+global.HOTPOT_DEBUG = undefined;
 
 import { assert } from "chai";
 import { Expectation } from "../Expectation.js";

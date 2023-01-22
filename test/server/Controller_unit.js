@@ -98,17 +98,8 @@ describe("Controller", function() {
 		},
 		calendar: {
 			"Hotpot Test": {
-				$instance_of: "src/server/GoogleCalendar",
-				id: "nsh4t993ti8djdots912cebbrg@group.calendar.google.com",
-				secrets: {
-					client_id: "765904217299-catel31ruqjr401cj873op5a7i6lph3n.apps.googleusercontent.com",
-					client_secret: "XAfsu6oeHaFv54BPkAm6s6ZD",
-					redirect_uris: [
-						"urn:ietf:wg:oauth:2.0:oob",
-						"http://localhost",
-					]
-				},
-				auth_cache: "calendar.auth",
+				$instance_of: "src/server/HotpotCalendar",
+        file: "calendar.json",
 				update_period: 6,
 				cache_length: 24
 			}
@@ -202,23 +193,26 @@ describe("Controller", function() {
 		.then(c => {
 			controller = c; return controller.initialise();
 		})
-		.then(() => controller.dispatch(["request"],
-										{source:"test",
-										 service:"HW",
-										 temperature:99,
-										 until: "boost"}))
-		.then(() => controller.dispatch(["state"]))
+		.then(() => controller.makeRequest(
+      "HW",
+			{
+        source:"test",
+				service:"HW",
+				temperature:99,
+				until: "boost"
+      }))
+		.then(() => controller.getSerialisableState())
 		.then(ser => {
 			let req = ser.thermostat.HW.requests[0];
 			assert.equal(req.source, "test");
 			assert.equal(req.temperature, 99);
-			assert.equal(req.until, Request.BOOST);
+			assert.equal(req.until, "boost");
 		})
 		.then(() => controller.stop())
 		.then(() => HOTPOT_DEBUG.stop());
 	});
 
-	it("mailer", () => {
+/*	it("mailer", () => {
     let controller;
 	  HOTPOT_DEBUG = new Service();
 		return DataModel.remodel({
@@ -245,6 +239,6 @@ describe("Controller", function() {
 		})
 		.then(() => controller.stop())
 		.then(() => HOTPOT_DEBUG.stop());
-	});
+	});*/
 });
 

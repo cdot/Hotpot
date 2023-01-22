@@ -3,7 +3,6 @@
 /*eslint-env node */
 
 import { Utils } from "../common/Utils.js";
-import { Request } from "../common/Request.js";
 import { ScheduledEvent } from "../common/ScheduledEvent.js";
 
 // MS in an hour
@@ -13,7 +12,7 @@ const TAG = "Calendar";
 
 /**
  * Base class of calendars. Specific calendar implementations
- * should subclass, e.g. GoogleCalendar, this class should not be
+ * should subclass, e.g. HotpotCalendar, this class should not be
  * instantiated directly (or used in a .Model)
  */
 class Calendar {

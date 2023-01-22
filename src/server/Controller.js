@@ -425,6 +425,11 @@ class Controller extends Events.EventEmitter {
     });
   };
 
+  getLog(type, service, since) {
+    // Get the log for the given object of the given type
+    return this[type][service].getSerialisableLog(since);
+  }
+
   /**
    * Command handler for ajax commands, suitable for calling by a Server.
    * @params {array} path the url path components
@@ -443,17 +448,14 @@ class Controller extends Events.EventEmitter {
     router.get(
       "/log/:type/:name",
       (req, res) =>
-      // Get the log for the given object of the given type
-      res.json(
-        this[req.params.type][req.params.name]
-        .getSerialisableLog(req.body.since)));
+      this.getLog(req.params.type, req.params.name, req.body.since)
+      .then(log => res.json(log)));
 
     // /config?path=/to/config/node
     router.get(
       "/config",
       (req, res) => {
         const p = DataModel.at(this, Controller.Model, req.query.path);
-        console.log("WANK", p);
         DataModel.getSerialisable(p.node, p.model)
         .then(response => res.json(response));
       });
@@ -704,7 +706,7 @@ Controller.Model = {
     }
   },
   calendar: {
-    $doc: "Set of Calendars e.g. GoogleCalendar",
+    $doc: "Set of Calendars e.g. HotpotCalendar",
     $map_of: {
       $instantiable: true
     }

@@ -14,21 +14,27 @@ describe("ScheduledEvent", () => {
 		let t = Date.now();
 		let e = new Expectation(2);
 		let cal = {
-			trigger: (id, service, temp, until) => {
-				assert.equal(id, "future");
-				assert.equal(service, "CH");
-				assert.equal(temp, 99);
-				assert.equal(until, t + 500);
+      name: "Tunnocks Caramel Biscuit",
+			trigger: (ev) => {
+				assert.equal(ev.service, "CH");
+				assert.equal(ev.source, "Calendar 'Tunnocks Caramel Biscuit'");
+				assert.equal(ev.temperature, 99);
+				assert.equal(ev.until, t + 500);
 				e.saw(0);
 			},
-			remove: (id, service) => {
-				assert.equal(id, "future");
-				assert.equal(service, "CH");
+			remove: (ev) => {
+				assert.equal(ev.service, "CH");
+				assert.equal(ev.source, "Calendar 'Tunnocks Caramel Biscuit'");
 				e.saw(1);
 			}
 		};
 		let futureevent = new ScheduledEvent(
-			cal, "future", t + 250, "CH", 99, t + 500);
+			cal, {
+        start: t + 250,
+        service: "CH",
+        temperature: 99,
+        until: t + 500
+      });
 		return e.expect();
 	});
 
@@ -36,36 +42,36 @@ describe("ScheduledEvent", () => {
 		let t = Date.now();
 		let e = new Expectation(2);
 		let cal = {
-			trigger: (id, service, temp, until) => {
-				assert.equal(id, "live");
-				assert.equal(service, "HW");
-				assert.equal(temp, 9);
-				assert.equal(until, t + 250);
+      name: "Flapjack",
+			trigger: ev => {
+				assert.equal(ev.service, "HW");
+				assert.equal(ev.temperature, 9);
+				assert.equal(ev.until, t + 500);
 				e.saw(0);
 			},
-			remove: (id, service) => {
-				assert.equal(id, "live");
-				assert.equal(service, "HW");
+			remove: ev => {
+				assert.equal(ev.service, "HW");
 				e.saw(1);
 			}
 		};
 		let liveevent = new ScheduledEvent(
-			cal, "live", t - 250, "HW", 9, t + 250);
+			cal, {start: t - 250, service: "HW", temperature: 9, until: t + 500});
 		return e.expect();
 	});
 
 	it("a past event", () => {
 		let t = Date.now();
 		let cal = {
-			trigger: (id, service, temp, until) => {
+      name: "Rich Tea",
+			trigger: ev => {
 				assert.fail();
 			},
-			remove: (id, service) => {
+      remove: ev => {
 				assert.fail();
 			}
 		};
 		let pastevent = new ScheduledEvent(
-			cal, "past", t - 2000, "HW", 99, t - 1000);
+			cal, {start: t - 2000, service: "HW", temperature: 99, until: t - 1000});
 	});
 });
 

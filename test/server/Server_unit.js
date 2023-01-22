@@ -57,11 +57,12 @@ describe("Server", () => {
 		});
 	});
 
-	it("GET /test.txt", () => {
+	it("GET /test/server/test.txt", () => {
+    //Utils.TRACEfilter("all");
 		const server = new Server(config);
 		server.start();
     return chai.request(server.express)
-		.get("/test.txt")
+		.get("/test/server/test.txt")
 		.then(res => {
 			assert.equal(res.status, 200);
 			assert.equal(`'${res.text}'`, "'Test Data for UnitTestServer\n'");
