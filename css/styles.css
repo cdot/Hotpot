@@ -2,13 +2,15 @@ body {
   background-color: #062F47;
   color: #FFFFFF;
   font-family: Helvetica,Arial,sans-serif;
-  font-size: 5vmin;
-  line-height: 1.5;
 }
 
-h1 {
-  font-size: 8vmin;
+h1.service {
+  font-size: 7vmin;
   margin: 1vmin 0vmin;
+}
+
+.thermostat, .pin {
+  font-size: 5vmin;
 }
 
 table {
@@ -19,11 +21,14 @@ img.disabled {
   filter: grayscale(100);
 }
 
-input {
+#boost-dialog input, #off-dialog input {
   font-family: Courier, "Courier New", Monospace;
   font-size: 5vmin;
   line-height: 1;
   text-align: right;
+  position: relative;
+  top: -0.3vmin;
+  padding-top: 3vmin;
 }
 
 .example {
@@ -38,31 +43,52 @@ input {
 }
 
 .help_button {
-	height: 2.5em;
-}
-
-input {
-  position: relative;
-  top: -0.3vmin;
-  padding-top: 3vmin;
+  height: 2.5em;
 }
 
 .dialog {
   display: none;
 }
 
-table.timeline {
-  table-layout: auto;
-  border-collapse: collapse;
+.timeline {
+  font-size: 6vmin;
   width: 100%;
 }
 
-table.timeline td[name] {
-  border: 1px solid #ccc;
+.timeline div {
+  display: inline-block;
+  width: 100%;
 }
 
-table .wide-column {
+.timeline span {
+  display: inline-block;
   width: 100%;
+}
+
+.timeline .tlx {
+  border: 1px solid;
+}
+
+.timeline input {
+  font-size: inherit;
+}
+
+.timeline .tlh {
+  pointer-events: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: larger;
+  font-weight: bold;
+}
+
+.timeline .tlr {
+  display: flex;
+  width: 100%;
+  transition: height 0.3s;
+  align-items: center;
+  justify-content: space-evenly;
 }
 
 canvas {
@@ -99,19 +125,21 @@ canvas {
 
 /* Main index page */
 #banner {
-	background-color: #000000;
-	color: #B82601;
-	padding: 1.7vmin;
-	margin: 0;
+  background-color: #000000;
+  color: #B82601;
+  padding: 1.7vmin;
+  margin: 0;
+  font-size: 8vmin;
 }
 
-.calendar {
-	display: none;
+.cal-events {
+  display: none;
 }
 
 .request {
-	background-color: orange;
-	padding: 1vmin;
+  background-color: orange;
+  padding: 1vmin;
+  font-size: 3vmin;
 }
 
 #help {
@@ -126,9 +154,9 @@ canvas {
 
 @media screen and (max-aspect-ratio: 1/1) {
   .ui-dialog {
-    top: 0;
-    bottom: 0;
+    position: absolute;
+    top: 0!important;
+    left: 0!important;
     min-width: 100vw;
-    min-height: 100vh;
   }
 }

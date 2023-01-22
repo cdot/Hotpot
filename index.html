@@ -3,12 +3,25 @@
   <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>HotPot remote monitor</title>
-	<link rel="icon" href="images/favicon.ico" type="image/x-icon" />
-	<link rel="stylesheet" href="node_modules/jquery-ui-dist/jquery-ui.min.css">
-	<link rel="stylesheet" href="node_modules/jquery-ui-dist/jquery-ui.theme.min.css">
+	<link rel="icon" href="/images/favicon.ico" type="image/x-icon" />
+	<link rel="stylesheet" href="/node_modules/jquery-ui-dist/jquery-ui.min.css">
+	<link rel="stylesheet" href="/node_modules/jquery-ui-dist/jquery-ui.theme.min.css">
 	<link rel="stylesheet" href="css/styles.css">
-
-	<script data-main="js/browser/main" src="node_modules/requirejs/require.js"></script>
+	<link rel="stylesheet" href="/node_modules/@cdot/event_calendar/css/calendar.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "jquery/": "/node_modules/jquery/",
+          "jquery-ui/": "/node_modules/jquery-ui-dist/",
+          "@rwap/jquery-ui-touch-punch/": "/node_modules/@rwap/jquery-ui-touch-punch/",
+          "@cdot/event_calendar/": "/node_modules/@cdot/event_calendar/"
+        }
+      }
+    </script>
+    <script type="module">
+      import { Hotpot } from "./src/browser/Hotpot.js";
+      new Hotpot().begin();
+    </script>
   </head>
   <body>
 	<div id="main">
@@ -16,18 +29,17 @@
 		<span id="systemTime"></span>
 		<img src="images/hotpot.svg" style="height: 230px; float:right">
 	  </h1>
-	  <img id="refresh_calendars" class="image_button" src="images/calendar.svg" />
 	  <img class="image_button" src="images/help.svg" id="help" />
 	  <div id="CH">
-		<h1>Central Heating <img title="Edit the 24-hour timeline" id="CH-timeline" class="image_button" src="images/clock.svg" /></h1>
-		<div>
+		<h1 class="service">Central Heating <img title="Edit the 24-hour timeline" id="CH-timeline" class="image_button" src="images/clock.svg" /></h1>
+		<div class="thermostat">
 		  <span id="CH-th-temp"></span>
 		  <span id="CH-th-diff"></span>
 		  <span id="CH-th-target"></span>°C
 		  <img id="CH-boost" title="Turn the central heating on until the temperature reaches a requested level; it will then revert to following the 24h timeline" class="image_button" src="images/service-boost.svg" />
 		  <img id="CH-off" title="Turn the central heating off for a time" class="image_button" src="images/service-off.svg" />
 		</div>
-		<div>
+		<div class="pin">
 		  <span id="CH-pin-state"></span>
 		  <span id="CH-pin-reason"></span>
 		  <span id="CH-th-lkg" class="lkg"></span>
@@ -38,14 +50,14 @@
 	  <p></p>
 	  <div id="HW">
 		<h1>Hot Water <img title="Edit the 24-hour timeline" id="HW-timeline" class="image_button" src="images/clock.svg" /></h1>
-		<div>
+		<div class="thermostat">
 		  <span id="HW-th-temp"></span>
 		  <span id="HW-th-diff"></span>
 		  <span id="HW-th-target"></span>°C
 		  <img id="HW-boost" title="Turn the hot water on until the temperature reaches a requested level; it will then revert to following the 24h timeline" class="image_button" src="images/service-boost.svg" />
 		  <img id="HW-off" title="Turn the hot water off for a time" class="image_button" src="images/service-off.svg" />
 		</div>
-		<div>
+		<div class="pin">
 		  <span id="HW-pin-state"></span>
 		  <span id="HW-pin-reason"></span>
 		  <span id="HW-th-lkg" class="lkg"></span>
@@ -53,15 +65,16 @@
 		<div id="HW-requests"></div>
 		<div class="HW-info"></div>
 	  </div>
-	  <h1>Calendar Events</h1>
+	  <h1>Calendar <img id="cal_edit" title="Edit calendar" class="image_button" src="images/calendar.svg"/>
+</h1>
 	  <div id="cal_update_pending">Calendar update pending</div>
-	  <div id="CH-calendar" class="calendar">
+	  <div id="CH-calendar" class="cal-events">
 		<span id="CH-cal-name"></span>:
 		<span id="CH-cal-temperature"></span> from
 		<span id="CH-cal-start"></span> until
 		<span id="CH-cal-end"></span>
 	  </div>
-	  <div id="HW-calendar" class="calendar">
+	  <div id="HW-calendar" class="cal-events">
 		<span id="HW-cal-name"></span>:
 		<span id="HW-cal-temperature"></span> from
 		<span id="HW-cal-start"></span> until
@@ -78,19 +91,22 @@
 	  </div>
 	  <div id="log"></div>
 	</div>
+
 	<div id="timeline-editor" style="display:none">
 	  <h1><span name="title"></span> timeline
 		<img id="add-timepoint" class="image_button" src="images/add-timepoint.svg" title="Add time point">
 		<img id="save-timeline" class="image_button" src="images/save.svg" title="Save timeline">
 		<img id="cancel-timeline" class="image_button" src="images/back.svg" title="Cancel edit">
 	  </h1>
-	  <table name="table" class="timeline">
-		<thead>
-		  <th>Time</th><th>Temperature</th><th class="wide-column"></th>
-		</thead>
-		<tbody>
-		</tbody>
-	  </table>
+	  <div class="timeline">
+		<div class="tlh">
+		  <span>Time</span>
+          <span>°C</span>
+          <span>&nbsp;</span>
+		</div>
+        <div class="tlb">
+        </div>
+	  </div>
 	  <div class="graph"></div>
 	  <div id="add-timepoint-dialog" class="dialog">
 		<label for="atd-time">Add time point at</label>
@@ -103,6 +119,12 @@
 		Timeline has been modified. Changes will not be saved to the server.
 	  </div>
 	</div>
+
+    <div id="calendar-editor" class="dialog">
+      <div class="calendar-container">
+      </div>
+    </div>
+
     <div id="help" class="dialog">
 	  <h1 id="banner">Hotpot</h1>
 	  <p>
@@ -122,5 +144,6 @@
 	    will update the requests list from Google Calendar
 	  </p>
     </div>
+
   </body>
 </html>
