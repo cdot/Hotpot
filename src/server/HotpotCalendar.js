@@ -37,7 +37,8 @@ class HotpotCalendar extends Calendar {
       const now = Date.now();
       const events = JSON.parse(buf.toString());
       // Purge history
-      return events.filter(e => e.end >= now);
+      const purged = events.filter(e => e.until >= now);
+      return purged;
     })
     .catch(e => {
       console.error("Error loading", this.file, e);

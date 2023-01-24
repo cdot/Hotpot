@@ -2,12 +2,13 @@
 <html>
   <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title>HotPot remote monitor</title>
 	<link rel="icon" href="/images/favicon.ico" type="image/x-icon" />
-	<link rel="stylesheet" href="/node_modules/jquery-ui-dist/jquery-ui.min.css">
-	<link rel="stylesheet" href="/node_modules/jquery-ui-dist/jquery-ui.theme.min.css">
-	<link rel="stylesheet" href="css/styles.css">
-	<link rel="stylesheet" href="/node_modules/@cdot/event_calendar/css/calendar.css">
+	<link rel="stylesheet" type="text/css" href="/node_modules/jquery-ui-dist/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="/node_modules/jquery-ui-dist/jquery-ui.theme.min.css">
+	<link rel="stylesheet" type="text/css" href="css/styles.css">
+	<link rel="stylesheet" type="text/css" href="/node_modules/@cdot/event_calendar/css/event_calendar.css">
     <script type="importmap">
       {
         "imports": {
@@ -25,13 +26,13 @@
   </head>
   <body>
 	<div id="main">
-	  <h1 id="banner">Hotpot at
+	  <h1 id="banner">Hotpot
 		<span id="systemTime"></span>
-		<img src="images/hotpot.svg" style="height: 230px; float:right">
+		<img src="images/hotpot.svg">
 	  </h1>
 	  <img class="image_button" src="images/help.svg" id="help" />
 	  <div id="CH">
-		<h1 class="service">Central Heating <img title="Edit the 24-hour timeline" id="CH-timeline" class="image_button" src="images/clock.svg" /></h1>
+		<h2 class="service">Central Heating <img title="Edit the 24-hour timeline" id="CH-timeline" class="image_button" src="images/clock.svg" /></h2>
 		<div class="thermostat">
 		  <span id="CH-th-temp"></span>
 		  <span id="CH-th-diff"></span>
@@ -49,7 +50,7 @@
 	  </div>
 	  <p></p>
 	  <div id="HW">
-		<h1>Hot Water <img title="Edit the 24-hour timeline" id="HW-timeline" class="image_button" src="images/clock.svg" /></h1>
+		<h2 class="service">Hot Water <img title="Edit the 24-hour timeline" id="HW-timeline" class="image_button" src="images/clock.svg" /></h2>
 		<div class="thermostat">
 		  <span id="HW-th-temp"></span>
 		  <span id="HW-th-diff"></span>
@@ -65,8 +66,9 @@
 		<div id="HW-requests"></div>
 		<div class="HW-info"></div>
 	  </div>
-	  <h1>Calendar <img id="cal_edit" title="Edit calendar" class="image_button" src="images/calendar.svg"/>
-</h1>
+	  <div>
+        <img id="cal_edit" title="Edit calendar" class="image_button" src="images/calendar.svg"/>
+      </div>
 	  <div id="cal_update_pending">Calendar update pending</div>
 	  <div id="CH-calendar" class="cal-events">
 		<span id="CH-cal-name"></span>:

@@ -93,32 +93,6 @@ class Hotpot {
       $requests.append($div);
     }
 
-    $("#cal_edit")
-    .on("click", () => {
-      $.get("/calendar/events")
-      .then(events => {
-        $("#calendar-editor").dialog({
-          width: 400,
-          title: "Hotpot Calendar",
-          open: (event) => {
-            $(".calendar-container", $(event.target))
-            .event_calendar({
-              events: events,
-
-              delete: e => $.post(`/calendar/remove/${e.id}`),
-
-              add: e => {
-                return $.post(`/calendar/add`, e)
-                .then(id => e.id = id);
-              },
-
-              change: e => $.post(`/calendar/change/${e.id}`, e)
-            });
-          }
-        });
-      });
-    });
-
     const $caldiv = $(`#${service}-calendar`);
     $caldiv.hide();
     for (let name in obj.calendar) {
@@ -281,6 +255,57 @@ class Hotpot {
    * and start the polling loop.
    */
   begin() {
+    // Get viewport dimensions
+    const vh = $(window).height();
+    const vw = $(window).width();
+    const line_height = Math.min(vh / 20, vw / 20);
+    $("body").css("font-size", line_height);
+    $(".image_button").css("height", line_height).show();
+
+    $("#cal_edit")
+    .on("click", () => {
+      $.get("/calendar/events")
+      .then(events => {
+        $("#calendar-editor").dialog({
+          title: "Hotpot Calendar",
+          modal: true,
+          position: { my: "top", at: "top", of: window },
+          width: $(window).width(),
+          height: $(window).height(),
+          open: (event) => {
+            $(event.target)
+            .event_calendar({
+              events: events.map(ce => {
+                return {
+                  title: ce.service + " " +
+                  (ce.until === Request.BOOST
+                   ? "boost"
+                   : (ce.temperature === Request.OFF
+                      ? "off"
+                      : ce.temperature)),
+                  description: ce.source,
+                  start: new Date(ce.start),
+                  end: ce.until === Request.BOOST
+                  // Mark a boost as lasting an hour, should be all it needs
+                  ? new Date(ce.start + 60 * 60 * 1000)
+                  : new Date(ce.until)
+                };
+              }),
+
+              delete: e => $.post(`/calendar/remove/${e.id}`),
+
+              add: e => {
+                return $.post(`/calendar/add`, e)
+                .then(id => e.id = id);
+              },
+
+              change: e => $.post(`/calendar/change/${e.id}`, e)
+            });
+          }
+        });
+      });
+    });
+
     this.configureService("HW", "Hot Water", 50);
     this.configureService("CH", "Central Heating", 18);
 
