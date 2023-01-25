@@ -14,6 +14,7 @@ import "jquery/dist/jquery.js";
 import "jquery-ui/jquery-ui.js";
 import "@rwap/jquery-ui-touch-punch/jquery.ui.touch-punch.js";
 import "@cdot/event_calendar/src/EventCalendar.js";
+import "@cdot/event_calendar/src/jquery-clockpicker.js";
 
 const UPDATE_BACKOFF = 20; // seconds
 
@@ -203,18 +204,18 @@ class Hotpot {
     $(`#${service}-boost`)
     .on("click", handle_boost);
 
-    $("#off-for")
+    $("#off-until")
     .on("input", function() {
       try {
         const val = Time.parseDuration($(this).val());
         $(this).data("good", true);
-        $("#off-for-feedback").text(Time.formatDuration(val));
+        $("#off-until-feedback").text(Time.formatDuration(val));
       } catch (e) {
         $(this).data("good", false);
       }
     });
     const handle_off = () => {
-      $("#off-for-feedback").text($(`#off-for`).val());
+      $("#off-until-feedback").text($(`#off-until`).val());
       $("#off-dialog").dialog({
         title: name,
         width: 'auto',
@@ -223,11 +224,10 @@ class Hotpot {
             text: "Off",
             click: function () {
               $(this).dialog("close");
-              if ($("#off-for").data("good"))
+              if ($("#off-until").data("good"))
                 self.sendScheduledEvent({
                   service: service,
-                  until: Date.now() + Time.parseDuration(
-									  $(`#off-for`).val()),
+                  until: Time.parse($(`#off-until`).val()),
                   temperature: Request.OFF
                 });
             }
@@ -261,6 +261,11 @@ class Hotpot {
     const line_height = Math.min(vh / 20, vw / 20);
     $("body").css("font-size", line_height);
     $(".image_button").css("height", line_height).show();
+
+    $(".clockpicker").clockpicker({
+        autoclose: true,
+        default: "now"
+    });
 
     $("#cal_edit")
     .on("click", () => {

@@ -87,9 +87,11 @@
   		<input name="target" size="3" />°C
 	  </div>
 	  <div id="off-dialog" class="dialog">
-		Switch off for
-  		<input id="off-for" value="6:00" size="6" title="Enter H:M:S time to turn off for"/>
-        <div id="off-for-feedback"></div>
+		Switch off until
+        <div class="clockpicker">
+  		  <input id="off-until" size="6" title="Enter time to turn off until" />
+        </div>
+        Off for <span id="off-until-feedback"></span>
 	  </div>
 	  <div id="log"></div>
 	</div>
