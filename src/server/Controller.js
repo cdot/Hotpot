@@ -706,12 +706,14 @@ Controller.Model = {
     }
   },
   calendar: {
+    $optional: true,
     $doc: "Set of Calendars e.g. HotpotCalendar",
     $map_of: {
       $instantiable: true
     }
   },
   weather: {
+    $optional: true,
     $doc: "Set of weather agents e.g. MetOffice",
     // We don't know what class the agents are yet
     $map_of: {

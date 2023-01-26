@@ -28,18 +28,16 @@
     "dependencies": {
         "@cdot/event_calendar": "file:../EventCalendar",
         "@rwap/jquery-ui-touch-punch": "github:RWAP/jquery-ui-touch-punch",
-        "bcrypt": "^5.1.0",
         "cors": "^2.8.5",
+        "debug": "^4.3.4",
         "express": "^4.18.2",
+        "express-basic-auth": "^1.2.1",
         "express-session": "^1.17.3",
         "follow-redirects": "^1.15.2",
         "jquery": "^3.6.3",
         "jquery-ui-dist": "^1.13.2",
         "nodemailer": "^6.9.0",
-        "passport": "^0.6.0",
-        "passport-strategy": "^1.0.0",
         "posix-getopt": "^1.2.1",
-        "requirejs": "^2.3.6",
         "session-file-store": "^1.5.0"
     },
     "peerDependencies": {
