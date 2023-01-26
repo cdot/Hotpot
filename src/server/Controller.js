@@ -2,19 +2,21 @@
 
 /*eslint-env node */
 
+import debug from "debug";
 import Events from "events";
 import Path from "path";
 import { promises as Fs } from "fs";
 
-import { Utils } from "../common/Utils.js";
+import { extend } from "../common/extend.js";
+import { startTimer, cancelTimer } from "../common/Timers.js";
 import { Request } from "../common/Request.js";
 import { DataModel } from "../common/DataModel.js";
 import { Thermostat } from "./Thermostat.js";
 import { Pin } from "./Pin.js";
 
-const TAG = "Controller";
+const trace = debug("Controller");
 
-/* global HOTPOT_DEBUG */
+/* global HOTPOT_SIM */
 
 /**
  * Controller for a number of pins, thermostats, calendars, weather agents,
@@ -33,7 +35,7 @@ class Controller extends Events.EventEmitter {
    */
   constructor(proto) {
     super();
-    Utils.extend(this, proto);
+    extend(this, proto);
   }
 
   /**
@@ -41,7 +43,7 @@ class Controller extends Events.EventEmitter {
    * @return {Promise} Promise resolving to `this`
    */
   initialise() {
-    Utils.TRACE(TAG, "Initialising Controller");
+    trace("Initialising Controller");
 
     return this.initialisePins()
 
@@ -70,7 +72,7 @@ class Controller extends Events.EventEmitter {
       promises.push(this.weather[name].initialise());
     }
     return Promise.all(promises).then(() => {
-      Utils.TRACE(TAG, "Initialised Weather Agents");
+      trace("Initialised Weather Agents");
     });
   };
 
@@ -85,7 +87,7 @@ class Controller extends Events.EventEmitter {
   makeRequest(service, req) {
     const remove = (req.until === Request.CLEAR);
 
-    Utils.TRACE(TAG, "makeRequest ", service, req);
+    trace("makeRequest %s %o", service, req);
 
     if (/^ALL$/i.test(service)) {
       for (let name in this.thermostat) {
@@ -98,8 +100,7 @@ class Controller extends Events.EventEmitter {
           th.addRequest(req);
       }
     } else if (!this.thermostat[service])
-      throw Utils.exception(
-        TAG, `Cannot add request, ${service} is not a known thermostat`);
+      throw Error(`Cannot add request, ${service} is not a known thermostat`);
     else if (remove)
 			this.thermostat[service].purgeRequests({
 				source: req.source
@@ -117,7 +118,7 @@ class Controller extends Events.EventEmitter {
    * @private
    */
   initialiseCalendars() {
-    Utils.TRACE(TAG, "Initialising Calendar");
+    trace("Initialising Calendar");
 
     for (const name in this.calendar) {
       const cal = this.calendar[name];
@@ -152,7 +153,7 @@ class Controller extends Events.EventEmitter {
       cal.update(1000);
     }
 
-    Utils.TRACE(TAG, "Initialised Calendars");
+    trace("Initialised Calendars");
     return Promise.resolve();
   };
 
@@ -168,7 +169,7 @@ class Controller extends Events.EventEmitter {
     for (let name in this.pin)
       promises.push(this.pin[name].initialise());
     return Promise.all(promises).then(() => {
-      Utils.TRACE(TAG, "Initialised pins");
+      trace("Initialised pins");
     });
   }
 
@@ -181,32 +182,32 @@ class Controller extends Events.EventEmitter {
     const pins = this.pin;
     const valveBack = this.valve_return;
 
-    Utils.TRACE(TAG, "Resetting valve");
+    trace("Resetting valve");
     return pins.HW.setState(1, "Reset")
 
     .then(() => {
-      Utils.TRACE(TAG, "Reset: HW(1) done");
+      trace("Reset: HW(1) done");
       return new Promise(resolve => {
-        Utils.startTimer("HWreset", resolve, valveBack);
+        startTimer("HWreset", resolve, valveBack);
       });
     })
 
     .then(() => {
-      Utils.TRACE(TAG, "Reset: delay done");
+      trace("Reset: delay done");
       return pins.CH.setState(0, "Reset");
     })
 
     .then(() => {
-      Utils.TRACE(TAG, "Reset: CH(0) done");
+      trace("Reset: CH(0) done");
       return pins.HW.setState(0, "Reset");
     })
 
     .then(() => {
-      Utils.TRACE(TAG, "Valve reset");
+      trace("Valve reset");
     })
 
     .catch(e => {
-      Utils.TRACE(TAG, "Failed to reset valve: ", e);
+      trace("Failed to reset valve: ", e);
     });
   }
 
@@ -227,7 +228,7 @@ class Controller extends Events.EventEmitter {
         }));
     }
     return Promise.all(promises).then(() => {
-      Utils.TRACE(TAG, "Initialised thermostats");
+      trace("Initialised thermostats");
     });
   };
 
@@ -280,15 +281,6 @@ class Controller extends Events.EventEmitter {
               return field;
             }));
         }
-      }
-    }
-
-    if (Utils.TRACEing(TAG)) {
-      state.timers = {};
-      let timers = Utils.getTimers();
-      for (let tid in timers) {
-        Utils.TRACE(TAG, "\t", tid, new Date(timers[tid].when));
-        state.timers[tid] = new Date(timers[tid].when).toString();
       }
     }
 
@@ -369,7 +361,7 @@ class Controller extends Events.EventEmitter {
 
     if (this.pending) {
       return new Promise(resolve => {
-        Utils.startTimer("setPromise", () => resolve(
+        startTimer("setPromise", () => resolve(
           this.setPromise(channel, newState)),
                          this.valve_return);
       });
@@ -409,7 +401,7 @@ class Controller extends Events.EventEmitter {
           .then(() => pins.HW.setState(1)) // switch on HW
           // wait for spring return
           .then(() => new Promise(
-            resolve => Utils.startTimer(
+            resolve => startTimer(
               "springReturn",
               resolve, this.valve_return)))
           .then(() => pins.HW.setState(0)) // switch off HW
@@ -472,9 +464,7 @@ class Controller extends Events.EventEmitter {
         if (typeof p.parent === "undefined" ||
             typeof p.key === "undefined" ||
             typeof p.node === "undefined")
-          throw Utils.exception(
-            TAG,
-            `Cannot update ${path}, insufficient context`);
+          throw Error(            `Cannot update ${path}, insufficient context`);
 
         // Now remodel the data using the sub-model
         DataModel.remodel({
@@ -494,7 +484,7 @@ class Controller extends Events.EventEmitter {
         // controller data
         .then(rebuilt => {
           p.parent[p.key] = rebuilt;
-          Utils.TRACE(TAG, `setconfig ${path} = `, rebuilt);
+          trace(`setconfig ${path} = `, rebuilt);
           return rebuilt;
         })
         // finally trigger a save at the right place in
@@ -528,7 +518,7 @@ class Controller extends Events.EventEmitter {
    * @private
    */
   pollRules() {
-    Utils.TRACE(TAG, "Polling rules");
+    trace("Polling rules");
 
     // Purge completed requests
     for (let name in this.thermostat)
@@ -548,7 +538,7 @@ class Controller extends Events.EventEmitter {
     return Promise.all(promises)
     .then(() => {
       // Queue the next poll
-      this.pollTimer = Utils.startTimer(
+      this.pollTimer = startTimer(
         "pollRules", () => this.pollRules(), this.rule_interval);
       return this;
     });
@@ -561,7 +551,7 @@ class Controller extends Events.EventEmitter {
   stop() {
     this.stopped = true;
     if (typeof this.pollTimer !== "undefined") {
-      Utils.cancelTimer(this.pollTimer);
+      cancelTimer(this.pollTimer);
       delete this.pollTimer;
     }
     for (let name in this.thermostat) {
@@ -587,11 +577,11 @@ class Controller extends Events.EventEmitter {
       let promise;
 
       if (typeof this.mail === "undefined") {
-        if (typeof HOTPOT_DEBUG === "undefined") {
+        if (typeof HOTPOT_SIM === "undefined") {
           console.error("Mail not configured and no --debug");
           return null;
         }
-        promise = HOTPOT_DEBUG.setupEmail(NodeMailer)
+        promise = HOTPOT_SIM.setupEmail(NodeMailer)
         .then(mail => {
           this.mail = mail;
         });

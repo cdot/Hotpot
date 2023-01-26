@@ -3,7 +3,6 @@
 /*eslint-env node */
 
 import { assert } from "chai";
-import { Utils } from "../../src/common/Utils.js";
 import { Expectation } from "../Expectation.js";
 import { Time } from "../../src/common/Time.js";
 import { Calendar } from "../../src/server/Calendar.js";
@@ -12,7 +11,6 @@ import { Request } from "../../src/common/Request.js";
 describe("Calendar", () => {
 
 	it("parse events", () => {
-    //Utils.TRACEfilter("all");
 		let now = Date.now() + 250;
 		let cal = new Calendar({}, "test");
 		let exp = new Expectation(5);

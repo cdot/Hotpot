@@ -3,7 +3,7 @@
 /*eslint-env node */
 
 import getopt from "posix-getopt";
-import { Utils } from "../src/common/Utils.js";
+import { startTimer } from "../src/common/Timers.js";
 import { DS18x20 } from "../src/server/DS18x20.js";
 
 const ASYNC = true;
@@ -80,7 +80,7 @@ function poll(sensors) {
   }
 	promise.finally(() => {
 		if (freq > 0)
-			Utils.startTimer("freq", () => poll(sensors), freq * 1000);
+			startTimer("freq", () => poll(sensors), freq * 1000);
 	});
 }
 

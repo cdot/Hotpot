@@ -2,8 +2,6 @@
 
 /*eslint-env browser,node */
 
-import { Utils } from "./Utils.js";
-
 const ONE_DAY = 24 * 60 * 60 * 1000; // one day in ms
 
 /**
@@ -36,7 +34,7 @@ class Time {
     const s = Number.parseFloat(hms.shift() || "0");
     // Set according to local time
     if (h > 23 || m > 59 || s >= 60 || h < 0 || m < 0 || s < 0)
-      throw Utils.exception("Time", "out of range 00:00:00..23:59:59");
+      throw Error("Time out of range 00:00:00..23:59:59");
     return (((h * 60) + m) * 60 + s) * 1000;
   }
 
@@ -103,7 +101,7 @@ class Time {
       return pad + n;
     }
     if (t < 0 || t > ONE_DAY)
-      throw Utils.exception("Time", "unparse time out of range");
+      throw Error("Time unparse out of range");
     const ms = t % 1000;
     t = Math.trunc(t / 1000); // to seconds
     const s = t % 60; // seconds

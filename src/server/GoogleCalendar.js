@@ -2,17 +2,16 @@
 
 /*eslint-env node */
 
-import { Utils } from "../common/Utils.js";
-
+import debug from "debug";
+import { extend } from "../common/extend.js";
 import { Calendar } from "./Calendar.js";
-
 import googleApis from "googleapis";
 import { OAuth2Client } from "google-auth-library";
 
 // MS in an hour
 const HOURS = 60 * 60 * 1000;
 
-const TAG = "GoogleCalendar";
+const trace = debug("GoogleCalendar");
 
 function googleCalendarAPI() {
   const apis = new googleApis.GoogleApis();
@@ -103,7 +102,7 @@ class GoogleCalendar extends Calendar {
     .then(response => {
       this.clearSchedule();
       const events = response.data.items;
-      Utils.TRACE(TAG, `'${this.name}' has ${events.length} events`);
+      trace(`'${this.name}' has ${events.length} events`);
       this.last_update = new Date();
       for (let i = 0; i < events.length; i++) {
         const event = events[i];
@@ -113,14 +112,14 @@ class GoogleCalendar extends Calendar {
         const fullText = `${event.summary};${event.description}`;
         this.parseEvents(start, end, fullText);
       }
-      Utils.TRACE(TAG, `'${this.name}' ready`);
+      trace(`'${this.name}' ready`);
     });
   }
 
   listCalendars() {
     return this.authorise()
     .then(() => {
-      Utils.TRACE(TAG, "Listing calendars");
+      trace("Listing calendars");
       const calendar = googleCalendarAPI();
 
       return new Promise((resolve, reject) => {
@@ -153,7 +152,7 @@ class GoogleCalendar extends Calendar {
  * @property {String} auth_cache.refresh_token see README.md
  * @property {number} auth_cache.expiry_date see README.md
  */
-GoogleCalendar.Model = Utils.extend(Calendar.Model, {
+GoogleCalendar.Model = extend(Calendar.Model, {
   $class: GoogleCalendar,
   id: {
     // id used by google calendar

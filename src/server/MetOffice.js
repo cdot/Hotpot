@@ -1,21 +1,18 @@
 /*@preserve Copyright (C) 2016-2023 Crawford Currie http://c-dot.co.uk license MIT*/
 /*eslint-env node */
 
+import debug from "debug";
 import http from "follow-redirects";
 const Http = http.http;
 import Url from "url";
 
-import { Utils } from "../common/Utils.js";
+import { extend } from "../common/extend.js";
 import { Location } from "../common/Location.js";
 import { Weather } from "./Weather.js";
 
-/** @private */
 const USUAL_PATH = "/public/data/val/wxfcs/all/json/";
+const trace = debug("MetOffice");
 
-/** @private */
-const TAG = "MetOffice";
-
-/** @private */
 const IS_NUMBER = [
 	"Feels Like Temperature",
 	"Screen Relative Humidity",
@@ -64,7 +61,7 @@ class MetOffice extends Weather {
    * @param {Location} loc where
    */
   setLocation(loc) {
-    Utils.TRACE(TAG, "Set location ", loc);
+    trace("Set location %s", loc.toString());
     return this._findNearestLocation(loc)
     .then(() => super.setLocation(loc));
   };
@@ -99,8 +96,7 @@ class MetOffice extends Weather {
         best = list[i];
       }
     }
-    Utils.TRACE(TAG, "Nearest location is ", best.name, " at ",
-                new Location(best));
+    trace("Nearest location is %s at %o", best.name, best);
     this.location_id = best.id;
   };
 
@@ -125,7 +121,7 @@ class MetOffice extends Weather {
           let result = "";
           if (res.statusCode < 200 || res.statusCode > 299) {
             reject(new Error(
-              TAG + " failed to load sitelist, status: " +
+              "MetOffice failed to load sitelist, status: " +
               res.statusCode));
             return;
           }
@@ -138,7 +134,7 @@ class MetOffice extends Weather {
           });
         })
       .on("error", err => {
-        Utils.TRACE(TAG, "Failed to GET sitelist: ", err.toString());
+        trace("Failed to GET sitelist: %o", err);
         reject(err);
       });
     });
@@ -202,7 +198,7 @@ class MetOffice extends Weather {
         new_reports++;
       }
     }
-    Utils.TRACE(TAG, new_reports, " new reports");
+    trace("%d new reports", new_reports);
   };
 
   /**
@@ -215,7 +211,7 @@ class MetOffice extends Weather {
       return Promise.resolve();
     }
 
-    Utils.TRACE(TAG, "Updating from MetOffice website");
+    trace("Updating from MetOffice website");
 
     let options = {
       protocol: this.url.protocol,
@@ -239,7 +235,7 @@ class MetOffice extends Weather {
           });
         })
       .on("error", err => {
-        Utils.TRACE(TAG, "Failed to GET weather: ", err.toString());
+        trace("Failed to GET weather: %O", err);
         fail(err);
       });
     })
@@ -293,7 +289,7 @@ class MetOffice extends Weather {
  * @typedef MetOffice.Model
  * @property {string} api_key API key for requests to the Met Office website
  */
-MetOffice.Model = Utils.extend(Weather.Model, {
+MetOffice.Model = extend(Weather.Model, {
   $class: MetOffice,
   api_key: {
     $class: String,

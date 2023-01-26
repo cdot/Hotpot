@@ -1,4 +1,5 @@
-import { Utils } from "../common/Utils.js";
+import debug from "debug";
+const trace = debug("Rules");
 import { Rule } from "./Rule.js";
 
 // How close to the target temperature we want to be. Water will
@@ -21,8 +22,8 @@ class HotWaterRule extends Rule {
       if (thermostat.temperature > thermostat.getMaximumTemperature()) {
         // Hot enough, so switch off regardless of other rules
         if (state === 1) {
-          Utils.TRACE("Rules", "HW is overheating ", thermostat.temperature,
-                      "°C so turning off");
+          trace("HW is overheating %d°C so turning off",
+                thermostat.temperature);
           pin.reason = "Overheat";
         }
         // Use setPromise rather than Pin.setState() because setPromise
@@ -35,8 +36,7 @@ class HotWaterRule extends Rule {
       if (thermostat.temperature > target) {
         // Hot enough, so switch off regardless of other rules
         if (state === 1) {
-          Utils.TRACE("Rules", "HW is ", thermostat.temperature,
-                      "°C so turning off");
+          trace("HW is %d°C so turning off", thermostat.temperature);
           pin.reason = "Hot enough";
         }
         // Use setPromise rather than Pin.setState() because setPromise
@@ -46,9 +46,7 @@ class HotWaterRule extends Rule {
 
       if (thermostat.temperature < target - PRECISION) {
         if (state === 0) {
-          Utils.TRACE("Rules", "HW only ",
-                      thermostat.temperature,
-                      "°C, so on");
+          trace("HW only %d°C, so on", thermostat.temperature);
           pin.reason = "Too cold";
         }
         return controller.setPromise("HW", 1);

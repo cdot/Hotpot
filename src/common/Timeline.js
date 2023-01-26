@@ -2,12 +2,8 @@
 
 /*eslint-env browser,node */
 
-import { Utils } from "./Utils.js";
-
 import { Time } from "./Time.js";
 import { TimeValue } from "./TimeValue.js";
-
-const TAG = "Timeline";
 
 /**
  * A timeline is an object that represents a continuous graph
@@ -55,7 +51,7 @@ class Timeline {
         this.max < this.min ||
         typeof this.period !== "number" ||
         this.period <= 0) {
-      throw Utils.exception(TAG, "Bad configuration");
+      throw Error("Bad configuration");
     }
 
     if (typeof this.points === "undefined")
@@ -127,8 +123,7 @@ class Timeline {
    */
   getPointBefore(t) {
     if (t < 0 || t >= this.period)
-      throw Utils.exception(
-        TAG, `${Time.formatHMS(t)} is outside timeline ${Time.formatHMS(0)}..${Time.formatHMS(this.period - 1)}`);
+      throw Error(`${Time.formatHMS(t)} is outside timeline ${Time.formatHMS(0)}..${Time.formatHMS(this.period - 1)}`);
 		let prev;
     for (let pt of this.points) {
       if (pt.time > t)
@@ -148,8 +143,7 @@ class Timeline {
    */
   getPointAfter(t) {
     if (t < 0 || t >= this.period)
-      throw Utils.exception(
-        TAG, `${Time.formatHMS(t)} is outside timeline ${Time.formatHMS(0)}..${Time.formatHMS(this.period - 1)}`);
+      throw Error(`${Time.formatHMS(t)} is outside timeline ${Time.formatHMS(0)}..${Time.formatHMS(this.period - 1)}`);
     for (let pt of this.points) {
       if (pt.time >= t)
         return pt;
@@ -193,8 +187,7 @@ class Timeline {
   remove(tp) {
 		const idx = this.points.indexOf(tp);
     if (idx <= 0)
-      throw Utils.exception(
-        TAG, `Point at ${Time.formatHMS(tp.time)} cannot be removed`);
+      throw Error(`Point at ${Time.formatHMS(tp.time)} cannot be removed`);
     this.points.splice(idx, 1);
     return this;
   }
@@ -214,8 +207,7 @@ class Timeline {
    */
   getPoint(i) {
     if (i < 0 || i >= this.points.length)
-      throw Utils.exception(
-        TAG, `Point ${i} not in 0..${this.points.length - 1}`);
+      throw Error(`Point ${i} not in 0..${this.points.length - 1}`);
     return this.points[i];
 
   }
@@ -236,7 +228,7 @@ class Timeline {
 				return;
 			}
 		}
-		throw Utils.exception(TAG, "Nowhere to insert point");
+		throw Error("Nowhere to insert point");
 	}
 }
 

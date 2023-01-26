@@ -3,7 +3,6 @@
 /*eslint-env node */
 
 import { Expectation } from "../Expectation.js";
-import { Utils } from "../../src/common/Utils.js";
 import { Server } from "../../src/server/Server.js";
 import chai from "chai";
 const assert = chai.assert;
@@ -18,14 +17,10 @@ describe("Server", () => {
 	const config = {
 		port: 13198,
 		docroot: __dirname,
-    session_secret: "brilliant shine"
+    privacy: { session_secret: "brilliant shine" }
 	};
 
   let server;
-
-	before(() => {
-    //Utils.TRACEfilter("all");
-	});
 
   afterEach(() => {
     process.removeAllListeners("unhandledRejection");
@@ -50,7 +45,7 @@ describe("Server", () => {
 		return chai.request(server.express)
 		.get('/')
 		.then(res => {
-			assert.equal(res.status, 200);
+			assert.equal(res.status, 200, res);
       // should be index.html
       assert(/^<!DOCTYPE/.test(res.text));
       server.stop();
@@ -58,7 +53,6 @@ describe("Server", () => {
 	});
 
 	it("GET /test/server/test.txt", () => {
-    //Utils.TRACEfilter("all");
 		const server = new Server(config);
 		server.start();
     return chai.request(server.express)
@@ -70,19 +64,6 @@ describe("Server", () => {
 		});
 	});
 
-  it("GET /trace?ids=", () => {
-    // NOTE: not a post, a get
-		const server = new Server(config);
-		server.start();
-    return chai.request(server.express)
-		.get("/trace?ids=Poot,Weet")
-		.then(res => {
-			assert.equal(res.status, 200);
-      assert(Utils.TRACEing("Poot"));
-      assert(Utils.TRACEing("Weet"));
-      server.stop();
-		});
-  });
 /*
   it("GET /log/:type/:name", () => {
 		const server = new Server(config);

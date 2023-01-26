@@ -13,7 +13,7 @@
 
 /*eslint-env node */
 import getopt from "posix-getopt";
-import { Utils } from "../src/common/Utils.js";
+import { expandEnv } from "../src/common/expandEnv.js";
 import { DataModel } from "../src/common/DataModel.js";
 import { Controller } from "../src/server/Controller.js";
 import { GoogleCalendar } from "../src/server/GoogleCalendar.js";
@@ -35,8 +35,6 @@ const DESCRIPTION = [
 	"-C, --calendar=ARG - Name of calendar (default is first)",
 	"-c, --config=ARG - Configuration file (default hotpot.cfg)"
 ].join("\n");
-
-Utils.TRACEfilter("all");
 
 function showCalendar(cal) {
 	cal
@@ -74,7 +72,7 @@ while ((option = go_parser.getopt())) {
 	}
 }
 
-DataModel.loadData(Utils.expandEnvVars(cliopt.config), HOTPOT_MODEL)
+DataModel.loadData(expandEnv(cliopt.config), HOTPOT_MODEL)
 .then(function(config) {
 	if (!cliopt.calendar) {
 		for (cliopt.calendar in config.controller.calendar)
@@ -83,8 +81,7 @@ DataModel.loadData(Utils.expandEnvVars(cliopt.config), HOTPOT_MODEL)
 	var cfg = config.controller.calendar[cliopt.calendar];
 
 	if (!cfg)
-		throw Utils.exception("Calendar", "No calendar ",
-								          cliopt.calendar, " in config");
+		throw Error(`No calendar ${cliopt.calendar} in config`);
 	console.log("Using calendar '" + cliopt.calendar + "'");
 
 	var cal = new GoogleCalendar(cfg, cliopt.calendar);

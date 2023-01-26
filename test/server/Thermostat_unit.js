@@ -2,18 +2,18 @@
 
 /*eslint-env node */
 
-global.HOTPOT_DEBUG = undefined;
+global.HOTPOT_SIM = undefined;
 
 import { assert } from "chai";
 import { Expectation } from "../Expectation.js";
 import { DataModel } from "../../src/common/DataModel.js";
 import { Thermostat } from "../../src/server/Thermostat.js";
-import { DebugSupport as Service } from "../../src/server/DebugSupport.js";
+import { Simulator } from "../../src/server/Simulator.js";
 
 describe("Thermostat", () => {
 
 	it("initialise", () => {
-		HOTPOT_DEBUG = new Service();
+		HOTPOT_SIM = new Simulator();
 		return DataModel.remodel({
 			index: "test",
 			data: { id: "FF-C04EFECAFEBABE",
@@ -53,7 +53,7 @@ describe("Thermostat", () => {
 			  assert.equal(st.requests.length, 0);
 				th.stop();
 			})
-			.then(() => HOTPOT_DEBUG.stop());
+			.then(() => HOTPOT_SIM.stop());
 		});
 	});
 });

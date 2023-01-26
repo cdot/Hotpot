@@ -2,7 +2,7 @@
 
 /*eslint-env node */
 
-import { Utils } from "../common/Utils.js";
+import { extend } from "../common/extend.js";
 
 /**
  * Abstract base class of rules governing when/if a function is to
@@ -21,7 +21,7 @@ class Rule {
      */
     this.name = name;
 
-    Utils.extend(this, proto);
+    extend(this, proto);
   }
 
   /**

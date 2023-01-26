@@ -2,15 +2,16 @@
 
 /*eslint-env node */
 
+import { extend } from "../common/extend.js";
+import debug from "debug";
 import { promises as Fs } from "fs";
-import { Utils } from "../common/Utils.js";
 import { ScheduledEvent } from "../common/ScheduledEvent.js";
 import { Calendar } from "./Calendar.js";
 
 // MS in an hour
 const HOURS = 60 * 60 * 1000;
 
-const TAG = "HotpotCalendar";
+const trace = debug("HotpotCalendar");
 
 /**
  * @typedef Calendar.Event
@@ -88,7 +89,7 @@ class HotpotCalendar extends Calendar {
   }
 
   handle_change(id, data) {
-    Utils.TRACE(TAG, `Change ${id} `, data);
+    trace(`Change ${id} `, data);
     return this.load()
     .then(events => {
       // Expand incoming calendar events into ScheduledEvents
@@ -110,7 +111,7 @@ class HotpotCalendar extends Calendar {
   }
 
   handle_add(data) {
-    Utils.TRACE(TAG, "Add ", data);
+    trace("Add %o", data);
     return this.load()
     .then(events => {
       // An incoming event from a UI calendar might spawn multiple
@@ -132,7 +133,7 @@ class HotpotCalendar extends Calendar {
   }
 
   handle_remove(id) {
-    Utils.TRACE(TAG, `Remove ${id}`);
+    trace(`Remove ${id}`);
     // TODO: Also to cancel any active requests?
     return this.load()
     .then(events => this.save(events.filter(e => e.id !== id)));
@@ -173,7 +174,7 @@ class HotpotCalendar extends Calendar {
   }
 }
 
-HotpotCalendar.Model = Utils.extend(Calendar.Model, {
+HotpotCalendar.Model = extend(Calendar.Model, {
   $class: HotpotCalendar,
   file: {
     $doc: "Full path to the events file",

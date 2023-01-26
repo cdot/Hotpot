@@ -2,8 +2,6 @@
 
 /*eslint-env node */
 
-import { Utils } from "./Utils.js";
-
 /**
  * Simple vector package.
  * Objects passed are maps of coordinate names to numbers. Coordinates
@@ -23,15 +21,14 @@ class Vec {
       for (let i = 1; i < arguments.length; i++)
         if (!(arguments[i] instanceof Array) ||
             (arguments[i].length != v.length))
-          throw Utils.exception("Vec", "Length mismatch");
+          throw Error("Vec length mismatch");
       return [];
     } else {
       for (let i in v) {
         for (let j = 1; j < arguments.length; j++)
           if (typeof arguments[j][i] !== typeof v[i])
-            throw Utils.exception("Vec", "Type mismatch",
-                                  typeof arguments[j][i],
-                                  typeof v[i]);
+            throw Error(
+              `Vec type mismatch ${typeof arguments[j][i]} ${typeof v[i]}`);
       }
       return {};
     }

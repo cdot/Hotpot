@@ -2,11 +2,13 @@
 
 /*eslint-env node */
 
-import { Utils } from "../common/Utils.js";
+import debug from "debug";
+import { extend } from "../common/extend.js";
+import { startTimer, cancelTimer } from "../common/Timers.js";
 import { DataModel } from "../common/DataModel.js";
 import { Historian } from "./Historian.js";
 
-const TAG = "Weather";
+const trace = debug("Weather");
 
 /**
  * Abstract base class of weather agents. Specific agent implementations
@@ -26,7 +28,7 @@ class Weather {
    * @param {string} name name of the service
    */
 	constructor(proto, name) {
-    Utils.extend(this, proto);
+    extend(this, proto);
 		/**
 		 * Name of this service
 		 * @member {string}
@@ -139,14 +141,14 @@ class Weather {
    */
   update() {
 		if (this.updateTimer) {
-			Utils.cancelTimer(this.updateTimer);
+			cancelTimer(this.updateTimer);
 			delete this.updateTimer;
 		}
     return this.getWeather()
     .then(wait => {
       this.last_update = Date.now();
       if (wait > 0) {
-				this.updateTimer = Utils.startTimer(
+				this.updateTimer = startTimer(
 					"weather", () => {
 						this.update();
 					}, wait);
@@ -159,9 +161,9 @@ class Weather {
    */
   stop() {
     if (this.updateTimer) {
-      Utils.cancelTimer(this.updateTimer);
+      cancelTimer(this.updateTimer);
       delete this.updateTimer;
-			Utils.TRACE(TAG, `'${this.name}' stopped`);
+	    trace(`'${this.name}' stopped`);
     }
   }
 }
@@ -173,7 +175,7 @@ class Weather {
  */
 Weather.Model = {
   $class: Weather,
-  history: Utils.extend({
+  history: extend({
     $optional: true
   }, Historian.Model)
 };

@@ -2,15 +2,14 @@
 
 /*eslint-env node */
 
+import debug from "debug";
 import { promises as Fs } from "fs";
 import Path from "path";
-import { Utils } from "../common/Utils.js";
 
-const TAG = "DS18x20";
-
-// Base path of all one-wire device paths. This is declared as static so it
-// can be overridded in DebugSupport.js
+// Base path of all one-wire device paths.
 const ONE_WIRE_PATH = "/sys/bus/w1/devices";
+
+const trace = debug("DS18x20");
 
 /**
  * Interface to DS18x20 temperature sensors
@@ -33,10 +32,10 @@ class DS18x20 {
    * Return a promise to get the temperature from the sensor
    */
   async getTemperature() {
-    // Javascript is single-threaded, so the await should be
+    // Hotpot server is single-threaded, so the await should be
     // enough to block any other attempt to read from the wire
     // bus.
-    Utils.TRACE(TAG, `Polling ${this.id}`);
+    trace(`Polling ${this.id}`);
     return await Fs.readFile(
       Path.resolve(ONE_WIRE_PATH, this.id, 'w1_slave'), 'latin1')
     .then(content => {
@@ -55,7 +54,7 @@ class DS18x20 {
       return val / 1000;
     })
     .catch(e => {
-      Utils.TRACE(TAG, `Poll failed ${e}`);
+      trace(`Poll failed ${e}`);
       throw e;
     });
   }

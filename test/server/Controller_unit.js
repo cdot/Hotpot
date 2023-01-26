@@ -1,23 +1,22 @@
 /*@preserve Copyright (C) 2021 Crawford Currie http://c-dot.co.uk license MIT*/
 /*eslint-env node */
 
-/* global HOTPOT_DEBUG */
+/* global HOTPOT_SIM */
 import chai from "chai";
 const assert = chai.assert;
 import chaiHttp from "chai-http";
 chai.use(chaiHttp);
-import { Utils } from "../../src/common/Utils.js";
 import { Request } from "../../src/common/Request.js";
 import NodeMailer from "nodemailer";
 import { Expectation } from "../Expectation.js";
 import { DataModel } from "../../src/common/DataModel.js";
 import { Controller } from "../../src/server/Controller.js";
-import { DebugSupport as Service } from "../../src/server/DebugSupport.js";
+import { Simulator } from "../../src/server/Simulator.js";
 import Path from "path";
 import { fileURLToPath } from "url";
 const __dirname = Path.dirname(fileURLToPath(import.meta.url));
 
-global.HOTPOT_DEBUG = undefined;
+global.HOTPOT_SIM = undefined;
 
 describe("Controller", function() {
 
@@ -118,7 +117,7 @@ describe("Controller", function() {
   function UNit() {}
 
 	it("basic", () => {
-	  HOTPOT_DEBUG = new Service();
+	  HOTPOT_SIM = new Simulator();
 		return DataModel.remodel({
       index: "test",
       data: config,
@@ -127,11 +126,11 @@ describe("Controller", function() {
     })
 		.then(controller => controller.initialise())
 		.then(controller => controller.stop())
-		.then(() => HOTPOT_DEBUG.stop());
+		.then(() => HOTPOT_SIM.stop());
 	});
   
 	it("state", () => {
-	  HOTPOT_DEBUG = new Service();
+	  HOTPOT_SIM = new Simulator();
 		let controller;
 		return DataModel.remodel({
       index: "test",
@@ -155,13 +154,13 @@ describe("Controller", function() {
 			});
 		})
 		.then(() => controller.stop())
-		.then(() => HOTPOT_DEBUG.stop());
+		.then(() => HOTPOT_SIM.stop());
 	});
 
 	it("log", () => {
 		let controller;
 
-	  HOTPOT_DEBUG = new Service();
+	  HOTPOT_SIM = new Simulator();
 		return DataModel.remodel({
       index: "test",
       data: config,
@@ -178,12 +177,12 @@ describe("Controller", function() {
 									                {since: Date.now() - 20000}))
 		.then(ser => console.debug(ser))
 		.then(() => controller.stop())
-		.then(() => HOTPOT_DEBUG.stop());
+		.then(() => HOTPOT_SIM.stop());
 	});
 
 	it("boost", () => {
 		let controller;
-	  HOTPOT_DEBUG = new Service();
+	  HOTPOT_SIM = new Simulator();
 		return DataModel.remodel({
       index: "test",
       data: config,
@@ -209,12 +208,12 @@ describe("Controller", function() {
 			assert.equal(req.until, "boost");
 		})
 		.then(() => controller.stop())
-		.then(() => HOTPOT_DEBUG.stop());
+		.then(() => HOTPOT_SIM.stop());
 	});
 
 /*	it("mailer", () => {
     let controller;
-	  HOTPOT_DEBUG = new Service();
+	  HOTPOT_SIM = new Simulator();
 		return DataModel.remodel({
       index: "test",
       data: config,
@@ -238,7 +237,7 @@ describe("Controller", function() {
 					});
 		})
 		.then(() => controller.stop())
-		.then(() => HOTPOT_DEBUG.stop());
+		.then(() => HOTPOT_SIM.stop());
 	});*/
 });
 

@@ -2,11 +2,15 @@
 
 /*eslint-env node */
 
+import debug from "debug";
 import { promises as Fs } from "fs";
-import { Utils } from "../common/Utils.js";
+
+import { extend } from "../common/extend.js";
+import { expandEnv } from "../common//expandEnv.js";
+import { startTimer, cancelTimer } from "../common/Timers.js";
 import { TimeValue } from "../common/TimeValue.js";
 
-const TAG = "Historian";
+const trace = debug("Historian");
 
 /**
  * Logger. Can either log according to a time interval using a sampling
@@ -22,12 +26,12 @@ class Historian {
    * @param {string} name name of the historian
    */
   constructor(proto, name) {
-    Utils.extend(this, proto);
+    extend(this, proto);
 
     this.name = name;
 
     this.timeout = null;
-    Utils.TRACE(TAG, "for ", name, " in ", this.path());
+    trace("For %s in %s", name, this.path());
   }
 
   /**
@@ -35,7 +39,7 @@ class Historian {
    * @return {string} file name
    */
   path() {
-    return Utils.expandEnvVars(this.file);
+    return expandEnv(this.file);
   }
 
   /**
@@ -48,7 +52,7 @@ class Historian {
       s += `${report[i].time},${report[i].value}\n`;
     return Fs.writeFile(this.path(), s)
     .then(() => {
-      Utils.TRACE(TAG, "Wrote ", this.path());
+      trace("Wrote %s", this.path());
     });
   };
 
@@ -103,7 +107,7 @@ class Historian {
       return report;
     })
     .catch(e => {
-      Utils.TRACE(TAG, "Failed to open history ", e);
+      trace("Failed to open history %o", e);
       return [];
     });
   };
@@ -131,12 +135,12 @@ class Historian {
   start(sample) {
 
     if (typeof sample !== "function")
-      throw Utils.exception(TAG, "Cannot start; sample not a function");
+      throw Error("Cannot start; sample not a function");
     this.sampler = sample;
 
     if (typeof this.interval === "undefined")
-      throw Utils.exception(TAG, "Cannot start; interval not defined");
-    this.timeout = Utils.startTimer(
+      throw Error("Cannot start; interval not defined");
+    this.timeout = startTimer(
       `hist${this.name}`, () => this._poll(), 100);
   }
 
@@ -158,7 +162,7 @@ class Historian {
       if (this.timeout) {
         // Existance of a timer indicates we must continue
         // to poll
-        this.timeout = Utils.startTimer(
+        this.timeout = startTimer(
           `hist${this.name}`, () => this._poll(), this.interval);
       }
     });
@@ -169,9 +173,9 @@ class Historian {
    */
   stop() {
     if (this.timeout) {
-      Utils.cancelTimer(this.timeout);
+      cancelTimer(this.timeout);
       this.timeout = null;
-      Utils.TRACE(TAG, this.name, " stopped");
+      trace("%s stopped", this.name);
     }
   };
 
@@ -201,7 +205,7 @@ class Historian {
 
     return Fs.appendFile(this.path(), line)
     .catch(ferr => {
-      Utils.TRACE(TAG, `failed to append to '${this.path()}': `, ferr);
+      trace(`failed to append to '${this.path()}': `, ferr);
     });
   };
 }

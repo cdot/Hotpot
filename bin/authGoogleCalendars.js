@@ -11,7 +11,7 @@ import { OAuth2Client } from "google-auth-library";
  * Stand-alone program to authorise calendars declared in hotpot.cfg
  * @module server/AuthoriseCalendars
  */
-import { Utils } from "../src/common/Utils.js";
+import { expandEnv } from "../src/common/expandEnv.js";
 import { Time } from "../src/common/Time.js";
 import { DataModel } from "../src/common/DataModel.js";
 
@@ -41,7 +41,7 @@ while ((option = go_parser.getopt())) {
   }
 
 function configureCalendar(credentials) {
-  let cfn = Utils.expandEnvVars(credentials.auth_cache);
+  let cfn = expandEnv(credentials.auth_cache);
   if (cliopt.debug) console.debug(`Auth cache ${cfn}`);
   return Fs.stat(cfn)
   .catch(e => {
@@ -92,7 +92,7 @@ function authorise(credentials) {
       }
       oAuth2Client.credentials = token;
 
-      Fs.writeFile(Utils.expandEnvVars(credentials.auth_cache),
+      Fs.writeFile(expandEnv(credentials.auth_cache),
                    JSON.stringify(token))
 
       .then(() => {

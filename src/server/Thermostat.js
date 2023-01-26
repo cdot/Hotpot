@@ -1,9 +1,12 @@
 /*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
-/* global HOTPOT_DEBUG */
+/* global HOTPOT_SIM */
 
-import { Utils } from "../common/Utils.js";
+import debug from "debug";
+import { extend } from "../common/extend.js";
+import { expandEnv } from "../common//expandEnv.js";
+import { startTimer, cancelTimer } from "../common/Timers.js";
 import { DataModel } from "../common/DataModel.js";
 import { Time } from "../common/Time.js";
 import { Timeline } from "../common/Timeline.js";
@@ -11,7 +14,7 @@ import { DS18x20 } from "./DS18x20.js";
 import { Historian } from "./Historian.js";
 import { Request } from "../common/Request.js";
 
-const TAG = "Thermostat";
+const trace = debug("Thermostat");
 
 // Default interval between polls
 const DEFAULT_POLL_INTERVAL = 20; // seconds
@@ -67,7 +70,7 @@ class Thermostat {
      */
     this.history = undefined;
 
-    Utils.extend(this, proto);
+    extend(this, proto);
 
     /**
      * @member {string}
@@ -128,7 +131,7 @@ class Thermostat {
     let promise;
     if (typeof this.timeline === "string") {
       promise = Promise.resolve(DataModel.loadData(
-        Utils.expandEnvVars(this.timeline), Timeline.Model))
+        expandEnv(this.timeline), Timeline.Model))
       .then(data => {
         this.timeline = data;
       });
@@ -142,7 +145,8 @@ class Thermostat {
       .then(t => resolve(t))
       .catch(e => {
         console.error(`Thermostat ${this.id} initialisation failed ${e}`);
-        if (typeof HOTPOT_DEBUG === "undefined") {
+        trace(e.stack);
+        if (typeof HOTPOT_SIM === "undefined") {
           console.error("--debug not enabled");
           // Don't do this, it raises an unhandled reject
           // throw e;
@@ -153,7 +157,7 @@ class Thermostat {
           // thermostats, so we don't risk anything by this.
         } else {
           // Fall back to debug
-          this.sensor = HOTPOT_DEBUG.getService(this.name);
+          this.sensor = HOTPOT_SIM.getService(this.name);
           console.error(`Falling back to simulator for thermostat '${this.name}'`);
           resolve(this.sensor.getTemperature());
         }
@@ -163,12 +167,12 @@ class Thermostat {
       this.temperature = temp;
       // Start the historian
       if (this.history) {
-        Utils.TRACE(TAG, `starting historian for '${this.name}' at ${temp}`);
+        trace(`starting historian for '${this.name}' at ${temp}`);
         this.history.start(() => {
           return Math.round(this.temperature * 10) / 10;
         });
       }
-      Utils.TRACE(TAG, `'${this.name}' initialised`);
+      trace(`'${this.name}' initialised`);
       return this;
     });
   }
@@ -225,7 +229,7 @@ class Thermostat {
     delete this.pollTimer;
     return this.sensor.getTemperature()
     .then(temp => {
-      Utils.TRACE(TAG, `${this.id} now ${temp}`);
+      trace(`${this.id} now ${temp}`);
       this.temperature = temp;
       this.lastKnownGood = Date.now();
       this.alerted = false;
@@ -249,11 +253,11 @@ class Thermostat {
 
     .finally(() => {
       if (this.interrupted) {
-        Utils.TRACE(TAG, `'${this.name}' interrupted`);
+        trace(`'${this.name}' interrupted`);
         this.interrupted = false;
         return;
       }
-      this.pollTimer = Utils.startTimer(
+      this.pollTimer = startTimer(
         `poll${this.name}`,
         () => this.poll(),
         1000 * (this.poll_every || DEFAULT_POLL_INTERVAL));
@@ -265,9 +269,8 @@ class Thermostat {
    */
   stop() {
     if (this.pollTimer) {
-      Utils.TRACE(
-        TAG, `'${this.name}' interrupted ${this.pollTimer}`);
-      Utils.cancelTimer(this.pollTimer);
+      trace(`'${this.name}' interrupted ${this.pollTimer}`);
+      cancelTimer(this.pollTimer);
       delete this.pollTimer;
     }
     if (this.history)
@@ -297,8 +300,8 @@ class Thermostat {
     try {
       t = this.timeline.valueAtTime(Date.now() - Time.midnight());
     } catch (e) {
-      Utils.TRACE(TAG, e, "\n",
-                  typeof e.stack !== "undefined" ? e.stack : e);
+      trace("%o");
+      if (typeof e.stack !== "undefined") trace("%O", e.stack);
       t = 0;
     }
     return t;
@@ -337,7 +340,7 @@ class Thermostat {
       source: req.source
     });
 
-    Utils.TRACE(TAG, `Add request ${this.name} `, req);
+    trace(`Add request ${this.name} `, req);
     this.requests.push(req);
   };
 
@@ -352,7 +355,7 @@ class Thermostat {
    */
   purgeRequests(match, clear) {
     if (match)
-      Utils.TRACE(TAG, `Purge ${this.name} `, match, clear ? "clear" : "");
+      trace(`Purge ${this.name} `, match, clear ? "clear" : "");
     match = match || {};
     const reqs = this.requests;
     for (let i = 0; i < reqs.length; i++) {
@@ -369,14 +372,14 @@ class Thermostat {
         if (!purge && r.until === Request.BOOST) {
           if (this.temperature >= r.temperature) {
             purge = true;
-            Utils.TRACE(TAG, `Purge because boost ${this.temperature} over ${r.temperature}`);
+            trace(`Purge because boost ${this.temperature} over ${r.temperature}`);
           }
         } else if (!purge && r.until < Date.now()) {
           purge = true;
-          Utils.TRACE(TAG, "Purge because until was in the past");
+          trace("Purge because until was in the past");
         }
         if (purge) {
-          Utils.TRACE(TAG, `Purge ${this.name} request ${r}`);
+          trace(`Purge ${this.name} request ${r}`);
           reqs.splice(i--, 1);
         }
       }
@@ -403,11 +406,11 @@ Thermostat.Model = {
     $doc: "Polling frequency, in seconds",
     $optional: true
   },
-  timeline: Utils.extend({}, {
+  timeline: extend({}, {
     $fileable: true,
-    $doc: "Timeline (object or filename)",
+    $doc: "Timeline (object or filename)"
   }, Timeline.Model),
-  history: Utils.extend({
+  history: extend({
     $optional: true
   }, Historian.Model)
 };

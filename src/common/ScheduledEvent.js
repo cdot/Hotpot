@@ -1,9 +1,10 @@
 /*@preserve Copyright (C) 2016-2023 Crawford Currie http://c-dot.co.uk license MIT*/
 
-import { Utils } from "./Utils.js";
+import { startTimer, cancelTimer, runAt } from "./Timers.js";
 import { Request } from "./Request.js";
+import debug from "debug";
 
-const TAG = "ScheduledEvent";
+const trace = debug("ScheduledEvent");
 
 /**
  * Calendar event. Extends Request to add a start time, unique id, and
@@ -53,19 +54,16 @@ class ScheduledEvent extends Request {
 
     const now = Date.now();
     if (this.start > now) {
-      Utils.TRACE(
-        TAG, this.id,
-        `(${this.service},${this.temperature}) will start at `,
-        new Date(this.start),
-        " now is ", new Date());
-      this.eventTimer = Utils.startTimer(
+      trace(`${this.id} (${this.service},${this.temperature}) will start at
+${new Date(this.start)} now is ${new Date()}`);
+      this.eventTimer = startTimer(
         this.id, () => this.begin(cal), this.start - now);
-      Utils.TRACE(TAG, this.id, ` set timer ${this.eventTimer}`);
+      trace(`${this.id} set timer ${this.eventTimer}`);
     } else if (this.start <= now && this.until > 0 && this.until > now) {
-      Utils.TRACE(TAG, this.id, " began in the past");
+      trace(`${this.id} began in the past`);
       this.begin(cal);
     } else {
-      Utils.TRACE(TAG, this.id, " is already finished");
+      trace(`${this.id} is already finished`);
     }
   }
 
@@ -75,7 +73,7 @@ class ScheduledEvent extends Request {
    */
   cancel() {
     if (typeof this.eventTimer !== "undefined") {
-      Utils.cancelTimer(this.eventTimer);
+      cancelTimer(this.eventTimer);
       delete this.eventTimer;
     }
   }
@@ -85,14 +83,14 @@ class ScheduledEvent extends Request {
    */
   begin(cal) {
     cal.trigger(this);
-    Utils.runAt(() => this.end(cal), this.until);
+    runAt(() => this.end(cal), this.until);
   }
 
   /**
    * End this event.
    */
   end(cal) {
-    Utils.TRACE(TAG, this.id, " finished");
+    trace(`${this.id} finished`);
     cal.remove(this);
   }
 
@@ -137,7 +135,7 @@ class ScheduledEvent extends Request {
       };
       if (/boost/i.test(match[2]))
         e.until = Request.BOOST;
-			Utils.TRACE(TAG, "Parsed ", e);
+			trace("Parsed %o", e);
       onEvent(e);
 		}
   }

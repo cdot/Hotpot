@@ -1,13 +1,15 @@
 /*@preserve Copyright (C) 2016-2021 Crawford Currie http://c-dot.co.uk license MIT*/
 
 /*eslint-env node */
-/*global HOTPOT_DEBUG*/
+/*global HOTPOT_SIM*/
 
-import { Utils } from "../common/Utils.js";
+import debug from "debug";
+
+import { extend } from "../common/extend.js";
 import { Gpio } from "./Gpio.js";
 import { Historian } from "./Historian.js";
 
-const TAG = "Pin";
+const trace = debug("Pin");
 
 /**
  * A Pin is the interface to a RPi GPIO pin.
@@ -33,7 +35,7 @@ class Pin {
      */
     this.history = undefined;
 
-    Utils.extend(this, proto);
+    extend(this, proto);
 
     /**
      * Name of the pin e.g. HW
@@ -48,7 +50,7 @@ class Pin {
      */
     this.reason = "";
 
-    Utils.TRACE(TAG, `'${this.name}' constructed on gpio ${this.gpio}`);
+    trace(`'${this.name}' constructed on gpio ${this.gpio}`);
 
     /**
      * The object that interfaces to the actual GPIO pins
@@ -59,18 +61,18 @@ class Pin {
   }
 
   initialise() {
-    Utils.TRACE(TAG, `Initialising pin ${this.name}`);
+    trace(`Initialising pin ${this.name}`);
     return this.Gpio.initialiseGpio("out", "low")
     .catch(e => {
       console.error(`Pin ${this.name} initialisation failed ${e}`);
-      if (typeof HOTPOT_DEBUG === "undefined") {
+      if (typeof HOTPOT_SIM === "undefined") {
         console.error("--debug not enabled");
         // if we can't talk to GPIO and we can't start debug,
         // then this is something the sysadmin has to resolve.
         throw e;
       }
       // Fall back to debug
-      this.Gpio = HOTPOT_DEBUG.getService(this.name);
+      this.Gpio = HOTPOT_SIM.getService(this.name);
       console.error(`Falling back to simulator for pin '${this.name}'`);
       return this;
     });
@@ -84,7 +86,7 @@ class Pin {
    * @public
    */
   setState(state) {
-    Utils.TRACE(TAG, `gpio${this.gpio}=${state === 1 ? "ON" : "OFF"}`);
+    trace(`gpio${this.gpio}=${state === 1 ? "ON" : "OFF"}`);
 
     let promise = this.Gpio.setValue(state);
     if (this.history)
@@ -142,7 +144,7 @@ Pin.Model = {
     $class: Number,
     $doc: "the number of the gpio pin"
   },
-  history: Utils.extend({
+  history: extend({
     $optional: true
   }, Historian.Model)
 };

@@ -1,5 +1,7 @@
-import { Utils } from "../common/Utils.js";
+import debug from "debug";
 import { Rule } from "./Rule.js";
+
+const trace = debug("Rules");
 
 // How close to the target temperature we want to be. Heating will
 // be turned on if temp drops lower than this below the target. You
@@ -21,9 +23,8 @@ class CentralHeatingRule extends Rule {
 			const max = thermostat.getMaximumTemperature();
       if (thermostat.temperature > max) {
         const mess = (state === 1) ? "turning" : "keeping";
-        Utils.TRACE("Rules", "CH is overheating ",
-								    thermostat.temperature,
-								    `°C > ${max} so ${mess} off`);
+        trace("CH is overheating %d > %d so %s off",
+							thermostat.temperature,	max, mess);
         pin.reason = "Overheat";
         // setPromise is a NOP if already in the right state
         return controller.setPromise("CH", 0);
@@ -34,8 +35,8 @@ class CentralHeatingRule extends Rule {
       if (thermostat.temperature > target) {
         // Warm enough inside, so switch off even if
         const mess = (state === 1) ? "turning" : "keeping";
-        Utils.TRACE("Rules", "CH is ", thermostat.temperature,
-								    `°C > ${target} so ${mess} off`);
+        trace("CH is %d > %d so %s off",
+              thermostat.temperature, target, mess);
         pin.reason = "Warm enough";
         // setPromise is a NOP if already in the right state
         return controller.setPromise("CH", 0);
@@ -43,15 +44,13 @@ class CentralHeatingRule extends Rule {
 
       else if (thermostat.temperature < target - PRECISION) {
         const mess = (state === 0) ? "turning" : "keeping";
-        Utils.TRACE("Rules",
-								    `CH only ${thermostat.temperature}°C `,
-								    `< ${target}`,
-								    `so ${mess} on`);
+        trace("CH only %d < %d to %s on",
+              thermostat.temperature,	target, mess);
         pin.reason = "Too cold";
         return controller.setPromise("CH", 1);
       }
 
-      Utils.TRACE("Rules", "CH no change");
+      trace("CH no change");
 			return Promise.resolve();
     });
   }

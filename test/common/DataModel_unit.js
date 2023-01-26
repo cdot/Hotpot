@@ -4,10 +4,10 @@
 
 import { assert } from "chai";
 import { promises as Fs } from "fs";
+import { extend } from "../../src/common/extend.js";
 import { DataModel } from "../../src/common/DataModel.js";
 import { Instantiable } from "./Instantiable.js";
 import { Timeline } from "../../src/common/Timeline.js";
-import { Utils } from "../../src/common/Utils.js";
 import Path from "path";
 import { fileURLToPath } from "url";
 const __dirname = Path.dirname(fileURLToPath(import.meta.url));
@@ -62,7 +62,7 @@ describe("DataModel", () => {
       model: simpleModel
     })
 		.then(remodeled => {
-			assert.equal(Utils.dump(remodeled), Utils.dump(simpleData));
+			assert.deepEqual(remodeled, simpleData);
 			assert.equal(simpleHelpString, DataModel.help(simpleModel));
 		});
 	});
@@ -95,7 +95,7 @@ describe("DataModel", () => {
 			return DataModel.getSerialisable(d, model);
 		})
 		.then(s => {
-			assert.equal(Utils.dump(s), Utils.dump(data));
+			assert.deepEqual(s, data);
 		});
 	});
 
@@ -124,7 +124,7 @@ describe("DataModel", () => {
 			return DataModel.getSerialisable(d, model);
 		})
 		.then(s => {
-			assert.equal(Utils.dump(s), Utils.dump(data));
+			assert.deepEqual(s, data);
 		});
 	});
 
@@ -144,7 +144,6 @@ describe("DataModel", () => {
 				data: "Sausages"
 			}
 		};
-		//Utils.TRACEfilter("all");
 		return DataModel.remodel({ data: data, model: model})
 		.then(d => assert.fail())
 		.catch(e => {
@@ -186,7 +185,7 @@ describe("DataModel", () => {
 			return DataModel.getSerialisable(d, model);
 		})
 		.then(s => {
-			assert.equal(Utils.dump(s), Utils.dump(data));
+			assert.deepEqual(s, data);
 		});
 	});
 
@@ -210,7 +209,7 @@ describe("DataModel", () => {
 			return DataModel.getSerialisable(d, model);
 		})
 		.then(s => {
-			assert.equal(Utils.dump(s), Utils.dump(data));
+			assert.deepEqual(s, data);
 		});
 	});
 
@@ -235,7 +234,7 @@ describe("DataModel", () => {
 			return DataModel.getSerialisable(d, model);
 		})
 		.then(s => {
-			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+			assert.deepEqual(s, serial_data);
 		});
 	});
 
@@ -260,7 +259,7 @@ describe("DataModel", () => {
 			return DataModel.getSerialisable(d, model);
 		})
 		.then(s => {
-			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+			assert.deepEqual(s, serial_data);
 		});
 	});
 
@@ -287,7 +286,7 @@ describe("DataModel", () => {
 			return DataModel.getSerialisable(d, model);
 		})
 		.then(s => {
-			assert.equal(Utils.dump(s), Utils.dump(data));
+			assert.deepEqual(s, data);
 		});
 	});
 
@@ -357,7 +356,7 @@ describe("DataModel", () => {
 			return DataModel.getSerialisable(d, model);
 		})
 		.then(s => {
-			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+			assert.deepEqual(s, serial_data);
 		});
 	});
 
@@ -399,7 +398,7 @@ describe("DataModel", () => {
 			return DataModel.getSerialisable(d, model);
 		})
 		.then(s => {
-			assert.equal(Utils.dump(s), Utils.dump(serial_data));
+			assert.deepEqual(s, serial_data);
 		});
 	});
 
@@ -498,8 +497,9 @@ describe("DataModel", () => {
 		})
 		.then(() => Fs.readFile(savedFile))
 		.then(rootData => {
-			let reread = Utils.eval(rootData.toString());
-			assert.equal(Utils.dump(saveData), Utils.dump(reread));
+			let reread;
+      eval(`reread=${rootData.toString()}`);
+			assert.deepEqual(saveData, reread);
 		});
 	});
 
@@ -516,16 +516,17 @@ describe("DataModel", () => {
 		})
 		.then(() => Fs.readFile(savedFile))
 		.then(rootData => {
-			let reread = Utils.eval(rootData.toString());
-			assert.equal(Utils.dump(saveData), Utils.dump(reread));
+			let reread;
+      eval(`reread=${rootData.toString()}`);
+			assert.deepEqual(saveData, reread);
 		});
 	});
 
 	it("saveData on $fileable map", () => {
-		const annotatedModel = Utils.extend({},	saveModel());
+		const annotatedModel = extend({},	saveModel());
 		annotatedModel.map.$fileable = true;
 
-		const annotatedData = Utils.extend({}, saveData);
+		const annotatedData = extend({}, saveData);
 		annotatedData.map.$read_from = savedFile;
 		delete annotatedData.$read_from;
 
@@ -542,8 +543,9 @@ describe("DataModel", () => {
 		})
 		.then(() => Fs.readFile(savedFile))
 		.then(rootData => {
-			let reread = Utils.eval(rootData.toString());
-			assert.equal(Utils.dump(annotatedData.map), Utils.dump(reread));
+			let reread;
+      eval(`reread=${rootData.toString()}`);
+			assert.deepEqual(annotatedData.map, reread);
 		});
 	});
 

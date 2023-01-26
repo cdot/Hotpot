@@ -88,7 +88,7 @@ class Service {
   }
 }
 
-class DebugSupport {
+class Simulator {
 
   constructor() {
     this.services = [];
@@ -125,4 +125,4 @@ class DebugSupport {
   }
 }
 
-export { DebugSupport }
+export { Simulator }

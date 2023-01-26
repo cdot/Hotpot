@@ -2,13 +2,16 @@
 
 /*eslint-env node */
 
-import { Utils } from "../common/Utils.js";
+import debug from "debug";
+
+import { extend } from "../common/extend.js";
+import { startTimer, cancelTimer } from "../common/Timers.js";
 import { ScheduledEvent } from "../common/ScheduledEvent.js";
 
 // MS in an hour
 const HOURS = 60 * 60 * 1000;
 
-const TAG = "Calendar";
+const trace = debug("Calendar");
 
 /**
  * Base class of calendars. Specific calendar implementations
@@ -23,7 +26,7 @@ class Calendar {
    * @param {string} name name of the calendar
    */
   constructor(proto, name) {
-    Utils.extend(this, proto);
+    extend(this, proto);
 
     /**
      * Name of the calendar
@@ -97,7 +100,7 @@ class Calendar {
    */
   trigger(e) {
     if (this.on_trigger) {
-      Utils.TRACE(TAG, "Triggering request ", e);
+      trace("Triggering request %o", e);
       this.on_trigger(e.service, e);
     }
   }
@@ -189,34 +192,34 @@ class Calendar {
   update(after) {
 		if (this.updateTimer) {
 			// Kill the old timer
-			Utils.cancelTimer(this.updateTimer);
+			cancelTimer(this.updateTimer);
 			delete this.updateTimer;
 		}
 
-    this.updateTimer = Utils.startTimer(
+    this.updateTimer = startTimer(
       "calUp",
       () => {
-        Utils.TRACE(TAG, `Updating '${this.name}'`);
+        trace(`Updating '${this.name}'`);
         this.fillCache()
         .then(() => {
-          Utils.TRACE(TAG, `Updated '${this.name}'`);
+          trace(`Updated '${this.name}'`);
           this.update(this.update_period * HOURS);
         })
         .catch(e => {
-          console.error(`${TAG} '${this.name}' error ${e.message}`);
+          console.error(`Calendar '${this.name}' error ${e.message}`);
         });
       }, after);
-		Utils.TRACE(TAG, `Started timer ${this.updateTimer}`);
+		trace(`Started timer ${this.updateTimer}`);
   }
 
   /**
    * Cancel the calendar update timer and all active event timers
    */
   stop() {
-    Utils.TRACE(TAG, `'${this.name}' stopped`);
+    trace(`'${this.name}' stopped`);
     if (this.updateTimer) {
-			Utils.TRACE(TAG, `Stopped timer ${this.updateTimer}`);
-      Utils.cancelTimer(this.updateTimer);
+			trace(`Stopped timer ${this.updateTimer}`);
+      cancelTimer(this.updateTimer);
       delete this.updateTimer;
     }
     this.clearSchedule();

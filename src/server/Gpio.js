@@ -5,7 +5,7 @@
 import { promises as Fs } from "fs";
 import Path from "path";
 
-import { Utils } from "../common/Utils.js";
+import { startTimer } from "../common/Timers.js";
 
 // Base path of all GPIO paths.
 const GPIO_PATH = "/sys/class/gpio";
@@ -60,7 +60,7 @@ class Gpio {
       // Use a timeout to give it time to get set up;
       // it takes a while
       return new Promise(resolve => {
-        Utils.startTimer(`export${this.gpio}`, resolve, 1000);
+        startTimer(`export${this.gpio}`, resolve, 1000);
       });
     });
   }

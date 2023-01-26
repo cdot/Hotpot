@@ -4,7 +4,6 @@
 
 import getopt from "posix-getopt";
 import { Gpio } from "../src/server/Gpio.js";
-import { Utils } from "../src/common/Utils.js";
 
 const DESCRIPTION = [
 	`Usage: node ${process.argv[1]} [OPTION] <pin>`,
@@ -53,8 +52,6 @@ if (typeof value !== "undefined" && value != 0 && value != 1) {
 	console.error(`Bad set=${value}`);
   console.log(DESCRIPTION); process.exit(0);
 }
-
-Utils.TRACEfilter("Gpio");
 
 let pin = parseInt(process.argv[go_parser.optind()]);
 if (typeof pin !== "number") {

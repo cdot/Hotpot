@@ -2,10 +2,6 @@
 
 /*eslint-env node */
 
-import { Utils } from "./Utils.js";
-
-const TAG = "Location";
-
 const EARTH_RADIUS = 6371000; // metres
 
 // Somewhere in the Gulf of Guinea
@@ -45,8 +41,7 @@ class Location {
         lng = lat.longitude;
         lat = lat.latitude;
       } else {
-        throw Utils.exception(
-          TAG, `Cannot initialise from ${lat}`);
+        throw Error(`Cannot initialise from ${lat}`);
       }
     } // else Constructor (1.)
     /** @member {number} */
@@ -89,7 +84,7 @@ class Location {
    * @throw {Error}
    */
   toString() {
-    return Utils.joinArgs(['(', this.latitude, ",", this.longitude, ')']);
+    return `(${this.latitude},${this.longitude})`;
   }
 
   /**

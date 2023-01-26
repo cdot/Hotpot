@@ -2,18 +2,18 @@
 
 /*eslint-env node */
 
-global.HOTPOT_DEBUG = undefined;
+global.HOTPOT_SIM = undefined;
 
 import { assert } from "chai";
 import { Expectation } from "../Expectation.js";
 import { DataModel } from "../../src/common/DataModel.js";
 import { Pin } from "../../src/server/Pin.js";
-import { DebugSupport as Service } from "../../src/server/DebugSupport.js";
+import { Simulator } from "../../src/server/Simulator.js";
 
 describe("Pin", () => {
 
 	it("initialise/get/set", async () => {
-		HOTPOT_DEBUG = new Service();
+		HOTPOT_SIM = new Simulator();
 		return DataModel.remodel({data: {gpio:6}, model: Pin.Model})
 		.then(p => {
 			assert(p instanceof Pin);
@@ -35,7 +35,7 @@ describe("Pin", () => {
 			});
 		})
 		.then(() => {
-			HOTPOT_DEBUG.stop();
+			HOTPOT_SIM.stop();
 		});
 	});
 });

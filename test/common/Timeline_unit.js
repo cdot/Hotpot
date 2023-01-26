@@ -4,7 +4,7 @@
 
 import { assert } from "chai";
 import { promises as Fs } from "fs";
-import { Utils } from "../../src/common/Utils.js";
+import { extend } from "../../src/common/extend.js";
 import { Time } from "../../src/common/Time.js";
 import { TimeValue } from "../../src/common/TimeValue.js";
 import { DataModel } from "../../src/common/DataModel.js";
@@ -37,7 +37,6 @@ describe("Timeline", () => {
 			assert(false, "Should not get here");
 		} catch (e) {
 			assert(e instanceof Error);
-			assert.equal(e.name, "Timeline");
 			assert.equal(e.message, "Bad configuration");
 		}
 		tl = new Timeline({
@@ -108,7 +107,7 @@ describe("Timeline", () => {
 	});
 
 	it("get $fileable map of Timeline from file", () => {
-		const model = Utils.extend({}, { $fileable: true },
+		const model = extend({}, { $fileable: true },
 								   Timeline.Model);
 		const data = __dirname + "/oneTimeline.txt";
 		return DataModel.remodel({

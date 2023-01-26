@@ -2,9 +2,10 @@
 
 /*eslint-env node */
 
-import { Utils } from "./Utils.js";
+import { expandEnv } from "./expandEnv.js";
+import debug from "debug";
 
-const TAG = "DataModel";
+const trace = debug("DataModel");
 
 // Demand-load Fs, node.js only
 let Fs, Path;
@@ -277,7 +278,7 @@ class DataModel {
       return;
 
     function fail(mess) {
-      throw new Error(`${TAG}.check: ${mess} at '${context.join('.')}'`);
+      throw new Error(`DataModel.check: ${mess} at '${context.join('.')}'`);
     }
 
     if (typeof context === "undefined")
@@ -370,16 +371,16 @@ class DataModel {
     function fail(mess) {
       return Promise.reject(
         new Error(
-          `${TAG}.remodel: ${mess} at '${context.join('.')}'`));
+          `DataModel.remodel: ${mess} at '${context.join('.')}'`));
     }
 
     // Load from a file name if the model allows it
     if (model.$fileable && typeof data === "string") {
 
-      Utils.TRACE(TAG, `Loading ${index} from file ${data}`);
+      trace(`Loading ${index} from file ${data}`);
       return loadFileable(data)
       .catch(e => {
-        Utils.TRACE(TAG, `${data} load failed ${e}`);
+        trace(`${data} load failed ${e}`);
         return data;
       })
       .then(content => {
@@ -388,7 +389,7 @@ class DataModel {
         if (typeof content === "undefined")
           return undefined;
         try {
-          content = Utils.eval(content.toString(), data);
+          eval(`content=${content.toString()}`);
         } catch (e) {
           e.message = `Loading ${index} from file ${data}: ${e.message}`;
           throw e;
@@ -411,8 +412,7 @@ class DataModel {
     if (index === "$read_from")
       return Promise.resolve(data);
 
-    Utils.TRACE(
-      `${TAG}Details`, `Remodel '${context.join('.')}' `, data);
+    trace(`Remodel '${context.join('.')}' %o`, data);
 
     // Got a data definition
     if (typeof data === "undefined") {
@@ -427,13 +427,12 @@ class DataModel {
 
     if (model.$unchecked) {
       // Don't remodel data under this node
-      Utils.TRACE(`${TAG}Details`, `\t$unchecked '${context.join('.')}'`);
+      trace(`\t$unchecked '${context.join('.')}'`);
       return Promise.resolve(data);
     }
 
     if (typeof model.$map_of !== "undefined") {
-      Utils.TRACE(`${TAG}Details`,
-                  `\tbuild $map_of ${model.$map_of}`);
+      trace(`\tbuild $map_of ${model.$map_of}`);
 
       // Object with keys that don't have to match the model,
       // and values that can be undefined
@@ -459,7 +458,7 @@ class DataModel {
     }
 
     if (typeof model.$array_of !== "undefined") {
-      Utils.TRACE(`${TAG}Details`, `\t$array_of ${model.$array_of}`);
+      trace(`\t$array_of ${model.$array_of}`);
       const promises = [];
       for (let i in data) {
         // undefined is allowed in array data
@@ -510,8 +509,7 @@ class DataModel {
           });
         } else {
           // Anything else is regarded as hidden payload.
-          return fail(`Hidden payload '${i}' in ` +
-                      Utils.dump(data));
+          return fail(`Hidden payload '${i}'`);
         }
       }
 
@@ -544,9 +542,9 @@ class DataModel {
           if (typeof res.data !== "undefined") {
             // undefined is skipped in objects
             rebuilt[res.key] = res.data;
-            Utils.TRACE(`${TAG}Details`, `Rebuilt ${res.key}`);
+            trace(`Rebuilt ${res.key}`);
           } else
-            Utils.TRACE(`${TAG}Details`, `Filtered ${res.key}`);
+            trace(`Filtered ${res.key}`);
         }
         return rebuilt;
       });
@@ -561,8 +559,7 @@ class DataModel {
         if (typeof t !== "string")
           return fail("Expected $instance_of");
 
-        Utils.TRACE(`${TAG}Details`,
-                    `Instantiate a ${rebuilt.$instance_of}`, rebuilt);
+        trace(`Instantiate a ${rebuilt.$instance_of} %o`, rebuilt);
 
         // Building a type defined in the data. When we serialise,
         // it will record the type loaded, not the type in the
@@ -603,8 +600,7 @@ class DataModel {
       // as String, Number, Date
       // Could call remodel, this is fractionally quicker
       const clss = model.$class;
-      Utils.TRACE(`${TAG}Details`,
-								  `Instantiate ${clss.name} ${index}`);
+      trace(`Instantiate ${clss.name} ${index}`);
       return Promise.resolve(new clss(rebuilt, index, model));
     });
   };
@@ -661,7 +657,7 @@ class DataModel {
       }
       return Promise.all(promises)
       .then(p => {
-        Utils.TRACE(`${TAG}Details`, "Array loaded");
+        trace("Array loaded");
         return p;
       });
 
@@ -719,7 +715,7 @@ class DataModel {
     for (let key in model) {
       if (MODEL_META_KEYS[key])
         continue;
-      Utils.TRACE(`${TAG}Details`, `Expand ${key}`);
+      trace(`Expand ${key}`);
       promises.push(
         DataModel.getSerialisable(
           data[key], model[key],
@@ -829,21 +825,25 @@ class DataModel {
    */
   static loadData(file, model) {
     DataModel.check(model);
-    Utils.TRACE(TAG, `Loading ${file}`);
+    trace(`Loading ${file}`);
     return _loadFs()
     .then(() => Fs.readFile(file))
-    .then(code => DataModel.remodel({
-      data: Utils.eval(code, file),
-      model: model,
-      context: [ file ],
-      loadFileable: f => {
-        f = Utils.expandEnvVars(f);
-        if (!Path.isAbsolute(f))
-          f = Path.join(Path.dirname(file), f);
-        Utils.TRACE(TAG, `Abs path ${f}`);
-        return Fs.readFile(f);
-      }
-    }))
+    .then(code => {
+      let data;
+      eval(`data=${code}`);
+      return DataModel.remodel({
+        data: data,
+        model: model,
+        context: [ file ],
+        loadFileable: f => {
+          f = expandEnv(f);
+          if (!Path.isAbsolute(f))
+            f = Path.join(Path.dirname(file), f);
+          trace(`Abs path ${f}`);
+          return Fs.readFile(f);
+        }
+      });
+    })
     .then(rebuilt => {
       if (typeof rebuilt === "object" &&
           !(rebuilt instanceof Array))
@@ -886,12 +886,12 @@ class DataModel {
     if (!p.node.$read_from)
       return Promise.reject(new Error("DataModel.saveData: Cannot determine file to save to"));
 
-    Utils.TRACE(TAG, `Saving ${path.join('.')} to ${p.node.$read_from}`);
+    trace(`Saving ${path.join('.')} to ${p.node.$read_from}`);
 
     return _loadFs()
     .then(() => DataModel.getSerialisable(p.node, p.model))
     .then(serial => Fs.writeFile(
-      Utils.expandEnvVars(p.node.$read_from),
+      expandEnv(p.node.$read_from),
       JSON.stringify(serial, null, 2), "utf8"))
     .then(() => {
       return path;

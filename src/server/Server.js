@@ -6,6 +6,7 @@ import Url from "url";
 import Path from "path";
 const __dirname = Path.dirname(Url.fileURLToPath(import.meta.url));
 const root = Path.normalize(Path.join(__dirname, "..", ".."));
+import debug from "debug";
 
 import Cors from "cors";
 import Express from "express";
@@ -14,12 +15,11 @@ import SessionFileStore from "session-file-store";
 import BasicAuth from "express-basic-auth";
 import HTTP from "http";
 import HTTPS from "https";
-import { promises as Fs } from "fs";
 
-import { Utils } from "../common/Utils.js";
+import { extend } from "../common/extend.js";
 import { Location } from "../common/Location.js";
 
-const TAG = "Server";
+const trace = debug("Server");
 
 const SESSION_COOKIE = "HOTPOT.sid";
 const SESSIONS_DIR = Path.join(root, ".sessions");
@@ -107,14 +107,14 @@ class Server {
     // based on the file mime type (extension) but Express doesn't
     // always get it right.....
     /* c8 ignore next 2 */
-    Utils.TRACE(TAG, "static files from ", root);
+    trace("static files from %s", root);
 
     this.express.use(Express.static(root));
 
     // Debug report incoming requests
     this.express.use((req, res, next) => {
       /* c8 ignore next 2 */
-      Utils.TRACE(TAG, `${req.method} ${req.url}`);
+      trace("%s %s", req.method, req.url);
       next();
     });
 
@@ -146,16 +146,6 @@ class Server {
     this.express.get(
       "/",
       (req, res) => res.sendFile(Path.join(root, "index.html")));
-
-    // /trace?ids=...
-    this.express.get(
-      "/trace",
-      (req, res) => {
-        // Set tracing level
-        Utils.TRACEfilter(req.query.ids);
-        res.end();
-      });
-
   }
 
   /**
@@ -167,7 +157,7 @@ class Server {
           ? HTTPS.Server(this.ssl, this.express)
           : HTTP.Server(this.express);
     this.listener = protocol.listen(this.port);
-    Utils.TRACE(TAG, `Server started on port ${this.port}`);
+    trace("Server started on port %d", this.port);
   }
 
   stop() {
@@ -191,7 +181,7 @@ Server.Model = {
     $doc: "Port to run the server on",
     $class: Number
   },
-  location: Utils.extend({}, Location.Model, {
+  location: extend({}, Location.Model, {
     $doc: "Where in the world the server is located"
   }),
   privacy: {
