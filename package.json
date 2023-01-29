@@ -17,7 +17,7 @@
         "url": "https://github.com/cdot/Hotpot.git"
     },
     "scripts": {
-        "simulator": "node bin/server.js --config test/server/simulated_hotpot.cfg --debug",
+        "simulator": "node --no-expose-wasm bin/server.js --config test/server/simulated_hotpot.cfg --debug",
         "doc": "jsdoc --verbose -c doc/config.json -r -d doc browser server",
         "lint": "eslint src -f unix",
         "test": "mocha test/*/*_unit.js --timeout=5000",
