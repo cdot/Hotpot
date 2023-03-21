@@ -26,19 +26,19 @@ class Timeline {
      * minimum possible value
      * @member {number}
      */
-    this.min = proto.min;
+    this.min = parseFloat(proto.min);
 
     /**
      * maximum possible value
      * @member {number}
      */
-    this.max = proto.max;
+    this.max = parseFloat(proto.max);
 
     /**
      * period of timeline in ms
      * @member {number}
      */
-    this.period = proto.period;
+    this.period = parseFloat(proto.period);
 
     /**
      * Array of {@link TimeValue}
@@ -46,11 +46,7 @@ class Timeline {
      */
     this.points = proto.points;
 
-    if (typeof this.max !== "number" ||
-        typeof this.min !== "number" ||
-        this.max < this.min ||
-        typeof this.period !== "number" ||
-        this.period <= 0) {
+    if (this.max < this.min || this.period <= 0) {
       throw Error("Bad configuration");
     }
 

@@ -542,7 +542,7 @@ class DataModel {
           if (typeof res.data !== "undefined") {
             // undefined is skipped in objects
             rebuilt[res.key] = res.data;
-            trace(`Rebuilt ${res.key}`);
+            trace(`Rebuilt ${res.key} ${typeof res.data}`);
           } else
             trace(`Filtered ${res.key}`);
         }

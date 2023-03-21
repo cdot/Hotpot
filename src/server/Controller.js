@@ -456,7 +456,13 @@ class Controller extends Events.EventEmitter {
     router.post(
       "/config",
       (req, res) => {
-        const path = req.query.path;
+        let path = req.query.path;
+        if (typeof path === "string") {
+          // Convert string path to array of path components
+          path = path.split(/\/+/);
+          while (path.length > 0 && path[0].length == 0)
+            path.shift();
+        }
 
         // Locate the data in the Controller model
         const p = DataModel.at(this, Controller.Model, path);
@@ -483,6 +489,8 @@ class Controller extends Events.EventEmitter {
         // Assign the remodeled data to the right place in the
         // controller data
         .then(rebuilt => {
+          if (p.parent[p.key].$read_from)
+            rebuilt.$read_from = p.parent[p.key].$read_from;
           p.parent[p.key] = rebuilt;
           trace(`setconfig ${path} = `, rebuilt);
           return rebuilt;

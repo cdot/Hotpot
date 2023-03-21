@@ -216,7 +216,7 @@ class TimelineView {
     .then(serialisable => {
       $.post(
         `/config?path=thermostat/${this.service}/timeline`,
-        JSON.stringify(serialisable))
+        serialisable)
       .done(() => {
         alert("Timeline saved");
         // Save done, not required.
