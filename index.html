@@ -70,14 +70,15 @@
 	  <div>
         <img id="cal_edit" title="Edit calendar" class="image_button" src="images/calendar.svg"/>
       </div>
-	  <div id="cal_update_pending">Calendar update pending</div>
 	  <div id="CH-calendar" class="cal-events">
+	    <span id="CH-cal-update-pending">CH calendar update pending</span>
 		<span id="CH-cal-name"></span>:
 		<span id="CH-cal-temperature"></span> from
 		<span id="CH-cal-start"></span> until
 		<span id="CH-cal-end"></span>
 	  </div>
 	  <div id="HW-calendar" class="cal-events">
+	    <span id="HW-cal-update-pending">HW calendar update pending</span>
 		<span id="HW-cal-name"></span>:
 		<span id="HW-cal-temperature"></span> from
 		<span id="HW-cal-start"></span> until
@@ -121,13 +122,13 @@
 		<input id="atd-temp" name="temp" size="3" />°C
 	  </div>
 	  <div id="close-timeline" class="dialog">
-		Timeline has been modified. Changes will not be saved to the server.
+		<b>WARNING:</b> Timeline has been modified.
+        Changes will NOT be saved to the server.
 	  </div>
 	</div>
 
     <div id="calendar-editor" class="dialog">
-      <div class="calendar-container">
-      </div>
+      <div class="calendar-container"></div>
     </div>
 
     <div id="login-dialog" class="dialog">

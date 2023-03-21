@@ -99,7 +99,9 @@ class Hotpot {
     for (let name in obj.calendar) {
       const cal = obj.calendar[name];
       if (cal.pending_update)
-        $("#cal_update_pending").show();
+        $(`#${service}-cal-update-pending`).show();
+      else
+        $(`#${service}-cal-update-pending`).hide();
       const ce = cal.events[service];
       if (ce) {
         $(`#${service}-cal-name`).text(service);

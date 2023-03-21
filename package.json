@@ -17,8 +17,8 @@
         "url": "https://github.com/cdot/Hotpot.git"
     },
     "scripts": {
-        "simulator": "node --no-expose-wasm bin/server.js --config test/server/simulated_hotpot.cfg --debug",
-        "doc": "jsdoc --verbose -c doc/config.json -r -d doc browser server",
+        "simulator": "DEBUG='*' node --no-expose-wasm bin/server.js --config test/server/simulated_hotpot.cfg --debug",
+        "doc": "jsdoc --verbose -c jsdoc_config.json -r -d doc src",
         "lint": "eslint src -f unix",
         "test": "mocha test/*/*_unit.js --timeout=5000",
         "coverage": "nyc --hook-run-in-context --hook-run-in-this-context --reporter=html --reporter text npm run test",
@@ -33,7 +33,7 @@
         "express": "^4.18.2",
         "express-basic-auth": "^1.2.1",
         "express-session": "^1.17.3",
-        "jquery": "^3.6.3",
+        "jquery": "^3.6.4",
         "jquery-ui-dist": "^1.13.2",
         "posix-getopt": "^1.2.1",
         "session-file-store": "^1.5.0"
@@ -41,8 +41,8 @@
     "optionalDependencies": {
         "follow-redirects": "^1.15.2",
         "google-auth-library": "^8.7.0",
-        "googleapis": "^110.0.0",
-        "nodemailer": "^6.9.0"
+        "googleapis": "^113.0.0",
+        "nodemailer": "^6.9.1"
     },
     "analyze": true,
     "eslintConfig": {
@@ -86,9 +86,9 @@
     "devDependencies": {
         "chai": "^4.3.7",
         "chai-http": "^4.3.0",
-        "eslint": ">=8.32.0",
+        "eslint": ">=8.36.0",
         "eslint-plugin-import": "^2.27.5",
-        "jsdoc": "^4.0.0",
+        "jsdoc": "^4.0.2",
         "mocha": "^10.2.0",
         "nyc": "^15.1.0",
         "request": "^2.88.2"

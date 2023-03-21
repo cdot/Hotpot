@@ -338,7 +338,7 @@ class Thermostat {
   addRequest(req) {
     this.purgeRequests({
       source: req.source
-    });
+    }, true);
 
     trace(`Add request ${this.name} `, req);
     this.requests.push(req);
@@ -347,11 +347,11 @@ class Thermostat {
   /**
    * Purge requests that have timed out, or are force-purged by matching
    * the parameters.
-   * @param {object} match map of request fields to match
+   * @param {object?} match map of request fields to match
    * e.g. { source: id }
    * All fields must match
-   * @param {boolean} clear true if requests are to be deleted
-   * even if they are under targets
+   * @param {boolean?} clear true if requests are to be deleted
+   * even if their targets have not yet been achieved
    */
   purgeRequests(match, clear) {
     if (match)
@@ -376,7 +376,7 @@ class Thermostat {
           }
         } else if (!purge && r.until < Date.now()) {
           purge = true;
-          trace("Purge because until was in the past");
+          trace("Purge because 'until' was in the past");
         }
         if (purge) {
           trace(`Purge ${this.name} request ${r}`);

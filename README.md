@@ -341,4 +341,4 @@ The interface includes full help information.
 
 # Development
 
-See doc/README.md
+See DEVELOPING.md

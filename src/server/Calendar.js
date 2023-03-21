@@ -68,6 +68,13 @@ class Calendar {
      * @private
 		 */
 		this.services = [ "ALL" ];
+
+    /**
+     * Indicates if we are waiting for an
+     * update from a remote calendar service
+     ( @member {boolean}
+    */
+    this.pending_update = false;
   }
 
 	/**
