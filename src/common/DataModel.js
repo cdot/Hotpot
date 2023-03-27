@@ -504,8 +504,8 @@ class DataModel {
         else if (typeof model.$class !== "undefined" &&
                  typeof model.$class.Model !== "undefined" &&
                  typeof model.$class.Model[i] !== "undefined") {
-          // We could validate the fields now, but we
-          // just leave it till later
+          // We could validate the fields now, but it's going to be
+          // remodelled later so don't bother
           promises.push({
             key: i,
             data: data[i]

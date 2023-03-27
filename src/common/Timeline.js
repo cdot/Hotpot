@@ -256,9 +256,7 @@ Timeline.Model = {
   },
   points: {
     $doc: "Array of time points",
-    $array_of: {
-      $class: TimeValue
-    }
+    $array_of: TimeValue.Model
   }
 };
 

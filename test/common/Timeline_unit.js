@@ -30,6 +30,8 @@ describe("Timeline", () => {
     };
 	};
 
+  function UNit() {}
+
 	it('constructs', () => {
 		var tl;
 		try {
@@ -120,4 +122,11 @@ describe("Timeline", () => {
 		});
 	});
 
+  it("loads", () => {
+    return DataModel.loadData(
+      __dirname + "/HW_timeline.cfg", Timeline.Model)
+    .then(data => {
+      console.log(data);
+    });
+  });
 });
