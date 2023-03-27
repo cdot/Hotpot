@@ -15,66 +15,175 @@ const __dirname = Path.dirname(fileURLToPath(import.meta.url));
 describe("DataModel", () => {
 
 	const simpleModel = {
-		pugh: { $class: String, $doc: "hugh" },
-		barney: { $class: Number },
-		cuthbert: {
-			$doc: "mcgrew",
-			dibble: { $class: String, $doc: "grubb" },
-			bob: { $class: String, $doc: "builder", $optional: true }
+		string: { $class: String, $doc: "base type: string" },
+		number: { $class: Number, $doc: "base type: number" },
+    boolean: { $class: Boolean, $doc: "base type: boolean" },
+    date: { $class: Date, $doc: "base type: date" },
+    regexp: { $class: RegExp, $doc: "base type: regexp" },
+		object: {
+			$doc: "complex type: object",
+			string: { $class: String, $doc: "optional string", $optional: true }
 		},
-		array: { $array_of: { $class: String } }
+		array_of_string: { $array_of: { $class: String } },
+		map_of_number: { $map_of: { $class: Number } }
 	};
 
-	const simpleData = {
-		pugh: "hugh",
-		barney: 99,
-		cuthbert: {
-			dibble: "grubb"
+	const simpleDataGood = {
+		string: "a string",
+		number: 99,
+    boolean: true,
+    date: new Date("Mon Mar 27 2023"),
+    regexp: /^regexp$/,
+		object: {
+			string: "string in object"
 		},
-		array: [ "a", "b", "c" ]
+		array_of_string: [ "a", "b", "c" ],
+    map_of_number: { a: 1, b: 2 }
 	};
 
-	const simpleDataBad = {
-		pugh: "hugh",
-		barney: 7,
-		cuthbert: {
-			// dibble is missing
-		} // array is missing
-	};
-
-	const simpleHelpString = [ "{",
-		" pugh: <String> hugh",
-		" barney: <Number>",
-		" cuthbert: mcgrew {",
-		"  dibble: <String> grubb",
-		"  bob: (optional) <String> builder",
+	const simpleHelpString = [
+    "{",
+		" string: <String> base type: string",
+		" number: <Number> base type: number",
+    " boolean: <Boolean> base type: boolean",
+    " date: <Date> base type: date",
+    " regexp: <RegExp> base type: regexp",
+		" object: complex type: object {",
+		"  string: (optional) <String> optional string",
 		" }",
-		" array: [",
+		" array_of_string: [",
 		"  <String>",
 		" ]",
-	"}" ].join("\n");;
+    " map_of_number: {",
+    "  <Number>",
+    " }",
+	  "}" ].join("\n");
 
 	function UNit() {}
 
 	it("good simple", () => {
 		return DataModel.remodel({
-      data: simpleData,
+      data: simpleDataGood,
       model: simpleModel
     })
 		.then(remodeled => {
-			assert.deepEqual(remodeled, simpleData);
+      assert.equal(typeof remodeled.string, "string");
+      assert.equal(typeof remodeled.number, "number");
+      assert.equal(typeof remodeled.object, "object");
+      assert.equal(typeof remodeled.boolean, "boolean");
+      assert(remodeled.date instanceof Date);
+      assert(remodeled.regexp instanceof RegExp);
+			assert.deepEqual(remodeled, simpleDataGood);
 			assert.equal(simpleHelpString, DataModel.help(simpleModel));
 		});
 	});
 
-	it("bad simple", () => {
-		return DataModel.remodel({ data: simpleDataBad, model: simpleModel })
-		.then(() => assert.fail())
-		.catch(s => {
-			// Unpredictable order from maps, so use regex
-			assert.match(s.message, /field not optional and no default at/);
+	it("convert to model base type", () => {
+		return DataModel.remodel({
+      data: {
+		    string: -99,
+		    number: "7",
+        boolean: 1,
+        regexp: "^regexp$",
+        date: "2023-03-26",
+		    object: { },
+		    array_of_string: [ 101 ],
+        map_of_number: { one: "1" }
+	    },
+      model: simpleModel
+    })
+		.then(remodeled => {
+			assert.deepEqual(remodeled, {
+		    string: "-99",
+		    number: 7,
+        boolean: true,
+        date: new Date("2023-03-26"),
+        regexp: /^regexp$/,
+		    object: {},
+		    array_of_string: [ "101" ],
+        map_of_number: { one: 1 }
+      });
 		});
 	});
+
+	it("bad string", () => {
+		return DataModel.remodel({
+      data: {
+		    string: undefined,
+        number: 1,
+        boolean: false,
+        date: new Date(),
+        regexp: 0,
+        object: {},
+        array_of_string: [],
+        map_of_number: {}
+	    }, model: simpleModel
+    })
+		.then(() => assert.fail())
+		.catch(s => {
+			assert.equal(s.message, "DataModel.remodel: field not optional and no default at 'string'");
+		});
+	});
+
+	it("bad number", () => {
+		return DataModel.remodel({
+      data: {
+		    string: "",
+        number: {},
+        boolean: false,
+        date: new Date(),
+        regexp: 0,
+        object: {},
+        array_of_string: [],
+        map_of_number: { a: NaN, b: "not a number" }
+	    }, model: simpleModel
+    })
+		.then(d => {
+      assert.isNaN(d.number);
+      assert.isNaN(d.map_of_number.a);
+      assert.isNaN(d.map_of_number.b);
+    });
+	});
+
+	it("bad date", () => {
+		return DataModel.remodel({
+      data: {
+		    string: "",
+        number: 99,
+        boolean: false,
+        date: "99-99-99",
+        regexp: 0,
+        object: {},
+        array_of_string: [],
+        map_of_number: { a: NaN, b: "not a number" }
+	    }, model: simpleModel
+    })
+		.then(d => {
+      assert.isNaN(d.date.getTime());
+    });
+	});
+
+  it("serialises", () => {
+    // Simple stuff only, complex objects tested in load/save, below
+    DataModel.getSerialisable(
+      simpleDataGood, simpleModel, "")
+    .then(serial => {
+      assert.equal(serial.string, "a string");
+      assert.equal(typeof serial.string, "string");
+      assert.equal(serial.number, 99);
+      assert.equal(typeof serial.number, "number");
+      assert.equal(serial.boolean, true);
+      assert.equal(typeof serial.boolean, "boolean");
+      assert.equal(serial.date, new Date("2023-03-26"));
+      assert(serial.date instanceof Date);
+      assert.equal(serial.date, /^regexp$/);
+      assert(serial.date instanceof RegExp);
+      assert.equal(typeof serial.object, "object");
+      assert.equal(serial.object.string, "string in object");
+      assert.deepEqual(serial.array_of_string, [ "a", "b", "c" ]);
+      assert.deepEqual(serial.map_of_number, { a: 1, b: 2 });
+    });
+  });
 
 	////////////////////////////////////////////////////////////////
 

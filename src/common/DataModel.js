@@ -41,13 +41,13 @@ const DATA_META_KEYS = {
 };
 
 // basic types
-const BUILTIN_TYPES = [
-	Boolean,
-	Number,
-	Date,
-	String,
-	RegExp
-];
+const BUILTIN_TYPES = {
+	"Boolean": data => data ? true : false,
+	"Number": data => parseFloat(data),
+	"Date": data => new Date(data),
+	"String": data => `${data}`,
+	"RegExp": data => new RegExp(data)
+};
 
 /**
  * Support for complex loadable/savable data structures. The
@@ -301,7 +301,7 @@ class DataModel {
     let is_builtin = false;
     if (typeof model.$class === "function") {
       // The datum being described has a class
-      if (BUILTIN_TYPES.indexOf(model.$class) >= 0) {
+      if (BUILTIN_TYPES[model.$class.name]) {
         // It's a built-in type e.g. String, RegExp, Date etc.
         // Internal fields are not supported
         is_builtin = true;
@@ -384,7 +384,7 @@ class DataModel {
         return data;
       })
       .then(content => {
-        if (BUILTIN_TYPES.indexOf(model.$class) >= 0)
+        if (model.$class && BUILTIN_TYPES[model.$class.name])
           return Promise.resolve(content);
         if (typeof content === "undefined")
           return undefined;
@@ -412,7 +412,7 @@ class DataModel {
     if (index === "$read_from")
       return Promise.resolve(data);
 
-    trace(`Remodel '${context.join('.')}' %o`, data);
+    trace(`Remodel '${context.join('.')}' %o`, data, model.$class);
 
     // Got a data definition
     if (typeof data === "undefined") {
@@ -474,8 +474,11 @@ class DataModel {
       return Promise.all(promises);
     }
 
-    if (BUILTIN_TYPES.indexOf(model.$class) >= 0)
-      return Promise.resolve(data);
+    if (model.$class && BUILTIN_TYPES[model.$class.name]) {
+      const converted = BUILTIN_TYPES[model.$class.name](data);
+      trace(`\tbase type ${model.$class.name} => ${typeof converted} ${converted}`);
+      return Promise.resolve(converted);
+    }
 
     // Not a base type, so the model describes what has to be passed
     // to the constructor (if there is one)
@@ -696,8 +699,8 @@ class DataModel {
       // end up with a field in the data that doesn't correspond
       // to the model (which simply shows the File model)
       model = model.$class.Model;
-    } else if (BUILTIN_TYPES.indexOf(model.$class) >= 0) {
-      return Promise.resolve(data);
+    } else if (model.$class && BUILTIN_TYPES[model.$class.name]) {
+      return Promise.resolve(BUILTIN_TYPES[model.$class.name](data));
     }
 
     const promises = [];
@@ -931,7 +934,7 @@ class DataModel {
       else
         docstring.push(model.$class); // wtf?
 
-      recurse = (BUILTIN_TYPES.indexOf(model.$class) < 0);
+      recurse = !(model.$class && BUILTIN_TYPES[model.$class.name]);
     }
 
     if (model.$instantiable)
@@ -950,7 +953,7 @@ class DataModel {
         if (sub.length > 0) {
           docstring.push('{\n');
           docstring.push(indent(sub));
-          docstring.push("}\n");
+          docstring.push("\n}");
         }
       } else {
         const sub = [];
