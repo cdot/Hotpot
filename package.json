@@ -30,7 +30,7 @@
         "@rwap/jquery-ui-touch-punch": "github:RWAP/jquery-ui-touch-punch",
         "cors": "^2.8.5",
         "debug": "^4.3.4",
-        "express": "^4.21.1",
+        "express": "^4.21.2",
         "express-basic-auth": "^1.2.1",
         "express-session": "^1.18.1",
         "jquery": "^3.6.4",
