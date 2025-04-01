@@ -1,6 +1,6 @@
 # Hotpot
 
-**Hotpot is no longer maintained** - I've moved to a new property that has a more sophisticated heating system, and at time of writing I don't need Hotpot any more.
+**Hotpot is no longer maintained** - it worked super-reliably for many years, but I've moved to a new property that has a more sophisticated heating system, and at time of writing I don't need Hotpot any more.
 
 Hotpot is a controller for a Y-plan central heating system, using
 node.js on Raspberry Pi. It piggybacks on the existing system so that
